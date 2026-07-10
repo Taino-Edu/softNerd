@@ -123,3 +123,4 @@ CONTEXTO-SESSAO.md
 
 # Certificados/chaves de integrações (Inter, SEFAZ, etc.) — nunca versionar
 deploy/certs/
+deploy/nginx/certs/
