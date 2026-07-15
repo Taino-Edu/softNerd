@@ -278,7 +278,7 @@ export default function ProductPage() {
                       className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
                       style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
                       <Clock className="w-5 h-5" />
-                      {wlLoading ? 'Aguarde...' : 'Entrar na lista de espera'}
+                      {wlLoading ? 'Aguarde...' : 'Reservar meu produto'}
                     </button>
                   )}
                   <Link href="/produtos"
@@ -353,7 +353,7 @@ export default function ProductPage() {
             </div>
 
             <p className="text-sm" style={{ color: '#4D8FAC' }}>
-              Faça login para entrar na lista de espera de <strong style={{ color: '#0C3D5A' }}>{product.name}</strong>.
+              Faça login para reservar <strong style={{ color: '#0C3D5A' }}>{product.name}</strong>.
             </p>
 
             <form onSubmit={handleLogin} className="flex flex-col gap-3">

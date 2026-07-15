@@ -130,7 +130,7 @@ export default function ReservasPage() {
     setWlLoading(true)
     try {
       const { data } = await productApi.listAdmin()
-      const preVenda = data.filter((p: Product) => p.isPreVenda)
+      const preVenda = data.filter((p: Product) => p.isPreVenda && p.isActive)
       setWlProducts(preVenda)
 
       const results = await Promise.all(preVenda.map(p =>

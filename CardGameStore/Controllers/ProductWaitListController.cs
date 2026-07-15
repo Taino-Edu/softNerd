@@ -148,8 +148,10 @@ public class ProductWaitListController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> CountPreVendaPendentes()
     {
+        // Só conta produto que ainda existe/está ativo — senão o número no dashboard fica
+        // "mentindo" pro Maikon contando fila de produto que já saiu de pré-venda ou foi desativado.
         var count = await _db.ProductWaitLists
-            .Where(w => w.NotifiedAt == null && w.Product!.IsPreVenda)
+            .Where(w => w.NotifiedAt == null && w.Product!.IsPreVenda && w.Product!.IsActive)
             .CountAsync();
 
         return Ok(new { Count = count });
