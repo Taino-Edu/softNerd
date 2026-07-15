@@ -16,17 +16,23 @@ const EMOJI_SUGESTOES = [
 ]
 
 function CategoryModal({
-  category, onClose, onSave,
+  category, allCategories, onClose, onSave,
 }: {
   category: Partial<ProductCategory> | null
+  allCategories: ProductCategory[]
   onClose: () => void
   onSave:  (c: Partial<ProductCategory>) => Promise<void>
 }) {
   const [form, setForm]     = useState<Partial<ProductCategory>>(
-    category ?? { name: '', emoji: '', displayOrder: 0, isActive: true }
+    category ?? { name: '', emoji: '', displayOrder: 0, isActive: true, parentCategoryId: null }
   )
   const [saving, setSaving] = useState(false)
   const set = (k: keyof ProductCategory, v: unknown) => setForm(f => ({ ...f, [k]: v }))
+
+  // Só pode virar categoria-pai quem hoje não é subcategoria de ninguém (só 1 nível de
+  // aninhamento) e não é a própria categoria sendo editada.
+  const opcoesPai = allCategories.filter(c => c.id !== form.id && !c.parentCategoryId)
+  const temFilhas = !!form.id && allCategories.some(c => c.parentCategoryId === form.id)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -81,6 +87,31 @@ function CategoryModal({
           </div>
 
           <div>
+            <label className="label">Categoria pai</label>
+            {temFilhas ? (
+              <p className="text-xs text-gray-400 bg-surface-700 rounded-lg px-3 py-2">
+                Esta categoria já tem subcategorias — não pode virar subcategoria de outra.
+              </p>
+            ) : (
+              <>
+                <select
+                  className="input"
+                  value={form.parentCategoryId ?? ''}
+                  onChange={e => set('parentCategoryId', e.target.value || null)}
+                >
+                  <option value="">Nenhuma — categoria principal</option>
+                  {opcoesPai.map(c => (
+                    <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ` : ''}{c.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Ex: "One Piece" com pai "Card Game" vira subcategoria.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div>
             <label className="label">Ordem de exibição</label>
             <input
               className="input" type="number" min="0"
@@ -129,6 +160,24 @@ export default function CategoriasPage() {
 
   useEffect(() => { fetchCategories() }, [])
 
+  // Lista pais em ordem, cada um seguido imediatamente das próprias subcategorias (indentadas).
+  const orderedCategories = (() => {
+    const porOrdem = (a: ProductCategory, b: ProductCategory) =>
+      a.displayOrder - b.displayOrder || a.name.localeCompare(b.name)
+    const pais    = categories.filter(c => !c.parentCategoryId).sort(porOrdem)
+    const filhas  = categories.filter(c => c.parentCategoryId).sort(porOrdem)
+    const result: { category: ProductCategory; isChild: boolean }[] = []
+    for (const pai of pais) {
+      result.push({ category: pai, isChild: false })
+      for (const filha of filhas.filter(f => f.parentCategoryId === pai.id))
+        result.push({ category: filha, isChild: true })
+    }
+    // Subcategorias órfãs (pai deletado sem SetNull ter rodado ainda, ou edge case) — mostra no final.
+    for (const filha of filhas.filter(f => !pais.some(p => p.id === f.parentCategoryId)))
+      result.push({ category: filha, isChild: false })
+    return result
+  })()
+
   async function handleSave(form: Partial<ProductCategory>) {
     try {
       if (form.id) await categoryApi.update(form.id, form)
@@ -153,6 +202,7 @@ export default function CategoriasPage() {
       {modal !== undefined && (
         <CategoryModal
           category={modal}
+          allCategories={categories}
           onClose={() => setModal(undefined)}
           onSave={handleSave}
         />
@@ -192,13 +242,16 @@ export default function CategoriasPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-500">
-              {categories.map(c => (
+              {orderedCategories.map(({ category: c, isChild }) => (
                 <tr key={c.id} className="hover:bg-surface-500/30 transition-colors">
                   <td className="px-3 py-3 text-gray-500">
                     <GripVertical className="w-4 h-4" />
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-white">{c.name}</p>
+                    <p className={`font-medium text-white ${isChild ? 'pl-5 flex items-center gap-1.5' : ''}`}>
+                      {isChild && <span className="text-gray-500">↳</span>}
+                      {c.name}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-2xl">
                     {c.emoji ?? <span className="text-gray-400 text-sm">—</span>}

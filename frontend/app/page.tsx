@@ -39,6 +39,15 @@ const DEFAULT_SITE: SiteConfigDto = {
   colorNavy: '#0C3D5A',
   colorBackground: '#EBF7FD',
   colorCard: '#FFFFFF',
+  borderRadiusStyle: 'Padrao',
+}
+
+/** Valores originais hardcoded do Tailwind pra cada utilitário rounded-* usado na landing —
+ * "Padrao" reproduz exatamente isso, então nada muda até o admin escolher outro estilo. */
+const RADIUS_PRESETS: Record<SiteConfigDto['borderRadiusStyle'], { md: string; lg: string; xl: string; twoXl: string }> = {
+  Padrao:           { md: '0.375rem', lg: '0.5rem', xl: '0.75rem', twoXl: '1rem' },
+  Suave:            { md: '0.5rem',   lg: '0.75rem', xl: '1rem',   twoXl: '1.25rem' },
+  MuitoArredondado: { md: '0.75rem',  lg: '1.25rem', xl: '1.75rem', twoXl: '2.25rem' },
 }
 
 /** Mistura duas cores hex — usado pra derivar o "cardAlt" (fundo de imagem dentro de card)
@@ -182,8 +191,20 @@ export default function LandingPage() {
     ]).finally(() => setLoading(false))
   }, [router])
 
+  const radius = RADIUS_PRESETS[site.borderRadiusStyle] ?? RADIUS_PRESETS.Padrao
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: C.bg, color: C.navy }}>
+    <div className="site-shell min-h-screen" style={{ backgroundColor: C.bg, color: C.navy }}>
+      {/* Retematiza os cantos (cards/botões/imagens) sem precisar editar cada className —
+          [class~=...] só bate o token exato "rounded-xl" etc, então variantes responsivas
+          (sm:rounded-2xl) e direcionais (rounded-t-3xl, usadas nos modais de bottom-sheet)
+          ficam de fora de propósito, senão quebraria o desenho deles. */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .site-shell [class~="rounded-md"]  { border-radius: ${radius.md} !important; }
+        .site-shell [class~="rounded-lg"]  { border-radius: ${radius.lg} !important; }
+        .site-shell [class~="rounded-xl"]  { border-radius: ${radius.xl} !important; }
+        .site-shell [class~="rounded-2xl"] { border-radius: ${radius.twoXl} !important; }
+      ` }} />
 
       {/* ── NAVBAR ─────────────────────────────────────────────────────── */}
       {/* Trigger zone: permite hover revelar o nav mesmo quando escondido */}

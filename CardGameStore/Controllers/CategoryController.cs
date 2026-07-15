@@ -15,7 +15,8 @@ public record CategoryRequest(
     [Required][MaxLength(100)] string Name,
     [MaxLength(10)]            string? Emoji,
     int  DisplayOrder,
-    bool IsActive
+    bool IsActive,
+    Guid? ParentCategoryId
 );
 
 [ApiController]
@@ -38,14 +39,16 @@ public class CategoryController : ControllerBase
         if (!ModelState.IsValid) return BadRequest(ModelState);
         var category = new ProductCategory
         {
-            Id           = Guid.NewGuid(),
-            Name         = req.Name.Trim(),
-            Emoji        = req.Emoji?.Trim(),
-            DisplayOrder = req.DisplayOrder,
-            IsActive     = req.IsActive,
-            CreatedAt    = DateTime.UtcNow,
+            Id               = Guid.NewGuid(),
+            Name             = req.Name.Trim(),
+            Emoji            = req.Emoji?.Trim(),
+            DisplayOrder     = req.DisplayOrder,
+            IsActive         = req.IsActive,
+            ParentCategoryId = req.ParentCategoryId,
+            CreatedAt        = DateTime.UtcNow,
         };
-        return Ok(await _service.CreateAsync(category));
+        try { return Ok(await _service.CreateAsync(category)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
     }
 
     [HttpPut("{id:guid}")]
@@ -55,13 +58,15 @@ public class CategoryController : ControllerBase
         if (!ModelState.IsValid) return BadRequest(ModelState);
         var category = new ProductCategory
         {
-            Id           = id,
-            Name         = req.Name.Trim(),
-            Emoji        = req.Emoji?.Trim(),
-            DisplayOrder = req.DisplayOrder,
-            IsActive     = req.IsActive,
+            Id               = id,
+            Name             = req.Name.Trim(),
+            Emoji            = req.Emoji?.Trim(),
+            DisplayOrder     = req.DisplayOrder,
+            IsActive         = req.IsActive,
+            ParentCategoryId = req.ParentCategoryId,
         };
-        return Ok(await _service.UpdateAsync(category));
+        try { return Ok(await _service.UpdateAsync(category)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
     }
 
     [HttpDelete("{id:guid}")]

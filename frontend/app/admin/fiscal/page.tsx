@@ -59,6 +59,7 @@ export default function FiscalPage() {
   const [ie, setIe]                       = useState('')
   const [regime, setRegime]               = useState('SimplesNacional')
   const [ambiente, setAmbiente]           = useState('Homologacao')
+  const [modoSimulacao, setModoSimulacao] = useState(false)
   const [serieNfce, setSerieNfce]         = useState(1)
   const [emailContador, setEmailContador] = useState('')
 
@@ -173,6 +174,7 @@ export default function FiscalPage() {
       setIe(cfg.inscricaoEstadual ?? '')
       setRegime(cfg.regimeTributario ?? 'SimplesNacional')
       setAmbiente(cfg.ambiente ?? 'Homologacao')
+      setModoSimulacao(cfg.modoSimulacao ?? false)
       setSerieNfce(cfg.serieNfce ?? 1)
       setEmailContador(cfg.emailContador ?? '')
       setLogradouro(cfg.logradouro ?? '')
@@ -200,7 +202,7 @@ export default function FiscalPage() {
     try {
       const { data } = await fiscalApi.saveConfig({
         cnpj, razaoSocial, inscricaoEstadual: ie, regimeTributario: regime,
-        ambiente, serieNfce, emailContador,
+        ambiente, modoSimulacao, serieNfce, emailContador,
         logradouro, numero, complemento, bairro,
         codigoMunicipioIbge, municipio, uf, cep,
         cscId, ...(cscToken ? { cscToken } : {}),
@@ -389,6 +391,26 @@ export default function FiscalPage() {
             <select value={ambiente} onChange={e => setAmbiente(e.target.value)} className="input w-full">
               {AMBIENTES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
             </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="flex items-start gap-2 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={modoSimulacao}
+                onChange={e => setModoSimulacao(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-amber-400">
+                  Modo simulação (teste sem certificado)
+                </span>
+                <span className="block text-xs text-gray-400 mt-0.5">
+                  Emite notas "autorizadas" só localmente, sem enviar nada de verdade à SEFAZ — serve pra
+                  testar o resto do fluxo (cupom, numeração) sem precisar de certificado A1. As notas geradas
+                  aqui não têm validade fiscal. Desative antes de vender pra clientes de verdade.
+                </span>
+              </span>
+            </label>
           </div>
           <div>
             <label className="text-xs text-gray-400 font-semibold mb-1 block">Série NFC-e</label>

@@ -62,6 +62,14 @@ public class SiteConfigController : ControllerBase
         if (req.ColorBackground      is not null) cfg.ColorBackground      = req.ColorBackground;
         if (req.ColorCard            is not null) cfg.ColorCard            = req.ColorCard;
 
+        if (req.BorderRadiusStyle is not null)
+        {
+            if (BorderRadiusStyles.Valid.Contains(req.BorderRadiusStyle))
+                cfg.BorderRadiusStyle = req.BorderRadiusStyle;
+            else
+                return BadRequest(new { Message = $"Estilo de arredondamento inválido. Use: {string.Join(", ", BorderRadiusStyles.Valid)}." });
+        }
+
         cfg.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
@@ -95,6 +103,11 @@ public class SiteConfigController : ControllerBase
     }
 }
 
+public static class BorderRadiusStyles
+{
+    public static readonly string[] Valid = { "Padrao", "Suave", "MuitoArredondado" };
+}
+
 public class SaveSiteConfigRequest
 {
     public string? SiteName            { get; init; }
@@ -122,4 +135,5 @@ public class SaveSiteConfigRequest
     public string? ColorNavy           { get; init; }
     public string? ColorBackground     { get; init; }
     public string? ColorCard           { get; init; }
+    public string? BorderRadiusStyle   { get; init; }
 }

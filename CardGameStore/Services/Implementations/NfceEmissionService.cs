@@ -168,6 +168,19 @@ public class NfceEmissionService : INfceEmissionService
             throw new InvalidOperationException(
                 $"Fora da janela legal de cancelamento ({JanelaCancelamento.TotalMinutes:0} minutos após a autorização).");
 
+        // Nota "autorizada" em modo simulação nunca existiu pra SEFAZ — cancela só localmente,
+        // sem tentar abrir certificado (que pode nem estar configurado no modo simulação).
+        if (nota.Protocolo?.StartsWith("SIMULADO-") == true)
+        {
+            nota.Status                   = NotaFiscalStatus.Cancelada;
+            nota.CanceladoEm              = DateTime.UtcNow;
+            nota.JustificativaCancelamento = justificativa.Trim();
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("NFC-e simulada {NotaId} cancelada localmente (nunca existiu pra SEFAZ).", nota.Id);
+            return nota;
+        }
+
         var (cfg, cfgServico, certificado, _, _, _) = await AbrirConfiguracaoSefazAsync();
         using var _certDispose = certificado;
 
@@ -455,6 +468,17 @@ public class NfceEmissionService : INfceEmissionService
 
     private async Task TransmitirAsync(NotaFiscalEmitida nota, DadosEmissao dados)
     {
+        // Checa o modo simulação ANTES de exigir certificado — é justamente o caminho pra
+        // testar o resto do fluxo (numeração, cupom, banco) sem ter um A1 configurado ainda.
+        var cfgAtual = await _db.FiscalConfigs.FindAsync(FiscalConfig.SingletonId)
+            ?? throw new FiscalNaoConfiguradoException("Configuração fiscal ainda não cadastrada (Admin > Fiscal).");
+
+        if (cfgAtual.ModoSimulacao)
+        {
+            await TransmitirSimuladoAsync(nota, dados, cfgAtual);
+            return;
+        }
+
         var (cfg, cfgServico, certificado, cfgCertificado, estado, ambiente) = await AbrirConfiguracaoSefazAsync();
         using var _certDispose = certificado;
 
@@ -641,6 +665,47 @@ public class NfceEmissionService : INfceEmissionService
                 _logger.LogError(ex, "Falha ao inutilizar o número {Numero} da NFC-e rejeitada {NotaId}.", numero, nota.Id);
             }
         }
+    }
+
+    /// <summary>
+    /// Caminho de teste: monta e "assina" a nota só na memória (nem chega a existir um
+    /// certificado carregado), reserva um número real de NFC-e (pra testar a numeração
+    /// atômica de verdade) e marca a nota como Autorizada com uma chave/protocolo fake.
+    /// Nenhuma requisição sai pro SEFAZ. O protocolo sempre começa com "SIMULADO-" — usado
+    /// por <see cref="CancelarAsync"/> pra saber que essa nota nunca existiu pra SEFAZ.
+    /// </summary>
+    private async Task TransmitirSimuladoAsync(NotaFiscalEmitida nota, DadosEmissao dados, FiscalConfig cfg)
+    {
+        // Ainda valida CSOSN/NCM dos itens — é a mesma lógica de negócio que roda numa
+        // emissão real, só a assinatura/transmissão à SEFAZ que é pulada.
+        _ = dados.Itens.Select((item, idx) => MontarItem(item, idx + 1)).ToList();
+
+        if (string.IsNullOrWhiteSpace(cfg.Cnpj) || string.IsNullOrWhiteSpace(cfg.Uf))
+            throw new FiscalNaoConfiguradoException(
+                "Mesmo em modo simulação, CNPJ e UF precisam estar preenchidos em Admin > Fiscal " +
+                "pra gerar uma chave de acesso de teste coerente.");
+
+        var jaEmContingencia = nota.CnfContingencia.HasValue;
+        var numero = jaEmContingencia ? nota.Numero!.Value : await ReservarProximoNumeroNfceAsync(cfg.Id);
+        var dhEmi  = ParaBrasil(nota.CreatedAt);
+        var cNf    = jaEmContingencia ? nota.CnfContingencia!.Value : Random.Shared.Next(10_000_000, 99_999_999);
+        var estado = Enum.Parse<Estado>(cfg.Uf);
+        var chave  = ChaveFiscal.ObterChave(estado, dhEmi, cfg.Cnpj, ModeloDocumento.NFCe, cfg.SerieNfce, numero, (int)TipoEmissao.teNormal, cNf);
+
+        nota.Serie          = cfg.SerieNfce;
+        nota.Numero         = numero;
+        nota.Status         = NotaFiscalStatus.Autorizada;
+        nota.ChaveAcesso    = chave.Chave;
+        nota.Protocolo      = $"SIMULADO-{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+        nota.EmitidoEm    ??= DateTime.UtcNow;
+        nota.UrlQrCode      = null;
+        nota.MotivoRejeicao = null;
+        await _db.SaveChangesAsync();
+
+        _logger.LogWarning(
+            "NFC-e {NotaId} 'autorizada' em MODO SIMULAÇÃO (protocolo {Protocolo}) — nenhuma transmissão " +
+            "real foi feita à SEFAZ. Desative FiscalConfig.ModoSimulacao antes de operar com clientes de verdade.",
+            nota.Id, nota.Protocolo);
     }
 
     private async Task InutilizarNumeroAsync(

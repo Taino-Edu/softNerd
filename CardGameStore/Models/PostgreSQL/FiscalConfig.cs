@@ -106,6 +106,15 @@ public class FiscalConfig
     [Column("ambiente")]
     public AmbienteFiscal Ambiente { get; set; } = AmbienteFiscal.Homologacao;
 
+    /// <summary>
+    /// Quando ativo, a emissão pula assinatura digital e transmissão real à SEFAZ — usado pra
+    /// testar o resto do fluxo (numeração, cupom, banco) sem precisar de certificado A1
+    /// configurado. A nota fica marcada como Autorizada, mas não existe pra SEFAZ nem é válida
+    /// fiscalmente. Nunca deixar ativo operando com clientes de verdade.
+    /// </summary>
+    [Column("modo_simulacao")]
+    public bool ModoSimulacao { get; set; } = false;
+
     [Column("serie_nfce")]
     public int SerieNfce { get; set; } = 1;
 

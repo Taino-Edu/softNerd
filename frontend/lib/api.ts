@@ -145,6 +145,7 @@ export interface ProductVariant {
 export interface ProductCategory {
   id: string; name: string; emoji: string | null
   displayOrder: number; isActive: boolean; createdAt: string
+  parentCategoryId: string | null
 }
 
 export const categoryApi = {
@@ -1154,7 +1155,7 @@ export interface FiscalConfigDto {
   logradouro?: string; numero?: string; complemento?: string; bairro?: string
   codigoMunicipioIbge?: string; municipio?: string; uf?: string; cep?: string
   cscId?: string; cscConfigurado: boolean
-  regimeTributario: string; ambiente: string
+  regimeTributario: string; ambiente: string; modoSimulacao: boolean
   serieNfce: number; proximoNumeroNfce: number
   emailContador?: string
   certificadoConfigurado: boolean
@@ -1200,7 +1201,7 @@ export const fiscalApi = {
     logradouro: string; numero: string; complemento: string; bairro: string
     codigoMunicipioIbge: string; municipio: string; uf: string; cep: string
     cscId: string; cscToken: string
-    regimeTributario: string; ambiente: string; serieNfce: number; emailContador: string
+    regimeTributario: string; ambiente: string; modoSimulacao: boolean; serieNfce: number; emailContador: string
     formasPagamentoAutoEmissao: string[]
   }>) => api.put<FiscalConfigDto>('/api/fiscal/config', body),
 
@@ -1274,6 +1275,7 @@ export interface SiteConfigDto {
   colorNavy: string
   colorBackground: string
   colorCard: string
+  borderRadiusStyle: 'Padrao' | 'Suave' | 'MuitoArredondado'
 }
 
 export const siteConfigApi = {

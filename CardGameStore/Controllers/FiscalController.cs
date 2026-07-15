@@ -78,6 +78,9 @@ public class FiscalController : ControllerBase
             Enum.TryParse<AmbienteFiscal>(req.Ambiente, out var ambiente))
             cfg.Ambiente = ambiente;
 
+        if (req.ModoSimulacao.HasValue)
+            cfg.ModoSimulacao = req.ModoSimulacao.Value;
+
         if (req.FormasPagamentoAutoEmissao is not null)
         {
             var invalidas = req.FormasPagamentoAutoEmissao.Where(f => !PaymentMethod.IsValid(f)).ToList();
@@ -373,6 +376,47 @@ public class FiscalController : ControllerBase
         return File(zipBytes, "application/zip", fileName);
     }
 
+    // ── POST /api/fiscal/test-emissao-sefaz (DEBUG — herda AdminOnly da classe) ─
+    [HttpPost("test-emissao-sefaz")]
+    public async Task<IActionResult> TestEmissaoSefaz()
+    {
+        // Verificar config fiscal
+        var cfg = await _db.FiscalConfigs.FindAsync(FiscalConfig.SingletonId);
+        if (cfg is null || !cfg.CertificadoConfigurado)
+            return BadRequest(new { Message = "Certificado digital não configurado em Admin > Fiscal" });
+
+        // Buscar comanda com itens
+        var comanda = await _db.Comandas
+            .Include(c => c.Items)
+            .ThenInclude(i => i.Product)
+            .ThenInclude(p => p!.NaturezaOperacao)
+            .FirstOrDefaultAsync(c => c.Items.Count > 0);
+
+        if (comanda is null)
+            return BadRequest(new { Message = "Nenhuma comanda com itens encontrada pra teste" });
+
+        // Tentar emissão
+        var nota = await _emissao.EmitirParaComandaAsync(comanda.Id);
+
+        return Ok(new
+        {
+            notaId = nota.Id,
+            status = nota.Status.ToString(),
+            protocolo = nota.Protocolo,
+            chaveAcesso = nota.ChaveAcesso,
+            motivo = nota.MotivoRejeicao,
+            qrCode = nota.UrlQrCode,
+            mensagem = nota.Status switch
+            {
+                NotaFiscalStatus.Autorizada => "✅ Nota autorizada! Funcionou!",
+                NotaFiscalStatus.AutorizadaContingencia => "⚠️ Emitida em contingência (SEFAZ inalcançável — vai retransmitir sozinho)",
+                NotaFiscalStatus.Rejeitada => $"❌ Rejeitada: {nota.MotivoRejeicao}",
+                NotaFiscalStatus.PendenteEmissao => $"⏳ Pendente: {nota.MotivoRejeicao}",
+                _ => $"? Status desconhecido: {nota.Status}"
+            }
+        });
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -427,6 +471,7 @@ public class FiscalController : ControllerBase
             cfg.CscId, // não sensível isoladamente; o token nunca é retornado
             RegimeTributario = cfg.RegimeTributario.ToString(),
             Ambiente         = cfg.Ambiente.ToString(),
+            cfg.ModoSimulacao,
             cfg.SerieNfce,
             cfg.ProximoNumeroNfce,
             cfg.EmailContador,
@@ -459,6 +504,7 @@ public class SaveFiscalConfigRequest
     public string? CscToken            { get; init; }
     public string? RegimeTributario  { get; init; }
     public string? Ambiente          { get; init; }
+    public bool?   ModoSimulacao     { get; init; }
     public int?    SerieNfce         { get; init; }
     public string? EmailContador     { get; init; }
 

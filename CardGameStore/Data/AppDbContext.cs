@@ -106,6 +106,18 @@ public class AppDbContext : DbContext
             entity.HasIndex(c => c.Name)
                   .IsUnique()
                   .HasDatabaseName("ix_product_categories_name");
+
+            entity.HasIndex(c => c.ParentCategoryId)
+                  .HasDatabaseName("ix_product_categories_parent");
+
+            // Deletar a categoria-pai não apaga as subcategorias — elas só voltam a ser
+            // categorias principais (mesmo espírito de "produto fica sem categoria" ao
+            // deletar uma categoria usada por produtos).
+            entity.HasOne(c => c.ParentCategory)
+                  .WithMany(c => c.Children)
+                  .HasForeignKey(c => c.ParentCategoryId)
+                  .OnDelete(DeleteBehavior.SetNull)
+                  .IsRequired(false);
         });
 
         modelBuilder.Entity<Product>(entity =>

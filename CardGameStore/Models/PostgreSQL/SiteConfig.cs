@@ -132,6 +132,16 @@ public class SiteConfig
     [Column("color_card")]
     public string ColorCard { get; set; } = "#FFFFFF";
 
+    /// <summary>
+    /// Estilo de arredondamento dos cantos (cards, botões, imagens) da landing page.
+    /// "Padrao" preserva o visual atual (zero mudança até o admin trocar) — as opções mais
+    /// arredondadas existem porque o Maikon pediu um visual "fofo, redondo".
+    /// Valores aceitos: Padrao | Suave | MuitoArredondado.
+    /// </summary>
+    [MaxLength(20)]
+    [Column("border_radius_style")]
+    public string BorderRadiusStyle { get; set; } = "Padrao";
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

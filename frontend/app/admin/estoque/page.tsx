@@ -504,9 +504,11 @@ function ProductModal({
             <label className="label">Categoria *</label>
             <select className="input" required value={form.category ?? ''} onChange={e => set('category', e.target.value)}>
               <option value="">Selecione...</option>
-              {categories.filter(c => c.isActive).map(c => (
-                <option key={c.id} value={c.name}>{c.emoji ? `${c.emoji} ` : ''}{c.name}</option>
-              ))}
+              {categories.filter(c => c.isActive).map(c => {
+                const pai = categories.find(p => p.id === c.parentCategoryId)
+                const label = `${c.emoji ? `${c.emoji} ` : ''}${pai ? `${pai.name} › ` : ''}${c.name}`
+                return <option key={c.id} value={c.name}>{label}</option>
+              })}
             </select>
           </div>
 

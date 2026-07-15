@@ -31,6 +31,16 @@ const DEFAULTS: SiteConfigDto = {
   colorNavy: '#0C3D5A',
   colorBackground: '#EBF7FD',
   colorCard: '#FFFFFF',
+  borderRadiusStyle: 'Padrao',
+}
+
+const RADIUS_OPTIONS: { value: SiteConfigDto['borderRadiusStyle']; label: string; previewRadius: string }[] = [
+  { value: 'Padrao',           label: 'Padrão',           previewRadius: '0.5rem' },
+  { value: 'Suave',            label: 'Suave',             previewRadius: '0.9rem' },
+  { value: 'MuitoArredondado', label: 'Fofo e redondo',    previewRadius: '1.5rem' },
+]
+const RADIUS_PREVIEW_MAP: Record<SiteConfigDto['borderRadiusStyle'], string> = {
+  Padrao: '0.75rem', Suave: '1rem', MuitoArredondado: '1.75rem',
 }
 
 function Field({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
@@ -122,7 +132,10 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
         </div>
 
         {/* Card de exemplo */}
-        <div className="rounded-xl overflow-hidden border" style={{ backgroundColor: cfg.colorCard, borderColor: 'rgba(12,61,90,0.10)' }}>
+        <div className="overflow-hidden border" style={{
+          backgroundColor: cfg.colorCard, borderColor: 'rgba(12,61,90,0.10)',
+          borderRadius: RADIUS_PREVIEW_MAP[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP.Padrao,
+        }}>
           <div className="h-14" style={{ backgroundColor: cardAlt }} />
           <div className="p-2.5">
             <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: cfg.colorPrimary }}>
@@ -235,6 +248,33 @@ export default function SiteConfigPage() {
           <ColorField label="Fundo dos cards" value={cfg.colorCard} onChange={v => set('colorCard', v)} />
         </div>
         <p className="text-[11px] text-gray-500">Fundo e cards só valem no modo claro — o modo escuro mantém a paleta própria dele.</p>
+      </div>
+
+      {/* Estilo visual */}
+      <div className="card p-5 space-y-3">
+        <h3 className="font-bold text-white mb-1">Estilo visual</h3>
+        <p className="text-[11px] text-gray-500 -mt-1">Arredondamento dos cantos de cards, botões e imagens.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {RADIUS_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => set('borderRadiusStyle', opt.value)}
+              className={`flex flex-col items-center gap-2 p-3 border transition-colors ${
+                cfg.borderRadiusStyle === opt.value
+                  ? 'border-brand-400 bg-brand-500/10'
+                  : 'border-surface-500 hover:border-surface-400'
+              }`}
+              style={{ borderRadius: '0.75rem' }}
+            >
+              <span
+                className="w-full h-10 border-2"
+                style={{ borderRadius: opt.previewRadius, borderColor: cfg.colorPrimary, backgroundColor: 'transparent' }}
+              />
+              <span className="text-xs font-semibold text-gray-300">{opt.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Textos da navbar */}
