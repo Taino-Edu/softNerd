@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { productApi, vendaAvulsaApi, userApi, fiscalApi, PAYMENT_METHODS, PAYMENT_NEEDS_USER, SECOND_PAYMENT_METHODS, Product, ProductVariant, VendaAvulsaDto, UserSummary, EditarPagamentoVendaAvulsaRequest } from '@/lib/api'
+import { productApi, categoryApi, vendaAvulsaApi, userApi, fiscalApi, PAYMENT_METHODS, PAYMENT_NEEDS_USER, SECOND_PAYMENT_METHODS, Product, ProductCategory, ProductVariant, VendaAvulsaDto, UserSummary, EditarPagamentoVendaAvulsaRequest } from '@/lib/api'
 import { useThrottle } from '@/lib/hooks'
 import { usePreferences } from '@/hooks/usePreferences'
 import toast from 'react-hot-toast'
@@ -463,6 +463,7 @@ function VendaWizard({
   const [cart, setCart] = useState<CartItem[]>([])
   const [search, setSearch] = useState('')
   const [catFilter, setCat] = useState<string | null>(null)
+  const [allCategories, setAllCategories] = useState<ProductCategory[]>([])
   const searchRef = useRef<HTMLInputElement>(null)
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null)
 
@@ -488,6 +489,10 @@ function VendaWizard({
 
   useEffect(() => {
     fiscalApi.getConfig().then(r => setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    categoryApi.list().then(r => setAllCategories(r.data)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -603,7 +608,27 @@ function VendaWizard({
   const secondNeedsUser   = splitEnabled && (PAYMENT_NEEDS_USER as readonly string[]).includes(secondPayment)
   const needsUser         = (PAYMENT_NEEDS_USER as readonly string[]).includes(payment) || secondNeedsUser
 
-  const categories = useMemo(() => [...new Set(products.map(p => p.category))].sort(), [products])
+  // Agrupa os chips de categoria mostrando cada subcategoria logo após sua categoria-pai
+  // (só quando o pai também tem produtos, ou seja, também tem chip próprio nessa lista).
+  const categories = useMemo(() => {
+    const namesInUse = new Set(products.map(p => p.category))
+    const byName = new Map(allCategories.map(c => [c.name, c]))
+    const parentNameOf = (name: string): string | null => {
+      const cat = byName.get(name)
+      if (!cat?.parentCategoryId) return null
+      const parent = allCategories.find(c => c.id === cat.parentCategoryId)
+      return parent && namesInUse.has(parent.name) ? parent.name : null
+    }
+
+    const tops = [...namesInUse].filter(n => !parentNameOf(n)).sort()
+    const ordered: { name: string; isChild: boolean }[] = []
+    for (const top of tops) {
+      ordered.push({ name: top, isChild: false })
+      const children = [...namesInUse].filter(n => parentNameOf(n) === top).sort()
+      for (const child of children) ordered.push({ name: child, isChild: true })
+    }
+    return ordered
+  }, [products, allCategories])
   const filtered = products.filter(p => {
     const matchCat    = !catFilter || p.category === catFilter
     const q           = search.toLowerCase()
@@ -795,16 +820,17 @@ function VendaWizard({
                           : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-400'
                       )}
                     >Todos</button>
-                    {categories.map(cat => (
+                    {categories.map(({ name, isChild }) => (
                       <button
-                        key={cat}
-                        onClick={() => setCat(cat === catFilter ? null : cat)}
+                        key={name}
+                        onClick={() => setCat(name === catFilter ? null : name)}
                         className={clsx('px-2.5 py-1 rounded-full text-xs font-medium border transition-all',
-                          catFilter === cat
+                          isChild && 'ml-2',
+                          catFilter === name
                             ? 'bg-brand-600/20 border-brand-500/60 text-brand-300'
                             : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-400'
                         )}
-                      >{cat}</button>
+                      >{isChild && '↳ '}{name}</button>
                     ))}
                   </div>
                 )}
