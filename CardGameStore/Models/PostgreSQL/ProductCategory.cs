@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace CardGameStore.Models.PostgreSQL;
 
@@ -33,7 +34,17 @@ public class ProductCategory
     [Column("parent_category_id")]
     public Guid? ParentCategoryId { get; set; }
 
+    /// <summary>
+    /// [JsonIgnore] é essencial aqui: sem isso, o EF liga automaticamente ParentCategory ↔
+    /// Children entre entidades já carregadas no mesmo DbContext (mesmo sem .Include()), e o
+    /// System.Text.Json entra num ciclo infinito ao serializar (categoria → pai → filhos →
+    /// a própria categoria de novo → ...), derrubando o endpoint inteiro com 500. O frontend
+    /// só precisa do ParentCategoryId (escalar) pra montar a árvore, nunca desses objetos.
+    /// </summary>
+    [JsonIgnore]
     public ProductCategory? ParentCategory { get; set; }
+
+    [JsonIgnore]
     public ICollection<ProductCategory> Children { get; set; } = new List<ProductCategory>();
 
     [Column("created_at")]
