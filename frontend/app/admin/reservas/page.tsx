@@ -2,20 +2,21 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, productApi, waitListApi, Product, WaitListEntry } from '@/lib/api'
+import { api, productApi, waitListApi, reservationApi, Product, WaitListEntry, ReservationPixStatus } from '@/lib/api'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
   ShoppingBag, LayoutList, RefreshCw, Loader2, ChevronLeft, ChevronRight,
   AlertTriangle, TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
-  Hourglass, Sparkles,
+  Hourglass, Sparkles, QrCode, Layers,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
 
 type Reservation = {
   id: string
+  reservationGroupId: string
   userId: string
   userName?: string
   productId: string
@@ -102,6 +103,7 @@ export default function ReservasPage() {
   const [totalPages,  setTotalPages]  = useState(1)
   const [totalCount,  setTotalCount]  = useState(0)
   const [activeCount, setActiveCount] = useState(0) // "aguardando" — independente do filtro atual
+  const [pixByGroup,  setPixByGroup]  = useState<Record<string, ReservationPixStatus>>({})
 
   // Modal de homologação
   const [homModal,    setHomModal]    = useState<Reservation | null>(null)
@@ -226,6 +228,28 @@ export default function ReservasPage() {
   }, [statusFilter, page])
 
   useEffect(() => { load() }, [load])
+
+  // Busca status de pagamento Pix por grupo (uma vez por grupo, não por item) — só pra grupos
+  // que ainda não temos em cache, evita refetch a cada re-render.
+  useEffect(() => {
+    const groupIds = [...new Set(items.map(r => r.reservationGroupId))].filter(id => !(id in pixByGroup))
+    if (groupIds.length === 0) return
+    Promise.all(groupIds.map(id =>
+      reservationApi.getPix(id).then(r => [id, r.data] as const).catch(() => [id, { hasPix: false }] as const)
+    )).then(results => {
+      setPixByGroup(prev => {
+        const next = { ...prev }
+        for (const [id, status] of results) next[id] = status
+        return next
+      })
+    })
+  }, [items, pixByGroup])
+
+  // Quantos itens cada carrinho de reserva tem — pra mostrar "carrinho de N itens" quando > 1
+  const groupCounts = items.reduce<Record<string, number>>((acc, r) => {
+    acc[r.reservationGroupId] = (acc[r.reservationGroupId] ?? 0) + 1
+    return acc
+  }, {})
 
   async function loadComandas() {
     try {
@@ -497,6 +521,22 @@ export default function ReservasPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-bold text-white text-sm truncate">{r.productName}</p>
                     {r.variantLabel && <span className="text-xs text-gray-400">· {r.variantLabel}</span>}
+                    {groupCounts[r.reservationGroupId] > 1 && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-300">
+                        <Layers className="w-2.5 h-2.5" /> Carrinho de {groupCounts[r.reservationGroupId]}
+                      </span>
+                    )}
+                    {pixByGroup[r.reservationGroupId]?.hasPix && (
+                      pixByGroup[r.reservationGroupId]?.status === 'CONCLUIDA' ? (
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-500/30 bg-green-500/15 text-green-400">
+                          <QrCode className="w-2.5 h-2.5" /> Pago via Pix
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-400">
+                          <QrCode className="w-2.5 h-2.5" /> Pix pendente
+                        </span>
+                      )
+                    )}
                     <span className={clsx('text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ml-auto',
                       statusCls[displayStatus] ?? statusCls['expired'])}>
                       {statusLabel[displayStatus] ?? displayStatus}

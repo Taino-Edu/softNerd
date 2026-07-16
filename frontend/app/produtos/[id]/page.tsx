@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { productApi, waitListApi, authApi, userApi, Product, UserProfile } from '@/lib/api'
 import { saveAuth, isLoggedIn, getUserName } from '@/lib/auth'
+import { useReservationCart } from '@/hooks/useReservationCart'
 import Link from 'next/link'
-import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, Clock, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon } from 'lucide-react'
+import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, Clock, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus } from 'lucide-react'
 
 const NAVY = '#0C3D5A'
 const BLUE = '#3EC2F2'
@@ -32,6 +33,21 @@ export default function ProductPage() {
 
   // usuário logado
   const [profile, setProfile] = useState<UserProfile | null>(null)
+
+  const { items: cartItems, addItem, totalItems: cartCount } = useReservationCart()
+  const inCart = product ? cartItems.some(i => i.productId === product.id) : false
+
+  function handleAddToCart() {
+    if (!product) return
+    if (!isLoggedIn()) { setShowLogin(true); return }
+    addItem({
+      productId: product.id,
+      quantity: 1,
+      productName: product.name,
+      productImageUrl: product.imageUrl ?? undefined,
+      priceInCents: product.discountPriceInCents ?? product.priceInCents,
+    })
+  }
 
   const C = isDark ? {
     bg: '#121215', card: '#1A1A1F', border: 'rgba(255,255,255,0.07)',
@@ -281,6 +297,14 @@ export default function ProductPage() {
                       {wlLoading ? 'Aguarde...' : 'Reservar meu produto'}
                     </button>
                   )}
+                  {product.stockQuantity > 0 && (
+                    <button onClick={handleAddToCart} disabled={inCart}
+                      className="flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
+                      style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
+                      <BookmarkPlus className="w-4 h-4" />
+                      {inCart ? 'Já está na sua reserva' : 'Reservar este produto'}
+                    </button>
+                  )}
                   <Link href="/produtos"
                     className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
                     style={{ borderColor: C.border, color: C.text, backgroundColor: C.card }}>
@@ -295,6 +319,14 @@ export default function ProductPage() {
                     style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.30)' }}>
                     <MessageCircle className="w-5 h-5" /> Comprar pelo WhatsApp
                   </a>
+                  {product.stockQuantity > 0 && (
+                    <button onClick={handleAddToCart} disabled={inCart}
+                      className="flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
+                      style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
+                      <BookmarkPlus className="w-4 h-4" />
+                      {inCart ? 'Já está na sua reserva' : 'Reservar este produto'}
+                    </button>
+                  )}
                   <Link href="/produtos"
                     className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
                     style={{ borderColor: C.border, color: C.text, backgroundColor: C.card }}>
@@ -303,6 +335,15 @@ export default function ProductPage() {
                 </>
               )}
             </div>
+
+            {cartCount > 0 && (
+              <Link href="/cliente/reserva/carrinho"
+                className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full font-bold text-sm shadow-xl transition-transform active:scale-95"
+                style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}>
+                <BookmarkPlus className="w-4 h-4" />
+                Ver reserva ({cartCount})
+              </Link>
+            )}
 
             {product.description && (
               <p className="text-base leading-relaxed" style={{ color: C.text }}>{product.description}</p>

@@ -609,10 +609,16 @@ export interface MyWaitListEntry {
 }
 
 export interface MyReservation {
-  id: string; productId: string; productName?: string; productImageUrl?: string
+  id: string; reservationGroupId: string
+  productId: string; productName?: string; productImageUrl?: string
   variantId?: string; variantLabel?: string; quantity: number; status: string
   notes?: string; reservedAt: string; expiresAt: string
   fulfilledAt?: string; cancelledAt?: string; isExpired: boolean
+}
+
+export interface ReservationPixStatus {
+  hasPix: boolean; status?: string; pagoEm?: string
+  pixCopiaCola?: string; imagemQrCode?: string; expiraEm?: string; valorEmReais?: number
 }
 
 export interface UpdateMeRequest {
@@ -1121,6 +1127,14 @@ export const reservationApi = {
   mine:      ()                                    => api.get<MyReservation[]>('/api/reservations/mine'),
   create:    (body: { productId: string; variantId?: string; quantity?: number; notes?: string }) =>
                api.post('/api/reservations', body),
+  createCart: (items: { productId: string; variantId?: string; quantity: number }[]) =>
+               api.post<{ groupId: string; items: MyReservation[] }>('/api/reservations/cart', { items }),
+  gerarPix:  (groupId: string)                     =>
+               api.post<{ txId: string; status: string; pixCopiaCola?: string; imagemQrCode?: string; expiraEm?: string; valorEmReais: number }>(
+                 `/api/reservations/group/${groupId}/pix`),
+  verificarPix: (groupId: string)                  =>
+               api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
+  getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
   extend:    (id: string)                          => api.put(`/api/reservations/${id}/extend`),
   homologar: (id: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; comandaId?: string }) =>

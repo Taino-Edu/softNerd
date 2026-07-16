@@ -15,6 +15,14 @@ public class ProductReservation
     [Column("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    /// <summary>
+    /// Agrupa várias reservas feitas numa mesma "compra" (carrinho de reserva) — o cliente pode
+    /// reservar vários produtos de uma vez, cada um vira uma linha aqui com o mesmo GroupId.
+    /// Reservas antigas (de antes do carrinho) têm GroupId == Id (grupo de 1 item só).
+    /// </summary>
+    [Column("reservation_group_id")]
+    public Guid ReservationGroupId { get; set; }
+
     [Column("user_id")]
     public Guid UserId { get; set; }
 

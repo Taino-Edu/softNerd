@@ -17,6 +17,7 @@ public enum PixCobrancaOrigem
     Comanda,
     VendaAvulsa,
     Campeonato,
+    Reserva,
 }
 
 [Table("pix_cobrancas")]
@@ -55,6 +56,14 @@ public class PixCobranca
 
     [ForeignKey(nameof(ChampionshipParticipantId))]
     public ChampionshipParticipant? ChampionshipParticipant { get; set; }
+
+    /// <summary>
+    /// Preenchido quando Origem = Reserva — correlaciona com ProductReservation.ReservationGroupId.
+    /// Sem FK relacional de verdade (ReservationGroupId não é PK de nenhuma tabela própria, é só um
+    /// Guid compartilhado entre as linhas do carrinho de reserva), mesmo espírito do VendaAvulsaId.
+    /// </summary>
+    [Column("reservation_group_id")]
+    public Guid? ReservationGroupId { get; set; }
 
     /// <summary>Identificador único da transação Pix (gerado por nós, enviado ao Inter).</summary>
     [Required, MaxLength(35)]

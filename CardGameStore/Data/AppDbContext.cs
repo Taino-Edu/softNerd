@@ -374,6 +374,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(p => p.ComandaId)
                   .HasDatabaseName("ix_pix_cobrancas_comanda");
 
+            entity.HasIndex(p => p.ReservationGroupId)
+                  .HasDatabaseName("ix_pix_cobrancas_reservation_group");
+
             entity.HasOne(p => p.Crediario)
                   .WithMany()
                   .HasForeignKey(p => p.CrediarioId)
@@ -385,6 +388,15 @@ public class AppDbContext : DbContext
                   .HasForeignKey(p => p.ComandaId)
                   .OnDelete(DeleteBehavior.Cascade)
                   .IsRequired(false);
+        });
+
+        // =====================================================================
+        // PRODUCT RESERVATION
+        // =====================================================================
+        modelBuilder.Entity<ProductReservation>(entity =>
+        {
+            entity.HasIndex(r => r.ReservationGroupId)
+                  .HasDatabaseName("ix_product_reservations_group");
         });
 
         // =====================================================================
