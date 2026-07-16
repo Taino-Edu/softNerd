@@ -224,12 +224,12 @@ export default function ProductPage() {
 
             <div className="flex flex-wrap gap-2">
               {product.isPreVenda && (
-                <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full text-white"
-                  style={{ backgroundColor: '#7C3AED' }}>Pré-venda</span>
+                <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
+                  style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
               )}
               {!product.isPreVenda && product.isOnPromo && (
-                <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full text-white"
-                  style={{ backgroundColor: '#EF4444' }}>Promoção</span>
+                <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
+                  style={{ backgroundColor: '#EF4444', color: '#fff' }}>Promoção</span>
               )}
               <span className="text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1"
                 style={{ backgroundColor: C.chip, color: C.text }}>
@@ -274,8 +274,8 @@ export default function ProductPage() {
                     <div className="rounded-2xl border p-4 flex items-center justify-between gap-3"
                       style={{ backgroundColor: isDark ? '#1a1435' : '#f5f0ff', borderColor: '#7C3AED' }}>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-lg"
-                          style={{ backgroundColor: '#7C3AED' }}>
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-lg"
+                          style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
                           {wl.position}
                         </div>
                         <div>

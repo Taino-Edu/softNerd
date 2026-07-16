@@ -244,8 +244,8 @@ function ProductCard({ p, adding, onAdd }: {
           {unavailable && (
             <div className="absolute inset-0 flex items-center justify-center"
               style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}>
-              <span className="text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-md text-white"
-                style={{ backgroundColor: '#6B7280' }}>Indisponível</span>
+              <span className="text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-md"
+                style={{ backgroundColor: '#6B7280', color: '#fff' }}>Indisponível</span>
             </div>
           )}
         </div>
@@ -359,8 +359,8 @@ function PixPagamentoCard({ pix }: { pix: PixCobrancaDto }) {
         )}
 
         <button onClick={pagarNoBanco}
-          className="w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 text-white"
-          style={{ backgroundColor: '#16a34a' }}>
+          className="w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+          style={{ backgroundColor: '#16a34a', color: '#fff' }}>
           <Share2 className="w-4 h-4" /> Pagar no app do banco
         </button>
 

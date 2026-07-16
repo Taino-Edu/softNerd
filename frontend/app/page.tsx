@@ -889,8 +889,8 @@ function EventCalendar({ championships, onSelect, C }: {
           {Object.entries(eventDays).map(([day, c]) => (
             <button key={day} onClick={() => onSelect(c)}
               className="w-full text-left flex items-center gap-2 text-[11px] hover:opacity-80 transition-opacity">
-              <span className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 font-black text-white text-[10px]"
-                style={{ backgroundColor: C.blue }}>{day}</span>
+              <span className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 font-black text-[10px]"
+                style={{ backgroundColor: C.blue, color: '#fff' }}>{day}</span>
               <span className="line-clamp-1 font-semibold" style={{ color: C.navy }}>{c.name}</span>
             </button>
           ))}
@@ -1151,8 +1151,8 @@ function ProductModal({ product: p, onClose, C }: { product: Product; onClose: (
 
               {/* % OFF */}
               {discountPct != null && (
-                <div className="absolute top-3 right-3 w-11 h-11 rounded-full flex items-center justify-center font-black text-[11px] leading-none text-white"
-                  style={{ backgroundColor: '#FF3B3B' }}>
+                <div className="absolute top-3 right-3 w-11 h-11 rounded-full flex items-center justify-center font-black text-[11px] leading-none"
+                  style={{ backgroundColor: '#FF3B3B', color: '#fff' }}>
                   -{discountPct}%
                 </div>
               )}
