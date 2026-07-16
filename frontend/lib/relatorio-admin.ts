@@ -366,8 +366,10 @@ export async function gerarRelatorioCrediario(data: RelatorioCrediarioDto) {
   ])
 
   // ── Devedores ──────────────────────────────────────────────────────────────
-  if (data.devedores.length > 0) {
-    y = sectionTitle(doc, y, 'Clientes com crediário em aberto')
+  const isCurrentMonth = data.mes === (new Date().getMonth() + 1) && data.ano === new Date().getFullYear();
+
+  if (data.devedores.length > 0 && isCurrentMonth) {
+    y = sectionTitle(doc, y, 'Clientes com crediário em aberto (Situação Atual)')
     ;(doc as any).autoTable({
       startY: y,
       head: [['Cliente', 'WhatsApp', 'Vencimento', 'Dias Atraso', 'Saldo Devedor']],
@@ -418,7 +420,7 @@ export async function gerarRelatorioCrediario(data: RelatorioCrediarioDto) {
         }),
         p.clienteNome,
         p.formaPagamento,
-        p.observacao ?? '—',
+        p.observacao ? (p.observacao.length > 35 ? p.observacao.substring(0, 32) + '...' : p.observacao.replace(/\n/g, ' ')) : '—',
         fmt(p.valorEmReais),
       ]),
       styles:      { fontSize: 8, cellPadding: 2.5, textColor: BLACK },
