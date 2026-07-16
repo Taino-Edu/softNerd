@@ -39,8 +39,13 @@ const RADIUS_OPTIONS: { value: SiteConfigDto['borderRadiusStyle']; label: string
   { value: 'Suave',            label: 'Suave',             previewRadius: '0.9rem' },
   { value: 'MuitoArredondado', label: 'Fofo e redondo',    previewRadius: '1.5rem' },
 ]
+// Espelha RADIUS_PRESETS de app/page.tsx — "xl" pros botões CTA, "2xl" pra cards, senão o preview
+// mostra um arredondamento que não bate com o que aparece no site real.
 const RADIUS_PREVIEW_MAP: Record<SiteConfigDto['borderRadiusStyle'], string> = {
   Padrao: '0.75rem', Suave: '1rem', MuitoArredondado: '1.75rem',
+}
+const RADIUS_PREVIEW_MAP_2XL: Record<SiteConfigDto['borderRadiusStyle'], string> = {
+  Padrao: '1rem', Suave: '1.25rem', MuitoArredondado: '2.25rem',
 }
 
 function Field({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
@@ -108,7 +113,10 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
       {/* Navbar */}
       <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: cfg.colorNavy }}>
         <span className="font-black text-sm text-white">{cfg.siteName || 'Nome do site'}</span>
-        <span className="text-[10px] font-black px-2.5 py-1 rounded-lg" style={{ backgroundColor: cfg.colorAccent, color: cfg.colorNavy }}>
+        <span className="text-[10px] font-black px-2.5 py-1" style={{
+          backgroundColor: cfg.colorAccent, color: cfg.colorNavy,
+          borderRadius: RADIUS_PREVIEW_MAP[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP.Padrao,
+        }}>
           {cfg.ctaVerEventosLabel || 'Ver Eventos'}
         </span>
       </div>
@@ -123,10 +131,16 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
           {cfg.heroSubtitle || 'Frase de apresentação...'}
         </p>
         <div className="flex gap-1.5 mb-3">
-          <span className="text-[10px] font-black px-2 py-1 rounded-lg" style={{ backgroundColor: cfg.colorAccent, color: cfg.colorNavy }}>
+          <span className="text-[10px] font-black px-2 py-1" style={{
+            backgroundColor: cfg.colorAccent, color: cfg.colorNavy,
+            borderRadius: RADIUS_PREVIEW_MAP[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP.Padrao,
+          }}>
             {cfg.ctaVerTorneiosLabel || 'Ver Torneios'}
           </span>
-          <span className="text-[10px] font-semibold px-2 py-1 rounded-lg border" style={{ borderColor: cfg.colorPrimary, color: cfg.colorPrimary }}>
+          <span className="text-[10px] font-semibold px-2 py-1 border" style={{
+            borderColor: cfg.colorPrimary, color: cfg.colorPrimary,
+            borderRadius: RADIUS_PREVIEW_MAP[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP.Padrao,
+          }}>
             {cfg.ctaVerProdutosLabel || 'Ver Produtos'}
           </span>
         </div>
@@ -134,7 +148,7 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
         {/* Card de exemplo */}
         <div className="overflow-hidden border" style={{
           backgroundColor: cfg.colorCard, borderColor: 'rgba(12,61,90,0.10)',
-          borderRadius: RADIUS_PREVIEW_MAP[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP.Padrao,
+          borderRadius: RADIUS_PREVIEW_MAP_2XL[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP_2XL.Padrao,
         }}>
           <div className="h-14" style={{ backgroundColor: cardAlt }} />
           <div className="p-2.5">
