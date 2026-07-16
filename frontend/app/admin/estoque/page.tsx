@@ -421,6 +421,29 @@ function ProductModal({
   const [cameraOpen, setCameraOpen] = useState(false)
   const set = (k: keyof Product, v: unknown) => setForm(f => ({ ...f, [k]: v }))
 
+  // Categoria + Subcategoria como dois campos dependentes (Estado → Cidade). O valor salvo em
+  // form.category continua sendo só uma string (nome da folha escolhida — subcategoria se houver,
+  // senão a categoria principal), sem migração de schema — mesma estratégia documentada no
+  // planejamento. selectedTopId é só estado de navegação do formulário, nunca é salvo.
+  const activeCategories = categories.filter(c => c.isActive)
+  const topCategories     = activeCategories.filter(c => !c.parentCategoryId)
+  const [selectedTopId, setSelectedTopId] = useState(() => {
+    const current = activeCategories.find(c => c.name === product?.category)
+    return current ? (current.parentCategoryId ?? current.id) : ''
+  })
+  const childCategories = activeCategories.filter(c => c.parentCategoryId === selectedTopId)
+  const selectedChildName = childCategories.some(c => c.name === form.category) ? form.category : ''
+
+  function handleTopChange(topId: string) {
+    setSelectedTopId(topId)
+    const top = topCategories.find(c => c.id === topId)
+    set('category', top?.name ?? '')
+  }
+  function handleChildChange(childName: string) {
+    const top = topCategories.find(c => c.id === selectedTopId)
+    set('category', childName || top?.name || '')
+  }
+
   async function handleCameraDetected(code: string) {
     setCameraOpen(false)
     set('barcode', code)
@@ -500,16 +523,30 @@ function ProductModal({
             <label className="label">Nome *</label>
             <input className="input" required value={form.name ?? ''} onChange={e => set('name', e.target.value)} placeholder="Ex: Coca-Cola Lata 350ml" />
           </div>
-          <div>
-            <label className="label">Categoria *</label>
-            <select className="input" required value={form.category ?? ''} onChange={e => set('category', e.target.value)}>
-              <option value="">Selecione...</option>
-              {categories.filter(c => c.isActive).map(c => {
-                const pai = categories.find(p => p.id === c.parentCategoryId)
-                const label = `${c.emoji ? `${c.emoji} ` : ''}${pai ? `${pai.name} › ` : ''}${c.name}`
-                return <option key={c.id} value={c.name}>{label}</option>
-              })}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Categoria *</label>
+              <select className="input" required value={selectedTopId} onChange={e => handleTopChange(e.target.value)}>
+                <option value="">Selecione...</option>
+                {topCategories.map(c => (
+                  <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ` : ''}{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Subcategoria</label>
+              <select
+                className="input"
+                value={selectedChildName ?? ''}
+                onChange={e => handleChildChange(e.target.value)}
+                disabled={childCategories.length === 0}
+              >
+                <option value="">{childCategories.length === 0 ? '— Sem subcategorias —' : 'Nenhuma (categoria geral)'}</option>
+                {childCategories.map(c => (
+                  <option key={c.id} value={c.name}>{c.emoji ? `${c.emoji} ` : ''}{c.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
