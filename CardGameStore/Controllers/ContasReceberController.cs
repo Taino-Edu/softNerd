@@ -100,6 +100,14 @@ public class ContasReceberController : ControllerBase
                                       t.PaidAt.Value.Year  == today.Year &&
                                       t.PaidAt.Value.Month == today.Month)
                          .Sum(t => t.Type == "income" ? t.Amount : -t.Amount),
+            // Recebido automaticamente via Pix pelo próprio sistema (Inter) — reservas pagas,
+            // taxas de inscrição de campeonato, etc. Separado do resto porque não passou por
+            // lançamento manual nenhum, é o dinheiro que "caiu sozinho".
+            pixRecebido = new
+            {
+                total = all.Where(t => t.Source == "inter" && t.Type == "income" && t.Status == "paid").Sum(t => t.Amount),
+                qtd   = all.Count(t => t.Source == "inter" && t.Type == "income" && t.Status == "paid"),
+            },
         });
     }
 

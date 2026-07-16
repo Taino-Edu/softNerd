@@ -8,7 +8,7 @@ import {
   Wallet, Plus, Upload, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, CheckCircle, Clock,
   AlertTriangle, TrendingDown, TrendingUp, DollarSign,
-  X, Pencil, Trash2, FileText, Inbox,
+  X, Pencil, Trash2, FileText, Inbox, QrCode,
 } from 'lucide-react'
 
 type Transaction = {
@@ -27,9 +27,10 @@ type Transaction = {
 }
 
 type Summary = {
-  aPagar:   { total: number; atrasado: number; vence7d: number; qtd: number }
-  aReceber: { total: number; qtd: number }
-  pagoMes:  number
+  aPagar:      { total: number; atrasado: number; vence7d: number; qtd: number }
+  aReceber:    { total: number; qtd: number }
+  pagoMes:     number
+  pixRecebido: { total: number; qtd: number }
 }
 
 type NotaDestinada = {
@@ -93,6 +94,34 @@ function fmtMoney(v: number) {
 function fmtDate(d?: string) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+/** Mesmo padrão visual dos cards de KPI de Financeiro (ícone em caixa colorida, valor grande) —
+ * antes essa tela usava um layout mais simples/genérico, sem bater com o resto do admin. */
+function StatCard({ label, value, sub, color = 'brand', icon: Icon }: {
+  label: string; value: string; sub?: string
+  color?: 'brand' | 'green' | 'red' | 'yellow'; icon: React.ElementType
+}) {
+  const colors: Record<string, string> = {
+    brand: 'text-brand-400', green: 'text-emerald-400',
+    red:   'text-red-400',   yellow: 'text-yellow-400',
+  }
+  const bgs: Record<string, string> = {
+    brand: 'bg-brand-600/15', green: 'bg-emerald-500/15',
+    red:   'bg-red-500/15',   yellow: 'bg-yellow-500/15',
+  }
+  return (
+    <div className="card flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">{label}</p>
+        <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', bgs[color])}>
+          <Icon className={clsx('w-4 h-4', colors[color])} />
+        </div>
+      </div>
+      <p className={clsx('text-2xl font-bold font-mono', colors[color])}>{value}</p>
+      {sub && <p className="text-xs text-gray-500">{sub}</p>}
+    </div>
+  )
 }
 
 // Vencimento é uma data pura (sem hora significativa, sempre salva como meia-noite UTC) —
@@ -500,37 +529,22 @@ export default function ContasReceberPage() {
 
       {/* Cards resumo */}
       {tab === 'lancamentos' && summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div className="card p-4 flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-xs text-gray-400 font-semibold">
-              <TrendingDown className="w-3.5 h-3.5 text-red-400" /> A Pagar
-            </div>
-            <p className="text-lg font-black text-white">{fmtMoney(summary.aPagar.total)}</p>
-            <p className="text-xs text-gray-500">{summary.aPagar.qtd} lançamentos</p>
-          </div>
-          <div className="card p-4 flex flex-col gap-1 border-red-500/20">
-            <div className="flex items-center gap-2 text-xs text-red-400 font-semibold">
-              <AlertTriangle className="w-3.5 h-3.5" /> Atrasado
-            </div>
-            <p className="text-lg font-black text-red-400">{fmtMoney(summary.aPagar.atrasado)}</p>
-            <p className="text-xs text-gray-500">Vence em 7d: {fmtMoney(summary.aPagar.vence7d)}</p>
-          </div>
-          <div className="card p-4 flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-xs text-gray-400 font-semibold">
-              <TrendingUp className="w-3.5 h-3.5 text-green-400" /> A Receber
-            </div>
-            <p className="text-lg font-black text-white">{fmtMoney(summary.aReceber.total)}</p>
-            <p className="text-xs text-gray-500">{summary.aReceber.qtd} lançamentos</p>
-          </div>
-          <div className="card p-4 flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-xs text-gray-400 font-semibold">
-              <DollarSign className="w-3.5 h-3.5 text-brand-400" /> Pago este mês
-            </div>
-            <p className={clsx('text-lg font-black', summary.pagoMes >= 0 ? 'text-green-400' : 'text-red-400')}>
-              {summary.pagoMes >= 0 ? '+' : ''}{fmtMoney(summary.pagoMes)}
-            </p>
-            <p className="text-xs text-gray-500">saldo (recebido − pago)</p>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <StatCard label="A Pagar" icon={TrendingDown} color="red"
+            value={fmtMoney(summary.aPagar.total)}
+            sub={`${summary.aPagar.qtd} lançamentos`} />
+          <StatCard label="Atrasado" icon={AlertTriangle} color="red"
+            value={fmtMoney(summary.aPagar.atrasado)}
+            sub={`Vence em 7d: ${fmtMoney(summary.aPagar.vence7d)}`} />
+          <StatCard label="A Receber" icon={TrendingUp} color="green"
+            value={fmtMoney(summary.aReceber.total)}
+            sub={`${summary.aReceber.qtd} lançamentos`} />
+          <StatCard label="Pago este mês" icon={DollarSign} color={summary.pagoMes >= 0 ? 'green' : 'red'}
+            value={`${summary.pagoMes >= 0 ? '+' : ''}${fmtMoney(summary.pagoMes)}`}
+            sub="saldo (recebido − pago)" />
+          <StatCard label="Recebido via Pix" icon={QrCode} color="brand"
+            value={fmtMoney(summary.pixRecebido.total)}
+            sub={`${summary.pixRecebido.qtd} pagamento${summary.pixRecebido.qtd !== 1 ? 's' : ''} automático${summary.pixRecebido.qtd !== 1 ? 's' : ''}`} />
         </div>
       )}
 
