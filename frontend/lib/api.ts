@@ -1268,6 +1268,10 @@ export interface SiteConfigDto {
   heroSubtitle: string
   addressLine: string
   contactPersonName: string
+  logoUrl?: string | null
+  faviconUrl?: string | null
+  pwaIconUrl?: string | null
+  adminIconUrl?: string | null
   whatsappNumber: string
   contactEmail: string
   navTorneiosLabel: string

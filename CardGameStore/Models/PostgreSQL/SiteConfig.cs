@@ -40,6 +40,27 @@ public class SiteConfig
     [Column("contact_person_name")]
     public string ContactPersonName { get; set; } = "Maikon";
 
+    // ── Identidade visual (upload via /api/upload/image) ───────────────────────
+    /// <summary>URL da logo da loja. Vazio = navbar continua mostrando só o nome em texto.</summary>
+    [MaxLength(300)]
+    [Column("logo_url")]
+    public string? LogoUrl { get; set; }
+
+    /// <summary>URL do favicon do site. Vazio = usa o ícone genérico padrão.</summary>
+    [MaxLength(300)]
+    [Column("favicon_url")]
+    public string? FaviconUrl { get; set; }
+
+    /// <summary>URL do ícone do PWA (instalar como app). Vazio = usa o ícone genérico padrão.</summary>
+    [MaxLength(300)]
+    [Column("pwa_icon_url")]
+    public string? PwaIconUrl { get; set; }
+
+    /// <summary>URL do ícone exibido no painel admin. Vazio = usa LogoUrl.</summary>
+    [MaxLength(300)]
+    [Column("admin_icon_url")]
+    public string? AdminIconUrl { get; set; }
+
     // ── Contato ──────────────────────────────────────────────────────────────
     [MaxLength(20)]
     [Column("whatsapp_number")]

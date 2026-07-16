@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getRole } from '@/lib/auth'
 import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto } from '@/lib/api'
+import { mixHex } from '@/lib/colors'
 import Link from 'next/link'
 import {
   Trophy, ShoppingBag, Star, Calendar, Users,
@@ -18,6 +19,10 @@ const DEFAULT_SITE: SiteConfigDto = {
   heroSubtitle: 'Produtos, torneios e a melhor experiência TCG da região. Acumule pontos, compre na mesa e participe de campeonatos.',
   addressLine: 'José Bonifácio — SP',
   contactPersonName: 'Maikon',
+  logoUrl: null,
+  faviconUrl: null,
+  pwaIconUrl: null,
+  adminIconUrl: null,
   whatsappNumber: '5517997633103',
   contactEmail: 'santuarionerd@gmail.com',
   navTorneiosLabel: 'Torneios',
@@ -48,21 +53,6 @@ const RADIUS_PRESETS: Record<SiteConfigDto['borderRadiusStyle'], { md: string; l
   Padrao:           { md: '0.375rem', lg: '0.5rem', xl: '0.75rem', twoXl: '1rem' },
   Suave:            { md: '0.5rem',   lg: '0.75rem', xl: '1rem',   twoXl: '1.25rem' },
   MuitoArredondado: { md: '0.75rem',  lg: '1.25rem', xl: '1.75rem', twoXl: '2.25rem' },
-}
-
-/** Mistura duas cores hex — usado pra derivar o "cardAlt" (fundo de imagem dentro de card)
- * a partir da cor de card + um toque da cor primária, sem precisar de um campo próprio. */
-function mixHex(a: string, b: string, ratio: number): string {
-  const parse = (h: string) => {
-    const m = /^#?([0-9a-f]{6})$/i.exec(h.trim())
-    if (!m) return null
-    const n = parseInt(m[1], 16)
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-  }
-  const pa = parse(a), pb = parse(b)
-  if (!pa || !pb) return a
-  const mix = pa.map((c, i) => Math.round(c * (1 - ratio) + pb[i] * ratio))
-  return '#' + mix.map(c => c.toString(16).padStart(2, '0')).join('')
 }
 
 /** Formata "5517999998888" como "(17) 99999-8888" — se não bater o formato esperado, devolve como veio. */
@@ -119,6 +109,11 @@ export default function LandingPage() {
     yellow: site.colorAccent, text: '#4D8FAC',
     navy: '#0C3D5A',
   }
+
+  // Fundo padrão do banner/anúncio quando não há imagem — antes era um navy fixo (#0D1B2A/
+  // #112B45) que não respondia a nenhuma personalização. Agora deriva da cor de navbar
+  // configurada, então muda junto quando o admin troca a cor em Personalizar Site.
+  const bannerGradient = `linear-gradient(135deg, ${site.colorNavy} 0%, ${mixHex(site.colorNavy, '#000000', 0.35)} 100%)`
 
   function toggleDark() {
     const next = !isDark
@@ -217,7 +212,11 @@ export default function LandingPage() {
         onMouseLeave={() => setNavHover(false)}>
 
         {/* Marca centralizada absolutamente */}
-        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none">
+        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none flex items-center gap-2">
+          {site.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={site.logoUrl} alt={site.siteName} className="h-8 w-auto object-contain" />
+          )}
           <span className="font-black text-2xl leading-none" style={{ color: '#ffffff' }}>{site.siteName}</span>
         </div>
 
@@ -342,7 +341,7 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/10" />
           </>
         ) : (
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0D1B2A 0%, #112B45 100%)' }} />
+          <div className="absolute inset-0" style={{ background: bannerGradient }} />
         )}
 
         {/* Conteúdo do hero — por cima do fundo */}
@@ -373,11 +372,12 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Logo principal */}
+            {/* Logo principal — usa a logo configurada em Personalizar Site; sem uma, mantém o
+                arquivo padrão original pra não quebrar o visual de quem nunca configurou nada. */}
             <div className="relative shrink-0 w-full max-w-xs sm:max-w-sm md:max-w-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo-santuario.svg"
+                src={site.logoUrl || '/logo-santuario.svg'}
                 alt={site.siteName}
                 className="w-full h-auto object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
               />
@@ -445,7 +445,7 @@ export default function LandingPage() {
                 style={{
                   opacity: i === annIdx ? 1 : 0,
                   pointerEvents: i === annIdx ? 'auto' : 'none',
-                  background: 'linear-gradient(135deg, #0D1B2A 0%, #112B45 100%)',
+                  background: bannerGradient,
                 }}
               >
                 {a.imageUrl ? (
@@ -465,7 +465,7 @@ export default function LandingPage() {
                   </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-4 px-8 text-center"
-                    style={{ background: `linear-gradient(135deg, #0D1B2A 0%, #112B45 100%)` }}>
+                    style={{ background: bannerGradient }}>
                     <span className="inline-block text-xs font-black uppercase tracking-widest px-3 py-1 rounded"
                       style={{ background: a.type === 'Destaque' ? C.blue : C.yellow, color: a.type === 'Destaque' ? '#fff' : site.colorNavy }}>
                       {a.type === 'Destaque' ? 'Destaque' : 'Aviso'}
@@ -732,7 +732,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
             {/* Logo */}
             <div className="flex items-center gap-2.5">
-              <img src="/logo-maikon.png" alt={site.siteName} className="h-8 w-auto object-contain" />
+              <img src={site.logoUrl || '/logo-maikon.png'} alt={site.siteName} className="h-8 w-auto object-contain" />
               <div>
                 <p className="font-black text-sm leading-tight" style={{ color: C.navy }}>{site.siteName}</p>
                 <p className="text-[10px]" style={{ color: C.text }}>{site.addressLine}</p>

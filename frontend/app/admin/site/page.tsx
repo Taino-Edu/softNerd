@@ -1,15 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { siteConfigApi, SiteConfigDto } from '@/lib/api'
+import { siteConfigApi, uploadApi, SiteConfigDto } from '@/lib/api'
+import { mixHex, getContrastText } from '@/lib/colors'
 import toast, { Toaster } from 'react-hot-toast'
-import { Palette, Save, Loader2, ExternalLink } from 'lucide-react'
+import { Palette, Save, Loader2, ExternalLink, Upload, Image as ImageIcon } from 'lucide-react'
 
 const DEFAULTS: SiteConfigDto = {
   siteName: 'Santuário Nerd',
   heroSubtitle: 'Produtos, torneios e a melhor experiência TCG da região. Acumule pontos, compre na mesa e participe de campeonatos.',
   addressLine: 'José Bonifácio — SP',
   contactPersonName: 'Maikon',
+  logoUrl: null,
+  faviconUrl: null,
+  pwaIconUrl: null,
+  adminIconUrl: null,
   whatsappNumber: '5517997633103',
   contactEmail: 'santuarionerd@gmail.com',
   navTorneiosLabel: 'Torneios',
@@ -80,18 +85,35 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   )
 }
 
-/** Mistura duas cores hex — mesmo helper usado na landing pra derivar o fundo de imagem dentro do card. */
-function mixHex(a: string, b: string, ratio: number): string {
-  const parse = (h: string) => {
-    const m = /^#?([0-9a-f]{6})$/i.exec(h.trim())
-    if (!m) return null
-    const n = parseInt(m[1], 16)
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-  }
-  const pa = parse(a), pb = parse(b)
-  if (!pa || !pb) return a
-  const mix = pa.map((c, i) => Math.round(c * (1 - ratio) + pb[i] * ratio))
-  return '#' + mix.map(c => c.toString(16).padStart(2, '0')).join('')
+/** Upload de um ícone (logo/favicon/PWA/admin) — envia na hora pro servidor e guarda a URL
+ * retornada no estado local do formulário; só persiste de verdade quando o admin clica em
+ * "Salvar", igual todo o resto desta tela. */
+function IconUploadField({
+  label, desc, value, uploading, onUpload,
+}: { label: string; desc: string; value: string | null | undefined; uploading: boolean; onUpload: (file: File) => void }) {
+  return (
+    <div>
+      <label className="text-xs text-gray-400 font-semibold mb-1 block">{label}</label>
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-lg border border-surface-500 bg-surface-800 flex items-center justify-center overflow-hidden shrink-0">
+          {value ? (
+            <img src={value} alt={label} className="w-full h-full object-contain" />
+          ) : (
+            <ImageIcon className="w-5 h-5 text-gray-600" />
+          )}
+        </div>
+        <label className="btn-secondary text-sm py-1.5 cursor-pointer">
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          Enviar
+          <input
+            type="file" accept="image/*" className="hidden" disabled={uploading}
+            onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = '' }}
+          />
+        </label>
+      </div>
+      <p className="text-[11px] text-gray-500 mt-1">{desc}</p>
+    </div>
+  )
 }
 
 /** Preview ao vivo — miniatura da navbar + hero + card da landing page, refletindo o
@@ -111,9 +133,16 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
       </div>
 
       {/* Navbar */}
-      <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: cfg.colorNavy }}>
-        <span className="font-black text-sm text-white">{cfg.siteName || 'Nome do site'}</span>
-        <span className="text-[10px] font-black px-2.5 py-1" style={{
+      <div className="px-4 py-3 flex items-center justify-between gap-2" style={{ backgroundColor: cfg.colorNavy }}>
+        <span className="flex items-center gap-1.5 min-w-0">
+          {cfg.logoUrl && (
+            <img src={cfg.logoUrl} alt="Logo" className="w-6 h-6 object-contain shrink-0" />
+          )}
+          <span className="font-black text-sm truncate" style={{ color: getContrastText(cfg.colorNavy) }}>
+            {cfg.siteName || 'Nome do site'}
+          </span>
+        </span>
+        <span className="text-[10px] font-black px-2.5 py-1 shrink-0" style={{
           backgroundColor: cfg.colorAccent, color: cfg.colorNavy,
           borderRadius: RADIUS_PREVIEW_MAP[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP.Padrao,
         }}>
@@ -127,7 +156,7 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
           <span style={{ color: cfg.colorAccent }}>{firstWord || 'Nome'}</span>
           {restWord && <span style={{ color: cfg.colorPrimary }}> {restWord}</span>}
         </p>
-        <p className="text-[10px] leading-snug mb-3" style={{ color: '#4D8FAC' }}>
+        <p className="text-[10px] leading-snug mb-3" style={{ color: getContrastText(cfg.colorBackground, '#4D8FAC', 'rgba(255,255,255,0.85)') }}>
           {cfg.heroSubtitle || 'Frase de apresentação...'}
         </p>
         <div className="flex gap-1.5 mb-3">
@@ -155,7 +184,7 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
             <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: cfg.colorPrimary }}>
               {cfg.produtosEyebrow || 'Vitrine'}
             </p>
-            <p className="text-xs font-black" style={{ color: cfg.colorNavy }}>{cfg.produtosTitle || 'Em Destaque'}</p>
+            <p className="text-xs font-black" style={{ color: getContrastText(cfg.colorCard, '#0C3D5A', '#FFFFFF') }}>{cfg.produtosTitle || 'Em Destaque'}</p>
           </div>
         </div>
       </div>
@@ -167,6 +196,7 @@ export default function SiteConfigPage() {
   const [cfg, setCfg]         = useState<SiteConfigDto>(DEFAULTS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
+  const [uploadingIcon, setUploadingIcon] = useState<'logoUrl' | 'faviconUrl' | 'pwaIconUrl' | 'adminIconUrl' | null>(null)
 
   useEffect(() => {
     siteConfigApi.get()
@@ -177,6 +207,19 @@ export default function SiteConfigPage() {
 
   function set<K extends keyof SiteConfigDto>(key: K, value: SiteConfigDto[K]) {
     setCfg(prev => ({ ...prev, [key]: value }))
+  }
+
+  async function uploadIcon(field: 'logoUrl' | 'faviconUrl' | 'pwaIconUrl' | 'adminIconUrl', file: File) {
+    setUploadingIcon(field)
+    try {
+      const { data } = await uploadApi.image(file)
+      set(field, data.url)
+      toast.success('Enviado! Clique em Salvar pra aplicar.')
+    } catch {
+      toast.error('Erro ao enviar imagem')
+    } finally {
+      setUploadingIcon(null)
+    }
   }
 
   async function save() {
@@ -236,6 +279,33 @@ export default function SiteConfigPage() {
         <Field label="Nome de quem atende" desc={'Usado em textos como "Falar com [nome]" e "[nome] vai confirmar sua vaga..."'}>
           <input value={cfg.contactPersonName} onChange={e => set('contactPersonName', e.target.value)} className="input w-full" />
         </Field>
+      </div>
+
+      {/* Identidade visual */}
+      <div className="card p-5 space-y-4">
+        <h3 className="font-bold text-white mb-1">Identidade visual</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <IconUploadField
+            label="Logo da loja" desc="Aparece ao lado do nome na navbar"
+            value={cfg.logoUrl} uploading={uploadingIcon === 'logoUrl'}
+            onUpload={f => uploadIcon('logoUrl', f)}
+          />
+          <IconUploadField
+            label="Favicon" desc="Aparece na aba do navegador"
+            value={cfg.faviconUrl} uploading={uploadingIcon === 'faviconUrl'}
+            onUpload={f => uploadIcon('faviconUrl', f)}
+          />
+          <IconUploadField
+            label="Ícone do PWA" desc="Aparece quando o cliente instala o site como app"
+            value={cfg.pwaIconUrl} uploading={uploadingIcon === 'pwaIconUrl'}
+            onUpload={f => uploadIcon('pwaIconUrl', f)}
+          />
+          <IconUploadField
+            label="Ícone do admin" desc="Aparece no painel administrativo. Vazio = usa a logo da loja"
+            value={cfg.adminIconUrl} uploading={uploadingIcon === 'adminIconUrl'}
+            onUpload={f => uploadIcon('adminIconUrl', f)}
+          />
+        </div>
       </div>
 
       {/* Contato */}

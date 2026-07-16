@@ -432,13 +432,29 @@ public class ReservationController : ControllerBase
 
         pix.Status = result.Status ?? pix.Status;
         if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
+        {
             pix.PagoEm = DateTime.UtcNow;
+            
+            var tx = new ExternalTransaction
+            {
+                Source = "inter",
+                ExternalId = pix.TxId,
+                Type = "income",
+                Amount = pix.ValorEmCentavos / 100m,
+                Description = $"Pix Reserva Grupo {groupId.ToString().Substring(0,8)}",
+                DueDate = pix.ExpiraEm,
+                PaidAt = pix.PagoEm,
+                Status = "paid",
+                Notes = $"Pagamento via Pix da Reserva {groupId}"
+            };
+            _db.ExternalTransactions.Add(tx);
+        }
 
         await _db.SaveChangesAsync();
         return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
     }
 
-    // GET /api/reservations/group/{groupId}/pix — status atual do pagamento (sem consultar o Inter de novo)
+    // GET /api/reservations/group/{groupId}/pix — status atual do pagamento
     [HttpGet("group/{groupId:guid}/pix")]
     [Authorize]
     public async Task<IActionResult> GetPixReserva(Guid groupId)
@@ -454,6 +470,38 @@ public class ReservationController : ControllerBase
             .FirstOrDefaultAsync();
 
         if (pix is null) return Ok(new { hasPix = false });
+
+        if (pix.Status == "ATIVA")
+        {
+            var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+            if (cfg is not null)
+            {
+                var result = await _inter.ConsultarCobrancaAsync(cfg, pix.TxId);
+                if (result.Error is null && result.Status != null)
+                {
+                    pix.Status = result.Status;
+                    if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
+                    {
+                        pix.PagoEm = DateTime.UtcNow;
+                        var tx = new ExternalTransaction
+                        {
+                            Source = "inter",
+                            ExternalId = pix.TxId,
+                            Type = "income",
+                            Amount = pix.ValorEmCentavos / 100m,
+                            Description = $"Pix Reserva Grupo {groupId.ToString().Substring(0,8)}",
+                            DueDate = pix.ExpiraEm,
+                            PaidAt = pix.PagoEm,
+                            Status = "paid",
+                            Notes = $"Pagamento via Pix da Reserva {groupId}"
+                        };
+                        _db.ExternalTransactions.Add(tx);
+                    }
+                    await _db.SaveChangesAsync();
+                }
+            }
+        }
+
         return Ok(new { hasPix = true, pix.Status, pix.PagoEm, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
     }
 
