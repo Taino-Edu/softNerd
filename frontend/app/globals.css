@@ -138,6 +138,19 @@
 
 }
 
+/* ── Hover states — substitui o cinza chapado (hover:bg-surface-500/700, usado
+   em ~60 lugares no admin) por um tom sutil da cor da marca. O cinza fazia
+   linhas/cards parecerem "desabilitados" ao passar o mouse, em vez de destacados. */
+.hover\:bg-surface-500:hover,
+.hover\:bg-surface-500\/20:hover,
+.hover\:bg-surface-500\/30:hover,
+.hover\:bg-surface-700:hover,
+.hover\:bg-surface-700\/30:hover,
+.hover\:bg-surface-700\/40:hover,
+.hover\:bg-surface-700\/50:hover {
+  background-color: rgba(62, 194, 242, 0.10) !important;
+}
+
 /* ── Overrides de tema claro para classes Tailwind fixas ──────────────────── */
 html.light {
   /* Fundo de página */
@@ -171,9 +184,10 @@ html.light {
   /* Admin sidebar */
   .bg-\[#1E1E2D\] { background-color: #EAE8FF !important; }
 
-  /* Hover states */
-  .hover\:bg-surface-700:hover { background-color: #EAEAF0 !important; }
-  .hover\:bg-surface-500:hover { background-color: #D5D5DF !important; }
+  /* Hover states — mesmo tom sutil da marca usado no tema escuro (ver regra fora
+     deste bloco), só reafirmado aqui porque tem mais especificidade que a de fora. */
+  .hover\:bg-surface-700:hover { background-color: rgba(62, 194, 242, 0.10) !important; }
+  .hover\:bg-surface-500:hover { background-color: rgba(62, 194, 242, 0.10) !important; }
 
   /* Placeholders */
   ::placeholder { color: #AAAAAA !important; }
