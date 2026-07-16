@@ -113,7 +113,10 @@ function LivePreview({ cfg }: { cfg: SiteConfigDto }) {
       {/* Navbar */}
       <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: cfg.colorNavy }}>
         <span className="font-black text-sm text-white">{cfg.siteName || 'Nome do site'}</span>
-        <span className="text-[10px] font-black px-2.5 py-1 rounded-lg" style={{ backgroundColor: cfg.colorAccent, color: cfg.colorNavy }}>
+        <span className="text-[10px] font-black px-2.5 py-1" style={{
+          backgroundColor: cfg.colorAccent, color: cfg.colorNavy,
+          borderRadius: RADIUS_PREVIEW_MAP[cfg.borderRadiusStyle] ?? RADIUS_PREVIEW_MAP.Padrao,
+        }}>
           {cfg.ctaVerEventosLabel || 'Ver Eventos'}
         </span>
       </div>
