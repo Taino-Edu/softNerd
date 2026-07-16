@@ -290,20 +290,30 @@ export default function ProductPage() {
                       </button>
                     </div>
                   ) : (
-                    <button onClick={joinQueue} disabled={wlLoading}
-                      className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
-                      style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
-                      <Clock className="w-5 h-5" />
-                      {wlLoading ? 'Aguarde...' : 'Reservar meu produto'}
-                    </button>
+                    <div>
+                      <button onClick={joinQueue} disabled={wlLoading}
+                        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
+                        style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
+                        <Clock className="w-5 h-5" />
+                        {wlLoading ? 'Aguarde...' : 'Reservar meu produto'}
+                      </button>
+                      <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
+                        Pré-venda: ainda não chegou — avisamos você pelo WhatsApp assim que estiver disponível
+                      </p>
+                    </div>
                   )}
                   {product.stockQuantity > 0 && (
-                    <button onClick={handleAddToCart} disabled={inCart}
-                      className="flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
-                      style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
-                      <BookmarkPlus className="w-4 h-4" />
-                      {inCart ? 'Já está na sua reserva' : 'Reservar este produto'}
-                    </button>
+                    <div>
+                      <button onClick={handleAddToCart} disabled={inCart}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
+                        style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
+                        <BookmarkPlus className="w-4 h-4" />
+                        {inCart ? 'Já está guardado pra você' : 'Guardar para retirar depois'}
+                      </button>
+                      <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
+                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou agora pelo Pix
+                      </p>
+                    </div>
                   )}
                   <Link href="/produtos"
                     className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
@@ -313,19 +323,29 @@ export default function ProductPage() {
                 </>
               ) : (
                 <>
-                  <a href={`https://wa.me/${WA_NUM}?text=${waMsg}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
-                    style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.30)' }}>
-                    <MessageCircle className="w-5 h-5" /> Comprar pelo WhatsApp
-                  </a>
+                  <div>
+                    <a href={`https://wa.me/${WA_NUM}?text=${waMsg}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
+                      style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.30)' }}>
+                      <MessageCircle className="w-5 h-5" /> Comprar pelo WhatsApp
+                    </a>
+                    <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
+                      Você compra agora e combina a retirada direto com a gente
+                    </p>
+                  </div>
                   {product.stockQuantity > 0 && (
-                    <button onClick={handleAddToCart} disabled={inCart}
-                      className="flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
-                      style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
-                      <BookmarkPlus className="w-4 h-4" />
-                      {inCart ? 'Já está na sua reserva' : 'Reservar este produto'}
-                    </button>
+                    <div>
+                      <button onClick={handleAddToCart} disabled={inCart}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
+                        style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
+                        <BookmarkPlus className="w-4 h-4" />
+                        {inCart ? 'Já está guardado pra você' : 'Guardar para retirar depois'}
+                      </button>
+                      <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
+                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou agora pelo Pix
+                      </p>
+                    </div>
                   )}
                   <Link href="/produtos"
                     className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
