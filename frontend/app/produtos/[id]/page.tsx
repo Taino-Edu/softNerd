@@ -311,7 +311,8 @@ export default function ProductPage() {
                         {inCart ? 'Já está guardado pra você' : 'Guardar para retirar depois'}
                       </button>
                       <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
-                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou agora pelo Pix
+                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou no Pix.
+                        Pode guardar vários produtos e finalizar tudo junto no botão roxo "Ver reserva".
                       </p>
                     </div>
                   )}
@@ -343,7 +344,8 @@ export default function ProductPage() {
                         {inCart ? 'Já está guardado pra você' : 'Guardar para retirar depois'}
                       </button>
                       <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
-                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou agora pelo Pix
+                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou no Pix.
+                        Pode guardar vários produtos e finalizar tudo junto no botão roxo "Ver reserva".
                       </p>
                     </div>
                   )}
@@ -358,10 +360,11 @@ export default function ProductPage() {
 
             {cartCount > 0 && (
               <Link href="/cliente/reserva/carrinho"
-                className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full font-bold text-sm shadow-xl transition-transform active:scale-95"
+                key={cartCount}
+                className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full font-bold text-sm shadow-xl transition-transform active:scale-95 animate-bounce-in"
                 style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}>
                 <BookmarkPlus className="w-4 h-4" />
-                Ver reserva ({cartCount})
+                Ver reserva ({cartCount}) — finalizar
               </Link>
             )}
 
