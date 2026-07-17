@@ -242,6 +242,110 @@ public class NfceEmissionServiceTests
         resultado.Status.Should().Be(NotaFiscalStatus.Cancelada);
     }
 
+    // ── Contingência offline: prazo de 24h e isenção do limite de tentativas ──
+
+    [Fact]
+    public async Task ReprocessarAsync_ContingenciaComPrazoExpirado_ParaDeTentarESinaliza()
+    {
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+
+        var nota = new NotaFiscalEmitida
+        {
+            Origem          = NotaFiscalOrigem.Comanda,
+            ComandaId       = comanda.Id,
+            Status          = NotaFiscalStatus.AutorizadaContingencia,
+            DhContingencia  = DateTime.UtcNow.AddHours(-25), // passou das 24h legais
+            CnfContingencia = 12345678,
+            Numero          = 42,
+        };
+        db.NotasFiscaisEmitidas.Add(nota);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var resultado = await service.ReprocessarAsync(nota.Id);
+
+        resultado.TentativasReprocessamento.Should().Be(0); // nem tentou — prazo expirado
+        resultado.Status.Should().Be(NotaFiscalStatus.AutorizadaContingencia); // não vira Rejeitada (cupom já entregue)
+        resultado.MotivoRejeicao.Should().Contain("24h");
+    }
+
+    [Fact]
+    public async Task ReprocessarAsync_ContingenciaDentroDoPrazo_IgnoraLimiteDe10Tentativas()
+    {
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+
+        var nota = new NotaFiscalEmitida
+        {
+            Origem                     = NotaFiscalOrigem.Comanda,
+            ComandaId                  = comanda.Id,
+            Status                     = NotaFiscalStatus.AutorizadaContingencia,
+            DhContingencia             = DateTime.UtcNow.AddHours(-2), // dentro das 24h
+            CnfContingencia            = 12345678,
+            Numero                     = 42,
+            TentativasReprocessamento  = 10, // numa nota comum isso travaria — em contingência, não
+        };
+        db.NotasFiscaisEmitidas.Add(nota);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var resultado = await service.ReprocessarAsync(nota.Id);
+
+        // Tentou (incrementou) — a transmissão falha por falta de config fiscal,
+        // mas a nota NÃO pode ser abandonada antes do prazo legal de 24h.
+        resultado.TentativasReprocessamento.Should().Be(11);
+        resultado.Status.Should().Be(NotaFiscalStatus.AutorizadaContingencia);
+    }
+
+    // ── Idempotência: uma origem tem no máximo uma nota ───────────────────────
+
+    [Fact]
+    public async Task EmitirParaComandaAsync_NotaJaAutorizada_DevolveExistenteSemDuplicar()
+    {
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+
+        var existente = new NotaFiscalEmitida
+        {
+            Origem    = NotaFiscalOrigem.Comanda,
+            ComandaId = comanda.Id,
+            Status    = NotaFiscalStatus.Autorizada,
+            ChaveAcesso = "X", Protocolo = "P",
+        };
+        db.NotasFiscaisEmitidas.Add(existente);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var resultado = await service.EmitirParaComandaAsync(comanda.Id);
+
+        resultado.Id.Should().Be(existente.Id);
+        db.NotasFiscaisEmitidas.Count().Should().Be(1); // nenhuma nota nova criada
+    }
+
+    [Fact]
+    public async Task EmitirParaComandaAsync_NotaPendenteExistente_ReprocessaMesmaLinhaSemDuplicar()
+    {
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+
+        var existente = new NotaFiscalEmitida
+        {
+            Origem    = NotaFiscalOrigem.Comanda,
+            ComandaId = comanda.Id,
+            Status    = NotaFiscalStatus.PendenteEmissao,
+        };
+        db.NotasFiscaisEmitidas.Add(existente);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var resultado = await service.EmitirParaComandaAsync(comanda.Id);
+
+        resultado.Id.Should().Be(existente.Id);
+        resultado.TentativasReprocessamento.Should().Be(1); // virou reprocessamento na mesma linha
+        db.NotasFiscaisEmitidas.Count().Should().Be(1);
+    }
+
     // ── Mapeamento de CSOSN (MontarIcmsSimplesNacional) ───────────────────────
 
     private static NfceEmissionService.ItemFiscal Item(string? csosn, decimal? percentualCredito = null) =>

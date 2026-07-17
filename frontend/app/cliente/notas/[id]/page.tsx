@@ -70,6 +70,11 @@ export default function MeuCupomNfcePage() {
         <div style={{ textAlign: 'center', fontWeight: 700 }}>
           {cupom.status === 'Cancelada' ? 'NFC-e CANCELADA' : 'DOCUMENTO AUXILIAR DA NFC-e'}
         </div>
+        {cupom.status === 'AutorizadaContingencia' && (
+          <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 11 }}>
+            EMITIDA EM CONTINGÊNCIA — PENDENTE DE TRANSMISSÃO À SEFAZ
+          </div>
+        )}
         <hr />
 
         {cupom.itens.map((item, i) => (

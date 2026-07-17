@@ -663,6 +663,26 @@ using (var scope = app.Services.CreateScope())
                 CREATE UNIQUE INDEX IF NOT EXISTS ix_notas_fiscais_chave_acesso
                     ON notas_fiscais_emitidas (chave_acesso) WHERE chave_acesso IS NOT NULL;
 
+                -- Fiscal: no máximo UMA nota por origem (comanda/venda avulsa) — trava a corrida
+                -- entre dois fechamentos/emissões simultâneos (o NfceEmissionService também checa
+                -- na lógica; o índice cobre a corrida exata). DO-block com EXCEPTION pra não
+                -- derrubar o startup se um banco antigo já tiver duplicatas — nesse caso o índice
+                -- só não é criado e o aviso fica no log do Postgres.
+                DO $$
+                BEGIN
+                    CREATE UNIQUE INDEX IF NOT EXISTS ix_notas_fiscais_comanda_unica
+                        ON notas_fiscais_emitidas (comanda_id) WHERE comanda_id IS NOT NULL;
+                EXCEPTION WHEN OTHERS THEN
+                    RAISE WARNING 'ix_notas_fiscais_comanda_unica não criada (há notas duplicadas por comanda?): %', SQLERRM;
+                END $$;
+                DO $$
+                BEGIN
+                    CREATE UNIQUE INDEX IF NOT EXISTS ix_notas_fiscais_venda_avulsa_unica
+                        ON notas_fiscais_emitidas (venda_avulsa_id) WHERE venda_avulsa_id IS NOT NULL;
+                EXCEPTION WHEN OTHERS THEN
+                    RAISE WARNING 'ix_notas_fiscais_venda_avulsa_unica não criada (há notas duplicadas por venda avulsa?): %', SQLERRM;
+                END $$;
+
                 -- Fiscal: cancelamento, inutilização e controle de reprocessamento
                 ALTER TABLE notas_fiscais_emitidas ADD COLUMN IF NOT EXISTS justificativa_cancelamento TEXT        NULL;
                 ALTER TABLE notas_fiscais_emitidas ADD COLUMN IF NOT EXISTS inutilizado_em             TIMESTAMPTZ NULL;

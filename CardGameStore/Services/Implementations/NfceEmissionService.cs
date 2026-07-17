@@ -24,15 +24,19 @@
 //  - QR Code é gerado pela própria lib (Zeus.Net.NFe.NFCe / ExtinfNFeSupl),
 //    que já sabe a URL certa por estado — não reinventamos hash/URL na mão.
 //
-// Simplificações conhecidas ainda pendentes (documentadas para revisão futura
-// com o contador):
-//  - Itens sem Product vinculado (cartas TCG avulsas) usam NCM/CFOP/CSOSN de
-//    fallback (NCM 9504.40.00 "cartas para jogar" + a Natureza de Operação
-//    marcada como padrão).
-//  - Não há modo de contingência formal da SEFAZ (offline/EPEC/SVC) — se a
-//    SEFAZ estiver fora do ar, a nota só fica PendenteEmissao aguardando o
-//    retry automático. Pra um volume pequeno de vendas isso tende a resolver
-//    sozinho em minutos, mas não é o mecanismo oficial previsto em lei.
+// Robustez já implementada:
+//  - Contingência offline (tpEmis=9): SEFAZ inalcançável na venda → a nota sai
+//    com chave/cupom válidos e o FiscalRetryBackgroundService retransmite depois,
+//    reconstruindo a MESMA chave (número/cNf/tpEmis fixados). Respeita o prazo
+//    legal de 24h — depois dele para de tentar e sinaliza regularização manual.
+//  - Duplicidade (cStat 539) na (re)transmissão: quase sempre significa que uma
+//    tentativa anterior AUTORIZOU a nota e a resposta se perdeu (timeout). Em
+//    vez de marcar Rejeitada e inutilizar um número que pode estar autorizado na
+//    SEFAZ, o serviço consulta a situação real da chave e reconcilia o estado.
+//
+// Simplificações conhecidas ainda pendentes (revisar com o contador):
+//  - Produto sem NCM cadastrado BLOQUEIA a emissão (a nota fica PendenteEmissao)
+//    — o NCM nunca é inventado; deve vir da nota de compra do produto.
 //  - Cancelamento e inutilização assumem que "sem exceção + cStat esperado" é
 //    sucesso — não foi possível testar contra a SEFAZ real neste ambiente.
 // =============================================================================
@@ -76,7 +80,13 @@ public class NfceEmissionService : INfceEmissionService
     private static readonly TimeSpan JanelaCancelamento = TimeSpan.FromMinutes(30);
 
     // Trava contra loop de reprocessamento em nota permanentemente quebrada.
+    // NÃO se aplica à retransmissão de contingência (ver ReprocessarAsync).
     private const int MaxTentativasReprocessamento = 10;
+
+    // Prazo legal pra transmitir uma NFC-e emitida em contingência offline (tpEmis=9).
+    // Passou disso a SEFAZ rejeita — e insistir/inutilizar é pior: o cliente já saiu
+    // com o cupom. A nota fica sinalizada pra regularização manual com o contador.
+    private static readonly TimeSpan PrazoMaximoContingencia = TimeSpan.FromHours(24);
 
     // Todo horário enviado à SEFAZ usa esse fuso explicitamente — nunca o fuso
     // do servidor (containers em nuvem tipicamente rodam em UTC por padrão).
@@ -129,7 +139,31 @@ public class NfceEmissionService : INfceEmissionService
         if (nota.Status is not (NotaFiscalStatus.PendenteEmissao or NotaFiscalStatus.Rejeitada or NotaFiscalStatus.AutorizadaContingencia))
             return nota; // Autorizada/Cancelada não têm o que reprocessar — devolve como está.
 
-        if (nota.TentativasReprocessamento >= MaxTentativasReprocessamento)
+        var emContingencia = nota.Status == NotaFiscalStatus.AutorizadaContingencia;
+
+        // Prazo legal de 24h pra transmitir a contingência: depois dele a SEFAZ rejeita,
+        // e inutilizar o número seria errado (o cliente já saiu com o cupom válido).
+        // Para de tentar e deixa sinalizado pra regularização manual com o contador.
+        if (emContingencia && nota.DhContingencia.HasValue &&
+            DateTime.UtcNow - nota.DhContingencia.Value > PrazoMaximoContingencia)
+        {
+            nota.MotivoRejeicao =
+                "Prazo de 24h para transmitir a NFC-e em contingência expirou — a SEFAZ não aceita " +
+                "mais esta nota. Regularizar manualmente com o contador.";
+            nota.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            _logger.LogWarning(
+                "NFC-e {NotaId} em contingência desde {DhContingencia} passou do prazo legal de 24h — " +
+                "retransmissão automática encerrada. Regularização manual necessária.",
+                nota.Id, nota.DhContingencia);
+            return nota;
+        }
+
+        // O limite de tentativas NÃO se aplica à contingência: com ciclo de 15 min do retry
+        // automático, 10 tentativas abandonariam a nota em ~2,5h — muito antes do prazo legal
+        // de 24h que ela tem pra ser transmitida.
+        if (!emContingencia && nota.TentativasReprocessamento >= MaxTentativasReprocessamento)
         {
             _logger.LogWarning(
                 "NFC-e {NotaId} atingiu o limite de {Max} tentativas de reprocessamento — não vai tentar de novo.",
@@ -191,7 +225,9 @@ public class NfceEmissionService : INfceEmissionService
             justificativa: justificativa.Trim(), cpfcnpj: cfg.Cnpj, dhEvento: AgoraBrasil());
 
         var infEvento = retorno.Retorno?.retEvento?.FirstOrDefault()?.infEvento;
-        if (infEvento is null || infEvento.cStat is not (135 or 136))
+        // 135/136 = evento registrado | 573 = duplicidade de evento (o cancelamento já
+        // estava registrado — ex: a resposta da 1ª tentativa se perdeu). Ambos = cancelada.
+        if (infEvento is null || infEvento.cStat is not (135 or 136 or 573))
         {
             var motivo = infEvento?.xMotivo ?? retorno.RetornoStr ?? "SEFAZ não retornou motivo.";
             throw new InvalidOperationException($"SEFAZ rejeitou o cancelamento: {motivo}");
@@ -238,6 +274,21 @@ public class NfceEmissionService : INfceEmissionService
 
     private async Task<NotaFiscalEmitida> EmitirAsync(NotaFiscalOrigem origem, Guid? comandaId, string? vendaAvulsaId)
     {
+        // Idempotência: uma origem (comanda/venda avulsa) tem NO MÁXIMO uma nota. Sem isso,
+        // clique duplo ou requisições concorrentes criavam duas notas pra mesma venda — e
+        // duas NFC-e autorizadas pra uma venda só é problema fiscal sério. Reforçada pelos
+        // índices únicos parciais no banco (ver Program.cs), que cobrem a corrida exata.
+        var existente = await _db.NotasFiscaisEmitidas.FirstOrDefaultAsync(n =>
+            origem == NotaFiscalOrigem.Comanda
+                ? n.Origem == NotaFiscalOrigem.Comanda && n.ComandaId == comandaId
+                : n.Origem == NotaFiscalOrigem.VendaAvulsa && n.VendaAvulsaId == vendaAvulsaId);
+        if (existente is not null)
+            // Se estiver num estado reprocessável, a "emissão" vira nova tentativa na MESMA
+            // linha (rejeitada pega número novo; contingência reconstrói a mesma chave).
+            return existente.Status is NotaFiscalStatus.PendenteEmissao or NotaFiscalStatus.Rejeitada or NotaFiscalStatus.AutorizadaContingencia
+                ? await ReprocessarAsync(existente.Id)
+                : existente; // Autorizada/Cancelada — nada a fazer.
+
         var nota = new NotaFiscalEmitida
         {
             Origem        = origem,
@@ -246,7 +297,23 @@ public class NfceEmissionService : INfceEmissionService
             Status        = NotaFiscalStatus.PendenteEmissao,
         };
         _db.NotasFiscaisEmitidas.Add(nota);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Perdeu a corrida contra outra requisição que inseriu a nota da mesma origem
+            // primeiro (o índice único barrou a nossa) — descarta a linha local e usa a dela.
+            _db.Entry(nota).State = EntityState.Detached;
+            var vencedora = await _db.NotasFiscaisEmitidas.FirstAsync(n =>
+                origem == NotaFiscalOrigem.Comanda
+                    ? n.Origem == NotaFiscalOrigem.Comanda && n.ComandaId == comandaId
+                    : n.Origem == NotaFiscalOrigem.VendaAvulsa && n.VendaAvulsaId == vendaAvulsaId);
+            return vencedora.Status is NotaFiscalStatus.PendenteEmissao or NotaFiscalStatus.Rejeitada or NotaFiscalStatus.AutorizadaContingencia
+                ? await ReprocessarAsync(vencedora.Id)
+                : vencedora;
+        }
 
         await ExecutarComTratamentoDeErroAsync(nota, async () =>
         {
@@ -301,6 +368,20 @@ public class NfceEmissionService : INfceEmissionService
             _logger.LogError(ex,
                 "Falha ao emitir NFC-e {NotaId} ({Origem}) — motor configurado mas a transmissão falhou. " +
                 "Nota registrada como PendenteEmissao para nova tentativa.", nota.Id, nota.Origem);
+
+            // Persiste o motivo pra nota não ficar "pendente sem explicação" no painel —
+            // antes disso aqui, uma falha inesperada (ex: erro ao assinar o XML) deixava
+            // MotivoRejeicao nulo e o admin não tinha pista nenhuma do que aconteceu.
+            try
+            {
+                nota.MotivoRejeicao = $"Falha inesperada na emissão: {ex.Message}";
+                nota.UpdatedAt      = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex2)
+            {
+                _logger.LogError(ex2, "Não foi possível gravar o motivo da falha da NFC-e {NotaId}.", nota.Id);
+            }
         }
     }
 
@@ -627,8 +708,14 @@ public class NfceEmissionService : INfceEmissionService
 
         // Número já foi consumido e persistido atomicamente em ReservarProximoNumeroNfceAsync,
         // autorizada ou não — a numeração da NFC-e não pode ser reaproveitada sem inutilização.
-        nota.Serie  = cfg.SerieNfce;
-        nota.Numero = numero;
+        nota.Serie     = cfg.SerieNfce;
+        nota.Numero    = numero;
+        nota.UpdatedAt = DateTime.UtcNow;
+
+        // Quando a transmissão veio com 539 e a consulta não confirmou o estado real da
+        // chave, a inutilização automática fica PROIBIDA — o número pode estar autorizado
+        // na SEFAZ e a divergência é exatamente o que estamos evitando. Regularização manual.
+        var inutilizacaoBloqueada = false;
 
         if (protInfo is not null && protInfo.cStat == 100)
         {
@@ -638,9 +725,20 @@ public class NfceEmissionService : INfceEmissionService
             // Se veio de contingência, EmitidoEm já é o momento real da venda — não pisa nele
             // com o momento da confirmação tardia da SEFAZ.
             nota.EmitidoEm    ??= DateTime.UtcNow;
-            nota.XmlAutorizado  = retorno.EnvioStr;
+            // O "XML autorizado" de verdade é o nfeProc (NFe assinada + protNFe) — é o
+            // documento que o contador precisa receber e que vale juridicamente. Antes se
+            // guardava o envelope de ENVIO (EnvioStr), que não tem o protocolo de autorização.
+            nota.XmlAutorizado  = MontarXmlProcNfe(nfe, retorno.Retorno!.protNFe!);
             nota.UrlQrCode      = qrCodeUrl;
             nota.MotivoRejeicao = null; // limpa motivo de tentativas anteriores que falharam antes desta autorização
+        }
+        else if (protInfo is not null && protInfo.cStat == 539)
+        {
+            // Duplicidade: a chave já existe na SEFAZ — na prática, uma tentativa anterior
+            // AUTORIZOU a nota e a resposta se perdeu (timeout/rede). Marcar Rejeitada aqui
+            // (e inutilizar o número!) criaria divergência grave com a SEFAZ, onde a nota
+            // consta autorizada. Consulta a situação real da chave e reconcilia o estado.
+            inutilizacaoBloqueada = !await ConciliarDuplicidadeAsync(servico, nota, nfe, chave.Chave);
         }
         else
         {
@@ -653,7 +751,12 @@ public class NfceEmissionService : INfceEmissionService
         // Número já foi consumido acima independente do resultado — se rejeitada, esse
         // número nunca vai ser usado por nenhuma nota autorizada, então formaliza a
         // inutilização na hora pra não deixar buraco na numeração sem justificativa.
-        if (nota.Status == NotaFiscalStatus.Rejeitada)
+        // EXCEÇÕES (regularização manual, nunca automática):
+        //  - nota que chegou a sair em contingência: o cliente já tem o cupom com a chave,
+        //    inutilizar o número invalidaria o cupom entregue;
+        //  - duplicidade (539) inconclusiva: a chave existe na SEFAZ mas a consulta não
+        //    confirmou o estado — o número pode estar autorizado lá.
+        if (nota.Status == NotaFiscalStatus.Rejeitada && nota.CnfContingencia is null && !inutilizacaoBloqueada)
         {
             try
             {
@@ -665,7 +768,95 @@ public class NfceEmissionService : INfceEmissionService
                 _logger.LogError(ex, "Falha ao inutilizar o número {Numero} da NFC-e rejeitada {NotaId}.", numero, nota.Id);
             }
         }
+        else if (nota.Status == NotaFiscalStatus.Rejeitada)
+        {
+            _logger.LogWarning(
+                "NFC-e {NotaId} (número {Numero}) saiu em contingência e foi rejeitada na retransmissão: {Motivo}. " +
+                "Número NÃO inutilizado porque o cliente já recebeu o cupom — regularizar manualmente com o contador.",
+                nota.Id, numero, nota.MotivoRejeicao);
+        }
     }
+
+    /// <summary>
+    /// Trata o cStat 539 (duplicidade de chave) consultando a situação real da nota na
+    /// SEFAZ e reconciliando o estado local. O 539 quase sempre significa "autorizada
+    /// numa tentativa anterior cuja resposta se perdeu" — nesse caso a nota vira
+    /// Autorizada com o protocolo verdadeiro, em vez de Rejeitada + número inutilizado
+    /// (divergência fiscal). Se a consulta falhar, deixa pendente pro próximo ciclo
+    /// (a retransmissão vai receber 539 de novo e consultar outra vez).
+    /// Retorna true quando o estado final ficou claro (Autorizada/Cancelada) e false
+    /// quando a situação continuou incerta — nesse caso a inutilização é proibida.
+    /// </summary>
+    private async Task<bool> ConciliarDuplicidadeAsync(
+        ServicosNFe servico, NotaFiscalEmitida nota, NfeDocumento nfe, string chave)
+    {
+        NFe.Classes.Servicos.Consulta.retConsSitNFe? situacao;
+        try
+        {
+            situacao = await Task.Run(() => servico.NfeConsultaProtocolo(chave).Retorno);
+        }
+        catch (Exception ex)
+        {
+            nota.MotivoRejeicao = $"Duplicidade (539) na SEFAZ, mas a consulta da situação falhou: {ex.Message}. Nova tentativa no próximo ciclo.";
+            _logger.LogWarning(ex, "NFC-e {NotaId}: recebeu 539 e a consulta de situação da chave falhou.", nota.Id);
+            return false; // status permanece PendenteEmissao/AutorizadaContingencia — próximo ciclo tenta de novo
+        }
+
+        var infCons = situacao?.protNFe?.infProt;
+
+        // O envelope da consulta usa 101/110/151 quando a nota foi cancelada/denegada —
+        // checar ANTES do infProt, que nesses casos continua dizendo "100 autorizada".
+        if (situacao is not null && situacao.cStat is 101 or 110 or 151)
+        {
+            nota.Status                    = NotaFiscalStatus.Cancelada;
+            nota.CanceladoEm             ??= DateTime.UtcNow;
+            nota.JustificativaCancelamento ??= "Cancelamento/denegacao registrada diretamente na SEFAZ (reconciliado após duplicidade 539).";
+            nota.MotivoRejeicao            = null;
+            _logger.LogWarning(
+                "NFC-e {NotaId}: consulta após 539 mostrou nota cancelada/denegada na SEFAZ (cStat {CStat} — {Motivo}).",
+                nota.Id, situacao.cStat, situacao.xMotivo);
+            return true;
+        }
+        else if (infCons is not null && infCons.cStat == 100)
+        {
+            nota.Status         = NotaFiscalStatus.Autorizada;
+            nota.ChaveAcesso    = infCons.chNFe ?? chave;
+            nota.Protocolo      = infCons.nProt;
+            nota.EmitidoEm    ??= DateTime.UtcNow;
+            nota.XmlAutorizado  = MontarXmlProcNfe(nfe, situacao!.protNFe!);
+            nota.MotivoRejeicao = null;
+            _logger.LogInformation(
+                "NFC-e {NotaId} reconciliada: já estava autorizada na SEFAZ (protocolo {Protocolo}) — " +
+                "o 539 era a resposta perdida de uma tentativa anterior.",
+                nota.Id, infCons.nProt);
+            return true;
+        }
+        else
+        {
+            nota.Status         = NotaFiscalStatus.Rejeitada;
+            nota.MotivoRejeicao =
+                $"Duplicidade (539) e a consulta não confirmou autorização " +
+                $"({situacao?.cStat} — {situacao?.xMotivo ?? infCons?.xMotivo}). " +
+                "Verificar manualmente no portal da SEFAZ antes de qualquer inutilização.";
+            _logger.LogWarning(
+                "NFC-e {NotaId}: 539 sem autorização correspondente na consulta ({CStat} — {Motivo}).",
+                nota.Id, situacao?.cStat, situacao?.xMotivo);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Monta o nfeProc (NFe assinada + protocolo de autorização) — o "XML autorizado"
+    /// oficial que a exportação manda pro contador e que a SEFAZ/contador reconhecem
+    /// como documento fiscal válido. Serializado com o mesmo helper da própria lib.
+    /// </summary>
+    private static string MontarXmlProcNfe(NfeDocumento nfe, NFe.Classes.Protocolo.protNFe protocolo) =>
+        FuncoesXml.ClasseParaXmlString(new nfeProc
+        {
+            versao  = "4.00",
+            NFe     = nfe,
+            protNFe = protocolo,
+        });
 
     /// <summary>
     /// Caminho de teste: monta e "assina" a nota só na memória (nem chega a existir um
@@ -700,6 +891,7 @@ public class NfceEmissionService : INfceEmissionService
         nota.EmitidoEm    ??= DateTime.UtcNow;
         nota.UrlQrCode      = null;
         nota.MotivoRejeicao = null;
+        nota.UpdatedAt      = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
         _logger.LogWarning(
@@ -713,7 +905,10 @@ public class NfceEmissionService : INfceEmissionService
     {
         using var servico = new ServicosNFe(cfgServico, certificado);
         var justificativa = $"Numero da NFCe {nota.Id} rejeitado pela SEFAZ, inutilizado automaticamente.";
-        var retorno = servico.NfeInutilizacao(cfg.Cnpj, AgoraBrasil().Year, ModeloDocumento.NFCe, cfg.SerieNfce, numero, numero, justificativa);
+        // O ano da inutilização é o ano da NUMERAÇÃO da nota (quando ela foi criada),
+        // não o ano corrente — sem isso, uma nota de dezembro rejeitada em janeiro
+        // inutilizava o número no ano errado.
+        var retorno = servico.NfeInutilizacao(cfg.Cnpj, ParaBrasil(nota.CreatedAt).Year, ModeloDocumento.NFCe, cfg.SerieNfce, numero, numero, justificativa);
 
         var infInut = retorno.Retorno?.infInut;
         if (infInut is not null && infInut.cStat == 102)
