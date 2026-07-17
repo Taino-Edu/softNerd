@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<Championship>            Championships            { get; set; }
     public DbSet<ChampionshipParticipant>  ChampionshipParticipants  { get; set; }
     public DbSet<ChampionshipPreInscricao> ChampionshipPreInscricoes { get; set; }
+    public DbSet<LigaMensalManualEntry>    LigaMensalManualEntries   { get; set; }
     public DbSet<Announcement>            Announcements            { get; set; }
     public DbSet<Crediario>               Crediarios               { get; set; }
     public DbSet<PagamentoCrediario>      PagamentosCrediario      { get; set; }

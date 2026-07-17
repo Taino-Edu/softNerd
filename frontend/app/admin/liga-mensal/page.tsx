@@ -5,9 +5,11 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import {
   Trophy, Medal, Award, Loader2, Layers, ChevronDown, Check, Swords, ExternalLink,
+  Plus, Pencil, Trash2, X, PenLine,
 } from 'lucide-react'
 import {
   ligaMensalApi, championshipApi, LigaMensalDto, LigaMensalMesDto, Championship, ChampionshipParticipant,
+  LigaMensalManualEntryDto,
 } from '@/lib/api'
 
 const MEDAL_COLOR = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-brand-400']
@@ -110,12 +112,86 @@ function ChampionshipCard({ ch, onPlacementSaved }: { ch: Championship; onPlacem
   )
 }
 
+function ManualEntryModal({ ano, mes, entry, onClose, onSaved }: {
+  ano: number
+  mes: number
+  entry: LigaMensalManualEntryDto | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [playerName, setPlayerName]   = useState(entry?.playerName ?? '')
+  const [totalPoints, setTotalPoints] = useState(entry?.totalPoints?.toString() ?? '')
+  const [decks, setDecks]             = useState(entry?.decks ?? '')
+  const [observacao, setObservacao]   = useState(entry?.observacao ?? '')
+  const [saving, setSaving]           = useState(false)
+
+  async function salvar() {
+    const nome = playerName.trim()
+    const pontos = parseInt(totalPoints, 10)
+    if (!nome) { toast.error('Digite o nome do jogador.'); return }
+    if (isNaN(pontos)) { toast.error('Digite os pontos.'); return }
+
+    setSaving(true)
+    try {
+      const body = { ano, mes, playerName: nome, totalPoints: pontos, decks: decks || undefined, observacao: observacao || undefined }
+      if (entry) await ligaMensalApi.manualUpdate(entry.id, body)
+      else await ligaMensalApi.manualCreate(body)
+      toast.success(`${nome}: ${pontos} pts salvos.`)
+      onSaved()
+      onClose()
+    } catch {
+      toast.error('Erro ao salvar lançamento.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="card w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-white flex items-center gap-2">
+            <PenLine className="w-4 h-4 text-brand-400" /> {entry ? 'Editar lançamento' : 'Lançamento manual'}
+          </h2>
+          <button onClick={onClose}><X className="w-5 h-5 text-gray-500 hover:text-gray-300" /></button>
+        </div>
+
+        <div>
+          <label className="label">Nome do jogador</label>
+          <input className="input w-full" value={playerName} onChange={e => setPlayerName(e.target.value)} placeholder="Ex: Cabral" autoFocus />
+        </div>
+        <div>
+          <label className="label">Pontos totais no mês</label>
+          <input type="number" className="input w-full" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} placeholder="Ex: 17" />
+        </div>
+        <div>
+          <label className="label">Decks (opcional)</label>
+          <input className="input w-full" value={decks} onChange={e => setDecks(e.target.value)} placeholder="Separados por vírgula" />
+        </div>
+        <div>
+          <label className="label">Observação (opcional)</label>
+          <textarea className="input w-full" rows={2} value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Ex: histórico anotado à mão antes do sistema" />
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="btn-secondary flex-1 justify-center">Cancelar</button>
+          <button onClick={salvar} disabled={saving} className="btn-primary flex-1 justify-center">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminLigaMensalPage() {
   const [data, setData]   = useState<LigaMensalDto | null>(null)
   const [meses, setMeses] = useState<LigaMensalMesDto[]>([])
   const [championships, setChampionships] = useState<Championship[]>([])
   const [loading, setLoading] = useState(true)
   const [selecionado, setSelecionado] = useState<string>('')
+  const [manualEntries, setManualEntries] = useState<LigaMensalManualEntryDto[]>([])
+  const [manualModal, setManualModal] = useState<{ entry: LigaMensalManualEntryDto | null } | null>(null)
 
   const carregarRanking = useCallback((sel: string) => {
     const [ano, mes] = sel ? sel.split('-').map(Number) : [undefined, undefined]
@@ -136,12 +212,40 @@ export default function AdminLigaMensalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selecionado])
 
+  const carregarManuais = useCallback(() => {
+    if (!data) return
+    ligaMensalApi.manualList(data.ano, data.mes).then(r => setManualEntries(r.data)).catch(() => setManualEntries([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.ano, data?.mes])
+
+  useEffect(() => { carregarManuais() }, [carregarManuais])
+
+  async function excluirManual(entry: LigaMensalManualEntryDto) {
+    if (!confirm(`Excluir o lançamento manual de ${entry.playerName} (${entry.totalPoints} pts)?`)) return
+    try {
+      await ligaMensalApi.manualDelete(entry.id)
+      toast.success('Lançamento removido.')
+      carregarManuais()
+      carregarRanking(selecionado)
+    } catch {
+      toast.error('Erro ao remover lançamento.')
+    }
+  }
+
   const championshipsDoMes = data
     ? championships.filter(c => brYearMonth(c.startDate) === `${data.ano}-${String(data.mes).padStart(2, '0')}`)
     : []
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
+      {manualModal && data && (
+        <ManualEntryModal
+          ano={data.ano} mes={data.mes} entry={manualModal.entry}
+          onClose={() => setManualModal(null)}
+          onSaved={() => { carregarManuais(); carregarRanking(selecionado) }}
+        />
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -176,7 +280,17 @@ export default function AdminLigaMensalPage() {
         <>
           {/* Ranking */}
           <div className="space-y-2">
-            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Ranking · {data?.mesLabel}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Ranking · {data?.mesLabel}</p>
+              {data && (
+                <button
+                  onClick={() => setManualModal({ entry: null })}
+                  className="flex items-center gap-1 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Lançamento manual
+                </button>
+              )}
+            </div>
             {data && data.ranking.length === 0 ? (
               <div className="card p-6 text-center text-sm text-gray-500">Nenhuma pontuação registrada neste mês ainda.</div>
             ) : (
@@ -207,6 +321,33 @@ export default function AdminLigaMensalPage() {
               </div>
             )}
           </div>
+
+          {/* Lançamentos manuais */}
+          {manualEntries.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                <PenLine className="w-3.5 h-3.5" /> Lançamentos manuais do mês
+              </p>
+              <div className="card divide-y divide-surface-700/60 !p-0">
+                {manualEntries.map(entry => (
+                  <div key={entry.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white truncate">{entry.playerName}</p>
+                      {entry.decks && <p className="text-xs text-gray-500 truncate">{entry.decks}</p>}
+                      {entry.observacao && <p className="text-xs text-gray-500 truncate">{entry.observacao}</p>}
+                    </div>
+                    <span className="text-sm font-bold text-brand-400 flex-shrink-0">{entry.totalPoints} pts</span>
+                    <button onClick={() => setManualModal({ entry })} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-surface-700 transition-colors flex-shrink-0" title="Editar">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => excluirManual(entry)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Excluir">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Gerenciar colocações */}
           <div className="space-y-2">

@@ -1326,10 +1326,38 @@ export interface LigaMensalMesDto {
   mesLabel: string
 }
 
+export interface LigaMensalManualEntryDto {
+  id: string
+  ano: number
+  mes: number
+  playerName: string
+  totalPoints: number
+  decks?: string | null
+  observacao?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SaveLigaMensalManualEntry {
+  ano: number
+  mes: number
+  playerName: string
+  totalPoints: number
+  decks?: string
+  observacao?: string
+}
+
 export const ligaMensalApi = {
   ranking: (ano?: number, mes?: number) =>
     api.get<LigaMensalDto>('/api/liga-mensal', { params: { ano, mes } }),
   meses: () => api.get<LigaMensalMesDto[]>('/api/liga-mensal/meses'),
+  manualList:   (ano: number, mes: number) =>
+    api.get<LigaMensalManualEntryDto[]>('/api/liga-mensal/manual', { params: { ano, mes } }),
+  manualCreate: (body: SaveLigaMensalManualEntry) =>
+    api.post<LigaMensalManualEntryDto>('/api/liga-mensal/manual', body),
+  manualUpdate: (id: string, body: SaveLigaMensalManualEntry) =>
+    api.put<LigaMensalManualEntryDto>(`/api/liga-mensal/manual/${id}`, body),
+  manualDelete: (id: string) => api.delete(`/api/liga-mensal/manual/${id}`),
 }
 
 // ── Notificações in-app ───────────────────────────────────────────────────────

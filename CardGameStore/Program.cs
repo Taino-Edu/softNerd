@@ -844,6 +844,23 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS contact_person_name VARCHAR(60) NOT NULL DEFAULT 'Maikon';
                 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS color_background VARCHAR(9) NOT NULL DEFAULT '#EBF7FD';
                 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS color_card VARCHAR(9) NOT NULL DEFAULT '#FFFFFF';
+                ALTER TABLE site_config ADD COLUMN IF NOT EXISTS nav_liga_label VARCHAR(40) NOT NULL DEFAULT 'Liga Mensal';
+
+                -- Liga Mensal: lançamentos manuais (jogador + pontos digitados direto pelo admin,
+                -- sem precisar cadastrar Championship — pra migrar histórico anotado à mão).
+                CREATE TABLE IF NOT EXISTS liga_mensal_manual_entries (
+                    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    ano                 INTEGER      NOT NULL,
+                    mes                 INTEGER      NOT NULL,
+                    player_name         VARCHAR(200) NOT NULL,
+                    total_points        INTEGER      NOT NULL DEFAULT 0,
+                    decks               VARCHAR(500) NULL,
+                    observacao          VARCHAR(500) NULL,
+                    created_by_admin_id UUID         NOT NULL,
+                    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS ix_liga_mensal_manual_entries_ano_mes ON liga_mensal_manual_entries (ano, mes);
             ");
         }
 
