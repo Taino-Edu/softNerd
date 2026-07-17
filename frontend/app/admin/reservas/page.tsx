@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, productApi, reservationApi, Product, AdminReservation, ReservationPixStatus } from '@/lib/api'
+import { api, productApi, reservationApi, userApi, variantApi, Product, AdminReservation, ReservationPixStatus, UserSummary, ProductVariant } from '@/lib/api'
+import PixReservaModal from '@/components/PixReservaModal'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
@@ -71,6 +72,220 @@ function StatCard({ icon, label, value, tint }: {
   )
 }
 
+// ── Modal: admin registra pré-venda/fila em nome do cliente (pedido pelo WhatsApp/balcão) ──
+function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [userSearch,  setUserSearch]  = useState('')
+  const [users,       setUsers]       = useState<UserSummary[]>([])
+  const [userLoading, setUserLoading] = useState(false)
+  const [user,        setUser]        = useState<UserSummary | null>(null)
+
+  const [products,   setProducts]   = useState<Product[]>([])
+  const [prodSearch, setProdSearch] = useState('')
+  const [product,    setProduct]    = useState<Product | null>(null)
+
+  const [variants,  setVariants]  = useState<ProductVariant[]>([])
+  const [variantId, setVariantId] = useState('')
+
+  const [qty,        setQty]        = useState(1)
+  const [notes,      setNotes]      = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  // Produtos ativos — carrega uma vez ao abrir
+  useEffect(() => {
+    productApi.listAdmin()
+      .then(r => setProducts(r.data.filter(p => p.isActive)))
+      .catch(() => toast.error('Erro ao carregar produtos'))
+  }, [])
+
+  // Busca de cliente com debounce
+  useEffect(() => {
+    if (user) return
+    const t = setTimeout(() => {
+      setUserLoading(true)
+      userApi.list(userSearch || undefined)
+        .then(r => setUsers(r.data.slice(0, 8)))
+        .catch(() => {})
+        .finally(() => setUserLoading(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [userSearch, user])
+
+  // Variantes do produto escolhido
+  useEffect(() => {
+    setVariantId('')
+    if (!product?.hasVariants) { setVariants([]); return }
+    variantApi.list(product.id).then(r => setVariants(r.data)).catch(() => {})
+  }, [product])
+
+  const produtosFiltrados = products
+    .filter(p => !prodSearch || p.name.toLowerCase().includes(prodSearch.toLowerCase()))
+    .slice(0, 8)
+
+  const semEstoque = product ? product.stockQuantity <= 0 : false
+  const qtyMax     = product ? (semEstoque ? 10 : Math.max(1, product.stockQuantity)) : 1
+
+  async function handleSubmit() {
+    if (!user)    { toast.error('Selecione o cliente'); return }
+    if (!product) { toast.error('Selecione o produto'); return }
+    if (product.hasVariants && !variantId) { toast.error('Selecione a variante'); return }
+    setSubmitting(true)
+    try {
+      const { data } = await reservationApi.adminCreate({
+        userId: user.id, productId: product.id,
+        variantId: variantId || undefined, quantity: qty, notes: notes.trim() || undefined,
+      })
+      toast.success(data.kind === 'fila'
+        ? `${user.name} entrou na fila de "${product.name}"`
+        : `Pré-venda criada pra ${user.name} — estoque baixado`)
+      onCreated()
+      onClose()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Erro ao registrar')
+    } finally { setSubmitting(false) }
+  }
+
+  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-surface-700 border border-surface-600 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500'
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-surface-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}>
+        <div>
+          <h2 className="text-lg font-black text-white">Nova pré-venda para cliente</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Pedido chegou pelo WhatsApp ou no balcão? Registra aqui em nome do cliente.
+          </p>
+        </div>
+
+        {/* Cliente */}
+        <div>
+          <label className="text-xs text-gray-400 mb-1.5 block font-semibold">Cliente *</label>
+          {user ? (
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-brand-500/15 border border-brand-500/40">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+                <p className="text-[11px] text-gray-400">{user.whatsApp ?? user.email ?? user.cpf ?? ''}</p>
+              </div>
+              <button onClick={() => { setUser(null); setUserSearch('') }}
+                className="p-1 rounded hover:bg-surface-600 text-gray-400 shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <input className={inputCls} placeholder="Buscar por nome, WhatsApp ou CPF..."
+                value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+              <div className="mt-1.5 rounded-xl border border-surface-600 overflow-hidden">
+                {userLoading ? (
+                  <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-gray-500" /></div>
+                ) : users.length === 0 ? (
+                  <p className="text-xs text-gray-500 text-center py-3">Nenhum cliente encontrado</p>
+                ) : users.map(u => (
+                  <button key={u.id} onClick={() => setUser(u)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-600 transition-colors border-b border-surface-700 last:border-0">
+                    <UserIcon className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                    <span className="text-sm text-white truncate flex-1">{u.name}</span>
+                    <span className="text-[11px] text-gray-500 shrink-0">{u.whatsApp ?? ''}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Produto */}
+        <div>
+          <label className="text-xs text-gray-400 mb-1.5 block font-semibold">Produto *</label>
+          {product ? (
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-brand-500/15 border border-brand-500/40">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{product.name}</p>
+                <p className="text-[11px] text-gray-400">
+                  R$ {product.priceInReais.toFixed(2).replace('.', ',')} · estoque {product.stockQuantity}
+                </p>
+              </div>
+              <button onClick={() => { setProduct(null); setProdSearch(''); setQty(1) }}
+                className="p-1 rounded hover:bg-surface-600 text-gray-400 shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <input className={inputCls} placeholder="Buscar produto..."
+                value={prodSearch} onChange={e => setProdSearch(e.target.value)} />
+              <div className="mt-1.5 rounded-xl border border-surface-600 overflow-hidden">
+                {produtosFiltrados.length === 0 ? (
+                  <p className="text-xs text-gray-500 text-center py-3">Nenhum produto encontrado</p>
+                ) : produtosFiltrados.map(p => (
+                  <button key={p.id} onClick={() => { setProduct(p); setQty(1) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-600 transition-colors border-b border-surface-700 last:border-0">
+                    <Package className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                    <span className="text-sm text-white truncate flex-1">{p.name}</span>
+                    <span className={clsx('text-[11px] shrink-0', p.stockQuantity > 0 ? 'text-emerald-400' : 'text-purple-300')}>
+                      {p.stockQuantity > 0 ? `${p.stockQuantity} un.` : 'fila'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Variante */}
+        {product?.hasVariants && (
+          <div>
+            <label className="text-xs text-gray-400 mb-1.5 block font-semibold">Variante *</label>
+            <select className={inputCls} value={variantId} onChange={e => setVariantId(e.target.value)}>
+              <option value="">Selecione...</option>
+              {variants.map(v => (
+                <option key={v.id} value={v.id}>{v.label} ({v.stockQuantity} un.)</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Quantidade + obs */}
+        <div className="flex gap-3">
+          <div className="w-28 shrink-0">
+            <label className="text-xs text-gray-400 mb-1.5 block font-semibold">Qtd *</label>
+            <input className={inputCls} type="number" min={1} max={qtyMax} value={qty}
+              onChange={e => setQty(Math.max(1, Math.min(qtyMax, parseInt(e.target.value || '1', 10) || 1)))} />
+          </div>
+          <div className="flex-1">
+            <label className="text-xs text-gray-400 mb-1.5 block font-semibold">Observação</label>
+            <input className={inputCls} placeholder='Ex.: "pedido pelo zap 16h32"'
+              value={notes} onChange={e => setNotes(e.target.value)} />
+          </div>
+        </div>
+
+        {/* Consequência */}
+        {product && (
+          <div className={clsx('text-xs rounded-xl px-3 py-2.5 border',
+            semEstoque
+              ? 'bg-purple-500/10 border-purple-500/25 text-purple-300'
+              : 'bg-blue-500/10 border-blue-500/25 text-blue-300')}>
+            {semEstoque
+              ? 'Sem estoque — o cliente entra na FILA e vira pré-venda quando o item chegar.'
+              : 'Em estoque — vira PRÉ-VENDA na hora e o estoque já baixa. Regra de expiração normal.'}
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-1">
+          <button onClick={onClose} disabled={submitting}
+            className="flex-1 py-3 rounded-xl bg-surface-700 text-gray-300 text-sm font-semibold">
+            Cancelar
+          </button>
+          <button onClick={handleSubmit} disabled={submitting || !user || !product}
+            className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-40 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            Registrar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ReservasPage() {
   const router = useRouter()
   const [tab,         setTab]         = useState<'prevendas' | 'fila'>('prevendas')
@@ -92,6 +307,10 @@ export default function ReservasPage() {
   const [comandas,    setComandas]    = useState<OpenComanda[]>([])
   const [homComanda,  setHomComanda]  = useState<string>('')
   const [submitting,  setSubmitting]  = useState(false)
+
+  // Modal de nova pré-venda manual + modal de Pix (copiar código)
+  const [showNova,    setShowNova]    = useState(false)
+  const [pixGroup,    setPixGroup]    = useState<string | null>(null)
 
   // ── aba Fila (item que ainda não chegou) ──
   const [wlProducts,  setWlProducts]  = useState<Product[]>([])
@@ -276,8 +495,13 @@ export default function ReservasPage() {
           <p className="text-xs text-gray-500 mt-0.5">Pré-venda baixa o estoque na hora · fila é pra item que ainda não chegou</p>
         </div>
         <button
+          onClick={() => setShowNova(true)}
+          className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-bold transition-colors">
+          <Plus className="w-4 h-4" /> Nova pré-venda
+        </button>
+        <button
           onClick={refreshAll}
-          className="ml-auto p-2 rounded-xl bg-surface-700 hover:bg-surface-500 transition-colors text-gray-400">
+          className="p-2 rounded-xl bg-surface-700 hover:bg-surface-500 transition-colors text-gray-400">
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
@@ -536,6 +760,14 @@ export default function ReservasPage() {
                       <CheckCircle className="w-3 h-3" /> Homologar
                     </button>
                     {r.expiresAt && (
+                      <button onClick={() => setPixGroup(r.reservationGroupId)}
+                        title="Gerar/copiar o código Pix pra mandar no WhatsApp"
+                        className="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25
+                                   hover:bg-purple-500/20 text-xs font-semibold transition-colors flex items-center gap-1">
+                        <QrCode className="w-3 h-3" /> Pix
+                      </button>
+                    )}
+                    {r.expiresAt && (
                       <button onClick={() => handleExtend(r)}
                         className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20
                                    hover:bg-amber-500/20 text-xs font-semibold transition-colors flex items-center gap-1">
@@ -675,6 +907,24 @@ export default function ReservasPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal: registrar pré-venda/fila em nome do cliente */}
+      {showNova && (
+        <NovaPreVendaModal
+          onClose={() => setShowNova(false)}
+          onCreated={() => { setShowNova(false); refreshAll() }}
+        />
+      )}
+
+      {/* Modal: Pix da pré-venda (copiar código e mandar no zap) */}
+      {pixGroup && (
+        <PixReservaModal
+          groupId={pixGroup}
+          dark
+          onClose={() => setPixGroup(null)}
+          onPago={load}
+        />
       )}
     </div>
   )

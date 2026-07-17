@@ -5,7 +5,7 @@ import { productApi, reservationApi, authApi, userApi, Product, UserProfile, MyR
 import { saveAuth, isLoggedIn, getUserName } from '@/lib/auth'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import Link from 'next/link'
-import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, Clock, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus } from 'lucide-react'
+import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, Clock, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus } from 'lucide-react'
 
 const NAVY = '#0C3D5A'
 const BLUE = '#3EC2F2'
@@ -43,17 +43,19 @@ export default function ProductPage() {
 
   const { items: cartItems, addItem, totalItems: cartCount } = useReservationCart()
   const inCart = product ? cartItems.some(i => i.productId === product.id) : false
+  const [qty, setQty] = useState(1)
 
   function handleAddToCart() {
     if (!product) return
     if (!isLoggedIn()) { setShowLogin(true); return }
     addItem({
       productId: product.id,
-      quantity: 1,
+      quantity: qty,
       productName: product.name,
       productImageUrl: product.imageUrl ?? undefined,
       priceInCents: product.discountPriceInCents ?? product.priceInCents,
     })
+    setQty(1)
   }
 
   async function entrarNaFila() {
@@ -170,6 +172,9 @@ export default function ProductPage() {
   const emEstoque  = product.stockQuantity > 0
   const aceitaFila = product.isPreVenda // flag = "ainda não chegou — aceitar fila"
   const dataRua    = product.preVendaReleaseDate
+  const precoUnit  = product.isOnPromo && product.discountPriceInReais != null
+    ? product.discountPriceInReais
+    : product.priceInReais
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
@@ -290,12 +295,32 @@ export default function ProductPage() {
               {emEstoque && (
                 <>
                   <div>
-                    <button onClick={handleAddToCart} disabled={inCart}
-                      className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
-                      style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
-                      <BookmarkPlus className="w-5 h-5" />
-                      {inCart ? 'Já está na sua pré-venda ✓' : 'Entrar na pré-venda'}
-                    </button>
+                    {/* Botão único: stepper de quantidade + Reservar com preço total */}
+                    <div className="flex items-stretch gap-2">
+                      <div className="flex items-center rounded-2xl border shrink-0 overflow-hidden"
+                        style={{ borderColor: C.border, backgroundColor: C.card }}>
+                        <button onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}
+                          aria-label="Diminuir quantidade"
+                          className="w-11 self-stretch flex items-center justify-center transition-opacity disabled:opacity-25"
+                          style={{ color: C.navy }}>
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-7 text-center font-black tabular-nums" style={{ color: C.navy }}>{qty}</span>
+                        <button onClick={() => setQty(q => Math.min(product.stockQuantity, q + 1))}
+                          disabled={qty >= product.stockQuantity}
+                          aria-label="Aumentar quantidade"
+                          className="w-11 self-stretch flex items-center justify-center transition-opacity disabled:opacity-25"
+                          style={{ color: C.navy }}>
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <button onClick={handleAddToCart}
+                        className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
+                        style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
+                        <BookmarkPlus className="w-5 h-5" />
+                        {inCart ? `Adicionar +${qty} · ${fmt(precoUnit * qty)}` : `Reservar · ${fmt(precoUnit * qty)}`}
+                      </button>
+                    </div>
                     <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
                       {dataRua
                         ? `Lançamento dia ${fmtData(dataRua)}. Você garante a sua agora — o produto já é separado na hora — e retira a partir do lançamento. Pague no Pix ou na retirada.`

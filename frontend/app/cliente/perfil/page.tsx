@@ -13,7 +13,9 @@ import {
   CheckCircle, Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
   ShoppingBag, XCircle, Trophy, Coins, ShieldCheck, Mail, Settings, BookOpen,
   Bell, Package, X, Hourglass, FileText, Pencil, Check, Loader2 as Loader2Icon,
+  QrCode,
 } from 'lucide-react'
+import PixReservaModal from '@/components/PixReservaModal'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -122,6 +124,15 @@ export default function PerfilPage() {
   const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas' | 'notas'>('pontos')
   const [isUploading,    setIsUploading]    = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
+  const [pixGroupId,     setPixGroupId]     = useState<string | null>(null)
+
+  async function refetchReservas() {
+    try {
+      const r = await reservationApi.mine()
+      setReservations(r.data.filter(x => x.kind === 'pre_venda' && x.status === 'active'))
+      setFila(r.data.filter(x => x.kind === 'fila' && x.status === 'waiting'))
+    } catch { /* silencioso */ }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -320,6 +331,14 @@ export default function PerfilPage() {
           profile={profile}
           onClose={() => setEditingProfile(false)}
           onSaved={updated => setProfile(updated)}
+        />
+      )}
+
+      {pixGroupId && (
+        <PixReservaModal
+          groupId={pixGroupId}
+          onClose={() => setPixGroupId(null)}
+          onPago={refetchReservas}
         />
       )}
 
@@ -547,11 +566,20 @@ export default function PerfilPage() {
                                 </p>
                               )}
                             </div>
-                            <button onClick={() => handleCancelReservation(r)}
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
-                              title="Cancelar pré-venda">
-                              <X className="w-4 h-4" />
-                            </button>
+                            <div className="flex flex-col gap-1 shrink-0">
+                              {r.expiresAt && (
+                                <button onClick={() => setPixGroupId(r.reservationGroupId)}
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-purple-500 hover:bg-purple-50 transition-colors"
+                                  title="Pagar via Pix">
+                                  <QrCode className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button onClick={() => handleCancelReservation(r)}
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                title="Cancelar pré-venda">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

@@ -31,14 +31,17 @@ public class ReservationController : ControllerBase
     private readonly IVendaAvulsaService _vendaService;
     private readonly IComandaService     _comandaService;
     private readonly InterSyncService    _inter;
+    private readonly IPushService        _push;
 
     public ReservationController(
-        AppDbContext db, IVendaAvulsaService vendaService, IComandaService comandaService, InterSyncService inter)
+        AppDbContext db, IVendaAvulsaService vendaService, IComandaService comandaService,
+        InterSyncService inter, IPushService push)
     {
         _db             = db;
         _vendaService   = vendaService;
         _comandaService = comandaService;
         _inter          = inter;
+        _push           = push;
     }
 
     private Guid GetUserId()
@@ -132,6 +135,53 @@ public class ReservationController : ControllerBase
         }
 
         return Ok(new { groupId, items = toCreate.Select(r => ToDto(r)) });
+    }
+
+    // POST /api/reservations/admin-create — admin registra pré-venda/fila em nome do
+    // cliente (pedido chegou pelo WhatsApp ou no balcão). Mesmas regras da criação
+    // normal: em estoque vira pré-venda com baixa na hora; não chegou vira fila.
+    [HttpPost("admin-create")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> AdminCreate([FromBody] AdminCreateReservationRequest req)
+    {
+        var clienteExiste = await _db.Users.AnyAsync(u => u.Id == req.UserId);
+        if (!clienteExiste) return NotFound(new { Message = "Cliente não encontrado." });
+
+        var created = await CriarItemAsync(req.UserId, Guid.NewGuid(), req.ProductId, req.VariantId,
+                                           req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
+        if (created.Error is not null) return created.Error switch
+        {
+            "not_found" => NotFound(new { created.Message }),
+            "conflict"  => Conflict(new { created.Message }),
+            _           => BadRequest(new { created.Message }),
+        };
+
+        var r = created.Reservation!;
+        r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
+        _db.ProductReservations.Add(r);
+        await _db.SaveChangesAsync();
+
+        await _db.Entry(r).Reference(x => x.Product).LoadAsync();
+        await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
+
+        // Avisa o cliente (melhor-esforço): notificação in-app + push
+        try
+        {
+            var titulo = r.Kind == "fila" ? "Você entrou na fila 📋" : "Pré-venda registrada ✅";
+            var corpo  = r.Kind == "fila"
+                ? $"A loja te colocou na fila de \"{r.Product?.Name}\". A gente avisa quando chegar."
+                : $"A loja registrou \"{r.Product?.Name}\" pra você — pague no Pix ou na retirada.";
+            _db.Notifications.Add(new Notification
+            {
+                UserId = r.UserId, Title = titulo, Body = corpo,
+                Link = "/cliente/perfil", ImageUrl = r.Product?.ImageUrl,
+            });
+            await _db.SaveChangesAsync();
+            await _push.SendToManyAsync([r.UserId], titulo, corpo, "/cliente/perfil", r.Product?.ImageUrl);
+        }
+        catch { /* notificação é melhor-esforço — a reserva já está valendo */ }
+
+        return Ok(ToDto(r));
     }
 
     /// <summary>
@@ -438,10 +488,12 @@ public class ReservationController : ControllerBase
             .Include(r => r.Product)
             .Include(r => r.Variant)
             .Include(r => r.User)
-            .Where(r => r.ReservationGroupId == groupId && r.UserId == userId)
+            .Where(r => r.ReservationGroupId == groupId)
             .ToListAsync();
 
         if (items.Count == 0) return NotFound(new { Message = "Reserva não encontrada." });
+        // Dono gera o próprio Pix; admin gera pra enviar o código pelo WhatsApp/balcão.
+        if (items[0].UserId != userId && !User.IsInRole("Admin")) return Forbid();
 
         var preVendas = items.Where(r => r.Kind == "pre_venda").ToList();
         if (preVendas.Count == 0)
@@ -491,7 +543,7 @@ public class ReservationController : ControllerBase
         var userId = GetUserId();
 
         var pertenceAoUsuario = await _db.ProductReservations
-            .AnyAsync(r => r.ReservationGroupId == groupId && r.UserId == userId);
+            .AnyAsync(r => r.ReservationGroupId == groupId && (r.UserId == userId || User.IsInRole("Admin")));
         if (!pertenceAoUsuario) return NotFound(new { Message = "Reserva não encontrada." });
 
         var pix = await _db.PixCobrancas
@@ -636,6 +688,15 @@ public class CreateReservationCartItem
 public class CreateReservationCartRequest
 {
     public List<CreateReservationCartItem> Items { get; init; } = [];
+}
+
+public class AdminCreateReservationRequest
+{
+    public Guid  UserId    { get; init; }
+    public Guid  ProductId { get; init; }
+    public Guid? VariantId { get; init; }
+    public int   Quantity  { get; init; } = 1;
+    public string? Notes   { get; init; }
 }
 
 public class UpdateReservationStatusRequest
