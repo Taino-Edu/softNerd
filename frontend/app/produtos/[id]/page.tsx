@@ -253,10 +253,19 @@ export default function ProductPage() {
               ) : (
                 <p className="text-4xl font-black" style={{ color: BLUE }}>{fmt(product.priceInReais)}</p>
               )}
-              <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: product.stockQuantity > 0 ? '#22C55E' : '#EF4444' }}>
+              <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: (product.availableQuantity ?? product.stockQuantity) > 0 ? '#22C55E' : '#EF4444' }}>
                 <CheckCircle className="w-3.5 h-3.5" />
-                {product.stockQuantity > 0 ? `${product.stockQuantity} unidades em estoque` : 'Produto esgotado'}
+                {(product.availableQuantity ?? product.stockQuantity) > 0
+                  ? `${product.availableQuantity ?? product.stockQuantity} unidades disponíveis`
+                  : product.stockQuantity > 0
+                    ? 'Todas as unidades estão reservadas no momento'
+                    : 'Produto esgotado'}
               </p>
+              {(product.reservedQuantity ?? 0) > 0 && (
+                <p className="text-xs mt-1" style={{ color: C.muted }}>
+                  {product.reservedQuantity} un. reservadas aguardando retirada (ficam bloqueadas por até 48h)
+                </p>
+              )}
             </div>
 
             {/* CTAs */}
@@ -302,7 +311,7 @@ export default function ProductPage() {
                       </p>
                     </div>
                   )}
-                  {product.stockQuantity > 0 && (
+                  {(product.availableQuantity ?? product.stockQuantity) > 0 && (
                     <div>
                       <button onClick={handleAddToCart} disabled={inCart}
                         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
@@ -335,7 +344,7 @@ export default function ProductPage() {
                       Você compra agora e combina a retirada direto com a gente
                     </p>
                   </div>
-                  {product.stockQuantity > 0 && (
+                  {(product.availableQuantity ?? product.stockQuantity) > 0 && (
                     <div>
                       <button onClick={handleAddToCart} disabled={inCart}
                         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
@@ -382,7 +391,7 @@ export default function ProductPage() {
             <div className="rounded-2xl border divide-y text-sm" style={{ backgroundColor: C.card, borderColor: C.border }}>
               {([
                 ['Categoria', product.category],
-                ['Disponibilidade', product.stockQuantity > 0 ? 'Em estoque' : 'Esgotado'],
+                ['Disponibilidade', (product.availableQuantity ?? product.stockQuantity) > 0 ? 'Em estoque' : product.stockQuantity > 0 ? 'Tudo reservado' : 'Esgotado'],
                 product.barcode ? ['Código', product.barcode] : null,
               ].filter(Boolean) as string[][]).map(([label, value]) => (
                 <div key={label as string} className="flex items-center justify-between px-5 py-3">

@@ -26,6 +26,7 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync();
         await ApplyVariantStockAsync(list);
+        await ApplyReservedStockAsync(list);
         return list;
     }
 
@@ -37,6 +38,7 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync();
         await ApplyVariantStockAsync(list);
+        await ApplyReservedStockAsync(list);
         return list;
     }
 
@@ -47,16 +49,19 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync();
         await ApplyVariantStockAsync(list);
+        await ApplyReservedStockAsync(list);
         return list;
     }
 
     public async Task<Product?> GetByIdAsync(Guid id)
     {
         var p = await _db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
-        if (p?.HasVariants == true)
+        if (p is null) return null;
+        if (p.HasVariants)
             p.StockQuantity = await _db.Set<ProductVariant>()
                 .Where(v => v.ProductId == id)
                 .SumAsync(v => v.StockQuantity);
+        await ApplyReservedStockAsync([p]);
         return p;
     }
 
@@ -76,6 +81,25 @@ public class ProductService : IProductService
         foreach (var p in products.Where(p => p.HasVariants))
             if (sums.TryGetValue(p.Id, out var sum))
                 p.StockQuantity = sum;
+    }
+
+    // Soma reservas ativas (não expiradas) por produto numa query agrupada só — mesma ideia
+    // do ApplyVariantStockAsync. Reserva com variante também conta contra o total do produto,
+    // assim como o estoque exibido é a soma das variantes.
+    private async Task ApplyReservedStockAsync(List<Product> products)
+    {
+        var ids = products.Select(p => p.Id).ToList();
+        if (ids.Count == 0) return;
+
+        var agora = DateTime.UtcNow;
+        var sums = await _db.ProductReservations
+            .Where(r => ids.Contains(r.ProductId) && r.Status == "active" && r.ExpiresAt > agora)
+            .GroupBy(r => r.ProductId)
+            .Select(g => new { g.Key, Total = g.Sum(r => r.Quantity) })
+            .ToDictionaryAsync(x => x.Key, x => x.Total);
+
+        foreach (var p in products)
+            p.ReservedQuantity = sums.TryGetValue(p.Id, out var sum) ? sum : 0;
     }
 
     public async Task<Product> CreateAsync(Product product)

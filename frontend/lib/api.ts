@@ -128,6 +128,10 @@ export interface Product {
   isLowStock: boolean; priceInReais: number; costPriceInReais: number
   marginInReais: number; marginPercent: number
   hasVariants: boolean
+  /** Quantidade com reserva ativa aguardando retirada (o físico só baixa na homologação). */
+  reservedQuantity: number
+  /** Estoque realmente disponível: stockQuantity − reservedQuantity. */
+  availableQuantity: number
   /** NCM (Nomenclatura Comum do Mercosul) — obrigatório para emitir NFC-e deste produto. */
   ncm: string | null
   /** Natureza de operação (CFOP/CSOSN) usada na emissão fiscal. Null = usa a marcada como padrão. */

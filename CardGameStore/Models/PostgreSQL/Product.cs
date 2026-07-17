@@ -169,6 +169,18 @@ public class Product
     [NotMapped]
     public bool IsLowStock => StockQuantity <= MinimumStock;
 
+    /// <summary>
+    /// Quantidade com reserva ativa (não expirada) aguardando retirada — preenchida pelo
+    /// ProductService a partir de product_reservations. O estoque físico só baixa quando a
+    /// reserva é homologada/retirada; até lá ela só "trava" a disponibilidade.
+    /// </summary>
+    [NotMapped]
+    public int ReservedQuantity { get; set; }
+
+    /// <summary>Estoque realmente disponível para venda/reserva (físico − reservado ativo).</summary>
+    [NotMapped]
+    public int AvailableQuantity => Math.Max(0, StockQuantity - ReservedQuantity);
+
     // -------------------------------------------------------------------------
     // Navegação
     // -------------------------------------------------------------------------

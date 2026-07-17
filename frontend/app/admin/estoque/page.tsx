@@ -158,6 +158,14 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
               <span>Mínimo: {minStock} un.</span>
               <span>{product.stockQuantity > 0 ? `${stockPct.toFixed(0)}% do mínimo` : 'Sem estoque'}</span>
             </div>
+            {(product.reservedQuantity ?? 0) > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-purple-400">Reservado (site)</span>
+                <span className="font-semibold text-purple-400">
+                  {product.reservedQuantity} un. · disponível {product.availableQuantity ?? Math.max(0, product.stockQuantity - (product.reservedQuantity ?? 0))}
+                </span>
+              </div>
+            )}
             <div className="h-2 bg-surface-600 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all ${
                 product.stockQuantity === 0 ? 'bg-red-500' : product.isLowStock ? 'bg-amber-500' : 'bg-emerald-500'
