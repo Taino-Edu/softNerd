@@ -170,16 +170,12 @@ public class Product
     public bool IsLowStock => StockQuantity <= MinimumStock;
 
     /// <summary>
-    /// Quantidade com reserva ativa (não expirada) aguardando retirada — preenchida pelo
-    /// ProductService a partir de product_reservations. O estoque físico só baixa quando a
-    /// reserva é homologada/retirada; até lá ela só "trava" a disponibilidade.
+    /// "Data de rua" da pré-venda (opcional): item em estoque que só pode ser
+    /// vendido/retirado a partir desta data (ex: lançamento de coleção TCG).
+    /// Null = sem trava de data.
     /// </summary>
-    [NotMapped]
-    public int ReservedQuantity { get; set; }
-
-    /// <summary>Estoque realmente disponível para venda/reserva (físico − reservado ativo).</summary>
-    [NotMapped]
-    public int AvailableQuantity => Math.Max(0, StockQuantity - ReservedQuantity);
+    [Column("prevenda_release_date", TypeName = "date")]
+    public DateTime? PreVendaReleaseDate { get; set; }
 
     // -------------------------------------------------------------------------
     // Navegação

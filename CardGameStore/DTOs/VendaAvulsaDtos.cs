@@ -34,6 +34,13 @@ public class VendaAvulsaRequest
     /// <summary>Se true, emite a NFC-e desta venda automaticamente. Ver CloseComandaRequest.EmitirNotaFiscal.</summary>
     public bool EmitirNotaFiscal { get; set; } = false;
 
+    /// <summary>
+    /// Se true, NÃO valida nem decrementa estoque — usado na homologação de pré-venda,
+    /// onde o estoque já foi baixado no ato da reserva (a venda só registra a saída).
+    /// Uso interno do backend; o PDV nunca envia.
+    /// </summary>
+    public bool SkipStockDecrement { get; set; } = false;
+
     public bool IsPaymentMethodValid() =>
         Models.MongoDB.PaymentMethod.IsValid(PaymentMethod) &&
         (SecondPaymentMethod == null || Models.MongoDB.PaymentMethod.IsValid(SecondPaymentMethod));

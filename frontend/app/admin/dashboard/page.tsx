@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, waitListApi, fiscalApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, ClienteInsightDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
+import { comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, fiscalApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, ClienteInsightDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
 import { usePreferences } from '@/hooks/usePreferences'
 import { startHub, stopHub, ComandaUpdatedEvent } from '@/lib/signalr'
 import { playGoalSound } from '@/lib/sounds'
@@ -1603,7 +1603,7 @@ export default function DashboardPage() {
     }).catch(() => {})
     lgpdAdminApi.listRequests('Pendente').then(r => setPendingLgpd(r.data)).catch(() => {})
     notificationsApi.unreadCount().then(r => setUnreadNotif(r.data.count)).catch(() => {})
-    waitListApi.preVendaPendentesCount().then(r => setPendingPreVenda(r.data.count)).catch(() => {})
+    reservationApi.filaPendentesCount().then(r => setPendingPreVenda(r.data.count)).catch(() => {})
     fiscalApi.getConfig().then(r => setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])).catch(() => {})
   }, [])
 
@@ -2580,7 +2580,7 @@ export default function DashboardPage() {
               <div className="card">
                 <button onClick={togglePanelPreVenda} className="w-full flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                    <Package className="w-4 h-4 text-amber-400" /> Pré-venda
+                    <Package className="w-4 h-4 text-amber-400" /> Pré-venda &amp; Fila
                   </h3>
                   {panelPreVenda ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
@@ -2591,8 +2591,8 @@ export default function DashboardPage() {
                       <Package className={clsx('w-4 h-4', pendingPreVenda > 0 ? 'text-amber-400' : 'text-gray-500')} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">Lista de espera</p>
-                      <p className="text-xs text-gray-500">Aguardando notificação</p>
+                      <p className="text-sm font-medium text-white">Fila de espera</p>
+                      <p className="text-xs text-gray-500">Aguardando chegada do item</p>
                     </div>
                     <span className={clsx('text-sm font-bold tabular-nums', pendingPreVenda > 0 ? 'text-amber-400' : 'text-gray-600')}>
                       {pendingPreVenda}

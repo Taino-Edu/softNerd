@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { productApi, waitListApi, authApi, userApi, Product, UserProfile } from '@/lib/api'
+import { productApi, reservationApi, authApi, userApi, Product, UserProfile, MyReservation } from '@/lib/api'
 import { saveAuth, isLoggedIn, getUserName } from '@/lib/auth'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import Link from 'next/link'
@@ -12,6 +12,11 @@ const BLUE = '#3EC2F2'
 const WA_NUM = '5517997633103'
 
 function fmt(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}` }
+function fmtData(d: string) {
+  // "2026-07-25" → "25/07" (sem timezone — a data de rua é uma data, não um instante)
+  const [y, m, day] = d.slice(0, 10).split('-')
+  return `${day}/${m}/${y}`
+}
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>()
@@ -20,9 +25,10 @@ export default function ProductPage() {
   const [loading,  setLoading]  = useState(true)
   const [mainImg,  setMainImg]  = useState<string | null>(null)
   const [isDark,   setIsDark]   = useState(false)
-  const [wl,       setWl]       = useState<{ inList: boolean; position?: number; entryId?: string } | null>(null)
-  const [wlAuth,   setWlAuth]   = useState(false)
-  const [wlLoading, setWlLoading] = useState(false)
+
+  // fila (item que ainda não chegou)
+  const [filaEntry,   setFilaEntry]   = useState<MyReservation | null>(null)
+  const [filaLoading, setFilaLoading] = useState(false)
 
   // login modal
   const [showLogin,    setShowLogin]    = useState(false)
@@ -33,6 +39,7 @@ export default function ProductPage() {
 
   // usuário logado
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [authed,  setAuthed]  = useState(false)
 
   const { items: cartItems, addItem, totalItems: cartCount } = useReservationCart()
   const inCart = product ? cartItems.some(i => i.productId === product.id) : false
@@ -47,6 +54,28 @@ export default function ProductPage() {
       productImageUrl: product.imageUrl ?? undefined,
       priceInCents: product.discountPriceInCents ?? product.priceInCents,
     })
+  }
+
+  async function entrarNaFila() {
+    if (!product) return
+    if (!isLoggedIn()) { setShowLogin(true); return }
+    setFilaLoading(true)
+    try {
+      const { data } = await reservationApi.create({ productId: product.id, quantity: 1 })
+      setFilaEntry(data)
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string; Message?: string } } })?.response?.data
+      alert(msg?.message ?? msg?.Message ?? 'Não foi possível entrar na fila. Tente novamente.')
+    } finally { setFilaLoading(false) }
+  }
+
+  async function sairDaFila() {
+    if (!filaEntry) return
+    setFilaLoading(true)
+    try {
+      await reservationApi.cancel(filaEntry.id)
+      setFilaEntry(null)
+    } finally { setFilaLoading(false) }
   }
 
   const C = isDark ? {
@@ -68,18 +97,22 @@ export default function ProductPage() {
   useEffect(() => {
     if (!id) return
 
-    if (isLoggedIn()) {
-      setWlAuth(true)
-      userApi.me().then(r => setProfile(r.data)).catch(() => {})
-    }
+    const logado = isLoggedIn()
+    setAuthed(logado)
+    if (logado) userApi.me().then(r => setProfile(r.data)).catch(() => {})
 
     productApi.get(id)
       .then(r => {
         setProduct(r.data)
         setMainImg(r.data.imageUrl)
-        if (r.data.isPreVenda && isLoggedIn()) {
-          waitListApi.myPosition(id)
-            .then((res: { data: { inList: boolean; position?: number; entryId?: string } }) => setWl(res.data))
+        // Já está na fila deste produto?
+        if (logado) {
+          reservationApi.mine()
+            .then(res => {
+              const entry = res.data.find(x =>
+                x.productId === id && x.kind === 'fila' && x.status === 'waiting')
+              setFilaEntry(entry ?? null)
+            })
             .catch(() => {})
         }
       })
@@ -94,15 +127,18 @@ export default function ProductPage() {
     try {
       const { data } = await authApi.clientLogin(loginEmail, loginPass)
       saveAuth(data)
-      setWlAuth(true)
+      setAuthed(true)
       setShowLogin(false)
       setLoginEmail('')
       setLoginPass('')
-      // carrega perfil e posição na fila
       userApi.me().then(r => setProfile(r.data)).catch(() => {})
       if (id) {
-        waitListApi.myPosition(id)
-          .then((res: { data: { inList: boolean; position?: number; entryId?: string } }) => setWl(res.data))
+        reservationApi.mine()
+          .then(res => {
+            const entry = res.data.find(x =>
+              x.productId === id && x.kind === 'fila' && x.status === 'waiting')
+            setFilaEntry(entry ?? null)
+          })
           .catch(() => {})
       }
     } catch {
@@ -110,32 +146,6 @@ export default function ProductPage() {
     } finally {
       setLoginLoading(false)
     }
-  }
-
-  async function joinQueue() {
-    if (!id) return
-    setWlLoading(true)
-    try {
-      await waitListApi.join(id)
-      const res = await waitListApi.myPosition(id)
-      setWl(res.data)
-    } catch (err: any) {
-      if (err?.response?.status === 401) {
-        setWlAuth(false)
-      } else {
-        const msg = err?.response?.data?.message || err?.response?.data?.Message
-        alert(msg || 'Não foi possível entrar na lista. Tente novamente.')
-      }
-    } finally { setWlLoading(false) }
-  }
-
-  async function leaveQueue() {
-    if (!id) return
-    setWlLoading(true)
-    try {
-      await waitListApi.leave(id)
-      setWl({ inList: false })
-    } finally { setWlLoading(false) }
   }
 
   const allImgs = product
@@ -155,6 +165,11 @@ export default function ProductPage() {
   )
 
   if (!product) return null
+
+  // ── As 3 situações do produto (modelo da loja) ────────────────────────────
+  const emEstoque  = product.stockQuantity > 0
+  const aceitaFila = product.isPreVenda // flag = "ainda não chegou — aceitar fila"
+  const dataRua    = product.preVendaReleaseDate
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
@@ -179,7 +194,7 @@ export default function ProductPage() {
         </button>
 
         {/* Avatar do usuário logado */}
-        {wlAuth && (
+        {authed && (
           <Link href="/cliente" title="Minha conta">
             {profile?.profileImageUrl ? (
               <img src={profile.profileImageUrl} alt={userName}
@@ -223,11 +238,17 @@ export default function ProductPage() {
           <div className="flex-1 space-y-5">
 
             <div className="flex flex-wrap gap-2">
-              {product.isPreVenda && (
+              {dataRua && (
                 <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
-                  style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+                  style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
+                  Pré-venda · lançamento {fmtData(dataRua)}
+                </span>
               )}
-              {!product.isPreVenda && product.isOnPromo && (
+              {!dataRua && !emEstoque && aceitaFila && (
+                <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
+                  style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Em breve</span>
+              )}
+              {emEstoque && product.isOnPromo && (
                 <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
                   style={{ backgroundColor: '#EF4444', color: '#fff' }}>Promoção</span>
               )}
@@ -253,46 +274,67 @@ export default function ProductPage() {
               ) : (
                 <p className="text-4xl font-black" style={{ color: BLUE }}>{fmt(product.priceInReais)}</p>
               )}
-              <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: (product.availableQuantity ?? product.stockQuantity) > 0 ? '#22C55E' : '#EF4444' }}>
+              <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: emEstoque ? '#22C55E' : '#EF4444' }}>
                 <CheckCircle className="w-3.5 h-3.5" />
-                {(product.availableQuantity ?? product.stockQuantity) > 0
-                  ? `${product.availableQuantity ?? product.stockQuantity} unidades disponíveis`
-                  : product.stockQuantity > 0
-                    ? 'Todas as unidades estão reservadas no momento'
+                {emEstoque
+                  ? `${product.stockQuantity} unidades em estoque`
+                  : aceitaFila
+                    ? 'Ainda não chegou — entre na fila'
                     : 'Produto esgotado'}
               </p>
-              {(product.reservedQuantity ?? 0) > 0 && (
-                <p className="text-xs mt-1" style={{ color: C.muted }}>
-                  {product.reservedQuantity} un. reservadas aguardando retirada (ficam bloqueadas por até 48h)
-                </p>
-              )}
             </div>
 
-            {/* CTAs */}
+            {/* ── CTAs — UM fluxo por situação, com texto explícito ── */}
             <div className="flex flex-col gap-3">
-              {product.isPreVenda ? (
+
+              {emEstoque && (
                 <>
-                  {!wlAuth ? (
-                    <button
-                      onClick={() => setShowLogin(true)}
-                      className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
+                  <div>
+                    <button onClick={handleAddToCart} disabled={inCart}
+                      className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
                       style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
-                      <LogIn className="w-5 h-5" /> Entre para garantir sua vaga
+                      <BookmarkPlus className="w-5 h-5" />
+                      {inCart ? 'Já está na sua pré-venda ✓' : 'Entrar na pré-venda'}
                     </button>
-                  ) : wl?.inList ? (
+                    <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
+                      {dataRua
+                        ? `Lançamento dia ${fmtData(dataRua)}. Você garante a sua agora — o produto já é separado na hora — e retira a partir do lançamento. Pague no Pix ou na retirada.`
+                        : 'O produto já é separado pra você na hora. Pague agora no Pix ou na retirada em até 48h.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <a href={`https://wa.me/${WA_NUM}?text=${waMsg}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
+                      style={{ borderColor: '#25D366', color: '#25D366', backgroundColor: C.card }}>
+                      <MessageCircle className="w-4 h-4" /> Comprar direto pelo WhatsApp
+                    </a>
+                    <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
+                      Prefere comprar agora? Combina a retirada direto com a gente
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {!emEstoque && aceitaFila && (
+                <>
+                  {filaEntry ? (
                     <div className="rounded-2xl border p-4 flex items-center justify-between gap-3"
                       style={{ backgroundColor: isDark ? '#1a1435' : '#f5f0ff', borderColor: '#7C3AED' }}>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-lg"
                           style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
-                          {wl.position}
+                          {filaEntry.posicaoFila ?? '·'}
                         </div>
                         <div>
                           <p className="font-bold text-sm" style={{ color: '#7C3AED' }}>Você está na fila!</p>
-                          <p className="text-xs" style={{ color: C.muted }}>Posição #{wl.position} — avisaremos pelo WhatsApp</p>
+                          <p className="text-xs" style={{ color: C.muted }}>
+                            {filaEntry.posicaoFila ? `Posição #${filaEntry.posicaoFila} — ` : ''}avisamos quando chegar
+                          </p>
                         </div>
                       </div>
-                      <button onClick={leaveQueue} disabled={wlLoading}
+                      <button onClick={sairDaFila} disabled={filaLoading}
                         className="p-2 rounded-xl transition-colors" title="Sair da fila"
                         style={{ color: '#EF4444' }}>
                         <X className="w-4 h-4" />
@@ -300,71 +342,41 @@ export default function ProductPage() {
                     </div>
                   ) : (
                     <div>
-                      <button onClick={joinQueue} disabled={wlLoading}
+                      <button
+                        onClick={() => { if (!authed) { setShowLogin(true); return } entrarNaFila() }}
+                        disabled={filaLoading}
                         className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
                         style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
                         <Clock className="w-5 h-5" />
-                        {wlLoading ? 'Aguarde...' : 'Reservar meu produto'}
+                        {filaLoading ? 'Aguarde...' : authed ? 'Entrar na fila' : 'Entre para entrar na fila'}
                       </button>
                       <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
-                        Pré-venda: ainda não chegou — avisamos você pelo WhatsApp assim que estiver disponível
+                        Ainda não chegou. Você entra na fila e a gente avisa quando chegar — aí você garante no Pix ou na retirada.
                       </p>
                     </div>
                   )}
-                  {(product.availableQuantity ?? product.stockQuantity) > 0 && (
-                    <div>
-                      <button onClick={handleAddToCart} disabled={inCart}
-                        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
-                        style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
-                        <BookmarkPlus className="w-4 h-4" />
-                        {inCart ? 'Já está guardado pra você' : 'Guardar para retirar depois'}
-                      </button>
-                      <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
-                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou no Pix.
-                        Pode guardar vários produtos e finalizar tudo junto no botão roxo "Ver reserva".
-                      </p>
-                    </div>
-                  )}
-                  <Link href="/produtos"
-                    className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
-                    style={{ borderColor: C.border, color: C.text, backgroundColor: C.card }}>
-                    <ShoppingBag className="w-4 h-4" /> Ver mais produtos
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <a href={`https://wa.me/${WA_NUM}?text=${waMsg}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
-                      style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.30)' }}>
-                      <MessageCircle className="w-5 h-5" /> Comprar pelo WhatsApp
-                    </a>
-                    <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
-                      Você compra agora e combina a retirada direto com a gente
-                    </p>
-                  </div>
-                  {(product.availableQuantity ?? product.stockQuantity) > 0 && (
-                    <div>
-                      <button onClick={handleAddToCart} disabled={inCart}
-                        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80 disabled:opacity-60"
-                        style={{ borderColor: '#7C3AED', color: '#7C3AED', backgroundColor: C.card }}>
-                        <BookmarkPlus className="w-4 h-4" />
-                        {inCart ? 'Já está guardado pra você' : 'Guardar para retirar depois'}
-                      </button>
-                      <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
-                        Já tem em estoque — a gente guarda por 48h, você paga na retirada ou no Pix.
-                        Pode guardar vários produtos e finalizar tudo junto no botão roxo "Ver reserva".
-                      </p>
-                    </div>
-                  )}
-                  <Link href="/produtos"
-                    className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
-                    style={{ borderColor: C.border, color: C.text, backgroundColor: C.card }}>
-                    <ShoppingBag className="w-4 h-4" /> Ver mais produtos
-                  </Link>
                 </>
               )}
+
+              {!emEstoque && !aceitaFila && (
+                <div>
+                  <a href={`https://wa.me/${WA_NUM}?text=${waMsg}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
+                    style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.30)' }}>
+                    <MessageCircle className="w-5 h-5" /> Avise-me pelo WhatsApp
+                  </a>
+                  <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
+                    Esgotado no momento — pergunta pra gente quando volta
+                  </p>
+                </div>
+              )}
+
+              <Link href="/produtos"
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
+                style={{ borderColor: C.border, color: C.text, backgroundColor: C.card }}>
+                <ShoppingBag className="w-4 h-4" /> Ver mais produtos
+              </Link>
             </div>
 
             {cartCount > 0 && (
@@ -373,7 +385,7 @@ export default function ProductPage() {
                 className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full font-bold text-sm shadow-xl transition-transform active:scale-95 animate-bounce-in"
                 style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}>
                 <BookmarkPlus className="w-4 h-4" />
-                Ver reserva ({cartCount}) — finalizar
+                Ver pré-venda ({cartCount}) — finalizar
               </Link>
             )}
 
@@ -391,7 +403,8 @@ export default function ProductPage() {
             <div className="rounded-2xl border divide-y text-sm" style={{ backgroundColor: C.card, borderColor: C.border }}>
               {([
                 ['Categoria', product.category],
-                ['Disponibilidade', (product.availableQuantity ?? product.stockQuantity) > 0 ? 'Em estoque' : product.stockQuantity > 0 ? 'Tudo reservado' : 'Esgotado'],
+                ['Disponibilidade', emEstoque ? 'Em estoque' : aceitaFila ? 'Em breve (fila aberta)' : 'Esgotado'],
+                dataRua ? ['Lançamento', fmtData(dataRua)] : null,
                 product.barcode ? ['Código', product.barcode] : null,
               ].filter(Boolean) as string[][]).map(([label, value]) => (
                 <div key={label as string} className="flex items-center justify-between px-5 py-3">
@@ -426,7 +439,7 @@ export default function ProductPage() {
             </div>
 
             <p className="text-sm" style={{ color: '#4D8FAC' }}>
-              Faça login para reservar <strong style={{ color: '#0C3D5A' }}>{product.name}</strong>.
+              Faça login para garantir <strong style={{ color: '#0C3D5A' }}>{product.name}</strong>.
             </p>
 
             <form onSubmit={handleLogin} className="flex flex-col gap-3">

@@ -56,9 +56,7 @@ function ProductCard({ p, C }: { p: Product; C: Theme }) {
             <span className="text-sm font-black" style={{ color: C.blue }}>{fmt(p.priceInReais)}</span>
           )}
           <span className="text-[10px]" style={{ color: C.muted }}>
-            {(p.availableQuantity ?? p.stockQuantity) > 0
-              ? `${p.availableQuantity ?? p.stockQuantity} un.`
-              : p.stockQuantity > 0 ? 'Reservado' : 'Esgotado'}
+            {p.stockQuantity > 0 ? `${p.stockQuantity} un.` : 'Esgotado'}
           </span>
         </div>
       </div>

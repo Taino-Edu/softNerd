@@ -10,6 +10,18 @@ using System.Security.Claims;
 
 namespace CardGameStore.Controllers;
 
+// =============================================================================
+// ReservationController.cs — Pré-venda e Fila (modelo unificado da loja)
+//
+// PRÉ-VENDA (kind=pre_venda): item EM ESTOQUE. Baixa o estoque no ato, Pix em
+// tudo, data de rua opcional. Não paga expira (48h ou data de rua + 48h) e o
+// estoque volta. Paga não expira — é venda feita aguardando retirada.
+//
+// FILA (kind=fila): item que AINDA NÃO CHEGOU. Não mexe em estoque, não expira.
+// Quando o estoque chega, ProductService.ProcessarChegadaFilaAsync converte a
+// fila em pré-venda na ordem de entrada.
+// =============================================================================
+
 [ApiController]
 [Route("api/reservations")]
 [Produces("application/json")]
@@ -36,7 +48,7 @@ public class ReservationController : ControllerBase
         return id;
     }
 
-    // GET /api/reservations/mine — reservas do usuário logado
+    // GET /api/reservations/mine — pré-vendas e fila do usuário logado
     [HttpGet("mine")]
     [Authorize]
     public async Task<IActionResult> GetMine()
@@ -49,75 +61,52 @@ public class ReservationController : ControllerBase
             .OrderByDescending(r => r.ReservedAt)
             .ToListAsync();
 
-        return Ok(list.Select(r => ToDto(r)));
+        var result = new List<object>();
+        foreach (var r in list)
+        {
+            int? posicao = null;
+            if (r.Kind == "fila" && r.Status == "waiting")
+                posicao = 1 + await _db.ProductReservations
+                    .CountAsync(w => w.ProductId == r.ProductId && w.Kind == "fila"
+                                  && w.Status == "waiting" && w.ReservedAt < r.ReservedAt);
+            result.Add(ToDto(r, posicao));
+        }
+        return Ok(result);
     }
 
-    // POST /api/reservations — cria reserva (somente via site)
+    // POST /api/reservations — cria pré-venda (em estoque) ou entra na fila (não chegou)
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateReservationRequest req)
     {
-        var userId = GetUserId();
-
-        var product = await _db.Products
-            .Include(p => p.Variants)
-            .FirstOrDefaultAsync(p => p.Id == req.ProductId && p.IsActive);
-
-        if (product is null) return NotFound(new { Message = "Produto não encontrado." });
-
-        var qty = req.Quantity < 1 ? 1 : req.Quantity;
-
-        // Calcula estoque disponível descontando reservas ativas
-        int stockBase;
-        if (req.VariantId.HasValue)
+        var userId  = GetUserId();
+        var created = await CriarItemAsync(userId, Guid.NewGuid(), req.ProductId, req.VariantId,
+                                           req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
+        if (created.Error is not null) return created.Error switch
         {
-            var variant = product.Variants.FirstOrDefault(v => v.Id == req.VariantId.Value);
-            if (variant is null) return BadRequest(new { Message = "Variante não encontrada." });
-            stockBase = variant.StockQuantity;
-        }
-        else
-        {
-            stockBase = product.StockQuantity;
-        }
-
-        var activeReservedQty = await _db.ProductReservations
-            .Where(r => r.ProductId == req.ProductId
-                     && r.VariantId == req.VariantId
-                     && r.Status == "active"
-                     && r.ExpiresAt > DateTime.UtcNow)
-            .SumAsync(r => r.Quantity);
-
-        if (stockBase - activeReservedQty < qty)
-            return BadRequest(new { Message = $"Estoque insuficiente. Disponível para reserva: {Math.Max(0, stockBase - activeReservedQty)}." });
-
-        var reservation = new ProductReservation
-        {
-            UserId    = userId,
-            ProductId = req.ProductId,
-            VariantId = req.VariantId,
-            Quantity  = qty,
-            Notes     = req.Notes,
-            ExpiresAt = DateTime.UtcNow.AddHours(48),
+            "not_found" => NotFound(new { created.Message }),
+            "conflict"  => Conflict(new { created.Message }),
+            _           => BadRequest(new { created.Message }),
         };
-        reservation.ReservationGroupId = reservation.Id; // reserva avulsa = grupo de 1 item só
 
-        _db.ProductReservations.Add(reservation);
+        var r = created.Reservation!;
+        r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
+        _db.ProductReservations.Add(r);
         await _db.SaveChangesAsync();
 
-        await _db.Entry(reservation).Reference(r => r.Product).LoadAsync();
-        await _db.Entry(reservation).Reference(r => r.Variant).LoadAsync();
-
-        return Ok(ToDto(reservation));
+        await _db.Entry(r).Reference(x => x.Product).LoadAsync();
+        await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
+        return Ok(ToDto(r));
     }
 
-    // POST /api/reservations/cart — cria várias reservas de uma vez (carrinho), todas com o
-    // mesmo ReservationGroupId. Tudo ou nada: se um item não tem estoque, nenhuma é criada.
+    // POST /api/reservations/cart — cria várias de uma vez (carrinho), mesmo ReservationGroupId.
+    // Cada item vira pré-venda (se tem estoque) ou fila (se não chegou e aceita fila).
     [HttpPost("cart")]
     [Authorize]
     public async Task<IActionResult> CreateCart([FromBody] CreateReservationCartRequest req)
     {
         if (req.Items is null || req.Items.Count == 0)
-            return BadRequest(new { Message = "Carrinho de reserva vazio." });
+            return BadRequest(new { Message = "Carrinho vazio." });
 
         var userId  = GetUserId();
         var groupId = Guid.NewGuid();
@@ -125,52 +114,14 @@ public class ReservationController : ControllerBase
 
         foreach (var item in req.Items)
         {
-            var qty = item.Quantity < 1 ? 1 : item.Quantity;
+            var created = await CriarItemAsync(userId, groupId, item.ProductId, item.VariantId,
+                                               item.Quantity < 1 ? 1 : item.Quantity, null);
+            if (created.Error is not null)
+                return BadRequest(new { created.Message });
 
-            var product = await _db.Products
-                .Include(p => p.Variants)
-                .FirstOrDefaultAsync(p => p.Id == item.ProductId && p.IsActive);
-            if (product is null)
-                return BadRequest(new { Message = $"Produto {item.ProductId} não encontrado." });
-
-            int stockBase;
-            if (item.VariantId.HasValue)
-            {
-                var variant = product.Variants.FirstOrDefault(v => v.Id == item.VariantId.Value);
-                if (variant is null)
-                    return BadRequest(new { Message = $"Variante não encontrada para \"{product.Name}\"." });
-                stockBase = variant.StockQuantity;
-            }
-            else
-            {
-                stockBase = product.StockQuantity;
-            }
-
-            var activeReservedQty = await _db.ProductReservations
-                .Where(r => r.ProductId == item.ProductId
-                         && r.VariantId == item.VariantId
-                         && r.Status == "active"
-                         && r.ExpiresAt > DateTime.UtcNow)
-                .SumAsync(r => r.Quantity);
-
-            if (stockBase - activeReservedQty < qty)
-                return BadRequest(new {
-                    Message = $"Estoque insuficiente para \"{product.Name}\". Disponível para reserva: {Math.Max(0, stockBase - activeReservedQty)}.",
-                });
-
-            toCreate.Add(new ProductReservation
-            {
-                ReservationGroupId = groupId,
-                UserId    = userId,
-                ProductId = item.ProductId,
-                VariantId = item.VariantId,
-                Quantity  = qty,
-                ExpiresAt = DateTime.UtcNow.AddHours(48),
-            });
+            toCreate.Add(created.Reservation!);
         }
 
-        // Só grava depois de validar TODOS os itens — nenhuma reserva parcial fica no banco
-        // se um item qualquer do carrinho não tiver estoque suficiente.
         _db.ProductReservations.AddRange(toCreate);
         await _db.SaveChangesAsync();
 
@@ -180,10 +131,94 @@ public class ReservationController : ControllerBase
             await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
         }
 
-        return Ok(new { groupId, items = toCreate.Select(ToDto) });
+        return Ok(new { groupId, items = toCreate.Select(r => ToDto(r)) });
     }
 
-    // DELETE /api/reservations/{id} — cancela reserva própria
+    /// <summary>
+    /// Núcleo da criação: decide pré-venda × fila e já aplica o efeito de estoque.
+    /// Pré-venda: decremento atômico (falha = sem estoque → vira fila se aceitar).
+    /// Fila: só se o produto aceita fila (IsPreVenda) e o cliente ainda não está nela.
+    /// </summary>
+    private async Task<(ProductReservation? Reservation, string? Error, string? Message)> CriarItemAsync(
+        Guid userId, Guid groupId, Guid productId, Guid? variantId, int qty, string? notes)
+    {
+        var product = await _db.Products
+            .Include(p => p.Variants)
+            .FirstOrDefaultAsync(p => p.Id == productId && p.IsActive);
+        if (product is null)
+            return (null, "not_found", "Produto não encontrado.");
+
+        ProductVariant? variant = null;
+        if (product.HasVariants)
+        {
+            if (!variantId.HasValue)
+                return (null, "bad_request", $"\"{product.Name}\" tem grade — selecione tamanho/cor.");
+            variant = product.Variants.FirstOrDefault(v => v.Id == variantId.Value);
+            if (variant is null)
+                return (null, "bad_request", $"Variante não encontrada para \"{product.Name}\".");
+        }
+
+        // ── Tenta PRÉ-VENDA: baixa o estoque na hora (atômico, sem corrida) ──
+        int baixado;
+        if (variant is not null)
+            baixado = await _db.ProductVariants
+                .Where(v => v.Id == variant.Id && v.StockQuantity >= qty)
+                .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - qty));
+        else
+            baixado = await _db.Products
+                .Where(p => p.Id == product.Id && p.StockQuantity >= qty)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity - qty));
+
+        if (baixado > 0)
+        {
+            // Não pago expira: 48h, ou data de rua + 48h quando ela está no futuro.
+            var release = product.PreVendaReleaseDate;
+            var expira = release.HasValue && release.Value.Date > DateTime.UtcNow.Date
+                ? release.Value.Date.AddDays(2)
+                : DateTime.UtcNow.AddHours(48);
+
+            return (new ProductReservation
+            {
+                ReservationGroupId = groupId,
+                UserId = userId, ProductId = productId, VariantId = variant?.Id,
+                Quantity = qty, Notes = notes,
+                Kind = "pre_venda", Status = "active", ExpiresAt = expira,
+            }, null, null);
+        }
+
+        // ── Sem estoque: vira FILA se o produto aceita (flag "ainda não chegou") ──
+        if (!product.IsPreVenda)
+            return (null, "bad_request", $"\"{product.Name}\" está sem estoque no momento.");
+
+        var jaNaFila = await _db.ProductReservations.AnyAsync(r =>
+            r.UserId == userId && r.ProductId == productId && r.VariantId == variantId
+            && r.Kind == "fila" && r.Status == "waiting");
+        if (jaNaFila)
+            return (null, "conflict", $"Você já está na fila de \"{product.Name}\".");
+
+        return (new ProductReservation
+        {
+            ReservationGroupId = groupId,
+            UserId = userId, ProductId = productId, VariantId = variant?.Id,
+            Quantity = qty, Notes = notes,
+            Kind = "fila", Status = "waiting", ExpiresAt = null,
+        }, null, null);
+    }
+
+    /// <summary>Devolve o estoque de uma pré-venda (cancelamento/expiração).</summary>
+    private async Task DevolverEstoqueAsync(ProductReservation r)
+    {
+        if (r.VariantId.HasValue)
+            await _db.ProductVariants
+                .Where(v => v.Id == r.VariantId.Value)
+                .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + r.Quantity));
+        else
+            await _db.Products
+                .Where(p => p.Id == r.ProductId)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity + r.Quantity));
+    }
+
+    // DELETE /api/reservations/{id} — cancela pré-venda (estoque volta) ou sai da fila
     [HttpDelete("{id:guid}")]
     [Authorize]
     public async Task<IActionResult> Cancel(Guid id)
@@ -193,22 +228,44 @@ public class ReservationController : ControllerBase
 
         if (res is null) return NotFound();
         if (res.UserId != userId && !User.IsInRole("Admin")) return Forbid();
-        if (res.Status != "active") return BadRequest(new { Message = "Reserva não está ativa." });
+        if (res.Status is not ("active" or "waiting"))
+            return BadRequest(new { Message = "Esta reserva já foi encerrada." });
+
+        var devolveuEstoque = res.Status == "active" && res.Kind == "pre_venda";
+        if (devolveuEstoque)
+            await DevolverEstoqueAsync(res);
 
         res.Status      = "cancelled";
         res.CancelledAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
+        // Sobrou estoque? Puxa o próximo da fila.
+        if (devolveuEstoque)
+            await ProcessarFilaSeguroAsync(res.ProductId);
+
         return NoContent();
+    }
+
+    private async Task ProcessarFilaSeguroAsync(Guid productId)
+    {
+        try
+        {
+            var svc = HttpContext.RequestServices.GetRequiredService<IProductService>();
+            await svc.ProcessarChegadaFilaAsync(productId);
+        }
+        catch { /* melhor-esforço — o próximo reestoque/job cobre */ }
     }
 
     // GET /api/reservations — lista todas [AdminOnly]
     [HttpGet]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> GetAll(
-        [FromQuery] string? status = null,
-        [FromQuery] Guid?   userId = null,
-        [FromQuery] int     page   = 1)
+        [FromQuery] string? status    = null,
+        [FromQuery] string? kind      = null,
+        [FromQuery] Guid?   userId    = null,
+        [FromQuery] Guid?   productId = null,
+        [FromQuery] int     page      = 1,
+        [FromQuery] int     pageSize  = 30)
     {
         var q = _db.ProductReservations
             .Include(r => r.User)
@@ -217,71 +274,77 @@ public class ReservationController : ControllerBase
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status)) q = q.Where(r => r.Status == status);
+        if (!string.IsNullOrWhiteSpace(kind))   q = q.Where(r => r.Kind == kind);
         if (userId.HasValue)                    q = q.Where(r => r.UserId == userId.Value);
+        if (productId.HasValue)                 q = q.Where(r => r.ProductId == productId.Value);
 
+        pageSize = Math.Clamp(pageSize, 1, 200);
         var total = await q.CountAsync();
         var items = await q.OrderByDescending(r => r.ReservedAt)
-            .Skip((page - 1) * 30).Take(30)
+            .Skip((page - 1) * pageSize).Take(pageSize)
             .ToListAsync();
 
-        return Ok(new { items = items.Select(ToDto), total, totalPages = (int)Math.Ceiling(total / 30.0) });
+        // Posição na fila (só kind=fila/waiting): quantos entraram antes no mesmo produto.
+        var posicoes = new Dictionary<Guid, int>();
+        foreach (var r in items.Where(r => r.Kind == "fila" && r.Status == "waiting"))
+            posicoes[r.Id] = 1 + await _db.ProductReservations
+                .CountAsync(w => w.ProductId == r.ProductId && w.Kind == "fila"
+                              && w.Status == "waiting" && w.ReservedAt < r.ReservedAt);
+
+        return Ok(new
+        {
+            items = items.Select(r => ToDto(r, posicoes.TryGetValue(r.Id, out var pos) ? pos : null)),
+            total,
+            totalPages = (int)Math.Ceiling(total / (double)pageSize),
+        });
     }
 
     // PUT /api/reservations/{id}/status — admin atualiza status
+    // fulfilled = retirado (estoque JÁ foi baixado na pré-venda — não baixa de novo)
+    // cancelled = devolve o estoque se era pré-venda vigente
     [HttpPut("{id:guid}/status")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateReservationStatusRequest req)
     {
         var res = await _db.ProductReservations
-            .Include(r => r.Product).ThenInclude(p => p.Variants)
+            .Include(r => r.Product)
             .Include(r => r.Variant)
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (res is null) return NotFound();
-        if (res.Status != "active") return BadRequest(new { Message = "Reserva não está ativa." });
-
-        res.Status = req.Status;
+        if (res.Status is not ("active" or "waiting"))
+            return BadRequest(new { Message = "Esta reserva já foi encerrada." });
 
         if (req.Status == "fulfilled")
         {
+            if (res.Status != "active")
+                return BadRequest(new { Message = "Só pré-vendas ativas podem ser marcadas como retiradas." });
+            res.Status      = "fulfilled";
             res.FulfilledAt = DateTime.UtcNow;
-            // Decrementa estoque ao confirmar
-            if (res.VariantId.HasValue && res.Variant is not null)
-            {
-                res.Variant.StockQuantity = Math.Max(0, res.Variant.StockQuantity - res.Quantity);
-                res.Variant.UpdatedAt     = DateTime.UtcNow;
-            }
-            else
-            {
-                res.Product.StockQuantity = Math.Max(0, res.Product.StockQuantity - res.Quantity);
-                res.Product.UpdatedAt     = DateTime.UtcNow;
-            }
         }
         else if (req.Status == "cancelled")
         {
+            if (res.Status == "active" && res.Kind == "pre_venda")
+                await DevolverEstoqueAsync(res);
+            res.Status      = "cancelled";
             res.CancelledAt = DateTime.UtcNow;
+        }
+        else
+        {
+            return BadRequest(new { Message = "Status inválido. Use 'fulfilled' ou 'cancelled'." });
         }
 
         await _db.SaveChangesAsync();
+
+        if (req.Status == "cancelled" && res.Kind == "pre_venda")
+            await ProcessarFilaSeguroAsync(res.ProductId);
+
         return Ok(ToDto(res));
     }
 
-    // GET /api/reservations/product/{productId} — quantidade reservada (público)
-    [HttpGet("product/{productId:guid}")]
-    [AllowAnonymous]
-    public async Task<IActionResult> GetProductReservedQty(Guid productId, [FromQuery] Guid? variantId = null)
-    {
-        var reserved = await _db.ProductReservations
-            .Where(r => r.ProductId == productId
-                     && r.VariantId == variantId
-                     && r.Status == "active"
-                     && r.ExpiresAt > DateTime.UtcNow)
-            .SumAsync(r => r.Quantity);
-
-        return Ok(new { productId, variantId, reservedQuantity = reserved });
-    }
-
-    // POST /api/reservations/{id}/homologar — admin homologa reserva → lança no PDV ou comanda
+    // POST /api/reservations/{id}/homologar — admin homologa pré-venda → lança no PDV ou
+    // comanda. SkipStockDecrement: o estoque JÁ saiu no ato da pré-venda; aqui só se
+    // registra a venda (e a NFC-e, se for o caso).
     [HttpPost("{id:guid}/homologar")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Homologar(Guid id, [FromBody] HomologarRequest req)
@@ -293,7 +356,8 @@ public class ReservationController : ControllerBase
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (res is null) return NotFound();
-        if (res.Status != "active") return BadRequest(new { Message = "Reserva não está ativa." });
+        if (res.Status != "active" || res.Kind != "pre_venda")
+            return BadRequest(new { Message = "Só pré-vendas ativas podem ser homologadas." });
 
         var adminId   = GetUserId();
         var adminName = User.FindFirst(ClaimTypes.Name)?.Value
@@ -304,10 +368,11 @@ public class ReservationController : ControllerBase
         {
             var vendaReq = new VendaAvulsaRequest
             {
-                ClientName    = res.User?.Name,
-                UserId        = res.UserId,
-                PaymentMethod = req.PaymentMethod ?? "Dinheiro",
-                Items         = [new VendaAvulsaItemRequest { ProductId = res.ProductId, Quantity = res.Quantity }],
+                ClientName         = res.User?.Name,
+                UserId             = res.UserId,
+                PaymentMethod      = req.PaymentMethod ?? "Dinheiro",
+                SkipStockDecrement = true, // estoque já baixado na pré-venda
+                Items              = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
             };
             try { await _vendaService.RegisterAsync(vendaReq, adminId, adminName); }
             catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
@@ -320,7 +385,13 @@ public class ReservationController : ControllerBase
             try
             {
                 await _comandaService.AdminAddItemAsync(req.ComandaId.Value, adminId,
-                    new AddItemToComandaRequest { ProductId = res.ProductId, Quantity = res.Quantity });
+                    new AddItemToComandaRequest
+                    {
+                        ProductId          = res.ProductId,
+                        VariantId          = res.VariantId,
+                        Quantity           = res.Quantity,
+                        SkipStockDecrement = true, // estoque já baixado na pré-venda
+                    });
             }
             catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
         }
@@ -333,30 +404,30 @@ public class ReservationController : ControllerBase
         res.FulfilledAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Reserva homologada com sucesso.", reservationId = id, mode = req.Mode });
+        return Ok(new { message = "Pré-venda homologada com sucesso.", reservationId = id, mode = req.Mode });
     }
 
-    // PUT /api/reservations/{id}/extend — admin estende prazo +48h
+    // PUT /api/reservations/{id}/extend — admin estende prazo +48h (só pré-venda não paga)
     [HttpPut("{id:guid}/extend")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Extend(Guid id)
     {
         var res = await _db.ProductReservations.FindAsync(id);
         if (res is null) return NotFound();
-        if (res.Status != "active") return BadRequest(new { Message = "Reserva não está ativa." });
+        if (res.Status != "active") return BadRequest(new { Message = "Só pré-vendas ativas têm prazo a estender." });
 
-        res.ExpiresAt = res.ExpiresAt.AddHours(48);
+        res.ExpiresAt = (res.ExpiresAt ?? DateTime.UtcNow).AddHours(48);
         await _db.SaveChangesAsync();
         return Ok(ToDto(res));
     }
 
     // -------------------------------------------------------------------------
-    // PAGAMENTO DO CARRINHO DE RESERVA — Pix opcional (mesmo padrão da inscrição
-    // de campeonato: gerar cobrança + verificar sob demanda, sem webhook).
+    // PAGAMENTO — Pix do carrinho de pré-venda (mesmo padrão da inscrição de
+    // campeonato: gerar cobrança + verificar sob demanda, sem webhook).
+    // Pago = pré-venda não expira mais (ExpiresAt vira null — venda feita).
     // -------------------------------------------------------------------------
 
-    /// <summary>Gera cobrança Pix do valor total do carrinho de reserva. Pagamento é opcional —
-    /// a reserva já vale sem pagar, só é finalizada de verdade quando o produto chega.</summary>
+    /// <summary>Gera cobrança Pix do total das PRÉ-VENDAS do grupo (itens de fila não cobram).</summary>
     [HttpPost("group/{groupId:guid}/pix")]
     [Authorize]
     public async Task<IActionResult> GerarPixReserva(Guid groupId)
@@ -371,10 +442,14 @@ public class ReservationController : ControllerBase
             .ToListAsync();
 
         if (items.Count == 0) return NotFound(new { Message = "Reserva não encontrada." });
-        if (items.Any(r => r.Status != "active"))
-            return BadRequest(new { Message = "Só é possível gerar Pix para reservas ativas." });
 
-        var valorEmCentavos = items.Sum(r => (r.Variant?.PriceInCents ?? r.Product.PriceInCents) * r.Quantity);
+        var preVendas = items.Where(r => r.Kind == "pre_venda").ToList();
+        if (preVendas.Count == 0)
+            return BadRequest(new { Message = "Itens de fila não cobram — o Pix é gerado quando o produto chegar." });
+        if (preVendas.Any(r => r.Status != "active"))
+            return BadRequest(new { Message = "Só é possível gerar Pix para pré-vendas ativas." });
+
+        var valorEmCentavos = preVendas.Sum(r => (r.Variant?.PriceInCents ?? r.Product.PriceInCents) * r.Quantity);
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
         if (cfg is null)
@@ -383,7 +458,7 @@ public class ReservationController : ControllerBase
         var user = items[0].User;
         var cpf  = user?.Cpf?.Length == 11 ? user.Cpf : null;
         var result = await _inter.CriarCobrancaAsync(
-            cfg, valorEmCentavos, user?.Name, cpf, $"Reserva — {items.Count} item(ns)");
+            cfg, valorEmCentavos, user?.Name, cpf, $"Pré-venda — {preVendas.Count} item(ns)");
 
         if (result.Error is not null)
             return StatusCode(422, new { message = result.Error });
@@ -407,7 +482,8 @@ public class ReservationController : ControllerBase
         return Ok(new { pix.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
     }
 
-    /// <summary>Verifica no Inter se o Pix do carrinho de reserva caiu; se sim, marca a cobrança como paga.</summary>
+    /// <summary>Verifica no Inter se o Pix caiu; se sim, marca pago e as pré-vendas do
+    /// grupo deixam de expirar (venda feita, aguardando retirada).</summary>
     [HttpPost("group/{groupId:guid}/pix/verificar")]
     [Authorize]
     public async Task<IActionResult> VerificarPixReserva(Guid groupId)
@@ -434,24 +510,34 @@ public class ReservationController : ControllerBase
         if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
         {
             pix.PagoEm = DateTime.UtcNow;
-            
+            await MarcarGrupoComoPagoAsync(groupId);
+
             var tx = new ExternalTransaction
             {
                 Source = "inter",
                 ExternalId = pix.TxId,
                 Type = "income",
                 Amount = pix.ValorEmCentavos / 100m,
-                Description = $"Pix Reserva Grupo {groupId.ToString().Substring(0,8)}",
+                Description = $"Pix Pré-venda Grupo {groupId.ToString().Substring(0,8)}",
                 DueDate = pix.ExpiraEm,
                 PaidAt = pix.PagoEm,
                 Status = "paid",
-                Notes = $"Pagamento via Pix da Reserva {groupId}"
+                Notes = $"Pagamento via Pix da pré-venda {groupId}"
             };
             _db.ExternalTransactions.Add(tx);
         }
 
         await _db.SaveChangesAsync();
         return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
+    }
+
+    /// <summary>Pré-venda paga não expira: limpa o prazo dos itens ativos do grupo.</summary>
+    private async Task MarcarGrupoComoPagoAsync(Guid groupId)
+    {
+        var itens = await _db.ProductReservations
+            .Where(r => r.ReservationGroupId == groupId && r.Kind == "pre_venda" && r.Status == "active")
+            .ToListAsync();
+        foreach (var r in itens) r.ExpiresAt = null;
     }
 
     // GET /api/reservations/group/{groupId}/pix — status atual do pagamento
@@ -483,17 +569,18 @@ public class ReservationController : ControllerBase
                     if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
                     {
                         pix.PagoEm = DateTime.UtcNow;
+                        await MarcarGrupoComoPagoAsync(groupId);
                         var tx = new ExternalTransaction
                         {
                             Source = "inter",
                             ExternalId = pix.TxId,
                             Type = "income",
                             Amount = pix.ValorEmCentavos / 100m,
-                            Description = $"Pix Reserva Grupo {groupId.ToString().Substring(0,8)}",
+                            Description = $"Pix Pré-venda Grupo {groupId.ToString().Substring(0,8)}",
                             DueDate = pix.ExpiraEm,
                             PaidAt = pix.PagoEm,
                             Status = "paid",
-                            Notes = $"Pagamento via Pix da Reserva {groupId}"
+                            Notes = $"Pagamento via Pix da pré-venda {groupId}"
                         };
                         _db.ExternalTransactions.Add(tx);
                     }
@@ -505,18 +592,20 @@ public class ReservationController : ControllerBase
         return Ok(new { hasPix = true, pix.Status, pix.PagoEm, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
     }
 
-    private static object ToDto(ProductReservation r) => new
+    private static object ToDto(ProductReservation r, int? posicaoFila = null) => new
     {
         r.Id,
         r.ReservationGroupId,
         r.UserId,
         userName       = r.User?.Name,
+        userWhatsApp   = r.User?.WhatsApp,
         r.ProductId,
         productName    = r.Product?.Name,
         productImageUrl= r.Product?.ImageUrl,
         r.VariantId,
         variantLabel   = r.Variant?.Label,
         r.Quantity,
+        r.Kind,
         r.Status,
         r.Notes,
         r.ReservedAt,
@@ -524,6 +613,8 @@ public class ReservationController : ControllerBase
         r.FulfilledAt,
         r.CancelledAt,
         isExpired      = r.IsExpired,
+        posicaoFila,
+        preVendaReleaseDate = r.Product?.PreVendaReleaseDate,
     };
 }
 

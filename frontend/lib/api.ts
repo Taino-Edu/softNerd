@@ -128,10 +128,8 @@ export interface Product {
   isLowStock: boolean; priceInReais: number; costPriceInReais: number
   marginInReais: number; marginPercent: number
   hasVariants: boolean
-  /** Quantidade com reserva ativa aguardando retirada (o físico só baixa na homologação). */
-  reservedQuantity: number
-  /** Estoque realmente disponível: stockQuantity − reservedQuantity. */
-  availableQuantity: number
+  /** "Data de rua" da pré-venda (YYYY-MM-DD) — retirada/venda só a partir dela. Null = sem trava. */
+  preVendaReleaseDate: string | null
   /** NCM (Nomenclatura Comum do Mercosul) — obrigatório para emitir NFC-e deste produto. */
   ncm: string | null
   /** Natureza de operação (CFOP/CSOSN) usada na emissão fiscal. Null = usa a marcada como padrão. */
@@ -595,29 +593,20 @@ export const variantApi = {
             api.post<ProductVariant[]>(`/api/products/${productId}/variants/bulk`, { sizes, colors, baseStockQuantity: stockQty }),
 }
 
-export interface WaitListEntry { id: string; productId: string; userId?: string; name: string; whatsApp: string; position: number; createdAt: string; notifiedAt?: string }
-
-export const waitListApi = {
-  myPosition: (productId: string)  => api.get<{ inList: boolean; position?: number; entryId?: string }>(`/api/products/${productId}/waitlist/my`),
-  join:       (productId: string)  => api.post<WaitListEntry>(`/api/products/${productId}/waitlist`),
-  leave:      (productId: string)  => api.delete(`/api/products/${productId}/waitlist`),
-  adminList:  (productId: string)  => api.get<{ productId: string; productName: string; total: number; entries: WaitListEntry[] }>(`/api/products/${productId}/waitlist`),
-  adminRemove:(productId: string, entryId: string) => api.delete(`/api/products/${productId}/waitlist/${entryId}`),
-  preVendaPendentesCount: () => api.get<{ count: number }>('/api/products/waitlist/pre-venda/pendentes'),
-  mine: () => api.get<MyWaitListEntry[]>('/api/products/waitlist/mine'),
-}
-
-export interface MyWaitListEntry {
-  id: string; productId: string; productName: string; productImageUrl?: string
-  position: number; createdAt: string; notifiedAt?: string | null
-}
-
 export interface MyReservation {
   id: string; reservationGroupId: string
   productId: string; productName?: string; productImageUrl?: string
-  variantId?: string; variantLabel?: string; quantity: number; status: string
-  notes?: string; reservedAt: string; expiresAt: string
+  variantId?: string; variantLabel?: string; quantity: number
+  /** "pre_venda" (em estoque, baixou na hora) | "fila" (não chegou, espera) */
+  kind: 'pre_venda' | 'fila'
+  /** "waiting" (fila) | "active" (pré-venda vigente) | "fulfilled" | "cancelled" | "expired" */
+  status: string
+  notes?: string; reservedAt: string; expiresAt: string | null
   fulfilledAt?: string; cancelledAt?: string; isExpired: boolean
+  /** Posição na fila (só quando kind=fila e status=waiting). */
+  posicaoFila?: number | null
+  /** Data de rua da pré-venda (retirada a partir dela), se houver. */
+  preVendaReleaseDate?: string | null
 }
 
 export interface ReservationPixStatus {
@@ -1134,9 +1123,20 @@ export const publicProfileApi = {
 }
 
 // ── Reservas (pré-venda) ──────────────────────────────────────────────────────
+export interface AdminReservation {
+  id: string; reservationGroupId: string; userId: string
+  userName?: string; userWhatsApp?: string
+  productId: string; productName?: string; productImageUrl?: string
+  variantId?: string; variantLabel?: string; quantity: number
+  kind: 'pre_venda' | 'fila'; status: string
+  notes?: string; reservedAt: string; expiresAt: string | null
+  fulfilledAt?: string; cancelledAt?: string; isExpired: boolean
+  posicaoFila?: number | null; preVendaReleaseDate?: string | null
+}
+
 export const reservationApi = {
-  list:      (params?: { status?: string; page?: number; pageSize?: number }) =>
-               api.get('/api/reservations', { params }),
+  list:      (params?: { status?: string; kind?: string; userId?: string; productId?: string; page?: number; pageSize?: number }) =>
+               api.get<{ items: AdminReservation[]; total: number; totalPages: number }>('/api/reservations', { params }),
   mine:      ()                                    => api.get<MyReservation[]>('/api/reservations/mine'),
   create:    (body: { productId: string; variantId?: string; quantity?: number; notes?: string }) =>
                api.post('/api/reservations', body),
@@ -1153,6 +1153,8 @@ export const reservationApi = {
   homologar: (id: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; comandaId?: string }) =>
                api.post(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
+  /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */
+  filaPendentesCount: () => api.get<{ count: number }>('/api/products/waitlist/pre-venda/pendentes'),
 }
 
 // ── Contas a Receber / Pagar ──────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { api, comandaApi, userApi, productApi, categoryApi, waitListApi, variantApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto } from '@/lib/api'
+import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation } from '@/lib/api'
 import { getUserName } from '@/lib/auth'
 import NotificationBell from '@/components/cliente/NotificationBell'
 import { startHub, stopHub, ComandaOpenedEvent } from '@/lib/signalr'
@@ -187,31 +187,36 @@ function ProductCard({ p, adding, onAdd }: {
   const canWaitList     = outOfStock && p.isPreVenda
   const unavailable     = outOfStock && !canWaitList
 
-  const [inList,        setInList]    = useState(false)
+  const [filaEntry,     setFilaEntry]   = useState<MyReservation | null>(null)
   const [waitLoading,   setWaitLoading] = useState(false)
-  const [position,      setPosition]  = useState<number | null>(null)
 
   useEffect(() => {
     if (!canWaitList) return
-    waitListApi.myPosition(p.id)
-      .then(r => { setInList(r.data.inList); setPosition(r.data.position ?? null) })
+    reservationApi.mine()
+      .then(r => setFilaEntry(r.data.find(x =>
+        x.productId === p.id && x.kind === 'fila' && x.status === 'waiting') ?? null))
       .catch(() => {})
   }, [p.id, canWaitList])
 
   async function handleWaitList() {
     setWaitLoading(true)
     try {
-      if (inList) {
-        await waitListApi.leave(p.id)
-        setInList(false); setPosition(null)
-        toast.success('Saiu da lista de espera.')
+      if (filaEntry) {
+        await reservationApi.cancel(filaEntry.id)
+        setFilaEntry(null)
+        toast.success('Você saiu da fila.')
       } else {
-        const r = await waitListApi.join(p.id)
-        setInList(true); setPosition(r.data.position)
-        toast.success(`Você é o #${r.data.position} na lista de espera!`)
+        await reservationApi.create({ productId: p.id })
+        const r = await reservationApi.mine()
+        const entry = r.data.find(x =>
+          x.productId === p.id && x.kind === 'fila' && x.status === 'waiting') ?? null
+        setFilaEntry(entry)
+        toast.success(entry?.posicaoFila
+          ? `Você é o #${entry.posicaoFila} na fila!`
+          : 'Você entrou na fila!')
       }
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Erro na lista de espera.')
+      toast.error(e?.response?.data?.message || 'Erro ao entrar na fila.')
     } finally { setWaitLoading(false) }
   }
 
@@ -235,7 +240,7 @@ function ProductCard({ p, adding, onAdd }: {
           )}
           {canWaitList && (
             <span className="absolute top-1.5 left-1.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
-              style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+              style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Em breve</span>
           )}
           {!p.isPreVenda && p.isOnPromo && !outOfStock && (
             <span className="absolute top-1.5 left-1.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
@@ -276,7 +281,7 @@ function ProductCard({ p, adding, onAdd }: {
         </div>
       </button>
 
-      {/* Botão de lista de espera (pré-venda sem estoque) */}
+      {/* Botão de fila (produto que ainda não chegou) */}
       {canWaitList && (
         <div className="px-3 pb-3 space-y-1.5">
           <span className="text-sm font-black" style={{ color: C.blue2 }}>
@@ -287,17 +292,17 @@ function ProductCard({ p, adding, onAdd }: {
             disabled={waitLoading}
             className="w-full py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 transition-all"
             style={{
-              backgroundColor: inList ? '#F0FDF4' : '#EDE9FE',
-              color:           inList ? '#16A34A' : '#7C3AED',
-              border:          `1px solid ${inList ? '#86EFAC' : '#C4B5FD'}`,
+              backgroundColor: filaEntry ? '#F0FDF4' : '#EDE9FE',
+              color:           filaEntry ? '#16A34A' : '#7C3AED',
+              border:          `1px solid ${filaEntry ? '#86EFAC' : '#C4B5FD'}`,
             }}
           >
             {waitLoading
               ? <Loader2 className="w-3 h-3 animate-spin" />
               : <Bell className="w-3 h-3" />}
-            {inList
-              ? `Na fila · #${position} — Sair da lista`
-              : 'Entrar na lista de espera'}
+            {filaEntry
+              ? `Na fila${filaEntry.posicaoFila ? ` · #${filaEntry.posicaoFila}` : ''} — Sair da fila`
+              : 'Entrar na fila'}
           </button>
         </div>
       )}

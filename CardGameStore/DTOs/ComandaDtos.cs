@@ -31,6 +31,12 @@ public class AddItemToComandaRequest
 
     [Range(1, 100)]
     public int Quantity { get; set; } = 1;
+
+    /// <summary>
+    /// Se true, NÃO valida nem decrementa estoque — usado na homologação de pré-venda,
+    /// onde o estoque já foi baixado no ato da reserva. Uso interno do backend.
+    /// </summary>
+    public bool SkipStockDecrement { get; set; } = false;
 }
 
 // -------------------------------------------------------------------------

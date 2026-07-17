@@ -26,7 +26,6 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync();
         await ApplyVariantStockAsync(list);
-        await ApplyReservedStockAsync(list);
         return list;
     }
 
@@ -38,7 +37,6 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync();
         await ApplyVariantStockAsync(list);
-        await ApplyReservedStockAsync(list);
         return list;
     }
 
@@ -49,19 +47,16 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync();
         await ApplyVariantStockAsync(list);
-        await ApplyReservedStockAsync(list);
         return list;
     }
 
     public async Task<Product?> GetByIdAsync(Guid id)
     {
         var p = await _db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
-        if (p is null) return null;
-        if (p.HasVariants)
+        if (p?.HasVariants == true)
             p.StockQuantity = await _db.Set<ProductVariant>()
                 .Where(v => v.ProductId == id)
                 .SumAsync(v => v.StockQuantity);
-        await ApplyReservedStockAsync([p]);
         return p;
     }
 
@@ -81,25 +76,6 @@ public class ProductService : IProductService
         foreach (var p in products.Where(p => p.HasVariants))
             if (sums.TryGetValue(p.Id, out var sum))
                 p.StockQuantity = sum;
-    }
-
-    // Soma reservas ativas (não expiradas) por produto numa query agrupada só — mesma ideia
-    // do ApplyVariantStockAsync. Reserva com variante também conta contra o total do produto,
-    // assim como o estoque exibido é a soma das variantes.
-    private async Task ApplyReservedStockAsync(List<Product> products)
-    {
-        var ids = products.Select(p => p.Id).ToList();
-        if (ids.Count == 0) return;
-
-        var agora = DateTime.UtcNow;
-        var sums = await _db.ProductReservations
-            .Where(r => ids.Contains(r.ProductId) && r.Status == "active" && r.ExpiresAt > agora)
-            .GroupBy(r => r.ProductId)
-            .Select(g => new { g.Key, Total = g.Sum(r => r.Quantity) })
-            .ToDictionaryAsync(x => x.Key, x => x.Total);
-
-        foreach (var p in products)
-            p.ReservedQuantity = sums.TryGetValue(p.Id, out var sum) ? sum : 0;
     }
 
     public async Task<Product> CreateAsync(Product product)
@@ -134,18 +110,19 @@ public class ProductService : IProductService
         existing.ShowOnSite           = updated.ShowOnSite;
         existing.ShowOnMarketplace    = updated.ShowOnMarketplace;
         existing.IsPreVenda           = updated.IsPreVenda;
+        existing.PreVendaReleaseDate  = updated.PreVendaReleaseDate;
         existing.UpdatedAt            = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
 
-        // Reestoque (0 → positivo): avisa quem está na fila de espera. Nunca
-        // derruba o update do produto — notificação é melhor-esforço.
+        // Reestoque (0 → positivo): converte a fila em pré-venda na ordem.
+        // Nunca derruba o update do produto — conversão é melhor-esforço.
         if (estoqueAntes <= 0 && existing.StockQuantity > 0)
         {
-            try { await NotificarFilaDeEsperaAsync(existing); }
+            try { await ProcessarChegadaFilaAsync(existing.Id); }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao notificar fila de espera do produto {ProductId}", existing.Id);
+                _logger.LogError(ex, "Falha ao processar fila de espera do produto {ProductId}", existing.Id);
             }
         }
 
@@ -153,46 +130,67 @@ public class ProductService : IProductService
     }
 
     /// <summary>
-    /// Notifica todos da fila que ainda não foram avisados (in-app + push + email)
-    /// e marca NotifiedAt — quem entrar na fila depois é avisado no próximo reestoque.
+    /// Chegada de estoque: converte a fila (kind=fila, status=waiting) em pré-venda
+    /// na ordem de entrada, baixando o estoque de cada convertido, até onde o estoque
+    /// cobrir. Cada convertido vira status=active com ExpiresAt = agora + 48h e é
+    /// notificado (in-app + push + email). Quem não couber no lote segue na fila.
     /// </summary>
-    private async Task NotificarFilaDeEsperaAsync(Product p)
+    public async Task ProcessarChegadaFilaAsync(Guid productId)
     {
-        var fila = await _db.ProductWaitLists
-            .Include(w => w.User)
-            .Where(w => w.ProductId == p.Id && w.NotifiedAt == null)
-            .OrderBy(w => w.Position)
+        var p = await _db.Products.FindAsync(productId);
+        if (p is null) return;
+
+        var fila = await _db.ProductReservations
+            .Include(r => r.User)
+            .Where(r => r.ProductId == productId && r.Kind == "fila" && r.Status == "waiting")
+            .OrderBy(r => r.ReservedAt)
             .ToListAsync();
         if (fila.Count == 0) return;
 
-        var titulo = "Chegou! 🎉";
-        var corpo  = $"{p.Name} está disponível — você estava na fila de espera. Garanta o seu!";
-        var link   = $"/produtos/{p.Id}";
+        var convertidos = new List<ProductReservation>();
 
-        foreach (var w in fila)
+        foreach (var r in fila)
         {
-            if (w.UserId is Guid uid)
-                _db.Notifications.Add(new Notification
-                {
-                    UserId = uid, Title = titulo, Body = corpo, Link = link, ImageUrl = p.ImageUrl,
-                });
-            w.NotifiedAt = DateTime.UtcNow;
+            // Decremento atômico: só converte se ainda há estoque para esta reserva.
+            var updated = await _db.Products
+                .Where(x => x.Id == productId && x.StockQuantity >= r.Quantity)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.StockQuantity, x => x.StockQuantity - r.Quantity));
+            if (updated == 0) break; // lote acabou — resto da fila espera o próximo
+
+            r.Kind      = "pre_venda";
+            r.Status    = "active";
+            r.ExpiresAt = DateTime.UtcNow.AddHours(48);
+            convertidos.Add(r);
         }
+
+        if (convertidos.Count == 0) return;
         await _db.SaveChangesAsync();
 
-        var userIds = fila.Where(w => w.UserId != null).Select(w => w.UserId!.Value).Distinct().ToList();
-        if (userIds.Count > 0)
-            await _push.SendToManyAsync(userIds, titulo, corpo, link, p.ImageUrl);
+        var titulo = "Chegou! 🎉";
+        var corpo  = $"{p.Name} chegou e sua unidade já está separada! Pague no Pix ou na retirada em até 48h.";
+        var link   = "/cliente/perfil";
 
-        var comEmail = fila
-            .Where(w => !string.IsNullOrWhiteSpace(w.User?.Email))
-            .Select(w => (w.User!.Email!, w.User.Name))
+        foreach (var r in convertidos)
+            _db.Notifications.Add(new Notification
+            {
+                UserId = r.UserId, Title = titulo, Body = corpo, Link = link, ImageUrl = p.ImageUrl,
+            });
+        await _db.SaveChangesAsync();
+
+        var userIds = convertidos.Select(r => r.UserId).Distinct().ToList();
+        await _push.SendToManyAsync(userIds, titulo, corpo, link, p.ImageUrl);
+
+        var comEmail = convertidos
+            .Where(r => !string.IsNullOrWhiteSpace(r.User?.Email))
+            .Select(r => (r.User!.Email!, r.User.Name))
             .Distinct()
             .ToList();
         if (comEmail.Count > 0)
             await _email.SendAnuncioAsync(comEmail, $"Chegou: {p.Name}", corpo, p.ImageUrl, link);
 
-        _logger.LogInformation("Fila de espera de {Produto}: {Qtd} pessoa(s) avisada(s) do reestoque.", p.Name, fila.Count);
+        _logger.LogInformation(
+            "Fila de {Produto}: {Convertidos} convertidos em pré-venda, {Restantes} seguem na fila.",
+            p.Name, convertidos.Count, fila.Count - convertidos.Count);
     }
 
     public async Task DeactivateAsync(Guid id)
@@ -211,6 +209,11 @@ public class ProductService : IProductService
     {
         if (quantityDelta == 0) return true;
 
+        var estoqueAntes = await _db.Products
+            .Where(p => p.Id == id)
+            .Select(p => (int?)p.StockQuantity)
+            .FirstOrDefaultAsync();
+
         // UPDATE atômico — garante que estoque nunca fica negativo mesmo sob carga concorrente.
         // Retorna 0 rows se o produto não existe, não está ativo ou o delta resultaria em negativo.
         var rows = await _db.Products
@@ -219,6 +222,18 @@ public class ProductService : IProductService
                 .SetProperty(p => p.StockQuantity, p => p.StockQuantity + quantityDelta)
                 .SetProperty(p => p.UpdatedAt, DateTime.UtcNow));
 
-        return rows > 0;
+        if (rows == 0) return false;
+
+        // Reestoque (0 → positivo): converte a fila em pré-venda na ordem.
+        if (estoqueAntes <= 0)
+        {
+            try { await ProcessarChegadaFilaAsync(id); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falha ao processar fila de espera do produto {ProductId}", id);
+            }
+        }
+
+        return true;
     }
 }

@@ -361,6 +361,9 @@ builder.Services.AddHostedService<FiscalXmlExportBackgroundService>();
 builder.Services.AddHostedService<FiscalRetryBackgroundService>();
 builder.Services.AddHostedService<SefazDistBackgroundService>();
 
+// Pré-venda — expira não-pagos vencidos (devolve estoque e puxa a fila)
+builder.Services.AddHostedService<PreVendaExpiryBackgroundService>();
+
 // ---------------------------------------------------------------------------
 // 12. CORS — origens lidas de config para facilitar deploy sem rebuild
 // ---------------------------------------------------------------------------
@@ -575,6 +578,70 @@ using (var scope = app.Services.CreateScope())
                 CREATE INDEX IF NOT EXISTS ix_product_reservations_user    ON product_reservations (user_id);
                 CREATE INDEX IF NOT EXISTS ix_product_reservations_product ON product_reservations (product_id);
                 CREATE INDEX IF NOT EXISTS ix_product_reservations_status  ON product_reservations (status);
+
+                -- ── Pré-venda/reserva unificadas (modelo da loja) ──────────────
+                -- Pré-venda = item EM ESTOQUE (baixa na hora, Pix em tudo, data de rua
+                -- opcional). Reserva = FILA de item que não chegou (sem estoque, sem prazo).
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS prevenda_release_date DATE NULL;
+                ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'pre_venda';
+                ALTER TABLE product_reservations ALTER COLUMN expires_at DROP NOT NULL;
+                CREATE INDEX IF NOT EXISTS ix_product_reservations_kind ON product_reservations (kind);
+
+                -- Registro de migrações únicas de dados (protege updates não-idempotentes)
+                CREATE TABLE IF NOT EXISTS app_migrations (
+                    key        TEXT        PRIMARY KEY,
+                    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+
+                -- 1) Lista de espera antiga vira fila (kind=fila, status=waiting)
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM app_migrations WHERE key = 'waitlist_to_fila') THEN
+                        INSERT INTO product_reservations
+                            (reservation_group_id, user_id, product_id, quantity, status, kind, reserved_at, expires_at)
+                        SELECT gen_random_uuid(), w.user_id, w.product_id, 1, 'waiting', 'fila', w.created_at, NULL
+                        FROM product_waitlist w
+                        WHERE w.user_id IS NOT NULL
+                          AND NOT EXISTS (
+                              SELECT 1 FROM product_reservations r
+                              WHERE r.kind = 'fila' AND r.status = 'waiting'
+                                AND r.product_id = w.product_id AND r.user_id = w.user_id
+                          );
+                        DELETE FROM product_waitlist;
+                        INSERT INTO app_migrations (key) VALUES ('waitlist_to_fila');
+                    END IF;
+                END $$;
+
+                -- 2) Reservas ativas antigas (trava virtual de 48h) viram pré-venda de
+                --    verdade: baixa o estoque delas UMA única vez (produto ou variante).
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM app_migrations WHERE key = 'reserva_to_prevenda_stock') THEN
+                        UPDATE products p
+                        SET stock_quantity = GREATEST(0, p.stock_quantity - sub.qty)
+                        FROM (
+                            SELECT product_id, SUM(quantity) AS qty
+                            FROM product_reservations
+                            WHERE kind = 'pre_venda' AND status = 'active'
+                              AND expires_at > NOW() AND variant_id IS NULL
+                            GROUP BY product_id
+                        ) sub
+                        WHERE p.id = sub.product_id;
+
+                        UPDATE product_variants v
+                        SET stock_quantity = GREATEST(0, v.stock_quantity - sub.qty)
+                        FROM (
+                            SELECT variant_id, SUM(quantity) AS qty
+                            FROM product_reservations
+                            WHERE kind = 'pre_venda' AND status = 'active'
+                              AND expires_at > NOW() AND variant_id IS NOT NULL
+                            GROUP BY variant_id
+                        ) sub
+                        WHERE v.id = sub.variant_id;
+
+                        INSERT INTO app_migrations (key) VALUES ('reserva_to_prevenda_stock');
+                    END IF;
+                END $$;
 
                 -- Fiscal: emissão de NFC-e (certificado A1, config da empresa emitente)
                 CREATE TABLE IF NOT EXISTS fiscal_config (

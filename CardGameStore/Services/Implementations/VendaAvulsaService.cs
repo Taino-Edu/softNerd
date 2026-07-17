@@ -63,6 +63,15 @@ public class VendaAvulsaService : IVendaAvulsaService
             var product = products.FirstOrDefault(p => p.Id == item.ProductId)
                 ?? throw new InvalidOperationException($"Produto '{item.ProductId}' não encontrado ou inativo.");
 
+            // SkipStockDecrement (homologação de pré-venda): o estoque já foi baixado
+            // no ato da reserva — aqui só validamos que produto/variante existem.
+            if (request.SkipStockDecrement)
+            {
+                if (product.HasVariants && !item.VariantId.HasValue)
+                    throw new InvalidOperationException($"Produto '{product.Name}' tem grade — selecione tamanho/cor.");
+                continue;
+            }
+
             if (product.HasVariants)
             {
                 if (!item.VariantId.HasValue)
@@ -98,21 +107,27 @@ public class VendaAvulsaService : IVendaAvulsaService
                 if (variant.PriceInCents.HasValue) effectivePrice = variant.PriceInCents.Value;
                 variantLabel = variant.Label;
 
-                var updated = await _db.ProductVariants
-                    .Where(v => v.Id == variant.Id && v.StockQuantity >= reqItem.Quantity)
-                    .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - reqItem.Quantity));
-                if (updated == 0)
-                    throw new InvalidOperationException($"Estoque insuficiente para '{product.Name} — {variant.Label}' (venda simultânea detectada).");
+                if (!request.SkipStockDecrement)
+                {
+                    var updated = await _db.ProductVariants
+                        .Where(v => v.Id == variant.Id && v.StockQuantity >= reqItem.Quantity)
+                        .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - reqItem.Quantity));
+                    if (updated == 0)
+                        throw new InvalidOperationException($"Estoque insuficiente para '{product.Name} — {variant.Label}' (venda simultânea detectada).");
+                }
             }
             else
             {
-                // Decremento atômico via ExecuteUpdateAsync — evita race condition em vendas simultâneas
-                var updated = await _db.Products
-                    .Where(p => p.Id == product.Id && p.StockQuantity >= reqItem.Quantity)
-                    .ExecuteUpdateAsync(s => s.SetProperty(
-                        p => p.StockQuantity, p => p.StockQuantity - reqItem.Quantity));
-                if (updated == 0)
-                    throw new InvalidOperationException($"Estoque insuficiente para '{product.Name}' (venda simultânea detectada).");
+                if (!request.SkipStockDecrement)
+                {
+                    // Decremento atômico via ExecuteUpdateAsync — evita race condition em vendas simultâneas
+                    var updated = await _db.Products
+                        .Where(p => p.Id == product.Id && p.StockQuantity >= reqItem.Quantity)
+                        .ExecuteUpdateAsync(s => s.SetProperty(
+                            p => p.StockQuantity, p => p.StockQuantity - reqItem.Quantity));
+                    if (updated == 0)
+                        throw new InvalidOperationException($"Estoque insuficiente para '{product.Name}' (venda simultânea detectada).");
+                }
             }
 
             var subtotal = effectivePrice * reqItem.Quantity;

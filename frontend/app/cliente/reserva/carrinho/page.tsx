@@ -48,10 +48,10 @@ export default function ReservationCartPage() {
       )
       setGroupId(data.groupId)
       clear()
-      toast.success('Reserva confirmada! Você tem 48h antes dela expirar.')
+      toast.success('Pré-venda confirmada! O estoque já foi separado pra você.')
     } catch (e) {
       const msg = (e as { response?: { data?: { Message?: string } } })?.response?.data?.Message
-      toast.error(msg ?? 'Erro ao confirmar reserva. Verifique o estoque disponível.')
+      toast.error(msg ?? 'Erro ao confirmar pré-venda. Verifique o estoque disponível.')
     } finally {
       setSubmitting(false)
     }
@@ -101,9 +101,9 @@ export default function ReservationCartPage() {
           <div className="rounded-2xl border p-6 text-center space-y-3"
             style={{ backgroundColor: C.card, borderColor: C.border }}>
             <CheckCircle className="w-12 h-12 mx-auto" style={{ color: '#22C55E' }} />
-            <h1 className="text-xl font-black">Reserva confirmada!</h1>
+            <h1 className="text-xl font-black">Pré-venda confirmada!</h1>
             <p className="text-sm" style={{ color: C.text }}>
-              Seus produtos ficam guardados por 48h. Você pode pagar agora via Pix ou só na retirada.
+              O estoque já foi separado pra você. Pague agora no Pix ou na retirada — sem pagamento, a pré-venda expira e o item volta pra loja.
             </p>
           </div>
 
@@ -152,7 +152,7 @@ export default function ReservationCartPage() {
           <Link href="/cliente/perfil"
             className="mt-4 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
             style={{ borderColor: C.border, color: C.text, backgroundColor: C.card }}>
-            Ver minhas reservas
+            Ver minhas pré-vendas
           </Link>
         </div>
       </div>
@@ -169,16 +169,16 @@ export default function ReservationCartPage() {
         </Link>
 
         <h1 className="text-xl font-black mb-1 flex items-center gap-2">
-          <BookmarkPlus className="w-5 h-5" style={{ color: '#7C3AED' }} /> Sua reserva
+          <BookmarkPlus className="w-5 h-5" style={{ color: '#7C3AED' }} /> Sua pré-venda
         </h1>
         <p className="text-sm mb-5" style={{ color: C.text }}>
-          Os produtos ficam guardados por 48h. Você paga na retirada ou via Pix agora.
+          Ao confirmar, o estoque baixa na hora pra você. Pague no Pix ou na retirada em até 48h — se o item tiver data de lançamento, até 48h depois dela.
         </p>
 
         {items.length === 0 ? (
           <div className="rounded-2xl border p-8 text-center" style={{ backgroundColor: C.card, borderColor: C.border }}>
             <Package className="w-10 h-10 mx-auto mb-3" style={{ color: C.muted }} />
-            <p className="text-sm" style={{ color: C.text }}>Sua reserva está vazia.</p>
+            <p className="text-sm" style={{ color: C.text }}>Sua pré-venda está vazia.</p>
             <Link href="/produtos" className="text-sm font-bold mt-2 inline-block" style={{ color: '#7C3AED' }}>
               Ver produtos disponíveis
             </Link>
@@ -234,7 +234,7 @@ export default function ReservationCartPage() {
               className="w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
               style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
               {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <BookmarkPlus className="w-5 h-5" />}
-              {submitting ? 'Confirmando...' : 'Confirmar reserva'}
+              {submitting ? 'Confirmando...' : 'Confirmar pré-venda'}
             </button>
           </>
         )}

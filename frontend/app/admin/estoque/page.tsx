@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { productApi, variantApi, categoryApi, waitListApi, fiscalApi, Product, ProductCategory, ProductVariant, WaitListEntry, NaturezaOperacaoDto } from '@/lib/api'
+import { productApi, variantApi, categoryApi, reservationApi, fiscalApi, Product, ProductCategory, ProductVariant, AdminReservation, NaturezaOperacaoDto } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X, Loader2, Check, ScanBarcode, Camera, Download, FileText, BarChart2, Layers, DollarSign, TrendingDown, CircleOff, Grid3X3, ChevronDown, ChevronUp, Users, Bell } from 'lucide-react'
 import ImageUpload from '@/components/admin/ImageUpload'
@@ -15,7 +15,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
   onStock: (id: string, delta: number) => void
 }) {
   const [imgIdx, setImgIdx] = useState(0)
-  const [wlEntries, setWlEntries] = useState<WaitListEntry[]>([])
+  const [wlEntries, setWlEntries] = useState<AdminReservation[]>([])
   const [wlLoading, setWlLoading] = useState(false)
   const [wlTotal,   setWlTotal]   = useState(0)
 
@@ -27,15 +27,18 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
   useEffect(() => {
     if (!product.isPreVenda) return
     setWlLoading(true)
-    waitListApi.adminList(product.id)
-      .then(r => { setWlEntries(r.data.entries); setWlTotal(r.data.total) })
+    reservationApi.list({ productId: product.id, kind: 'fila', status: 'waiting' })
+      .then(r => {
+        setWlEntries([...r.data.items].sort((a, b) => (a.posicaoFila ?? 999) - (b.posicaoFila ?? 999)))
+        setWlTotal(r.data.total)
+      })
       .catch(() => {})
       .finally(() => setWlLoading(false))
   }, [product.id, product.isPreVenda])
 
   async function removeFromQueue(entryId: string) {
     try {
-      await waitListApi.adminRemove(product.id, entryId)
+      await reservationApi.updateStatus(entryId, 'cancelled')
       setWlEntries(prev => {
         const updated = prev.filter(e => e.id !== entryId)
         setWlTotal(updated.length)
@@ -98,7 +101,12 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${status.cls}`}>{status.label}</span>
               {product.isPreVenda && (
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Aceita fila</span>
+              )}
+              {product.preVendaReleaseDate && (
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded" style={{ backgroundColor: '#B45309', color: '#fff' }}>
+                  Lançamento {new Date(product.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                </span>
               )}
             </div>
             <h2 className="text-base font-bold text-white leading-snug">{product.name}</h2>
@@ -158,14 +166,6 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
               <span>Mínimo: {minStock} un.</span>
               <span>{product.stockQuantity > 0 ? `${stockPct.toFixed(0)}% do mínimo` : 'Sem estoque'}</span>
             </div>
-            {(product.reservedQuantity ?? 0) > 0 && (
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-purple-400">Reservado (site)</span>
-                <span className="font-semibold text-purple-400">
-                  {product.reservedQuantity} un. · disponível {product.availableQuantity ?? Math.max(0, product.stockQuantity - (product.reservedQuantity ?? 0))}
-                </span>
-              </div>
-            )}
             <div className="h-2 bg-surface-600 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all ${
                 product.stockQuantity === 0 ? 'bg-red-500' : product.isLowStock ? 'bg-amber-500' : 'bg-emerald-500'
@@ -181,7 +181,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
             )}
           </div>
 
-          {/* ── Fila de espera (pré-venda) ── */}
+          {/* ── Fila (produto que ainda não chegou) ── */}
           {product.isPreVenda && (
             <div className="bg-surface-700 rounded-xl border border-purple-500/30 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-surface-600">
@@ -205,11 +205,11 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
                   {wlEntries.map(e => (
                     <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
                       <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-300 shrink-0">
-                        {e.position}
+                        {e.posicaoFila ?? '·'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-white truncate">{e.name || e.userId}</p>
-                        <p className="text-[10px] text-gray-500">{new Date(e.createdAt).toLocaleDateString('pt-BR')} · {e.whatsApp}</p>
+                        <p className="text-xs font-semibold text-white truncate">{e.userName || e.userId}</p>
+                        <p className="text-[10px] text-gray-500">{new Date(e.reservedAt).toLocaleDateString('pt-BR')}{e.userWhatsApp ? ` · ${e.userWhatsApp}` : ''}</p>
                       </div>
                       <button
                         onClick={() => removeFromQueue(e.id)}
@@ -755,8 +755,8 @@ function ProductModal({
             </label>
             <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">🕐 Pré-venda</p>
-                <p className="text-xs text-[var(--text-muted)]">Item disponível para pedido, entrega no lançamento</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">📋 Fila de espera</p>
+                <p className="text-xs text-[var(--text-muted)]">Se o estoque zerar, o cliente entra numa fila — ao chegar estoque, vira pré-venda automaticamente</p>
               </div>
               <div
                 onClick={() => set('isPreVenda', !form.isPreVenda)}
@@ -771,6 +771,16 @@ function ProductModal({
                 ].join(' ')} />
               </div>
             </label>
+            <div>
+              <label className="label">📅 Data de lançamento (data de rua) — opcional</label>
+              <input className="input" type="date"
+                value={form.preVendaReleaseDate ? form.preVendaReleaseDate.slice(0, 10) : ''}
+                onChange={e => set('preVendaReleaseDate', e.target.value || null)}
+              />
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                Pré-venda com data de rua: o cliente garante agora (estoque baixa na hora) e retira a partir dessa data. Sem pagamento em até 48h após a data, a pré-venda expira e o estoque volta.
+              </p>
+            </div>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancelar</button>
@@ -1030,7 +1040,7 @@ export default function EstoquePage() {
                       <p className="font-medium text-white">{p.name}</p>
                       {p.isPreVenda && (
                         <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
-                          Pré-venda
+                          Aceita fila
                         </span>
                       )}
                     </div>
@@ -1119,7 +1129,7 @@ export default function EstoquePage() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="font-medium text-white text-sm leading-tight">{p.name}</p>
                     {p.isPreVenda && (
-                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Aceita fila</span>
                     )}
                     {p.isLowStock && (
                       <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20 flex items-center gap-0.5 shrink-0">

@@ -945,15 +945,18 @@ public class ComandaService : IComandaService
                 .FirstOrDefaultAsync(v => v.Id == request.VariantId && v.ProductId == product.Id)
                 ?? throw new InvalidOperationException("Variante inválida.");
 
-            if (variant.StockQuantity < request.Quantity)
-                throw new InvalidOperationException(
-                    $"Estoque insuficiente para '{product.Name} — {variant.Label}'. Disponível: {variant.StockQuantity} un.");
+            if (!request.SkipStockDecrement)
+            {
+                if (variant.StockQuantity < request.Quantity)
+                    throw new InvalidOperationException(
+                        $"Estoque insuficiente para '{product.Name} — {variant.Label}'. Disponível: {variant.StockQuantity} un.");
 
-            var updv = await _db.ProductVariants
-                .Where(v => v.Id == variant.Id && v.StockQuantity >= request.Quantity)
-                .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - request.Quantity));
-            if (updv == 0)
-                throw new InvalidOperationException($"Estoque insuficiente para '{product.Name} — {variant.Label}' (venda simultânea).");
+                var updv = await _db.ProductVariants
+                    .Where(v => v.Id == variant.Id && v.StockQuantity >= request.Quantity)
+                    .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - request.Quantity));
+                if (updv == 0)
+                    throw new InvalidOperationException($"Estoque insuficiente para '{product.Name} — {variant.Label}' (venda simultânea).");
+            }
 
             if (variant.PriceInCents.HasValue) effectivePrice = variant.PriceInCents.Value;
             itemName = $"{product.Name} — {variant.Label}";
@@ -961,6 +964,11 @@ public class ComandaService : IComandaService
         }
 
         // ── Produto simples ───────────────────────────────────────────────────
+        // SkipStockDecrement (homologação de pré-venda): estoque já foi baixado na
+        // reserva — só resolve nome/preço sem mexer no saldo.
+        if (request.SkipStockDecrement)
+            return (product.Name, effectivePrice, product.CostPriceInCents);
+
         if (product.StockQuantity < request.Quantity)
             throw new InvalidOperationException(
                 $"Estoque insuficiente para '{product.Name}'. Disponível: {product.StockQuantity} un.");

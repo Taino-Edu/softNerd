@@ -142,7 +142,11 @@ public class ProductWaitListController : ControllerBase
         }));
     }
 
-    // ── Admin: contagem agregada de pendentes em pré-venda (dashboard) ─────────
+    // ── Admin: contagem agregada de pendentes na fila (dashboard) ──────────────
+    // LEGADO: a rota continua /waitlist/pre-venda/pendentes para não quebrar o
+    // dashboard, mas desde a unificação pré-venda/reserva a contagem vem da fila
+    // em product_reservations (Kind=fila, Status=waiting). Os demais endpoints
+    // deste controller são do modelo antigo e não são mais chamados pelo frontend.
 
     [HttpGet("/api/products/waitlist/pre-venda/pendentes")]
     [Authorize(Policy = "AdminOnly")]
@@ -150,8 +154,9 @@ public class ProductWaitListController : ControllerBase
     {
         // Só conta produto que ainda existe/está ativo — senão o número no dashboard fica
         // "mentindo" pro Maikon contando fila de produto que já saiu de pré-venda ou foi desativado.
-        var count = await _db.ProductWaitLists
-            .Where(w => w.NotifiedAt == null && w.Product!.IsPreVenda && w.Product!.IsActive)
+        var count = await _db.ProductReservations
+            .Where(r => r.Kind == "fila" && r.Status == "waiting"
+                     && r.Product!.IsPreVenda && r.Product!.IsActive)
             .CountAsync();
 
         return Ok(new { Count = count });

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   userApi, UserProfile, crediarioApi, CrediariosDto, comandaApi, ComandaDto, championshipApi, MyParticipation,
-  waitListApi, MyWaitListEntry, reservationApi, MyReservation, minhasNotasApi, MinhaNotaDto,
+  reservationApi, MyReservation, minhasNotasApi, MinhaNotaDto,
 } from '@/lib/api'
 import { getUserName, clearAuth } from '@/lib/auth'
 import { authApi } from '@/lib/api'
@@ -114,7 +114,7 @@ export default function PerfilPage() {
   const [crediarios,     setCrediarios]     = useState<CrediariosDto[]>([])
   const [history,        setHistory]        = useState<ComandaDto[]>([])
   const [participations, setParticipations] = useState<MyParticipation[]>([])
-  const [waitlist,       setWaitlist]       = useState<MyWaitListEntry[]>([])
+  const [fila,           setFila]           = useState<MyReservation[]>([])
   const [reservations,   setReservations]   = useState<MyReservation[]>([])
   const [notas,          setNotas]          = useState<MinhaNotaDto[]>([])
   const [loading,        setLoading]        = useState(true)
@@ -129,27 +129,29 @@ export default function PerfilPage() {
       crediarioApi.meuHistorico().then(r => setCrediarios(r.data)).catch(() => {}),
       comandaApi.myHistory().then(r => setHistory(r.data)).catch(() => {}),
       championshipApi.myParticipations().then(r => setParticipations(r.data)).catch(() => {}),
-      waitListApi.mine().then(r => setWaitlist(r.data)).catch(() => {}),
-      reservationApi.mine().then(r => setReservations(r.data.filter((res: MyReservation) => res.status === 'active'))).catch(() => {}),
+      reservationApi.mine().then(r => {
+        setReservations(r.data.filter(x => x.kind === 'pre_venda' && x.status === 'active'))
+        setFila(r.data.filter(x => x.kind === 'fila' && x.status === 'waiting'))
+      }).catch(() => {}),
       minhasNotasApi.list().then(r => setNotas(r.data)).catch(() => {}),
     ]).finally(() => setLoading(false))
   }, [])
 
-  async function handleLeaveWaitlist(entry: MyWaitListEntry) {
+  async function handleLeaveFila(entry: MyReservation) {
     try {
-      await waitListApi.leave(entry.productId)
-      setWaitlist(prev => prev.filter(e => e.id !== entry.id))
-      toast.success('Você saiu da lista de espera.')
+      await reservationApi.cancel(entry.id)
+      setFila(prev => prev.filter(e => e.id !== entry.id))
+      toast.success('Você saiu da fila.')
     } catch { toast.error('Erro ao sair da fila.') }
   }
 
   async function handleCancelReservation(res: MyReservation) {
-    if (!confirm('Cancelar esta reserva?')) return
+    if (!confirm('Cancelar esta pré-venda? O item volta para o estoque da loja.')) return
     try {
       await reservationApi.cancel(res.id)
       setReservations(prev => prev.filter(r => r.id !== res.id))
-      toast.success('Reserva cancelada.')
-    } catch { toast.error('Erro ao cancelar reserva.') }
+      toast.success('Pré-venda cancelada.')
+    } catch { toast.error('Erro ao cancelar pré-venda.') }
   }
 
   function reservaTempoRestante(expiresAt: string) {
@@ -207,7 +209,7 @@ export default function PerfilPage() {
     { id: 'pontos',    icon: Star,    label: 'Pontos'   },
     { id: 'historico', icon: Receipt, label: 'Histórico' },
     { id: 'torneios',  icon: Trophy,  label: 'Torneios' },
-    { id: 'filas',     icon: Bell,    label: 'Filas', badge: waitlist.length + reservations.length },
+    { id: 'filas',     icon: Bell,    label: 'Pré-vendas', badge: fila.length + reservations.length },
     { id: 'crediario', icon: Wallet,  label: 'Dívida'   },
     { id: 'notas',     icon: FileText, label: 'Notas Fiscais' },
   ] as const
@@ -507,19 +509,19 @@ export default function PerfilPage() {
               </div>
             )}
 
-            {/* ── TAB: FILAS (lista de espera + reservas) ── */}
+            {/* ── TAB: PRÉ-VENDAS & FILA ── */}
             {tab === 'filas' && (
               <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {waitlist.length === 0 && reservations.length === 0 ? (
+                {fila.length === 0 && reservations.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
                     <Bell className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-                    <p className="text-sm text-gray-400 italic">Você não está em nenhuma fila nem tem reservas ativas.</p>
+                    <p className="text-sm text-gray-400 italic">Você não tem pré-vendas ativas nem está em nenhuma fila.</p>
                   </div>
                 ) : (
                   <>
                     {reservations.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Reservas ativas</p>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Pré-vendas</p>
                         {reservations.map(r => (
                           <div key={r.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
                             <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 overflow-hidden">
@@ -530,13 +532,24 @@ export default function PerfilPage() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-gray-900 truncate">{r.productName}</p>
                               {r.variantLabel && <p className="text-[11px] text-gray-400">{r.variantLabel}</p>}
-                              <p className="text-[11px] text-amber-500 font-bold flex items-center gap-1 mt-0.5">
-                                <Hourglass className="w-3 h-3" /> {reservaTempoRestante(r.expiresAt)}
-                              </p>
+                              {r.expiresAt ? (
+                                <p className="text-[11px] text-amber-500 font-bold flex items-center gap-1 mt-0.5">
+                                  <Hourglass className="w-3 h-3" /> {reservaTempoRestante(r.expiresAt)}
+                                </p>
+                              ) : (
+                                <p className="text-[11px] text-emerald-500 font-black uppercase tracking-wide mt-0.5">
+                                  Paga ✓ — aguardando retirada
+                                </p>
+                              )}
+                              {r.preVendaReleaseDate && (
+                                <p className="text-[11px] text-gray-400 mt-0.5">
+                                  Retirada a partir de {new Date(r.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                                </p>
+                              )}
                             </div>
                             <button onClick={() => handleCancelReservation(r)}
                               className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
-                              title="Cancelar reserva">
+                              title="Cancelar pré-venda">
                               <X className="w-4 h-4" />
                             </button>
                           </div>
@@ -544,27 +557,24 @@ export default function PerfilPage() {
                       </div>
                     )}
 
-                    {waitlist.length > 0 && (
+                    {fila.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Listas de espera</p>
-                        {waitlist.map(w => (
-                          <div key={w.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Na fila</p>
+                        {fila.map(f => (
+                          <div key={f.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
                             <div className="w-11 h-11 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0 overflow-hidden">
-                              {w.productImageUrl
-                                ? <img src={w.productImageUrl} alt={w.productName} className="w-full h-full object-cover" />
+                              {f.productImageUrl
+                                ? <img src={f.productImageUrl} alt={f.productName} className="w-full h-full object-cover" />
                                 : <Package className="w-5 h-5 text-purple-400" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate">{w.productName}</p>
-                              {w.notifiedAt ? (
-                                <p className="text-[11px] text-emerald-500 font-black uppercase tracking-wide mt-0.5">
-                                  Chegou! Disponível para compra
-                                </p>
-                              ) : (
-                                <p className="text-[11px] text-purple-500 font-bold mt-0.5">#{w.position} na fila</p>
-                              )}
+                              <p className="text-sm font-bold text-gray-900 truncate">{f.productName}</p>
+                              <p className="text-[11px] text-purple-500 font-bold mt-0.5">
+                                {f.posicaoFila ? `#${f.posicaoFila} na fila` : 'Na fila'}
+                              </p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">Avisamos quando chegar — aí vira pré-venda</p>
                             </div>
-                            <button onClick={() => handleLeaveWaitlist(w)}
+                            <button onClick={() => handleLeaveFila(f)}
                               className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
                               title="Sair da fila">
                               <X className="w-4 h-4" />
