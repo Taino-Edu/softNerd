@@ -9,7 +9,7 @@ import {
   Trophy, ShoppingBag, Star, Calendar, Users,
   X, MessageCircle, CheckCircle, Package,
   CreditCard, Award, QrCode, Shield, ChevronRight, ChevronLeft,
-  Sun, Moon, Mail,
+  Sun, Moon, Mail, Accessibility,
 } from 'lucide-react'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
@@ -224,42 +224,42 @@ export default function LandingPage() {
         <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between">
 
           {/* Links desktop — esquerda */}
-          <div className="hidden md:flex items-center gap-7 text-sm font-medium">
+          <div className="hidden xl:flex items-center gap-4 text-sm font-medium">
             <a href="#eventos"  style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navTorneiosLabel}</a>
             <Link href="/produtos" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navProdutosLabel}</Link>
             <Link href="/cliente/mercado" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navMercadoLabel}</Link>
             <Link href="/liga" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navLigaLabel}</Link>
             <a href="#pontos"   style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navPontosLabel}</a>
-            <button
-              onClick={() => (document.querySelector('[vw-access-button]') as HTMLElement | null)?.click()}
-              title="Acessibilidade em Libras"
-              className="text-sm font-medium hover:opacity-80 transition-opacity"
-              style={{ color: '#ffffff' }}>
-              Libras
-            </button>
           </div>
 
           {/* Espaço mobile esquerda */}
-          <div className="md:hidden" />
+          <div className="xl:hidden" />
 
           {/* Ações direita */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => (document.querySelector('[vw-access-button]') as HTMLElement | null)?.click()}
+              title="Acessibilidade em Libras"
+              className="hidden xl:block p-2 rounded-xl transition-colors hover:bg-white/10"
+              style={{ color: '#ffffff' }}>
+              <Accessibility className="w-4 h-4" />
+            </button>
             <button onClick={toggleDark} title={isDark ? 'Modo claro' : 'Modo escuro'}
               className="p-2 rounded-xl transition-colors hover:bg-white/10"
               style={{ color: '#ffffff' }}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <Link href="/entrar"
-              className="hidden md:block text-sm px-4 py-2 rounded-xl border transition-colors hover:bg-white/10"
+              className="hidden xl:block text-sm px-4 py-2 rounded-xl border transition-colors hover:bg-white/10"
               style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
               Minha Conta
             </Link>
             <a href="#eventos"
-              className="hidden md:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95"
+              className="hidden xl:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95"
               style={{ backgroundColor: C.yellow, color: site.colorNavy }}>
               {site.ctaVerEventosLabel}
             </a>
-            <button onClick={() => setMobileMenu(v => !v)} className="md:hidden p-2" style={{ color: '#ffffff' }}>
+            <button onClick={() => setMobileMenu(v => !v)} className="xl:hidden p-2" style={{ color: '#ffffff' }}>
               <div className="space-y-1.5">
                 <span className={`block w-5 h-0.5 bg-current transition-transform ${mobileMenu ? 'rotate-45 translate-y-2' : ''}`} />
                 <span className={`block w-5 h-0.5 bg-current transition-opacity ${mobileMenu ? 'opacity-0' : ''}`} />
@@ -272,7 +272,7 @@ export default function LandingPage() {
 
       {/* Menu mobile */}
       {mobileMenu && (
-        <div className="fixed inset-x-0 top-16 z-40 border-b md:hidden px-5 py-4 space-y-1"
+        <div className="fixed inset-x-0 top-16 z-40 border-b xl:hidden px-5 py-4 space-y-1"
           style={{ backgroundColor: site.colorNavy, borderColor: 'rgba(255,255,255,0.10)' }}>
           <a href="#eventos" onClick={() => setMobileMenu(false)}
             className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
