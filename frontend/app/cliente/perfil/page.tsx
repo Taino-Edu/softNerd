@@ -12,10 +12,101 @@ import {
   Star, User, Phone, CreditCard, Clock, AlertCircle, ArrowLeft, LogOut,
   CheckCircle, Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
   ShoppingBag, XCircle, Trophy, Coins, ShieldCheck, Mail, Settings, BookOpen,
-  Bell, Package, X, Hourglass, FileText,
+  Bell, Package, X, Hourglass, FileText, Pencil, Check, Loader2 as Loader2Icon,
 } from 'lucide-react'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
+
+function EditProfileModal({ profile, onClose, onSaved }: {
+  profile: UserProfile
+  onClose: () => void
+  onSaved: (updated: UserProfile) => void
+}) {
+  const [name, setName]         = useState(profile.name)
+  const [email, setEmail]       = useState(profile.email ?? '')
+  const [whatsApp, setWhatsApp] = useState(profile.whatsApp ?? '')
+  const [saving, setSaving]     = useState(false)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) { toast.error('O nome não pode ficar vazio.'); return }
+    setSaving(true)
+    try {
+      const { data } = await userApi.updateMe({
+        name: name.trim(),
+        email: email.trim(),
+        whatsApp: whatsApp.trim(),
+      })
+      toast.success('Dados atualizados!')
+      onSaved(data)
+      onClose()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao salvar seus dados.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}>
+      <form onSubmit={handleSave}
+        className="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-black text-gray-900">Editar meus dados</h2>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div>
+          <label className="text-xs font-black text-gray-400 uppercase tracking-wider">Nome</label>
+          <input
+            value={name} onChange={e => setName(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#42B6EE]"
+            placeholder="Seu nome"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-black text-gray-400 uppercase tracking-wider">E-mail</label>
+          <input
+            type="email" value={email} onChange={e => setEmail(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#42B6EE]"
+            placeholder="seu@email.com"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-black text-gray-400 uppercase tracking-wider">WhatsApp</label>
+          <input
+            value={whatsApp} onChange={e => setWhatsApp(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#42B6EE]"
+            placeholder="11999999999"
+          />
+        </div>
+
+        {profile.cpf && (
+          <div>
+            <label className="text-xs font-black text-gray-400 uppercase tracking-wider">CPF</label>
+            <div className="mt-1 w-full rounded-xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-sm text-gray-400">
+              {profile.cpf}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">CPF errado? Fale com o Maikon no balcão pra corrigir.</p>
+          </div>
+        )}
+
+        <button type="submit" disabled={saving}
+          className="w-full flex items-center justify-center gap-2 rounded-xl py-3 font-black text-white transition-colors disabled:opacity-60"
+          style={{ background: 'linear-gradient(135deg, #29B5E8, #1A6DB5)' }}>
+          {saving ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          Salvar alterações
+        </button>
+      </form>
+    </div>
+  )
+}
 
 export default function PerfilPage() {
   const router = useRouter()
@@ -30,6 +121,7 @@ export default function PerfilPage() {
   const [expanded,       setExpanded]       = useState<string | null>(null)
   const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas' | 'notas'>('pontos')
   const [isUploading,    setIsUploading]    = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -210,10 +302,24 @@ export default function PerfilPage() {
                   </span>
                 )}
               </div>
+              <button
+                onClick={() => setEditingProfile(true)}
+                className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-white/15 hover:bg-white/25 transition-colors px-3 py-1.5 rounded-full"
+              >
+                <Pencil className="w-3 h-3" /> Editar dados
+              </button>
             </div>
           )}
         </div>
       </header>
+
+      {editingProfile && profile && (
+        <EditProfileModal
+          profile={profile}
+          onClose={() => setEditingProfile(false)}
+          onSaved={updated => setProfile(updated)}
+        />
+      )}
 
       {/* ── CARD PRINCIPAL (sobrepõe o header) ── */}
       <div className="flex-1 -mt-12 bg-gray-50 rounded-t-[2rem] relative z-10 px-4 pt-6 pb-20 max-w-lg mx-auto w-full">

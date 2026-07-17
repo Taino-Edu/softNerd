@@ -113,7 +113,7 @@ public class UserController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return NotFound(new { Message = ex.Message });
+            return BadRequest(new { Message = ex.Message });
         }
     }
 

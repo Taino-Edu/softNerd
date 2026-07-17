@@ -159,10 +159,28 @@ public class UserService : IUserService
             user.Name = request.Name.Trim();
 
         if (request.Email is not null)
-            user.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
+        {
+            var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
+            if (email is not null && email != user.Email)
+            {
+                var emailEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.Email == email);
+                if (emailEmUso)
+                    throw new InvalidOperationException($"Já existe uma conta com o e-mail {email}.");
+            }
+            user.Email = email;
+        }
 
         if (request.WhatsApp is not null)
-            user.WhatsApp = string.IsNullOrWhiteSpace(request.WhatsApp) ? null : request.WhatsApp.Trim();
+        {
+            var whatsApp = string.IsNullOrWhiteSpace(request.WhatsApp) ? null : request.WhatsApp.Trim();
+            if (whatsApp is not null && whatsApp != user.WhatsApp)
+            {
+                var whatsAppEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.WhatsApp == whatsApp);
+                if (whatsAppEmUso)
+                    throw new InvalidOperationException($"Já existe uma conta com o WhatsApp {whatsApp}.");
+            }
+            user.WhatsApp = whatsApp;
+        }
 
         user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
