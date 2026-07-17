@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Package, Trophy, Search, QrCode,
   LogOut, User, ShoppingBag, Users, Megaphone,
   Loader2, X, Menu, CreditCard, Store, Shield, TrendingUp, Tag, BarChart2, Info, UserCog, Settings, Timer, BookOpen, History,
-  Wallet, Plug, ClipboardList, MessageSquare, Receipt, Palette, ChevronsLeft, ChevronsRight,
+  Wallet, Plug, ClipboardList, MessageSquare, Receipt, Palette, ChevronsLeft, ChevronsRight, Award,
 } from 'lucide-react'
 import clsx from 'clsx'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -39,6 +39,7 @@ const sections = [
       { href: '/admin/mensageria', label: 'Mensageria',   icon: MessageSquare,   perm: 'anuncios' },
       { href: '/admin/cartas',      label: 'Cartas TCG',   icon: Search,      perm: 'cartas' },
       { href: '/admin/campeonatos',  label: 'Campeonatos',  icon: Trophy,      perm: 'campeonatos' },
+      { href: '/admin/liga-mensal',  label: 'Liga Mensal',  icon: Award,       perm: 'campeonatos' },
       { href: '/admin/timer',        label: 'Timers',       icon: Timer,       perm: 'campeonatos' },
       { href: '/admin/marketplace',  label: 'Mercado de Cartas', icon: Store, perm: 'estoque' },
     ],

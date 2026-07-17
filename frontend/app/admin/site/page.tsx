@@ -21,6 +21,7 @@ const DEFAULTS: SiteConfigDto = {
   navProdutosLabel: 'Produtos',
   navMercadoLabel: 'Mercado de Cartas',
   navPontosLabel: 'Pontos',
+  navLigaLabel: 'Liga Mensal',
   ctaVerEventosLabel: 'Ver Eventos',
   ctaVerTorneiosLabel: 'Ver Torneios',
   ctaVerProdutosLabel: 'Ver Produtos',
@@ -376,6 +377,9 @@ export default function SiteConfigPage() {
           </Field>
           <Field label="Link 'Pontos'">
             <input value={cfg.navPontosLabel} onChange={e => set('navPontosLabel', e.target.value)} className="input w-full" />
+          </Field>
+          <Field label="Link 'Liga Mensal'">
+            <input value={cfg.navLigaLabel} onChange={e => set('navLigaLabel', e.target.value)} className="input w-full" />
           </Field>
           <Field label="Botão 'Ver Eventos' (navbar)">
             <input value={cfg.ctaVerEventosLabel} onChange={e => set('ctaVerEventosLabel', e.target.value)} className="input w-full" />

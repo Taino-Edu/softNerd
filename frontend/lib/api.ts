@@ -1278,6 +1278,7 @@ export interface SiteConfigDto {
   navProdutosLabel: string
   navMercadoLabel: string
   navPontosLabel: string
+  navLigaLabel: string
   ctaVerEventosLabel: string
   ctaVerTorneiosLabel: string
   ctaVerProdutosLabel: string
@@ -1299,6 +1300,36 @@ export interface SiteConfigDto {
 export const siteConfigApi = {
   get:  () => api.get<SiteConfigDto>('/api/site-config'),
   save: (body: Partial<SiteConfigDto>) => api.put<SiteConfigDto>('/api/site-config', body),
+}
+
+// ── Liga Mensal (ranking agregado dos campeonatos semanais) ───────────────────
+
+export interface LigaMensalRankingDto {
+  userId: string
+  playerName: string
+  totalPoints: number
+  eventsPlayed: number
+  bestPlacement: number
+  decks: string[]
+}
+
+export interface LigaMensalDto {
+  ano: number
+  mes: number
+  mesLabel: string
+  ranking: LigaMensalRankingDto[]
+}
+
+export interface LigaMensalMesDto {
+  ano: number
+  mes: number
+  mesLabel: string
+}
+
+export const ligaMensalApi = {
+  ranking: (ano?: number, mes?: number) =>
+    api.get<LigaMensalDto>('/api/liga-mensal', { params: { ano, mes } }),
+  meses: () => api.get<LigaMensalMesDto[]>('/api/liga-mensal/meses'),
 }
 
 // ── Notificações in-app ───────────────────────────────────────────────────────

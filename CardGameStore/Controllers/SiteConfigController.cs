@@ -50,6 +50,7 @@ public class SiteConfigController : ControllerBase
         if (req.NavProdutosLabel     is not null) cfg.NavProdutosLabel     = req.NavProdutosLabel;
         if (req.NavMercadoLabel      is not null) cfg.NavMercadoLabel      = req.NavMercadoLabel;
         if (req.NavPontosLabel       is not null) cfg.NavPontosLabel       = req.NavPontosLabel;
+        if (req.NavLigaLabel         is not null) cfg.NavLigaLabel         = req.NavLigaLabel;
         if (req.CtaVerEventosLabel   is not null) cfg.CtaVerEventosLabel   = req.CtaVerEventosLabel;
         if (req.CtaVerTorneiosLabel  is not null) cfg.CtaVerTorneiosLabel  = req.CtaVerTorneiosLabel;
         if (req.CtaVerProdutosLabel  is not null) cfg.CtaVerProdutosLabel  = req.CtaVerProdutosLabel;
@@ -128,6 +129,7 @@ public class SaveSiteConfigRequest
     public string? NavProdutosLabel    { get; init; }
     public string? NavMercadoLabel     { get; init; }
     public string? NavPontosLabel      { get; init; }
+    public string? NavLigaLabel        { get; init; }
     public string? CtaVerEventosLabel  { get; init; }
     public string? CtaVerTorneiosLabel { get; init; }
     public string? CtaVerProdutosLabel { get; init; }

@@ -88,6 +88,10 @@ public class SiteConfig
     public string NavPontosLabel { get; set; } = "Pontos";
 
     [MaxLength(40)]
+    [Column("nav_liga_label")]
+    public string NavLigaLabel { get; set; } = "Liga Mensal";
+
+    [MaxLength(40)]
     [Column("cta_ver_eventos_label")]
     public string CtaVerEventosLabel { get; set; } = "Ver Eventos";
 

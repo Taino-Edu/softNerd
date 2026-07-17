@@ -29,6 +29,7 @@ const DEFAULT_SITE: SiteConfigDto = {
   navProdutosLabel: 'Produtos',
   navMercadoLabel: 'Mercado de Cartas',
   navPontosLabel: 'Pontos',
+  navLigaLabel: 'Liga Mensal',
   ctaVerEventosLabel: 'Ver Eventos',
   ctaVerTorneiosLabel: 'Ver Torneios',
   ctaVerProdutosLabel: 'Ver Produtos',
@@ -227,6 +228,7 @@ export default function LandingPage() {
             <a href="#eventos"  style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navTorneiosLabel}</a>
             <Link href="/produtos" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navProdutosLabel}</Link>
             <Link href="/cliente/mercado" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navMercadoLabel}</Link>
+            <Link href="/liga" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navLigaLabel}</Link>
             <a href="#pontos"   style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navPontosLabel}</a>
             <button
               onClick={() => (document.querySelector('[vw-access-button]') as HTMLElement | null)?.click()}
@@ -283,6 +285,10 @@ export default function LandingPage() {
           <Link href="/cliente/mercado" onClick={() => setMobileMenu(false)}
             className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
             {site.navMercadoLabel}
+          </Link>
+          <Link href="/liga" onClick={() => setMobileMenu(false)}
+            className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
+            {site.navLigaLabel}
           </Link>
           <a href="#pontos" onClick={() => setMobileMenu(false)}
             className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
