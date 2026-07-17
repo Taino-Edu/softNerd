@@ -184,6 +184,26 @@ public class AdminResetPasswordRequest
     public string NewPassword { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Request para o Admin corrigir os dados de um cliente (nome, e-mail, CPF, WhatsApp).
+/// Todos os campos são opcionais: apenas os campos fornecidos são atualizados.
+/// </summary>
+public class AdminUpdateUserRequest
+{
+    [MaxLength(150)]
+    public string? Name { get; set; }
+
+    [EmailAddress]
+    [MaxLength(255)]
+    public string? Email { get; set; }
+
+    [MaxLength(11)]
+    public string? Cpf { get; set; }
+
+    [MaxLength(20)]
+    public string? WhatsApp { get; set; }
+}
+
 public class AtualizarPerfilOperadorRequest
 {
     /// <summary>ID do perfil a atribuir, ou null para desatribuir.</summary>

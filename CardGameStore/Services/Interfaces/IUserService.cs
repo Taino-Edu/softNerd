@@ -56,4 +56,7 @@ public interface IUserService
 
     /// <summary>Admin redefine a senha de um cliente (sem e-mail de confirmação).</summary>
     Task AdminResetPasswordAsync(Guid userId, AdminResetPasswordRequest request, Guid adminId);
+
+    /// <summary>Admin corrige os dados de um cliente (nome, e-mail, CPF, WhatsApp).</summary>
+    Task<UserSummaryDto> AdminUpdateUserAsync(Guid userId, AdminUpdateUserRequest request);
 }

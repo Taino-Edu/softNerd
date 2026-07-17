@@ -211,6 +211,31 @@ public class UserController : ControllerBase
         }
     }
 
+    /// <summary>Admin corrige os dados de um cliente (nome, e-mail, CPF, WhatsApp).</summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(UserSummaryDto), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> AdminUpdateUser(Guid id, [FromBody] AdminUpdateUserRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var result = await _service.AdminUpdateUserAsync(id, request);
+            await _audit.LogAsync("EditouCliente", "User", id.ToString(), httpContext: HttpContext);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ex.Message.Contains("não encontrado")
+                ? NotFound(new { Message = ex.Message })
+                : BadRequest(new { Message = ex.Message });
+        }
+    }
+
     /// <summary>Admin redefine a senha de um cliente (sem e-mail, imediato).</summary>
     [HttpPut("{id:guid}/reset-password")]
     [Authorize(Policy = "AdminOnly")]

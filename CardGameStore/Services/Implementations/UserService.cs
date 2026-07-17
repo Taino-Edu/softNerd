@@ -289,6 +289,58 @@ public class UserService : IUserService
             adminId, userId, user.Name);
     }
 
+    public async Task<UserSummaryDto> AdminUpdateUserAsync(Guid userId, AdminUpdateUserRequest request)
+    {
+        var user = await _db.Users.Include(u => u.Perfil).FirstOrDefaultAsync(u => u.Id == userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        if (!string.IsNullOrWhiteSpace(request.Name))
+            user.Name = request.Name.Trim();
+
+        if (request.Email is not null)
+        {
+            var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
+            if (email is not null && email != user.Email)
+            {
+                var emailEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.Email == email);
+                if (emailEmUso)
+                    throw new InvalidOperationException($"Já existe uma conta com o e-mail {email}.");
+            }
+            user.Email = email;
+        }
+
+        if (request.Cpf is not null)
+        {
+            var cpf = string.IsNullOrWhiteSpace(request.Cpf) ? null : request.Cpf.Trim();
+            if (cpf is not null && cpf != user.Cpf)
+            {
+                var cpfEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.Cpf == cpf);
+                if (cpfEmUso)
+                    throw new InvalidOperationException($"Já existe uma conta com o CPF {cpf}.");
+            }
+            user.Cpf = cpf;
+        }
+
+        if (request.WhatsApp is not null)
+        {
+            var whatsApp = string.IsNullOrWhiteSpace(request.WhatsApp) ? null : request.WhatsApp.Trim();
+            if (whatsApp is not null && whatsApp != user.WhatsApp)
+            {
+                var whatsAppEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.WhatsApp == whatsApp);
+                if (whatsAppEmUso)
+                    throw new InvalidOperationException($"Já existe uma conta com o WhatsApp {whatsApp}.");
+            }
+            user.WhatsApp = whatsApp;
+        }
+
+        user.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Admin corrigiu os dados do usuário {UserId} ({Name}).", userId, user.Name);
+
+        return MapToSummary(user);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static bool IsExpired(User user) =>

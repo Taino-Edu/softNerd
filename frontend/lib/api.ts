@@ -641,6 +641,13 @@ export interface AdminCreateUserRequest {
   perfilId?: string
 }
 
+export interface AdminUpdateUserRequest {
+  name?: string
+  email?: string
+  cpf?: string
+  whatsApp?: string
+}
+
 export interface PerfilDto {
   id: string
   nome: string
@@ -712,6 +719,8 @@ export const userApi = {
     api.post<UserSummary>('/api/user', data),
   adminResetPassword: (id: string, newPassword: string) =>
     api.put(`/api/user/${id}/reset-password`, { newPassword }),
+  adminUpdate: (id: string, data: AdminUpdateUserRequest) =>
+    api.put<UserSummary>(`/api/user/${id}`, data),
   adminUpdatePerfil: (id: string, perfilId: string | null) =>
     api.put<UserSummary>(`/api/user/${id}/perfil`, { perfilId }),
   adminDelete: (id: string) =>

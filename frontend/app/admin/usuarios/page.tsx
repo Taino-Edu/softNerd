@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { userApi, crediarioApi, analyticsApi, perfisApi, CrediariosDto, UserSummary, PerfilDto, ClienteInsightDto, ClienteHistoricoDto, PAYMENT_METHODS } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wallet, Minus, UserPlus, KeyRound, X, UserX, History, ShoppingBag, ShoppingCart, Trophy, ChevronDown, ChevronUp, ChevronLeft, TrendingUp, UserCog, Shield } from 'lucide-react'
+import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wallet, Minus, UserPlus, KeyRound, X, UserX, History, ShoppingBag, ShoppingCart, Trophy, ChevronDown, ChevronUp, ChevronLeft, TrendingUp, UserCog, Shield, Pencil } from 'lucide-react'
 import Link from 'next/link'
 
 // ── Modal: Novo Cliente ───────────────────────────────────────────────────────
@@ -355,6 +355,79 @@ function RedefinirSenhaModal({ user, onClose }: { user: UserSummary; onClose: ()
   )
 }
 
+// ── Modal: Editar Dados do Cliente ────────────────────────────────────────────
+function EditarClienteModal({ user, onClose, onSaved }: {
+  user: UserSummary
+  onClose: () => void
+  onSaved: (updated: UserSummary) => void
+}) {
+  const [nome, setNome]       = useState(user.name)
+  const [email, setEmail]     = useState(user.email ?? '')
+  const [cpf, setCpf]         = useState(user.cpf ?? '')
+  const [whats, setWhats]     = useState(user.whatsApp ?? '')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!nome.trim()) { toast.error('Nome é obrigatório'); return }
+    setLoading(true)
+    try {
+      const { data } = await userApi.adminUpdate(user.id, {
+        name: nome.trim(),
+        email: email.trim(),
+        cpf: cpf.trim(),
+        whatsApp: whats.trim(),
+      })
+      toast.success(`Dados de ${data.name} atualizados!`)
+      onSaved(data)
+      onClose()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Erro ao salvar dados')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-500">
+          <h2 className="font-bold text-white text-lg flex items-center gap-2">
+            <UserCog className="w-5 h-5 text-brand-400" /> Editar Dados do Cliente
+          </h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <div>
+            <label className="label">Nome completo *</label>
+            <input className="input" value={nome} onChange={e => setNome(e.target.value)} required />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">CPF</label>
+              <input className="input" placeholder="12345678901" value={cpf} onChange={e => setCpf(e.target.value)} maxLength={11} />
+            </div>
+            <div>
+              <label className="label">WhatsApp</label>
+              <input className="input" placeholder="5517999999999" value={whats} onChange={e => setWhats(e.target.value)} maxLength={20} />
+            </div>
+          </div>
+          <div>
+            <label className="label">E-mail</label>
+            <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancelar</button>
+            <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : 'Salvar alterações'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── Helper: label de forma de pagamento ───────────────────────────────────────
 const pmLabel = (v: string | null) =>
   PAYMENT_METHODS.find(p => p.value === v)?.label ?? v ?? '—'
@@ -675,6 +748,7 @@ export default function UsuariosPage() {
   const [showNovoCliente, setShowNovoCliente]   = useState(false)
   const [showNovoOperador, setShowNovoOperador] = useState(false)
   const [showRedefinirSenha, setShowRedefinirSenha] = useState(false)
+  const [showEditarCliente, setShowEditarCliente] = useState(false)
   const [showHistorico, setShowHistorico]     = useState(false)
   const [editandoOperador, setEditandoOperador] = useState<UserSummary | null>(null)
   const [tabSection, setTabSection]           = useState<'clientes' | 'operadores'>('clientes')
@@ -785,6 +859,16 @@ export default function UsuariosPage() {
         <RedefinirSenhaModal
           user={selected}
           onClose={() => setShowRedefinirSenha(false)}
+        />
+      )}
+      {showEditarCliente && selected && (
+        <EditarClienteModal
+          user={selected}
+          onClose={() => setShowEditarCliente(false)}
+          onSaved={updated => {
+            setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
+            setSelected(updated)
+          }}
         />
       )}
       {showHistorico && selected && (
@@ -1077,6 +1161,12 @@ export default function UsuariosPage() {
                     className="btn-secondary text-xs py-1.5 px-3 justify-center"
                   >
                     <KeyRound className="w-3.5 h-3.5" /> Redefinir Senha
+                  </button>
+                  <button
+                    onClick={() => setShowEditarCliente(true)}
+                    className="btn-secondary text-xs py-1.5 px-3 justify-center col-span-2"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Editar Dados
                   </button>
                 </div>
               </div>
