@@ -41,9 +41,9 @@ function CategoryModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="card w-full max-w-sm">
-        <div className="flex items-center justify-between mb-6">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 p-4 overflow-y-auto flex items-start sm:items-center justify-center">
+      <div className="card w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col my-auto">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 shrink-0">
           <h2 className="text-lg font-bold text-white">
             {form.id ? 'Editar Categoria' : 'Nova Categoria'}
           </h2>
@@ -51,7 +51,8 @@ function CategoryModal({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col">
+          <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
           <div>
             <label className="label">Nome *</label>
             <input
@@ -64,25 +65,25 @@ function CategoryModal({
 
           <div>
             <label className="label">Emoji</label>
-            <div className="flex gap-2">
-              <input
-                className="input w-20 text-center text-xl"
-                value={form.emoji ?? ''}
-                onChange={e => set('emoji', e.target.value)}
-                placeholder="🎮"
-                maxLength={4}
-              />
-              <div className="flex flex-wrap gap-1.5 flex-1">
-                {EMOJI_SUGESTOES.map(e => (
-                  <button
-                    key={e} type="button"
-                    onClick={() => set('emoji', e)}
-                    className="w-8 h-8 rounded-lg hover:bg-surface-500 transition-colors text-lg flex items-center justify-center"
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
+            <input
+              className="input w-20 text-center text-xl mb-2"
+              value={form.emoji ?? ''}
+              onChange={e => set('emoji', e.target.value)}
+              placeholder="🎮"
+              maxLength={4}
+            />
+            <div className="grid grid-cols-8 sm:grid-cols-10 gap-1 max-h-36 overflow-y-auto rounded-lg border border-surface-500 p-1.5">
+              {EMOJI_SUGESTOES.map(e => (
+                <button
+                  key={e} type="button"
+                  onClick={() => set('emoji', e)}
+                  className={`w-8 h-8 rounded-lg hover:bg-surface-500 transition-colors text-lg flex items-center justify-center ${
+                    form.emoji === e ? 'bg-brand-600/30 ring-1 ring-brand-500' : ''
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -130,8 +131,9 @@ function CategoryModal({
             />
             <label htmlFor="isActive" className="text-sm text-gray-300">Categoria ativa</label>
           </div>
+          </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4 shrink-0">
             <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">
               Cancelar
             </button>
