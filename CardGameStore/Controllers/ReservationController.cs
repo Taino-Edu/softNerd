@@ -31,17 +31,19 @@ public class ReservationController : ControllerBase
     private readonly IVendaAvulsaService _vendaService;
     private readonly IComandaService     _comandaService;
     private readonly InterSyncService    _inter;
+    private readonly IPixReconciliationService _pixReconciliation;
     private readonly IPushService        _push;
 
     public ReservationController(
         AppDbContext db, IVendaAvulsaService vendaService, IComandaService comandaService,
-        InterSyncService inter, IPushService push)
+        InterSyncService inter, IPixReconciliationService pixReconciliation, IPushService push)
     {
-        _db             = db;
-        _vendaService   = vendaService;
-        _comandaService = comandaService;
-        _inter          = inter;
-        _push           = push;
+        _db                = db;
+        _vendaService      = vendaService;
+        _comandaService    = comandaService;
+        _inter             = inter;
+        _pixReconciliation = pixReconciliation;
+        _push              = push;
     }
 
     private Guid GetUserId()
@@ -552,44 +554,12 @@ public class ReservationController : ControllerBase
             .FirstOrDefaultAsync();
         if (pix is null) return NotFound(new { Message = "Nenhuma cobrança Pix ativa para esta reserva." });
 
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg is null) return BadRequest(new { Message = "Integração com o Inter não configurada." });
-
-        var result = await _inter.ConsultarCobrancaAsync(cfg, pix.TxId);
+        // A baixa mora no PixReconciliationService — mesmo caminho do robô e da
+        // verificação final da expiração (pago = ExpiresAt zerado, não expira mais).
+        var result = await _pixReconciliation.ReconciliarAsync(pix);
         if (result.Error is not null) return StatusCode(422, new { message = result.Error });
 
-        pix.Status = result.Status ?? pix.Status;
-        if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
-        {
-            pix.PagoEm = DateTime.UtcNow;
-            await MarcarGrupoComoPagoAsync(groupId);
-
-            var tx = new ExternalTransaction
-            {
-                Source = "inter",
-                ExternalId = pix.TxId,
-                Type = "income",
-                Amount = pix.ValorEmCentavos / 100m,
-                Description = $"Pix Pré-venda Grupo {groupId.ToString().Substring(0,8)}",
-                DueDate = pix.ExpiraEm,
-                PaidAt = pix.PagoEm,
-                Status = "paid",
-                Notes = $"Pagamento via Pix da pré-venda {groupId}"
-            };
-            _db.ExternalTransactions.Add(tx);
-        }
-
-        await _db.SaveChangesAsync();
         return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
-    }
-
-    /// <summary>Pré-venda paga não expira: limpa o prazo dos itens ativos do grupo.</summary>
-    private async Task MarcarGrupoComoPagoAsync(Guid groupId)
-    {
-        var itens = await _db.ProductReservations
-            .Where(r => r.ReservationGroupId == groupId && r.Kind == "pre_venda" && r.Status == "active")
-            .ToListAsync();
-        foreach (var r in itens) r.ExpiresAt = null;
     }
 
     // GET /api/reservations/group/{groupId}/pix — status atual do pagamento
@@ -611,34 +581,8 @@ public class ReservationController : ControllerBase
 
         if (pix.Status == "ATIVA")
         {
-            var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-            if (cfg is not null)
-            {
-                var result = await _inter.ConsultarCobrancaAsync(cfg, pix.TxId);
-                if (result.Error is null && result.Status != null)
-                {
-                    pix.Status = result.Status;
-                    if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
-                    {
-                        pix.PagoEm = DateTime.UtcNow;
-                        await MarcarGrupoComoPagoAsync(groupId);
-                        var tx = new ExternalTransaction
-                        {
-                            Source = "inter",
-                            ExternalId = pix.TxId,
-                            Type = "income",
-                            Amount = pix.ValorEmCentavos / 100m,
-                            Description = $"Pix Pré-venda Grupo {groupId.ToString().Substring(0,8)}",
-                            DueDate = pix.ExpiraEm,
-                            PaidAt = pix.PagoEm,
-                            Status = "paid",
-                            Notes = $"Pagamento via Pix da pré-venda {groupId}"
-                        };
-                        _db.ExternalTransactions.Add(tx);
-                    }
-                    await _db.SaveChangesAsync();
-                }
-            }
+            // Falha na consulta ao Inter não derruba o GET — devolve o último status conhecido.
+            await _pixReconciliation.ReconciliarAsync(pix);
         }
 
         return Ok(new { hasPix = true, pix.Status, pix.PagoEm, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });

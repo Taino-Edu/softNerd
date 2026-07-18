@@ -65,6 +65,37 @@ public class PreVendaExpiryBackgroundService : BackgroundService
             .Distinct()
             .ToListAsync();
 
+        // Verificação dupla: grupo com cobrança ainda ATIVA no banco local pode ter
+        // sido pago sem ninguém de tela aberta — última consulta ao Inter antes de
+        // devolver o estoque. Se pagou, a baixa limpa o ExpiresAt e o item não expira.
+        var gruposSemBaixa = groupIds.Except(gruposPagos).ToList();
+        if (gruposSemBaixa.Count > 0)
+        {
+            var pixAtivas = await db.PixCobrancas
+                .Where(p => p.ReservationGroupId != null
+                         && gruposSemBaixa.Contains(p.ReservationGroupId.Value)
+                         && p.Status == "ATIVA")
+                .ToListAsync();
+
+            if (pixAtivas.Count > 0)
+            {
+                var reconciliation = scope.ServiceProvider.GetRequiredService<IPixReconciliationService>();
+                foreach (var pix in pixAtivas)
+                {
+                    try
+                    {
+                        var resultado = await reconciliation.ReconciliarAsync(pix);
+                        if (resultado.Status == "CONCLUIDA")
+                            gruposPagos.Add(pix.ReservationGroupId!.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Verificação final do Pix {TxId} falhou — grupo segue o fluxo normal de expiração", pix.TxId);
+                    }
+                }
+            }
+        }
+
         var produtosAfetados = new HashSet<Guid>();
         var expiradas = 0;
 

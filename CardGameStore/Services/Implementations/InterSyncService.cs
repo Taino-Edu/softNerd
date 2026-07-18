@@ -217,7 +217,8 @@ public class InterSyncService
     }
 
     // ── Consulta status de uma cobrança existente ──────────────────────────────
-    public async Task<PixCobrancaResult> ConsultarCobrancaAsync(IntegrationConfig cfg, string txid)
+    // virtual pra permitir mock nos testes da reconciliação (PixReconciliationService).
+    public virtual async Task<PixCobrancaResult> ConsultarCobrancaAsync(IntegrationConfig cfg, string txid)
     {
         if (!IsConfigured(cfg))
             return new PixCobrancaResult { Error = "Inter não configurado." };

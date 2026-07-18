@@ -364,6 +364,12 @@ builder.Services.AddHostedService<SefazDistBackgroundService>();
 // Pré-venda — expira não-pagos vencidos (devolve estoque e puxa a fila)
 builder.Services.AddHostedService<PreVendaExpiryBackgroundService>();
 
+// Pix — sem webhook do Inter: o robô reconcilia cobranças ATIVA a cada 5 min e
+// dá a baixa por origem (mesmo caminho dos controllers); a expiração de pré-venda
+// também faz uma verificação dupla antes de devolver estoque.
+builder.Services.AddScoped<IPixReconciliationService, PixReconciliationService>();
+builder.Services.AddHostedService<PixReconciliationBackgroundService>();
+
 // ---------------------------------------------------------------------------
 // 12. CORS — origens lidas de config para facilitar deploy sem rebuild
 // ---------------------------------------------------------------------------
