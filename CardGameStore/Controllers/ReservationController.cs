@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace CardGameStore.Controllers;
 
@@ -33,10 +34,12 @@ public class ReservationController : ControllerBase
     private readonly InterSyncService    _inter;
     private readonly IPixReconciliationService _pixReconciliation;
     private readonly IPushService        _push;
+    private readonly IAuditService       _audit;
 
     public ReservationController(
         AppDbContext db, IVendaAvulsaService vendaService, IComandaService comandaService,
-        InterSyncService inter, IPixReconciliationService pixReconciliation, IPushService push)
+        InterSyncService inter, IPixReconciliationService pixReconciliation, IPushService push,
+        IAuditService audit)
     {
         _db                = db;
         _vendaService      = vendaService;
@@ -44,6 +47,7 @@ public class ReservationController : ControllerBase
         _inter             = inter;
         _pixReconciliation = pixReconciliation;
         _push              = push;
+        _audit             = audit;
     }
 
     private Guid GetUserId()
@@ -186,6 +190,11 @@ public class ReservationController : ControllerBase
         r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
         _db.ProductReservations.Add(r);
         await _db.SaveChangesAsync();
+
+        // Auditoria: reserva manual movimenta estoque em nome de terceiro — registra quem fez.
+        await _audit.LogAsync("CriouReservaManual", "ProductReservation", r.Id.ToString(),
+            details: JsonSerializer.Serialize(new { clienteId = req.UserId, produtoId = r.ProductId, quantidade = r.Quantity, r.Kind }),
+            httpContext: HttpContext);
 
         await _db.Entry(r).Reference(x => x.Product).LoadAsync();
         await _db.Entry(r).Reference(x => x.Variant).LoadAsync();

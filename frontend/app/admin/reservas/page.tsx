@@ -10,7 +10,7 @@ import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
   ShoppingBag, LayoutList, RefreshCw, Loader2, ChevronLeft, ChevronRight,
   AlertTriangle, TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
-  Hourglass, Sparkles, QrCode, Layers,
+  Hourglass, Sparkles, QrCode, Layers, UserPlus,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
@@ -90,6 +90,14 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [notes,      setNotes]      = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // Cadastro rápido de cliente novo (pedido chegou pelo WhatsApp e a pessoa não tem conta)
+  const [novoCliente, setNovoCliente] = useState(false)
+  const [ncName,      setNcName]      = useState('')
+  const [ncWhatsApp,  setNcWhatsApp]  = useState('')
+  const [ncCpf,       setNcCpf]       = useState('')
+  const [ncEmail,     setNcEmail]     = useState('')
+  const [ncSaving,    setNcSaving]    = useState(false)
+
   // Produtos ativos — carrega uma vez ao abrir
   useEffect(() => {
     productApi.listAdmin()
@@ -144,6 +152,24 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
     } finally { setSubmitting(false) }
   }
 
+  // Cliente mandou print no WhatsApp e não tem conta: cadastra sem sair do modal
+  async function handleCriarCliente() {
+    if (!ncName.trim())     { toast.error('Informe o nome do cliente'); return }
+    if (!ncWhatsApp.trim()) { toast.error('Informe o WhatsApp do cliente'); return }
+    setNcSaving(true)
+    try {
+      const { data } = await userApi.adminCreate({
+        name: ncName.trim(), whatsApp: ncWhatsApp.trim(),
+        cpf: ncCpf.trim() || undefined, email: ncEmail.trim() || undefined,
+      })
+      toast.success(`Cliente ${data.name} cadastrado`)
+      setUser(data)
+      setNovoCliente(false)
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Erro ao cadastrar cliente')
+    } finally { setNcSaving(false) }
+  }
+
   const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-surface-700 border border-surface-600 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500'
 
   return (
@@ -189,6 +215,33 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
                   </button>
                 ))}
               </div>
+
+              {/* Cliente sem conta (chegou pelo WhatsApp): cadastro rápido sem sair do modal */}
+              {!novoCliente ? (
+                <button type="button" onClick={() => { setNovoCliente(true); setNcName(userSearch) }}
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-surface-600 text-xs font-semibold text-gray-400 hover:text-white hover:border-brand-500 transition-colors">
+                  <UserPlus className="w-3.5 h-3.5" /> Cliente novo? Cadastrar agora
+                </button>
+              ) : (
+                <div className="mt-2 rounded-xl border border-surface-600 p-3 space-y-2">
+                  <p className="text-xs font-bold text-gray-300">Cadastro rápido do cliente</p>
+                  <input className={inputCls} placeholder="Nome *" value={ncName} onChange={e => setNcName(e.target.value)} />
+                  <input className={inputCls} placeholder="WhatsApp * (11999999999)" value={ncWhatsApp} onChange={e => setNcWhatsApp(e.target.value)} />
+                  <input className={inputCls} placeholder="CPF (opcional)" value={ncCpf} onChange={e => setNcCpf(e.target.value)} />
+                  <input className={inputCls} type="email" placeholder="E-mail (opcional)" value={ncEmail} onChange={e => setNcEmail(e.target.value)} />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleCriarCliente} disabled={ncSaving}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold disabled:opacity-60">
+                      {ncSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      Cadastrar e selecionar
+                    </button>
+                    <button type="button" onClick={() => setNovoCliente(false)}
+                      className="px-3 py-2 rounded-xl border border-surface-600 text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -308,9 +361,9 @@ export default function ReservasPage() {
   const [homComanda,  setHomComanda]  = useState<string>('')
   const [submitting,  setSubmitting]  = useState(false)
 
-  // Modal de nova pré-venda manual + modal de Pix (copiar código)
+  // Modal de nova pré-venda manual + modal de Pix (copiar código / mandar no zap)
   const [showNova,    setShowNova]    = useState(false)
-  const [pixGroup,    setPixGroup]    = useState<string | null>(null)
+  const [pixGroup,    setPixGroup]    = useState<AdminReservation | null>(null)
 
   // ── aba Fila (item que ainda não chegou) ──
   const [wlProducts,  setWlProducts]  = useState<Product[]>([])
@@ -760,7 +813,7 @@ export default function ReservasPage() {
                       <CheckCircle className="w-3 h-3" /> Homologar
                     </button>
                     {r.expiresAt && (
-                      <button onClick={() => setPixGroup(r.reservationGroupId)}
+                      <button onClick={() => setPixGroup(r)}
                         title="Gerar/copiar o código Pix pra mandar no WhatsApp"
                         className="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25
                                    hover:bg-purple-500/20 text-xs font-semibold transition-colors flex items-center gap-1">
@@ -920,8 +973,9 @@ export default function ReservasPage() {
       {/* Modal: Pix da pré-venda (copiar código e mandar no zap) */}
       {pixGroup && (
         <PixReservaModal
-          groupId={pixGroup}
+          groupId={pixGroup.reservationGroupId}
           dark
+          clienteWhatsApp={pixGroup.userWhatsApp}
           onClose={() => setPixGroup(null)}
           onPago={load}
         />
