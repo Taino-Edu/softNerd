@@ -119,52 +119,71 @@ public class ReservationController : ControllerBase
         if (req.Items is null || req.Items.Count == 0)
             return BadRequest(new { Message = "Carrinho vazio." });
 
-        var userId   = GetUserId();
-        var groupId  = Guid.NewGuid();
-        var toCreate = new List<ProductReservation>();
-        var virouFila = new List<Guid>();
+        var userId  = GetUserId();
+        var groupId = Guid.NewGuid();
 
-        await using var tx = await _db.Database.BeginTransactionAsync();
+        // O Npgsql roda com EnableRetryOnFailure (Program.cs), que rejeita transação manual
+        // solta ("user-initiated transactions are not supported"): o bloco inteiro precisa
+        // rodar dentro da execution strategy — numa falha transitória ela reexecuta tudo.
+        var strategy = _db.Database.CreateExecutionStrategy();
 
-        foreach (var item in req.Items)
+        IActionResult? falha = null;
+        List<ProductReservation>? criadas = null;
+
+        await strategy.ExecuteAsync(async () =>
         {
-            var created = await CriarItemAsync(userId, groupId, item.ProductId, item.VariantId,
-                                               item.Quantity < 1 ? 1 : item.Quantity, null);
-            if (created.Error is not null)
-                return BadRequest(new { created.Message });
+            var toCreate  = new List<ProductReservation>();
+            var virouFila = new List<Guid>();
 
-            if (created.Reservation!.Kind == "fila" && !req.AllowFilaFallback)
-                virouFila.Add(created.Reservation.ProductId);
+            await using var tx = await _db.Database.BeginTransactionAsync();
 
-            toCreate.Add(created.Reservation!);
-        }
-
-        if (virouFila.Count > 0)
-        {
-            // Sem Commit: o estoque baixado deste carrinho volta com o rollback.
-            var semEstoque = await _db.Products
-                .Where(p => virouFila.Contains(p.Id))
-                .Select(p => new { productId = p.Id, p.Name })
-                .ToListAsync();
-
-            return Conflict(new
+            foreach (var item in req.Items)
             {
-                Message = "Alguns itens ficaram sem estoque enquanto você montava a reserva. Escolha entrar na fila de espera ou removê-los.",
-                SemEstoque = semEstoque,
-            });
-        }
+                var created = await CriarItemAsync(userId, groupId, item.ProductId, item.VariantId,
+                                                   item.Quantity < 1 ? 1 : item.Quantity, null);
+                if (created.Error is not null)
+                {
+                    falha = BadRequest(new { created.Message });
+                    return; // sem Commit: rollback no Dispose devolve o estoque baixado
+                }
 
-        _db.ProductReservations.AddRange(toCreate);
-        await _db.SaveChangesAsync();
-        await tx.CommitAsync();
+                if (created.Reservation!.Kind == "fila" && !req.AllowFilaFallback)
+                    virouFila.Add(created.Reservation.ProductId);
 
-        foreach (var r in toCreate)
+                toCreate.Add(created.Reservation!);
+            }
+
+            if (virouFila.Count > 0)
+            {
+                // Sem Commit: o estoque baixado deste carrinho volta com o rollback.
+                var semEstoque = await _db.Products
+                    .Where(p => virouFila.Contains(p.Id))
+                    .Select(p => new { productId = p.Id, p.Name })
+                    .ToListAsync();
+
+                falha = Conflict(new
+                {
+                    Message = "Alguns itens ficaram sem estoque enquanto você montava a reserva. Escolha entrar na fila de espera ou removê-los.",
+                    SemEstoque = semEstoque,
+                });
+                return;
+            }
+
+            _db.ProductReservations.AddRange(toCreate);
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+            criadas = toCreate;
+        });
+
+        if (falha is not null) return falha;
+
+        foreach (var r in criadas!)
         {
             await _db.Entry(r).Reference(x => x.Product).LoadAsync();
             await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
         }
 
-        return Ok(new { groupId, items = toCreate.Select(r => ToDto(r)) });
+        return Ok(new { groupId, items = criadas!.Select(r => ToDto(r)) });
     }
 
     // POST /api/reservations/admin-create — admin registra pré-venda/fila em nome do

@@ -56,12 +56,14 @@ export default function ReservationCartPage() {
       clear()
       toast.success('Reserva confirmada!')
     } catch (e) {
-      const resp = (e as { response?: { status?: number; data?: { Message?: string; SemEstoque?: { productId: string; name: string }[] } } })?.response
-      if (resp?.status === 409 && resp.data?.SemEstoque?.length) {
+      const resp = (e as { response?: { status?: number; data?: { message?: string; Message?: string; semEstoque?: { productId: string; name: string }[]; SemEstoque?: { productId: string; name: string }[] } } })?.response
+      // A API serializa em camelCase; o fallback PascalCase é só proteção.
+      const itensSemEstoque = resp?.data?.semEstoque ?? resp?.data?.SemEstoque
+      if (resp?.status === 409 && itensSemEstoque?.length) {
         // Backend recusou o carrinho inteiro (sem vazar estoque): cliente decide — fila ou remover.
-        setSemEstoque(resp.data.SemEstoque)
+        setSemEstoque(itensSemEstoque)
       } else {
-        toast.error(resp?.data?.Message ?? 'Erro ao confirmar a reserva. Verifique o estoque disponível.')
+        toast.error(resp?.data?.message ?? resp?.data?.Message ?? 'Erro ao confirmar a reserva. Verifique o estoque disponível.')
       }
     } finally {
       setSubmitting(false)
