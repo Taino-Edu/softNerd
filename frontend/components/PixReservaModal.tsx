@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { reservationApi, ReservationPixStatus } from '@/lib/api'
-import { QrCode, Copy, RefreshCw, Loader2, X, CheckCircle } from 'lucide-react'
+import { QrCode, Copy, RefreshCw, Loader2, X, CheckCircle, MessageCircle } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 
 /** Modal de pagamento Pix de um grupo de pré-venda.
  * Usado no perfil do cliente (pagar) e no admin (gerar/copiar o código pra mandar
- * no WhatsApp). Reutiliza a cobrança ATIVA existente; gera uma nova se não houver. */
-export default function PixReservaModal({ groupId, dark = false, onClose, onPago }: {
+ * no WhatsApp). Reutiliza a cobrança ATIVA existente; gera uma nova se não houver.
+ * Com `clienteWhatsApp` (admin), mostra botão que abre o wa.me com a mensagem pronta. */
+export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp, onClose, onPago }: {
   groupId: string
   dark?: boolean
+  /** WhatsApp do cliente (admin) — habilita o botão "Enviar no WhatsApp" com o código pronto. */
+  clienteWhatsApp?: string | null
   onClose: () => void
   onPago?: () => void
 }) {
@@ -59,6 +62,17 @@ export default function PixReservaModal({ groupId, dark = false, onClose, onPago
     toast.success('Código Pix copiado!')
   }
 
+  // Link wa.me com a mensagem pronta (valor + copia-e-cola) — fluxo "pedido pelo zap".
+  const waLink = (() => {
+    if (!clienteWhatsApp || !pix?.pixCopiaCola) return null
+    const digits = clienteWhatsApp.replace(/\D/g, '')
+    if (digits.length < 10) return null
+    const fone = digits.startsWith('55') ? digits : `55${digits}`
+    const valor = pix.valorEmReais !== undefined ? `R$ ${pix.valorEmReais.toFixed(2).replace('.', ',')}` : ''
+    const msg = `Olá! Segue o Pix da sua pré-venda no Santuário Nerd:\n\nValor: ${valor}\n\nCódigo copia-e-cola:\n${pix.pixCopiaCola}\n\nQualquer dúvida é só chamar!`
+    return `https://wa.me/${fone}?text=${encodeURIComponent(msg)}`
+  })()
+
   const pago = pix?.status === 'CONCLUIDA'
 
   return (
@@ -101,6 +115,13 @@ export default function PixReservaModal({ groupId, dark = false, onClose, onPago
                   dark ? 'border-surface-600 text-gray-300 hover:bg-surface-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50')}>
                 <Copy className="w-3.5 h-3.5" /> Copiar código Pix
               </button>
+            )}
+            {waLink && (
+              <a href={waLink} target="_blank" rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-colors"
+                style={{ backgroundColor: '#25D366', color: '#fff' }}>
+                <MessageCircle className="w-3.5 h-3.5" /> Enviar no WhatsApp do cliente
+              </a>
             )}
             {pix?.valorEmReais !== undefined && (
               <p className={clsx('text-center text-lg font-black', dark ? 'text-white' : 'text-gray-900')}>

@@ -28,16 +28,19 @@ public class ChampionshipController : ControllerBase
     private readonly IChampionshipService _service;
     private readonly AppDbContext         _db;
     private readonly InterSyncService     _inter;
+    private readonly IPixReconciliationService _pixReconciliation;
     private readonly ILogger<ChampionshipController> _logger;
 
     public ChampionshipController(
         IChampionshipService service, AppDbContext db, InterSyncService inter,
+        IPixReconciliationService pixReconciliation,
         ILogger<ChampionshipController> logger)
     {
-        _service = service;
-        _db      = db;
-        _inter   = inter;
-        _logger  = logger;
+        _service           = service;
+        _db                = db;
+        _inter             = inter;
+        _pixReconciliation = pixReconciliation;
+        _logger            = logger;
     }
 
     // -------------------------------------------------------------------------
@@ -342,24 +345,11 @@ public class ChampionshipController : ControllerBase
         if (pix is null)
             return NotFound(new { Message = "Nenhuma cobrança Pix ativa para esta inscrição." });
 
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg is null)
-            return BadRequest(new { Message = "Integração com o Inter não configurada." });
-
-        var result = await _inter.ConsultarCobrancaAsync(cfg, pix.TxId);
+        // A baixa mora no PixReconciliationService — mesmo caminho do robô.
+        var result = await _pixReconciliation.ReconciliarAsync(pix);
         if (result.Error is not null)
             return StatusCode(422, new { message = result.Error });
 
-        pix.Status = result.Status ?? pix.Status;
-        if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
-        {
-            pix.PagoEm = DateTime.UtcNow;
-            participant.EntryFeePaidAt        = DateTime.UtcNow;
-            participant.EntryFeePaymentMethod = "Pix";
-            _logger.LogInformation("Inscrição {ParticipantId} paga via Pix (tx {TxId}).", participant.Id, pix.TxId);
-        }
-
-        await _db.SaveChangesAsync();
         return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
     }
 

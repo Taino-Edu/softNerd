@@ -69,6 +69,8 @@ public class UserService : IUserService
             PointsExpired   = IsExpired(user),
             BalanceInCents  = user.BalanceInCents,
             CreatedAt       = user.CreatedAt,
+            HasPassword     = user.PasswordHash != null,
+            ProfileComplete = user.PasswordHash != null && user.Email != null,
         };
     }
 
@@ -161,6 +163,14 @@ public class UserService : IUserService
         if (request.Email is not null)
         {
             var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
+
+            // Conta com senha NÃO pode ficar sem e-mail: é a credencial de login e o
+            // caminho da redefinição de senha. Antes desta regra o titular conseguia
+            // apagar o próprio e-mail e quebrar os dois (incidente real em produção).
+            if (email is null && user.PasswordHash is not null)
+                throw new InvalidOperationException(
+                    "Sua conta usa e-mail e senha para entrar — o e-mail não pode ser removido. Se preferir, troque por outro e-mail.");
+
             if (email is not null && email != user.Email)
             {
                 var emailEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.Email == email);

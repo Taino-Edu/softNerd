@@ -298,6 +298,40 @@ public class AuthController : ControllerBase
     }
 
     // =========================================================================
+    // COMPLETE PROFILE — conta semi-criada (quick-login) ganha e-mail + senha
+    // =========================================================================
+
+    /// <summary>
+    /// Completa o perfil da conta logada. O site exige esta etapa no primeiro
+    /// acesso de contas criadas via quick-login — sem e-mail, a redefinição de
+    /// senha não funciona.
+    /// </summary>
+    /// <response code="204">Perfil completado.</response>
+    /// <response code="409">Conta já completa ou e-mail em uso.</response>
+    [HttpPost("complete-profile")]
+    [Authorize]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(409)]
+    public async Task<IActionResult> CompleteProfile([FromBody] CompleteProfileRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var claim = User.FindFirst("sub") ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (claim == null || !Guid.TryParse(claim.Value, out var userId))
+            return Unauthorized();
+
+        try
+        {
+            await _authService.CompleteProfileAsync(userId, request);
+            _logger.LogInformation("Perfil completado para usuário {UserId}", userId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)      { return NotFound(new { Message = ex.Message }); }
+        catch (InvalidOperationException ex) { return Conflict(new { Message = ex.Message }); }
+    }
+
+    // =========================================================================
     // FORGOT PASSWORD — Solicitar reset por email
     // =========================================================================
 

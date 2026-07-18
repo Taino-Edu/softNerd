@@ -34,20 +34,23 @@ public class ComandaController : ControllerBase
     private readonly IComandaService  _service;
     private readonly AppDbContext     _db;
     private readonly InterSyncService _inter;
+    private readonly IPixReconciliationService _pixReconciliation;
     private readonly IHubContext<ComandaHub> _hub;
     private readonly IPushService     _push;
     private readonly ILogger<ComandaController> _logger;
 
     public ComandaController(
         IComandaService service, AppDbContext db, InterSyncService inter,
+        IPixReconciliationService pixReconciliation,
         IHubContext<ComandaHub> hub, IPushService push, ILogger<ComandaController> logger)
     {
-        _service = service;
-        _db      = db;
-        _inter   = inter;
-        _hub     = hub;
-        _push    = push;
-        _logger  = logger;
+        _service           = service;
+        _db                = db;
+        _inter             = inter;
+        _pixReconciliation = pixReconciliation;
+        _hub               = hub;
+        _push              = push;
+        _logger            = logger;
     }
 
     /// <summary>Admin abre uma comanda para um cliente (sem precisar que ele escaneie o QR).</summary>
@@ -383,33 +386,13 @@ public class ComandaController : ControllerBase
     /// <summary>Consulta o Inter e, se a cobrança estiver paga, marca e fecha a comanda. Compartilhado entre admin e cliente.</summary>
     private async Task<IActionResult> VerificarPagamentoPixAsync(PixCobranca pix, Guid fechadoPor)
     {
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg == null)
-            return BadRequest(new { Message = "Integração com o Inter não configurada." });
-
-        var result = await _inter.ConsultarCobrancaAsync(cfg, pix.TxId);
+        // A baixa mora no PixReconciliationService — mesmo caminho do robô e da
+        // verificação final da expiração, pra tela e fundo nunca divergirem.
+        var result = await _pixReconciliation.ReconciliarAsync(pix, fechadoPor);
         if (result.Error is not null)
             return StatusCode(422, new { message = result.Error });
 
-        pix.Status = result.Status ?? pix.Status;
-
-        ComandaDto? comandaFechada = null;
-        if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
-        {
-            pix.PagoEm = DateTime.UtcNow;
-
-            try
-            {
-                comandaFechada = await _service.CloseComandaAsync(pix.ComandaId!.Value, fechadoPor, "Pix");
-            }
-            catch (InvalidOperationException)
-            {
-                // Comanda já foi fechada por outro caminho enquanto a cobrança estava ativa — ignora.
-            }
-        }
-
-        await _db.SaveChangesAsync();
-        return Ok(new { pix.TxId, pix.Status, PagoEm = pix.PagoEm, Comanda = comandaFechada });
+        return Ok(new { pix.TxId, pix.Status, PagoEm = pix.PagoEm, Comanda = result.ComandaFechada });
     }
 
     /// <summary>Última cobrança Pix não expirada da comanda ativa do usuário logado.</summary>

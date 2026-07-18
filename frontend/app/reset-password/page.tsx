@@ -114,10 +114,14 @@ function ResetPasswordForm() {
             <div className="text-center py-4 space-y-4">
               <Mail className="w-12 h-12 text-brand-400 mx-auto" />
               <div>
-                <p className="font-bold text-white text-lg">Link enviado!</p>
+                <p className="font-bold text-white text-lg">Se este e-mail estiver cadastrado, o link chega em instantes</p>
                 <p className="text-gray-400 text-sm mt-1">
-                  Verifique sua caixa de entrada em <span className="text-white">{email}</span>.
+                  Verifique a caixa de entrada de <span className="text-white">{email}</span> (e o spam).
                   O link expira em 2 horas.
+                </p>
+                <p className="text-gray-500 text-xs mt-3">
+                  Não recebeu? Se sua conta foi criada na loja só com nome e WhatsApp (sem e-mail),
+                  fale com a gente no balcão ou pelo WhatsApp — a equipe redefine sua senha na hora.
                 </p>
               </div>
               <button onClick={() => setEmailSent(false)} className="text-sm text-gray-500 hover:text-gray-300 transition">

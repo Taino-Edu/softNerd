@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace CardGameStore.Controllers;
 
@@ -31,17 +32,22 @@ public class ReservationController : ControllerBase
     private readonly IVendaAvulsaService _vendaService;
     private readonly IComandaService     _comandaService;
     private readonly InterSyncService    _inter;
+    private readonly IPixReconciliationService _pixReconciliation;
     private readonly IPushService        _push;
+    private readonly IAuditService       _audit;
 
     public ReservationController(
         AppDbContext db, IVendaAvulsaService vendaService, IComandaService comandaService,
-        InterSyncService inter, IPushService push)
+        InterSyncService inter, IPixReconciliationService pixReconciliation, IPushService push,
+        IAuditService audit)
     {
-        _db             = db;
-        _vendaService   = vendaService;
-        _comandaService = comandaService;
-        _inter          = inter;
-        _push           = push;
+        _db                = db;
+        _vendaService      = vendaService;
+        _comandaService    = comandaService;
+        _inter             = inter;
+        _pixReconciliation = pixReconciliation;
+        _push              = push;
+        _audit             = audit;
     }
 
     private Guid GetUserId()
@@ -103,7 +109,9 @@ public class ReservationController : ControllerBase
     }
 
     // POST /api/reservations/cart — cria várias de uma vez (carrinho), mesmo ReservationGroupId.
-    // Cada item vira pré-venda (se tem estoque) ou fila (se não chegou e aceita fila).
+    // Transação única: se qualquer item falhar, o estoque já baixado dos anteriores volta
+    // (rollback no Dispose) — sem vazamento. Item sem estoque não vira fila silenciosamente:
+    // com AllowFilaFallback=false o carrinho inteiro é recusado com 409 + a lista dos itens.
     [HttpPost("cart")]
     [Authorize]
     public async Task<IActionResult> CreateCart([FromBody] CreateReservationCartRequest req)
@@ -111,9 +119,12 @@ public class ReservationController : ControllerBase
         if (req.Items is null || req.Items.Count == 0)
             return BadRequest(new { Message = "Carrinho vazio." });
 
-        var userId  = GetUserId();
-        var groupId = Guid.NewGuid();
+        var userId   = GetUserId();
+        var groupId  = Guid.NewGuid();
         var toCreate = new List<ProductReservation>();
+        var virouFila = new List<Guid>();
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
 
         foreach (var item in req.Items)
         {
@@ -122,11 +133,30 @@ public class ReservationController : ControllerBase
             if (created.Error is not null)
                 return BadRequest(new { created.Message });
 
+            if (created.Reservation!.Kind == "fila" && !req.AllowFilaFallback)
+                virouFila.Add(created.Reservation.ProductId);
+
             toCreate.Add(created.Reservation!);
+        }
+
+        if (virouFila.Count > 0)
+        {
+            // Sem Commit: o estoque baixado deste carrinho volta com o rollback.
+            var semEstoque = await _db.Products
+                .Where(p => virouFila.Contains(p.Id))
+                .Select(p => new { productId = p.Id, p.Name })
+                .ToListAsync();
+
+            return Conflict(new
+            {
+                Message = "Alguns itens ficaram sem estoque enquanto você montava a reserva. Escolha entrar na fila de espera ou removê-los.",
+                SemEstoque = semEstoque,
+            });
         }
 
         _db.ProductReservations.AddRange(toCreate);
         await _db.SaveChangesAsync();
+        await tx.CommitAsync();
 
         foreach (var r in toCreate)
         {
@@ -160,6 +190,11 @@ public class ReservationController : ControllerBase
         r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
         _db.ProductReservations.Add(r);
         await _db.SaveChangesAsync();
+
+        // Auditoria: reserva manual movimenta estoque em nome de terceiro — registra quem fez.
+        await _audit.LogAsync("CriouReservaManual", "ProductReservation", r.Id.ToString(),
+            details: JsonSerializer.Serialize(new { clienteId = req.UserId, produtoId = r.ProductId, quantidade = r.Quantity, r.Kind }),
+            httpContext: HttpContext);
 
         await _db.Entry(r).Reference(x => x.Product).LoadAsync();
         await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
@@ -552,44 +587,12 @@ public class ReservationController : ControllerBase
             .FirstOrDefaultAsync();
         if (pix is null) return NotFound(new { Message = "Nenhuma cobrança Pix ativa para esta reserva." });
 
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg is null) return BadRequest(new { Message = "Integração com o Inter não configurada." });
-
-        var result = await _inter.ConsultarCobrancaAsync(cfg, pix.TxId);
+        // A baixa mora no PixReconciliationService — mesmo caminho do robô e da
+        // verificação final da expiração (pago = ExpiresAt zerado, não expira mais).
+        var result = await _pixReconciliation.ReconciliarAsync(pix);
         if (result.Error is not null) return StatusCode(422, new { message = result.Error });
 
-        pix.Status = result.Status ?? pix.Status;
-        if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
-        {
-            pix.PagoEm = DateTime.UtcNow;
-            await MarcarGrupoComoPagoAsync(groupId);
-
-            var tx = new ExternalTransaction
-            {
-                Source = "inter",
-                ExternalId = pix.TxId,
-                Type = "income",
-                Amount = pix.ValorEmCentavos / 100m,
-                Description = $"Pix Pré-venda Grupo {groupId.ToString().Substring(0,8)}",
-                DueDate = pix.ExpiraEm,
-                PaidAt = pix.PagoEm,
-                Status = "paid",
-                Notes = $"Pagamento via Pix da pré-venda {groupId}"
-            };
-            _db.ExternalTransactions.Add(tx);
-        }
-
-        await _db.SaveChangesAsync();
         return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
-    }
-
-    /// <summary>Pré-venda paga não expira: limpa o prazo dos itens ativos do grupo.</summary>
-    private async Task MarcarGrupoComoPagoAsync(Guid groupId)
-    {
-        var itens = await _db.ProductReservations
-            .Where(r => r.ReservationGroupId == groupId && r.Kind == "pre_venda" && r.Status == "active")
-            .ToListAsync();
-        foreach (var r in itens) r.ExpiresAt = null;
     }
 
     // GET /api/reservations/group/{groupId}/pix — status atual do pagamento
@@ -611,34 +614,8 @@ public class ReservationController : ControllerBase
 
         if (pix.Status == "ATIVA")
         {
-            var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-            if (cfg is not null)
-            {
-                var result = await _inter.ConsultarCobrancaAsync(cfg, pix.TxId);
-                if (result.Error is null && result.Status != null)
-                {
-                    pix.Status = result.Status;
-                    if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
-                    {
-                        pix.PagoEm = DateTime.UtcNow;
-                        await MarcarGrupoComoPagoAsync(groupId);
-                        var tx = new ExternalTransaction
-                        {
-                            Source = "inter",
-                            ExternalId = pix.TxId,
-                            Type = "income",
-                            Amount = pix.ValorEmCentavos / 100m,
-                            Description = $"Pix Pré-venda Grupo {groupId.ToString().Substring(0,8)}",
-                            DueDate = pix.ExpiraEm,
-                            PaidAt = pix.PagoEm,
-                            Status = "paid",
-                            Notes = $"Pagamento via Pix da pré-venda {groupId}"
-                        };
-                        _db.ExternalTransactions.Add(tx);
-                    }
-                    await _db.SaveChangesAsync();
-                }
-            }
+            // Falha na consulta ao Inter não derruba o GET — devolve o último status conhecido.
+            await _pixReconciliation.ReconciliarAsync(pix);
         }
 
         return Ok(new { hasPix = true, pix.Status, pix.PagoEm, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
@@ -688,6 +665,13 @@ public class CreateReservationCartItem
 public class CreateReservationCartRequest
 {
     public List<CreateReservationCartItem> Items { get; init; } = [];
+
+    /// <summary>
+    /// false (padrão): item que ficou sem estoque NÃO vira fila sozinho — o carrinho
+    /// inteiro é recusado com 409 e o cliente escolhe (entrar na fila ou remover).
+    /// true: conversão explícita pra fila (o cliente já consentiu na tela).
+    /// </summary>
+    public bool AllowFilaFallback { get; init; } = false;
 }
 
 public class AdminCreateReservationRequest

@@ -29,14 +29,17 @@ public class CrediariosController : ControllerBase
     private readonly AppDbContext    _db;
     private readonly IEmailService   _email;
     private readonly InterSyncService _inter;
+    private readonly IPixReconciliationService _pixReconciliation;
     private readonly ILogger<CrediariosController> _logger;
 
-    public CrediariosController(AppDbContext db, IEmailService email, InterSyncService inter, ILogger<CrediariosController> logger)
+    public CrediariosController(AppDbContext db, IEmailService email, InterSyncService inter,
+        IPixReconciliationService pixReconciliation, ILogger<CrediariosController> logger)
     {
-        _db     = db;
-        _email  = email;
-        _inter  = inter;
-        _logger = logger;
+        _db                = db;
+        _email             = email;
+        _inter             = inter;
+        _pixReconciliation = pixReconciliation;
+        _logger            = logger;
     }
 
     // -------------------------------------------------------------------------
@@ -505,58 +508,12 @@ public class CrediariosController : ControllerBase
         if (pix == null)
             return NotFound(new { Message = "Cobrança não encontrada." });
 
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg == null)
-            return BadRequest(new { Message = "Integração com o Inter não configurada." });
-
-        var result = await _inter.ConsultarCobrancaAsync(cfg, txid);
+        // Reconcilia automaticamente: cobrança paga → registra pagamento no crediário.
+        // A baixa mora no PixReconciliationService — mesmo caminho do robô.
+        var result = await _pixReconciliation.ReconciliarAsync(pix, GetUserId());
         if (result.Error is not null)
             return StatusCode(422, new { message = result.Error });
 
-        pix.Status = result.Status ?? pix.Status;
-
-        // Reconcilia automaticamente: cobrança paga → registra pagamento no crediário
-        if (pix.Status == "CONCLUIDA" && pix.PagoEm is null)
-        {
-            pix.PagoEm = DateTime.UtcNow;
-
-            var crediario = await _db.Crediarios
-                .Include(c => c.User)
-                .FirstOrDefaultAsync(c => c.Id == pix.CrediarioId);
-
-            if (crediario is not null && crediario.Status != CrediariosStatus.Pago)
-            {
-                var adminId    = GetUserId();
-                var valorPagar = Math.Min(pix.ValorEmCentavos, crediario.SaldoRestanteEmCentavos);
-
-                _db.PagamentosCrediario.Add(new PagamentoCrediario
-                {
-                    CrediarioId     = crediario.Id,
-                    ValorEmCentavos = valorPagar,
-                    FormaPagamento  = "Pix",
-                    Observacao      = $"Cobrança Pix automática (txid {txid})",
-                    AdminId         = adminId,
-                });
-                crediario.ValorPagoEmCentavos += valorPagar;
-
-                if (crediario.SaldoRestanteEmCentavos <= 1)
-                {
-                    crediario.Status         = CrediariosStatus.Pago;
-                    crediario.DataPagamento  = DateTime.UtcNow;
-                    crediario.PagoPorAdminId = adminId;
-
-                    if (!string.IsNullOrWhiteSpace(crediario.User?.Email))
-                        _ = _email.SendCrediarioPagoAsync(
-                            crediario.User.Email, crediario.User.Name, crediario.ValorEmReais);
-                }
-
-                _logger.LogInformation(
-                    "Cobrança Pix {TxId} confirmada — pagamento de R$ {Valor:N2} registrado no crediário {CrediarioId}",
-                    txid, valorPagar / 100m, crediario.Id);
-            }
-        }
-
-        await _db.SaveChangesAsync();
         return Ok(new { pix.TxId, pix.Status, PagoEm = pix.PagoEm });
     }
 

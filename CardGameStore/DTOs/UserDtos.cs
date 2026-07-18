@@ -104,6 +104,11 @@ public class UserProfileDto
     public bool      PointsExpired   { get; set; }
     public int       BalanceInCents  { get; set; }
     public DateTime  CreatedAt       { get; set; }
+    public bool      HasPassword     { get; set; }
+
+    /// <summary>Conta completa = tem senha E e-mail. Quick-login cria conta semi-criada
+    /// (sem ambos) — o site exige completar no primeiro acesso.</summary>
+    public bool      ProfileComplete { get; set; }
 }
 
 /// <summary>Request para ajustar saldo monetário de um usuário (Admin).</summary>
