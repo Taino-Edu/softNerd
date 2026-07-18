@@ -188,22 +188,30 @@ public class FiscalController : ControllerBase
         // Trocar o padrão (limpar os outros + gravar este) precisa ser atômico:
         // duas requisições concorrentes marcando padrão=true só podem ter uma vencedora
         // graças ao índice único parcial ix_naturezas_operacao_unica_padrao.
-        await using var tx = await _db.Database.BeginTransactionAsync();
-        try
+        // Transação manual precisa rodar dentro da execution strategy
+        // (EnableRetryOnFailure do Npgsql rejeita transação solta).
+        IActionResult? conflito = null;
+        await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            if (natureza.IsPadrao)
-                await _db.NaturezasOperacao.Where(n => n.IsPadrao)
-                    .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsPadrao, false));
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                if (natureza.IsPadrao)
+                    await _db.NaturezasOperacao.Where(n => n.IsPadrao)
+                        .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsPadrao, false));
 
-            _db.NaturezasOperacao.Add(natureza);
-            await _db.SaveChangesAsync();
-            await tx.CommitAsync();
-        }
-        catch (DbUpdateException)
-        {
-            await tx.RollbackAsync();
-            return Conflict(new { Message = "Outra natureza foi marcada como padrão ao mesmo tempo. Tente novamente." });
-        }
+                _db.NaturezasOperacao.Add(natureza);
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+            }
+            catch (DbUpdateException)
+            {
+                await tx.RollbackAsync();
+                conflito = Conflict(new { Message = "Outra natureza foi marcada como padrão ao mesmo tempo. Tente novamente." });
+            }
+        });
+
+        if (conflito is not null) return conflito;
 
         return Ok(natureza);
     }
@@ -223,22 +231,28 @@ public class FiscalController : ControllerBase
         natureza.PercentualCreditoIcmsSn = req.Csosn == "101" ? req.PercentualCreditoSn : null;
         natureza.UpdatedAt = DateTime.UtcNow;
 
-        await using var tx = await _db.Database.BeginTransactionAsync();
-        try
+        IActionResult? conflito = null;
+        await _db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            if (req.IsPadrao && !natureza.IsPadrao)
-                await _db.NaturezasOperacao.Where(n => n.IsPadrao && n.Id != id)
-                    .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsPadrao, false));
-            natureza.IsPadrao = req.IsPadrao;
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                if (req.IsPadrao && !natureza.IsPadrao)
+                    await _db.NaturezasOperacao.Where(n => n.IsPadrao && n.Id != id)
+                        .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsPadrao, false));
+                natureza.IsPadrao = req.IsPadrao;
 
-            await _db.SaveChangesAsync();
-            await tx.CommitAsync();
-        }
-        catch (DbUpdateException)
-        {
-            await tx.RollbackAsync();
-            return Conflict(new { Message = "Outra natureza foi marcada como padrão ao mesmo tempo. Tente novamente." });
-        }
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+            }
+            catch (DbUpdateException)
+            {
+                await tx.RollbackAsync();
+                conflito = Conflict(new { Message = "Outra natureza foi marcada como padrão ao mesmo tempo. Tente novamente." });
+            }
+        });
+
+        if (conflito is not null) return conflito;
 
         return Ok(natureza);
     }
