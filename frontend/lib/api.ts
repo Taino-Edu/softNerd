@@ -267,6 +267,9 @@ export interface UserProfile {
   cpf: string | null; whatsApp: string | null; role: string; profileImageUrl: string | null
   pointsBalance: number; pointsExpiresAt: string | null
   pointsExpired: boolean; balanceInCents: number; createdAt: string
+  /** Conta completa = senha + e-mail. Quick-login cria conta semi-criada (false) —
+   * o site exige completar (CompleteProfileGuard) pra redefinição de senha funcionar. */
+  hasPassword: boolean; profileComplete: boolean
 }
 
 type PrefCorner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
@@ -322,6 +325,8 @@ export const authApi = {
     api.post<CpfLookupResponse>('/api/auth/cpf-lookup', { cpf }),
   setupAccount: (cpf: string, email: string, password: string) =>
     api.post<AuthResponse>('/api/auth/setup-account', { cpf, email, password }),
+  completeProfile: (email: string, password: string) =>
+    api.post('/api/auth/complete-profile', { email, password }),
   quickLogin: (name: string, cpf: string | null, whatsApp: string, tableIdentifier?: string) =>
     api.post<AuthResponse>('/api/auth/quick-login', { name, cpf: cpf || null, whatsApp, tableIdentifier }),
   logout:         () => api.post('/api/auth/logout'),

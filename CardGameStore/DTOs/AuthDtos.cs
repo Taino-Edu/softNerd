@@ -75,6 +75,13 @@ public record SetupAccountRequest(
     [Required, MinLength(8)]    string Password
 );
 
+/// <summary>Completa o perfil da conta logada (conta semi-criada de quick-login) — e-mail + senha.
+/// Diferente do setup-account (que acha a conta pelo CPF), aqui o usuário já está autenticado.</summary>
+public record CompleteProfileRequest(
+    [Required, EmailAddress]    string Email,
+    [Required, MinLength(8)]    string Password
+);
+
 /// <summary>Cria uma conta nova de cliente pelo site — não depende de CPF pré-cadastrado
 /// (diferente de SetupAccountRequest, que só ativa contas já existentes vinda de compra em loja).</summary>
 public record RegisterRequest(

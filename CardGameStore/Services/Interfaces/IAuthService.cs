@@ -44,4 +44,7 @@ public interface IAuthService
 
     /// <summary>Cria uma conta nova de cliente pelo site, sem depender de CPF pré-cadastrado.</summary>
     Task<AuthResponse> RegisterAsync(RegisterRequest request);
+
+    /// <summary>Completa o perfil da conta logada (semi-criada de quick-login ganha e-mail + senha).</summary>
+    Task CompleteProfileAsync(Guid userId, CompleteProfileRequest request);
 }

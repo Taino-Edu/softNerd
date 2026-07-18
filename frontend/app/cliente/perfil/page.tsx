@@ -32,6 +32,11 @@ function EditProfileModal({ profile, onClose, onSaved }: {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) { toast.error('O nome não pode ficar vazio.'); return }
+    // Conta com senha não pode ficar sem e-mail — login e redefinição dependem dele
+    if (profile.hasPassword && !email.trim()) {
+      toast.error('Sua conta usa e-mail e senha para entrar — o e-mail não pode ficar vazio.')
+      return
+    }
     setSaving(true)
     try {
       const { data } = await userApi.updateMe({
@@ -72,9 +77,12 @@ function EditProfileModal({ profile, onClose, onSaved }: {
         </div>
 
         <div>
-          <label className="text-xs font-black text-gray-400 uppercase tracking-wider">E-mail</label>
+          <label className="text-xs font-black text-gray-400 uppercase tracking-wider">
+            E-mail {profile.hasPassword && <span className="text-red-400">· obrigatório</span>}
+          </label>
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
+            required={profile.hasPassword}
             className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#42B6EE]"
             placeholder="seu@email.com"
           />

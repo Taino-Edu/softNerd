@@ -253,6 +253,30 @@ public class AuthService : IAuthService
         return await GenerateAuthResponseAsync(user);
     }
 
+    // Completa o perfil da conta LOGADA — quick-login cria conta semi-criada (sem
+    // e-mail/senha) e o site exige esta etapa: sem e-mail a redefinição de senha
+    // não chega (incidente real com cliente da loja).
+    public async Task CompleteProfileAsync(Guid userId, CompleteProfileRequest request)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsActive)
+            ?? throw new KeyNotFoundException("Usuário não encontrado.");
+
+        if (user.PasswordHash is not null && user.Email is not null)
+            throw new InvalidOperationException("Esta conta já está completa.");
+
+        var email = request.Email.Trim().ToLowerInvariant();
+        var emailInUse = await _db.Users.AnyAsync(u => u.Email == email && u.Id != userId);
+        if (emailInUse)
+            throw new InvalidOperationException("Este e-mail já está em uso por outra conta.");
+
+        user.Email        = email;
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+        user.UpdatedAt    = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Perfil completado pelo próprio cliente {UserId}", userId);
+    }
+
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
         var email = request.Email.Trim().ToLowerInvariant();
