@@ -493,15 +493,14 @@ function ProductModal({
     {cameraOpen && (
       <CameraScanner onDetected={handleCameraDetected} onClose={() => setCameraOpen(false)} />
     )}
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
-      <div className="w-full max-w-md bg-surface-800 border border-surface-600 rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 p-4 overflow-y-auto flex items-start sm:items-center justify-center">
+      <div className="w-full max-w-md bg-surface-800 border border-surface-600 rounded-2xl shadow-xl max-h-[calc(100dvh-2rem)] flex flex-col my-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-600 shrink-0">
           <h2 className="text-lg font-bold text-white">{form.id ? 'Editar Produto' : 'Novo Produto'}</h2>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-500 text-gray-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
         </div>
-        <div className="overflow-y-auto flex-1 px-6 py-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0 px-6 py-4">
           <div>
             <label className="label">Código de barras</label>
             <div className="flex gap-2">
@@ -782,16 +781,15 @@ function ProductModal({
               </p>
             </div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancelar</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
-        </form>
         </div>
-      </div>
+        <div className="flex gap-3 px-6 py-4 border-t border-surface-600 shrink-0">
+          <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancelar</button>
+          <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+        </form>
       </div>
     </div>
     </>
