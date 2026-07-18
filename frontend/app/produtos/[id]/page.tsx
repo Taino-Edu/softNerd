@@ -323,8 +323,8 @@ export default function ProductPage() {
                     </div>
                     <p className="text-xs text-center mt-1.5" style={{ color: C.muted }}>
                       {dataRua
-                        ? `Lançamento dia ${fmtData(dataRua)}. Você garante a sua agora — o produto já é separado na hora — e retira a partir do lançamento. Pague no Pix ou na retirada.`
-                        : 'O produto já é separado pra você na hora. Pague agora no Pix ou na retirada em até 48h.'}
+                        ? `Lançamento dia ${fmtData(dataRua)}. Você garante a sua agora — o produto já é separado na hora — e retira no balcão a partir do lançamento. Pague no Pix ou na retirada.`
+                        : 'Reserva com retirada no balcão: o produto já é separado pra você na hora. Pague agora no Pix ou na retirada em até 48h.'}
                     </p>
                   </div>
 
@@ -410,7 +410,7 @@ export default function ProductPage() {
                 className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full font-bold text-sm shadow-xl transition-transform active:scale-95 animate-bounce-in"
                 style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}>
                 <BookmarkPlus className="w-4 h-4" />
-                Ver pré-venda ({cartCount}) — finalizar
+                Ver reserva ({cartCount}) — finalizar
               </Link>
             )}
 

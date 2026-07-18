@@ -105,7 +105,9 @@ public class ReservationController : ControllerBase
     }
 
     // POST /api/reservations/cart — cria várias de uma vez (carrinho), mesmo ReservationGroupId.
-    // Cada item vira pré-venda (se tem estoque) ou fila (se não chegou e aceita fila).
+    // Transação única: se qualquer item falhar, o estoque já baixado dos anteriores volta
+    // (rollback no Dispose) — sem vazamento. Item sem estoque não vira fila silenciosamente:
+    // com AllowFilaFallback=false o carrinho inteiro é recusado com 409 + a lista dos itens.
     [HttpPost("cart")]
     [Authorize]
     public async Task<IActionResult> CreateCart([FromBody] CreateReservationCartRequest req)
@@ -113,9 +115,12 @@ public class ReservationController : ControllerBase
         if (req.Items is null || req.Items.Count == 0)
             return BadRequest(new { Message = "Carrinho vazio." });
 
-        var userId  = GetUserId();
-        var groupId = Guid.NewGuid();
+        var userId   = GetUserId();
+        var groupId  = Guid.NewGuid();
         var toCreate = new List<ProductReservation>();
+        var virouFila = new List<Guid>();
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
 
         foreach (var item in req.Items)
         {
@@ -124,11 +129,30 @@ public class ReservationController : ControllerBase
             if (created.Error is not null)
                 return BadRequest(new { created.Message });
 
+            if (created.Reservation!.Kind == "fila" && !req.AllowFilaFallback)
+                virouFila.Add(created.Reservation.ProductId);
+
             toCreate.Add(created.Reservation!);
+        }
+
+        if (virouFila.Count > 0)
+        {
+            // Sem Commit: o estoque baixado deste carrinho volta com o rollback.
+            var semEstoque = await _db.Products
+                .Where(p => virouFila.Contains(p.Id))
+                .Select(p => new { productId = p.Id, p.Name })
+                .ToListAsync();
+
+            return Conflict(new
+            {
+                Message = "Alguns itens ficaram sem estoque enquanto você montava a reserva. Escolha entrar na fila de espera ou removê-los.",
+                SemEstoque = semEstoque,
+            });
         }
 
         _db.ProductReservations.AddRange(toCreate);
         await _db.SaveChangesAsync();
+        await tx.CommitAsync();
 
         foreach (var r in toCreate)
         {
@@ -632,6 +656,13 @@ public class CreateReservationCartItem
 public class CreateReservationCartRequest
 {
     public List<CreateReservationCartItem> Items { get; init; } = [];
+
+    /// <summary>
+    /// false (padrão): item que ficou sem estoque NÃO vira fila sozinho — o carrinho
+    /// inteiro é recusado com 409 e o cliente escolhe (entrar na fila ou remover).
+    /// true: conversão explícita pra fila (o cliente já consentiu na tela).
+    /// </summary>
+    public bool AllowFilaFallback { get; init; } = false;
 }
 
 public class AdminCreateReservationRequest

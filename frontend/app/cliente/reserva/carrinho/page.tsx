@@ -21,6 +21,8 @@ export default function ReservationCartPage() {
   const [isDark, setIsDark] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [groupId, setGroupId] = useState<string | null>(null)
+  const [temFila, setTemFila] = useState(false)
+  const [semEstoque, setSemEstoque] = useState<{ productId: string; name: string }[] | null>(null)
   const [pix, setPix] = useState<ReservationPixStatus | null>(null)
   const [pixLoading, setPixLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
@@ -39,22 +41,39 @@ export default function ReservationCartPage() {
     if (!isLoggedIn()) router.push('/')
   }, [router])
 
-  async function handleConfirm() {
+  // allowFila=true só vem do diálogo de "acabou o estoque" — nunca por padrão,
+  // pra reserva (estoque na hora) e fila (ainda não chegou) não se misturarem sozinhas.
+  async function handleConfirm(allowFila = false) {
     if (items.length === 0) return
     setSubmitting(true)
     try {
       const { data } = await reservationApi.createCart(
-        items.map(i => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity }))
+        items.map(i => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
+        allowFila
       )
       setGroupId(data.groupId)
+      setTemFila(data.items.some(i => i.kind === 'fila'))
       clear()
-      toast.success('Pré-venda confirmada! O estoque já foi separado pra você.')
+      toast.success('Reserva confirmada!')
     } catch (e) {
-      const msg = (e as { response?: { data?: { Message?: string } } })?.response?.data?.Message
-      toast.error(msg ?? 'Erro ao confirmar pré-venda. Verifique o estoque disponível.')
+      const resp = (e as { response?: { status?: number; data?: { Message?: string; SemEstoque?: { productId: string; name: string }[] } } })?.response
+      if (resp?.status === 409 && resp.data?.SemEstoque?.length) {
+        // Backend recusou o carrinho inteiro (sem vazar estoque): cliente decide — fila ou remover.
+        setSemEstoque(resp.data.SemEstoque)
+      } else {
+        toast.error(resp?.data?.Message ?? 'Erro ao confirmar a reserva. Verifique o estoque disponível.')
+      }
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function removerSemEstoque() {
+    semEstoque?.forEach(s => {
+      items.filter(i => i.productId === s.productId)
+        .forEach(i => removeItem(i.productId, i.variantId))
+    })
+    setSemEstoque(null)
   }
 
   async function handleGerarPix() {
@@ -101,9 +120,11 @@ export default function ReservationCartPage() {
           <div className="rounded-2xl border p-6 text-center space-y-3"
             style={{ backgroundColor: C.card, borderColor: C.border }}>
             <CheckCircle className="w-12 h-12 mx-auto" style={{ color: '#22C55E' }} />
-            <h1 className="text-xl font-black">Pré-venda confirmada!</h1>
+            <h1 className="text-xl font-black">{temFila ? 'Reserva registrada!' : 'Reserva confirmada!'}</h1>
             <p className="text-sm" style={{ color: C.text }}>
-              O estoque já foi separado pra você. Pague agora no Pix ou na retirada — sem pagamento, a pré-venda expira e o item volta pra loja.
+              {temFila
+                ? 'Os itens em estoque já foram separados pra você. Os itens que entraram na fila serão garantidos quando chegarem — a gente avisa. Pague no Pix ou na retirada.'
+                : 'O estoque já foi separado pra você — retirada no balcão. Pague agora no Pix ou na retirada: sem pagamento em 48h, a reserva expira e o item volta pra loja.'}
             </p>
           </div>
 
@@ -152,7 +173,7 @@ export default function ReservationCartPage() {
           <Link href="/cliente/perfil"
             className="mt-4 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm border transition-all hover:opacity-80"
             style={{ borderColor: C.border, color: C.text, backgroundColor: C.card }}>
-            Ver minhas pré-vendas
+            Ver minhas reservas
           </Link>
         </div>
       </div>
@@ -169,16 +190,16 @@ export default function ReservationCartPage() {
         </Link>
 
         <h1 className="text-xl font-black mb-1 flex items-center gap-2">
-          <BookmarkPlus className="w-5 h-5" style={{ color: '#7C3AED' }} /> Sua pré-venda
+          <BookmarkPlus className="w-5 h-5" style={{ color: '#7C3AED' }} /> Sua reserva
         </h1>
         <p className="text-sm mb-5" style={{ color: C.text }}>
-          Ao confirmar, o estoque baixa na hora pra você. Pague no Pix ou na retirada em até 48h — se o item tiver data de lançamento, até 48h depois dela.
+          Reserva com retirada no balcão: ao confirmar, o estoque baixa na hora pra você. Pague no Pix ou na retirada em até 48h — se o item tiver data de lançamento, até 48h depois dela.
         </p>
 
         {items.length === 0 ? (
           <div className="rounded-2xl border p-8 text-center" style={{ backgroundColor: C.card, borderColor: C.border }}>
             <Package className="w-10 h-10 mx-auto mb-3" style={{ color: C.muted }} />
-            <p className="text-sm" style={{ color: C.text }}>Sua pré-venda está vazia.</p>
+            <p className="text-sm" style={{ color: C.text }}>Sua reserva está vazia.</p>
             <Link href="/produtos" className="text-sm font-bold mt-2 inline-block" style={{ color: '#7C3AED' }}>
               Ver produtos disponíveis
             </Link>
@@ -230,15 +251,44 @@ export default function ReservationCartPage() {
               <span className="text-xl font-black">{fmt(totalCents)}</span>
             </div>
 
-            <button onClick={handleConfirm} disabled={submitting}
+            <button onClick={() => handleConfirm()} disabled={submitting}
               className="w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg disabled:opacity-60"
               style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
               {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <BookmarkPlus className="w-5 h-5" />}
-              {submitting ? 'Confirmando...' : 'Confirmar pré-venda'}
+              {submitting ? 'Confirmando...' : 'Confirmar reserva'}
             </button>
           </>
         )}
       </div>
+
+      {/* ── Diálogo: itens que ficaram sem estoque no meio do caminho ── */}
+      {semEstoque && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border p-5 space-y-4"
+            style={{ backgroundColor: C.card, borderColor: C.border }}>
+            <h2 className="font-black text-base" style={{ color: C.navy }}>Acabou enquanto você montava</h2>
+            <p className="text-sm" style={{ color: C.text }}>
+              Estes itens ficaram sem estoque agora. Quer entrar na fila de espera deles (a gente avisa quando chegar) ou remover da reserva?
+            </p>
+            <ul className="text-sm space-y-1">
+              {semEstoque.map(s => (
+                <li key={s.productId} className="font-semibold" style={{ color: C.navy }}>• {s.name}</li>
+              ))}
+            </ul>
+            <button onClick={() => { setSemEstoque(null); handleConfirm(true) }} disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-60"
+              style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {submitting ? 'Confirmando...' : 'Entrar na fila de espera'}
+            </button>
+            <button onClick={removerSemEstoque}
+              className="w-full py-3 rounded-xl font-semibold text-sm border transition-all hover:opacity-80"
+              style={{ borderColor: C.border, color: C.text }}>
+              Remover e seguir sem eles
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1140,8 +1140,8 @@ export const reservationApi = {
   mine:      ()                                    => api.get<MyReservation[]>('/api/reservations/mine'),
   create:    (body: { productId: string; variantId?: string; quantity?: number; notes?: string }) =>
                api.post('/api/reservations', body),
-  createCart: (items: { productId: string; variantId?: string; quantity: number }[]) =>
-               api.post<{ groupId: string; items: MyReservation[] }>('/api/reservations/cart', { items }),
+  createCart: (items: { productId: string; variantId?: string; quantity: number }[], allowFilaFallback = false) =>
+               api.post<{ groupId: string; items: MyReservation[] }>('/api/reservations/cart', { items, allowFilaFallback }),
   adminCreate: (body: { userId: string; productId: string; variantId?: string; quantity?: number; notes?: string }) =>
                api.post<AdminReservation>('/api/reservations/admin-create', body),
   gerarPix:  (groupId: string)                     =>
