@@ -1,10 +1,12 @@
 using CardGameStore.Data;
 using CardGameStore.DTOs;
+using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
@@ -35,11 +37,12 @@ public class ReservationController : ControllerBase
     private readonly IPixReconciliationService _pixReconciliation;
     private readonly IPushService        _push;
     private readonly IAuditService       _audit;
+    private readonly IHubContext<ComandaHub> _hub;
 
     public ReservationController(
         AppDbContext db, IVendaAvulsaService vendaService, IComandaService comandaService,
         InterSyncService inter, IPixReconciliationService pixReconciliation, IPushService push,
-        IAuditService audit)
+        IAuditService audit, IHubContext<ComandaHub> hub)
     {
         _db                = db;
         _vendaService      = vendaService;
@@ -48,7 +51,13 @@ public class ReservationController : ControllerBase
         _pixReconciliation = pixReconciliation;
         _push              = push;
         _audit             = audit;
+        _hub               = hub;
     }
+
+    // Avisa o admin (grupo do hub) que o estoque mudou — a tela de estoque
+    // recarrega sozinha, sem F5, quando cliente reserva/cancela no site.
+    private async Task AvisarEstoqueMudouAsync() =>
+        await _hub.Clients.Group(ComandaHub.AdminGroup).SendAsync("StockChanged", new { });
 
     private Guid GetUserId()
     {
@@ -102,6 +111,8 @@ public class ReservationController : ControllerBase
         r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
         _db.ProductReservations.Add(r);
         await _db.SaveChangesAsync();
+
+        if (r.Kind == "pre_venda") await AvisarEstoqueMudouAsync(); // fila não mexe em estoque
 
         await _db.Entry(r).Reference(x => x.Product).LoadAsync();
         await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
@@ -183,6 +194,8 @@ public class ReservationController : ControllerBase
             await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
         }
 
+        if (criadas!.Any(r => r.Kind == "pre_venda")) await AvisarEstoqueMudouAsync();
+
         return Ok(new { groupId, items = criadas!.Select(r => ToDto(r)) });
     }
 
@@ -209,6 +222,8 @@ public class ReservationController : ControllerBase
         r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
         _db.ProductReservations.Add(r);
         await _db.SaveChangesAsync();
+
+        if (r.Kind == "pre_venda") await AvisarEstoqueMudouAsync();
 
         // Auditoria: reserva manual movimenta estoque em nome de terceiro — registra quem fez.
         await _audit.LogAsync("CriouReservaManual", "ProductReservation", r.Id.ToString(),
@@ -345,7 +360,10 @@ public class ReservationController : ControllerBase
 
         // Sobrou estoque? Puxa o próximo da fila.
         if (devolveuEstoque)
+        {
             await ProcessarFilaSeguroAsync(res.ProductId);
+            await AvisarEstoqueMudouAsync();
+        }
 
         return NoContent();
     }
@@ -441,7 +459,10 @@ public class ReservationController : ControllerBase
         await _db.SaveChangesAsync();
 
         if (req.Status == "cancelled" && res.Kind == "pre_venda")
+        {
             await ProcessarFilaSeguroAsync(res.ProductId);
+            await AvisarEstoqueMudouAsync();
+        }
 
         return Ok(ToDto(res));
     }

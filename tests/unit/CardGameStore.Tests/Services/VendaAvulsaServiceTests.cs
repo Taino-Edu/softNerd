@@ -5,10 +5,12 @@
 
 using CardGameStore.Data;
 using CardGameStore.DTOs;
+using CardGameStore.Hubs;
 using CardGameStore.Models.MongoDB;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using FluentAssertions;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,8 +93,24 @@ public class VendaAvulsaServiceTests
         return (mockMongo, mockCollection);
     }
 
+    /// <summary>Cria mock de IHubContext com Clients.Group configurado para evitar NullReferenceException.</summary>
+    private static IHubContext<ComandaHub> CreateHubMock()
+    {
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClientProxy
+            .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var mockClients = new Mock<IHubClients>();
+        mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
+
+        var mockHub = new Mock<IHubContext<ComandaHub>>();
+        mockHub.Setup(h => h.Clients).Returns(mockClients.Object);
+        return mockHub.Object;
+    }
+
     private static VendaAvulsaService CreateService(AppDbContext db, IMongoDatabase mongo) =>
-        new(db, mongo, NullLogger<VendaAvulsaService>.Instance, new Mock<IServiceScopeFactory>().Object);
+        new(db, mongo, NullLogger<VendaAvulsaService>.Instance, new Mock<IServiceScopeFactory>().Object, CreateHubMock());
 
     private static async Task<Product> SeedProductAsync(AppDbContext db,
         string name = "Booster Pack", int priceInCents = 1500, int stock = 10, bool isActive = true)

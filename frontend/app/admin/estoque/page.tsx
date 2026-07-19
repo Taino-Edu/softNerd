@@ -6,6 +6,7 @@ import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X, Loader2, Check,
 import ImageUpload from '@/components/admin/ImageUpload'
 import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relatorio-estoque'
 import CameraScanner from '@/components/CameraScanner'
+import { startHub, stopHub } from '@/lib/signalr'
 
 // ── Drawer de detalhe do produto ─────────────────────────────────────────────
 function ProductDrawer({ product, onClose, onEdit, onStock }: {
@@ -807,17 +808,39 @@ export default function EstoquePage() {
   const [stockFilter, setStockFilter] = useState<'todos' | 'normal' | 'baixo' | 'zerado'>('todos')
   const [drawer, setDrawer]           = useState<Product | null>(null)
 
-  const fetch = async () => {
-    setLoading(true)
+  const fetch = async (quiet = false) => {
+    if (!quiet) setLoading(true)
     try {
       const [prodRes, catRes, natRes] = await Promise.all([productApi.listAdmin(), categoryApi.list(), fiscalApi.listNaturezas()])
       setProducts(prodRes.data)
       setCategories(catRes.data)
       setNaturezas(natRes.data)
-    } catch { toast.error('Erro ao carregar produtos') }
-    finally { setLoading(false) }
+    } catch { if (!quiet) toast.error('Erro ao carregar produtos') }
+    finally { if (!quiet) setLoading(false) }
   }
   useEffect(() => { fetch() }, [])
+
+  // Estoque se atualiza sozinho (sem F5): o backend emite StockChanged quando
+  // cliente reserva/cancela no site, pré-venda expira ou sai venda avulsa;
+  // Comanda* cobre as vendas da comanda. Refetch silencioso, sem piscar a tela.
+  useEffect(() => {
+    let hub: Awaited<ReturnType<typeof startHub>> | undefined
+    const atualiza = () => fetch(true)
+    startHub().then(h => {
+      hub = h
+      hub.on('StockChanged', atualiza)
+      hub.on('ComandaUpdated', atualiza)
+      hub.on('ComandaClosed', atualiza)
+      hub.on('ComandaCancelled', atualiza)
+    }).catch(() => {})
+    return () => {
+      hub?.off('StockChanged', atualiza)
+      hub?.off('ComandaUpdated', atualiza)
+      hub?.off('ComandaClosed', atualiza)
+      hub?.off('ComandaCancelled', atualiza)
+      stopHub()
+    }
+  }, [])
 
   const filtered = products
     .filter(p => {
