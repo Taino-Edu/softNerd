@@ -28,6 +28,14 @@ function writeCart(items: ReservationCartItem[]) {
   window.dispatchEvent(new Event(UPDATE_EVENT))
 }
 
+/** Esvazia o carrinho de reserva — chamar sempre no logout. O carrinho fica em
+ * localStorage sem dono: sem isso, trocar de conta no mesmo navegador mostra
+ * pro próximo usuário itens que o anterior tinha posto no carrinho. */
+export function clearReservationCart() {
+  if (typeof window === 'undefined') return
+  writeCart([])
+}
+
 const itemKey = (i: Pick<ReservationCartItem, 'productId' | 'variantId'>) => `${i.productId}:${i.variantId ?? ''}`
 
 /** Carrinho de reserva persistido em localStorage — sobrevive navegação entre páginas de produto

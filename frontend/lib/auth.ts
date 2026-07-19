@@ -8,6 +8,7 @@
 // =============================================================================
 import Cookies from 'js-cookie'
 import { AuthResponse } from './api'
+import { clearReservationCart } from '@/hooks/useReservationCart'
 
 export function saveAuth(auth: AuthResponse) {
   Cookies.set('userRole',  auth.role,     { expires: 30 })
@@ -21,6 +22,7 @@ export function saveAuth(auth: AuthResponse) {
 
 export function clearAuth() {
   ;['userRole', 'userName', 'userId', 'userPermissions'].forEach(k => Cookies.remove(k))
+  clearReservationCart() // sem isso, o próximo login no mesmo navegador herda o carrinho de quem saiu
 }
 
 export function getRole():        string    { return Cookies.get('userRole') || '' }
