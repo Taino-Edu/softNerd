@@ -132,8 +132,9 @@ public class ProductService : IProductService
     /// <summary>
     /// Chegada de estoque: converte a fila (kind=fila, status=waiting) em pré-venda
     /// na ordem de entrada, baixando o estoque de cada convertido, até onde o estoque
-    /// cobrir. Cada convertido vira status=active com ExpiresAt = agora + 48h e é
-    /// notificado (in-app + push + email). Quem não couber no lote segue na fila.
+    /// cobrir. Cada convertido vira status=active (ExpiresAt marca só "ainda não paga",
+    /// não expira sozinha) e é notificado (in-app + push + email). Quem não couber no
+    /// lote segue na fila.
     /// </summary>
     public async Task ProcessarChegadaFilaAsync(Guid productId)
     {
@@ -159,7 +160,7 @@ public class ProductService : IProductService
 
             r.Kind      = "pre_venda";
             r.Status    = "active";
-            r.ExpiresAt = DateTime.UtcNow.AddHours(48);
+            r.ExpiresAt = DateTime.UtcNow;
             convertidos.Add(r);
         }
 
@@ -167,7 +168,7 @@ public class ProductService : IProductService
         await _db.SaveChangesAsync();
 
         var titulo = "Chegou! 🎉";
-        var corpo  = $"{p.Name} chegou e sua unidade já está separada! Pague no Pix ou na retirada em até 48h.";
+        var corpo  = $"{p.Name} chegou e sua unidade já está separada! Pague no Pix ou na retirada.";
         var link   = "/cliente/perfil";
 
         foreach (var r in convertidos)
