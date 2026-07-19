@@ -303,7 +303,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
               : 'bg-blue-500/10 border-blue-500/25 text-blue-300')}>
             {semEstoque
               ? 'Sem estoque — o cliente entra na FILA e vira pré-venda quando o item chegar.'
-              : 'Em estoque — vira PRÉ-VENDA na hora e o estoque já baixa. Regra de expiração normal.'}
+              : 'Em estoque — vira PRÉ-VENDA na hora e o estoque já baixa.'}
           </div>
         )}
 
@@ -475,12 +475,14 @@ export default function ReservasPage() {
     }
     setSubmitting(true)
     try {
-      await api.post(`/api/reservations/${homModal.id}/homologar`, {
+      // Sempre homologa o grupo inteiro (não só este item) — reserva avulsa tem
+      // groupId = o próprio id, carrinho de N itens homologa todos de uma vez.
+      const { data } = await reservationApi.homologarGrupo(homModal.reservationGroupId, {
         mode:          homMode,
         paymentMethod: homMode === 'pdv' ? homPayment : undefined,
         comandaId:     homMode === 'comanda' ? homComanda : undefined,
       })
-      toast.success('Pré-venda homologada!')
+      toast.success(data.itens > 1 ? `${data.itens} itens do carrinho homologados!` : 'Pré-venda homologada!')
       setHomModal(null)
       load()
     } catch (e: any) {
@@ -818,10 +820,18 @@ export default function ReservasPage() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-5">
             <div>
-              <h2 className="text-lg font-black text-white">Homologar pré-venda</h2>
+              <h2 className="text-lg font-black text-white">
+                {groupCounts[homModal.reservationGroupId] > 1 ? 'Homologar carrinho' : 'Homologar pré-venda'}
+              </h2>
               <p className="text-sm text-gray-400 mt-0.5">
                 {homModal.productName} · {homModal.quantity}x · {homModal.userName}
               </p>
+              {groupCounts[homModal.reservationGroupId] > 1 && (
+                <p className="flex items-center gap-1 text-xs text-purple-300 mt-1">
+                  <Layers className="w-3 h-3" /> Este cliente reservou {groupCounts[homModal.reservationGroupId]} itens juntos —
+                  os outros vão ser homologados junto com este.
+                </p>
+              )}
               <p className="text-xs text-gray-500 mt-1">
                 O estoque já foi baixado quando a pré-venda foi criada — aqui só registra a venda.
               </p>

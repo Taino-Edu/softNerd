@@ -15,6 +15,7 @@
 using System.Security.Claims;
 using CardGameStore.Controllers;
 using CardGameStore.Data;
+using CardGameStore.DTOs;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
@@ -75,19 +76,21 @@ public class ReservationControllerTests
         return mockHub.Object;
     }
 
-    private static ReservationController CreateController(AppDbContext db, Guid? loggedUserId = null)
+    private static ReservationController CreateController(
+        AppDbContext db, Guid? loggedUserId = null,
+        IVendaAvulsaService? vendaService = null, IComandaService? comandaService = null)
     {
         var controller = new ReservationController(
             db,
-            new Mock<IVendaAvulsaService>().Object,
-            new Mock<IComandaService>().Object,
+            vendaService ?? new Mock<IVendaAvulsaService>().Object,
+            comandaService ?? new Mock<IComandaService>().Object,
             CreateInterStub(),
             new Mock<IPixReconciliationService>().Object,
             new Mock<IPushService>().Object,
             new Mock<IAuditService>().Object,
             CreateHubMock());
 
-        var claims = new List<Claim>();
+        var claims = new List<Claim> { new("name", "Admin Teste") };
         if (loggedUserId.HasValue) claims.Add(new Claim("sub", loggedUserId.Value.ToString()));
 
         controller.ControllerContext = new ControllerContext
@@ -237,6 +240,92 @@ public class ReservationControllerTests
 
         result.Should().BeOfType<BadRequestObjectResult>();
         (await db.ProductReservations.CountAsync()).Should().Be(0);
+    }
+
+    // ── Homologar o carrinho inteiro (bug: só o item clicado saía como retirado) ─
+
+    private static async Task<(ProductReservation a, ProductReservation b)> SeedCarrinhoAsync(
+        AppDbContext db, User cliente, Product produtoA, Product produtoB)
+    {
+        var groupId = Guid.NewGuid();
+        var a = new ProductReservation
+        {
+            ReservationGroupId = groupId, UserId = cliente.Id, ProductId = produtoA.Id,
+            Quantity = 1, Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
+        };
+        var b = new ProductReservation
+        {
+            ReservationGroupId = groupId, UserId = cliente.Id, ProductId = produtoB.Id,
+            Quantity = 1, Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
+        };
+        db.ProductReservations.AddRange(a, b);
+        await db.SaveChangesAsync();
+        return (a, b);
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_CarrinhoComDoisItens_MarcaOsDoisComoFulfilled()
+    {
+        // Reproduz o bug reportado: cliente reserva 2 itens juntos (mesmo grupo), mas o
+        // botão "Homologar" só existia por reserva individual — só um saía como retirado
+        // e o outro ficava "active" pra sempre sem ninguém perceber.
+        var db      = CreateDb(nameof(HomologarGrupo_CarrinhoComDoisItens_MarcaOsDoisComoFulfilled));
+        var cliente = await SeedUserAsync(db);
+        var produtoA = await SeedProductAsync(db, stock: 5);
+        var produtoB = await SeedProductAsync(db, stock: 5);
+        var (a, b) = await SeedCarrinhoAsync(db, cliente, produtoA, produtoB);
+
+        var vendaMock = new Mock<IVendaAvulsaService>();
+        vendaMock.Setup(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()))
+                 .ReturnsAsync(new VendaAvulsaDto());
+
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: vendaMock.Object);
+
+        var result = await controller.HomologarGrupo(a.ReservationGroupId, new HomologarRequest { Mode = "pdv" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        vendaMock.Verify(v => v.RegisterAsync(
+            It.Is<VendaAvulsaRequest>(r => r.Items.Count == 2 && r.SkipStockDecrement),
+            It.IsAny<Guid>(), It.IsAny<string>()), Times.Once);
+
+        db.ChangeTracker.Clear();
+        var itens = await db.ProductReservations.Where(r => r.Id == a.Id || r.Id == b.Id).ToListAsync();
+        itens.Should().OnlyContain(r => r.Status == "fulfilled" && r.FulfilledAt != null);
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_ModoComanda_AdicionaTodosOsItensNaMesmaComanda()
+    {
+        var db      = CreateDb(nameof(HomologarGrupo_ModoComanda_AdicionaTodosOsItensNaMesmaComanda));
+        var cliente = await SeedUserAsync(db);
+        var produtoA = await SeedProductAsync(db, stock: 5);
+        var produtoB = await SeedProductAsync(db, stock: 5);
+        var (a, _) = await SeedCarrinhoAsync(db, cliente, produtoA, produtoB);
+        var comandaId = Guid.NewGuid();
+
+        var comandaMock = new Mock<IComandaService>();
+        comandaMock.Setup(c => c.AdminAddItemAsync(comandaId, It.IsAny<Guid>(), It.IsAny<AddItemToComandaRequest>()))
+                   .ReturnsAsync(new ComandaDto());
+
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), comandaService: comandaMock.Object);
+
+        var result = await controller.HomologarGrupo(a.ReservationGroupId,
+            new HomologarRequest { Mode = "comanda", ComandaId = comandaId });
+
+        result.Should().BeOfType<OkObjectResult>();
+        comandaMock.Verify(c => c.AdminAddItemAsync(comandaId, It.IsAny<Guid>(), It.IsAny<AddItemToComandaRequest>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_SemReservasAtivasNoGrupo_RetornaNotFound()
+    {
+        var db = CreateDb(nameof(HomologarGrupo_SemReservasAtivasNoGrupo_RetornaNotFound));
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.HomologarGrupo(Guid.NewGuid(), new HomologarRequest { Mode = "pdv" });
+
+        result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     // ── Timer de expiração removido ─────────────────────────────────────────────

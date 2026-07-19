@@ -127,6 +127,11 @@ public class ReservationController : ControllerBase
 
         await strategy.ExecuteAsync(async () =>
         {
+            // Numa falha transitória o Npgsql reexecuta este bloco inteiro — sem isso, a
+            // ProductReservation que a tentativa anterior deixou marcada como "Added" no
+            // ChangeTracker (o SaveChangesAsync dela nunca terminou) seria inserida DE NOVO
+            // junto com a nova, duplicando reserva e baixa de estoque.
+            _db.ChangeTracker.Clear();
             await using var tx = await _db.Database.BeginTransactionAsync();
 
             var created = await CriarItemAsync(userId, Guid.NewGuid(), productId, variantId, qty, notes);
@@ -176,6 +181,11 @@ public class ReservationController : ControllerBase
 
         await strategy.ExecuteAsync(async () =>
         {
+            // Mesmo motivo do CriarEPersistirAsync: retry transitório reexecuta o bloco
+            // inteiro, e sem limpar o tracker as reservas da tentativa anterior (ainda
+            // "Added", nunca commitadas) seriam inseridas de novo junto com as novas.
+            _db.ChangeTracker.Clear();
+
             var toCreate  = new List<ProductReservation>();
             var virouFila = new List<Guid>();
 
@@ -551,6 +561,75 @@ public class ReservationController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Pré-venda homologada com sucesso.", reservationId = id, mode = req.Mode });
+    }
+
+    // POST /api/reservations/group/{groupId}/homologar — mesma coisa que Homologar, mas pro
+    // carrinho inteiro: reserva de N itens (mesmo ReservationGroupId) virava N cliques
+    // separados de "Homologar" — fácil o admin clicar só uma vez achando que pegou tudo e
+    // o cliente sair com metade do pedido, o resto ficando "active" pra sempre sem ninguém notar.
+    [HttpPost("group/{groupId:guid}/homologar")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> HomologarGrupo(Guid groupId, [FromBody] HomologarRequest req)
+    {
+        var itens = await _db.ProductReservations
+            .Include(r => r.User)
+            .Where(r => r.ReservationGroupId == groupId && r.Status == "active" && r.Kind == "pre_venda")
+            .ToListAsync();
+
+        if (itens.Count == 0) return NotFound(new { Message = "Nenhuma pré-venda ativa nesse grupo." });
+
+        var adminId   = GetUserId();
+        var adminName = User.FindFirst(ClaimTypes.Name)?.Value
+                     ?? User.FindFirst("name")?.Value
+                     ?? "Admin";
+
+        if (req.Mode == "pdv")
+        {
+            var vendaReq = new VendaAvulsaRequest
+            {
+                ClientName         = itens[0].User?.Name,
+                UserId             = itens[0].UserId,
+                PaymentMethod      = req.PaymentMethod ?? "Dinheiro",
+                SkipStockDecrement = true, // estoque já baixado na pré-venda
+                Items              = itens.Select(r => new VendaAvulsaItemRequest
+                {
+                    ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity,
+                }).ToList(),
+            };
+            try { await _vendaService.RegisterAsync(vendaReq, adminId, adminName); }
+            catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
+        }
+        else if (req.Mode == "comanda")
+        {
+            if (!req.ComandaId.HasValue)
+                return BadRequest(new { Message = "ComandaId é obrigatório no modo comanda." });
+
+            foreach (var r in itens)
+            {
+                try
+                {
+                    await _comandaService.AdminAddItemAsync(req.ComandaId.Value, adminId,
+                        new AddItemToComandaRequest
+                        {
+                            ProductId          = r.ProductId,
+                            VariantId          = r.VariantId,
+                            Quantity           = r.Quantity,
+                            SkipStockDecrement = true, // estoque já baixado na pré-venda
+                        });
+                }
+                catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
+            }
+        }
+        else
+        {
+            return BadRequest(new { Message = "Mode inválido. Use 'pdv' ou 'comanda'." });
+        }
+
+        var agora = DateTime.UtcNow;
+        foreach (var r in itens) { r.Status = "fulfilled"; r.FulfilledAt = agora; }
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Carrinho homologado com sucesso.", groupId, itens = itens.Count, mode = req.Mode });
     }
 
     // -------------------------------------------------------------------------

@@ -1160,6 +1160,10 @@ export const reservationApi = {
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
   homologar: (id: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; comandaId?: string }) =>
                api.post(`/api/reservations/${id}/homologar`, body),
+  /** Homologa TODOS os itens ativos do carrinho (mesmo reservationGroupId) de uma vez —
+   *  reserva avulsa também tem groupId (igual ao próprio id), então serve pros dois casos. */
+  homologarGrupo: (groupId: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; comandaId?: string }) =>
+               api.post<{ message: string; itens: number }>(`/api/reservations/group/${groupId}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */
   filaPendentesCount: () => api.get<{ count: number }>('/api/products/waitlist/pre-venda/pendentes'),
