@@ -40,22 +40,6 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-function timeUntil(d: string) {
-  const diff = new Date(d).getTime() - Date.now()
-  if (diff <= 0) return 'expirada'
-  const h = Math.floor(diff / 3_600_000)
-  const m = Math.floor((diff % 3_600_000) / 60_000)
-  return h > 0 ? `${h}h ${m}m` : `${m}min`
-}
-
-/** 0–100: quanto da janela de expiração já passou desde a criação. */
-function progressPct(reservedAt: string, expiresAt: string) {
-  const total = new Date(expiresAt).getTime() - new Date(reservedAt).getTime()
-  const elapsed = Date.now() - new Date(reservedAt).getTime()
-  if (total <= 0) return 100
-  return Math.min(100, Math.max(0, (elapsed / total) * 100))
-}
-
 function StatCard({ icon, label, value, tint }: {
   icon: React.ReactNode; label: string; value: number | string; tint: string
 }) {
@@ -513,14 +497,6 @@ export default function ReservasPage() {
     } catch { toast.error('Erro ao cancelar') }
   }
 
-  async function handleExtend(r: AdminReservation) {
-    try {
-      await api.put(`/api/reservations/${r.id}/extend`)
-      toast.success('+48h adicionadas')
-      load()
-    } catch { toast.error('Erro ao estender') }
-  }
-
   function refreshAll() {
     load()
     loadFila()
@@ -721,11 +697,9 @@ export default function ReservasPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {items.map(r => {
-            const expired = r.isExpired || (r.expiresAt ? new Date(r.expiresAt) < new Date() : false)
-            const displayStatus = r.status === 'active' && expired ? 'expired' : r.status
-            const pct = r.expiresAt ? progressPct(r.reservedAt, r.expiresAt) : 0
-            const urgent = r.status === 'active' && !!r.expiresAt && !expired && pct > 75
-            const pagaSemExpirar = r.status === 'active' && !r.expiresAt
+            // r.expiresAt não é mais prazo: só marca "pré-venda ainda não paga".
+            const aguardandoPagamento = r.status === 'active' && !!r.expiresAt
+            const paga = r.status === 'active' && !r.expiresAt
             return (
               <div key={r.id} className="card flex gap-4 items-start">
                 {/* Imagem */}
@@ -762,8 +736,8 @@ export default function ReservasPage() {
                       </span>
                     )}
                     <span className={clsx('text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ml-auto',
-                      statusCls[displayStatus] ?? statusCls['expired'])}>
-                      {statusLabel[displayStatus] ?? displayStatus}
+                      statusCls[r.status] ?? statusCls['expired'])}>
+                      {statusLabel[r.status] ?? r.status}
                     </span>
                   </div>
 
@@ -773,25 +747,15 @@ export default function ReservasPage() {
                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Criada: {fmtDate(r.reservedAt)}</span>
                   </div>
 
-                  {r.status === 'active' && !expired && r.expiresAt && (
-                    <div className="mt-2 max-w-[240px]">
-                      <div className="flex items-center justify-between text-[10px] mb-1">
-                        <span className={clsx('flex items-center gap-1 font-bold', urgent ? 'text-red-400' : 'text-amber-400')}>
-                          <TimerIcon className="w-2.5 h-2.5" /> Expira em {timeUntil(r.expiresAt)}
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-surface-600 overflow-hidden">
-                        <div
-                          className={clsx('h-full rounded-full transition-all', urgent ? 'bg-red-400' : 'bg-amber-400')}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
+                  {aguardandoPagamento && (
+                    <p className="flex items-center gap-1 text-xs text-amber-400 mt-1.5 font-semibold">
+                      <TimerIcon className="w-3 h-3" />Aguardando pagamento
+                    </p>
                   )}
 
-                  {pagaSemExpirar && (
+                  {paga && (
                     <p className="flex items-center gap-1 text-xs text-green-400 mt-1.5">
-                      <CheckCircle className="w-3 h-3" />Paga — não expira, aguardando retirada
+                      <CheckCircle className="w-3 h-3" />Paga — aguardando retirada
                     </p>
                   )}
 
@@ -805,7 +769,7 @@ export default function ReservasPage() {
                 </div>
 
                 {/* Ações */}
-                {r.status === 'active' && !expired && (
+                {r.status === 'active' && (
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     <button onClick={() => openHomModal(r)}
                       className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30
@@ -818,13 +782,6 @@ export default function ReservasPage() {
                         className="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25
                                    hover:bg-purple-500/20 text-xs font-semibold transition-colors flex items-center gap-1">
                         <QrCode className="w-3 h-3" /> Pix
-                      </button>
-                    )}
-                    {r.expiresAt && (
-                      <button onClick={() => handleExtend(r)}
-                        className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20
-                                   hover:bg-amber-500/20 text-xs font-semibold transition-colors flex items-center gap-1">
-                        <Plus className="w-3 h-3" /> +48h
                       </button>
                     )}
                     <button onClick={() => handleCancel(r)}

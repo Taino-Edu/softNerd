@@ -126,7 +126,7 @@ export default function ReservationCartPage() {
             <p className="text-sm" style={{ color: C.text }}>
               {temFila
                 ? 'Os itens em estoque já foram separados pra você. Os itens que entraram na fila serão garantidos quando chegarem — a gente avisa. Pague no Pix ou na retirada.'
-                : 'O estoque já foi separado pra você — retirada no balcão. Pague agora no Pix ou na retirada: sem pagamento em 48h, a reserva expira e o item volta pra loja.'}
+                : 'O estoque já foi separado pra você — retirada no balcão. Pague agora no Pix ou na retirada.'}
             </p>
           </div>
 
@@ -195,7 +195,7 @@ export default function ReservationCartPage() {
           <BookmarkPlus className="w-5 h-5" style={{ color: '#7C3AED' }} /> Sua reserva
         </h1>
         <p className="text-sm mb-5" style={{ color: C.text }}>
-          Reserva com retirada no balcão: ao confirmar, o estoque baixa na hora pra você. Pague no Pix ou na retirada em até 48h — se o item tiver data de lançamento, até 48h depois dela.
+          Reserva com retirada no balcão: ao confirmar, o estoque baixa na hora pra você. Pague no Pix ou na retirada.
         </p>
 
         {items.length === 0 ? (

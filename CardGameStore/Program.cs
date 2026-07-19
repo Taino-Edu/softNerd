@@ -361,9 +361,6 @@ builder.Services.AddHostedService<FiscalXmlExportBackgroundService>();
 builder.Services.AddHostedService<FiscalRetryBackgroundService>();
 builder.Services.AddHostedService<SefazDistBackgroundService>();
 
-// Pré-venda — expira não-pagos vencidos (devolve estoque e puxa a fila)
-builder.Services.AddHostedService<PreVendaExpiryBackgroundService>();
-
 // Pix — sem webhook do Inter: o robô reconcilia cobranças ATIVA a cada 5 min e
 // dá a baixa por origem (mesmo caminho dos controllers); a expiração de pré-venda
 // também faz uma verificação dupla antes de devolver estoque.

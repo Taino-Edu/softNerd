@@ -157,12 +157,10 @@ const SECOES = [
     titulo: 'Reservas de Produtos (Site)',
     cor: '#60A5FA',
     itens: [
-      { t: 'O que é', d: 'Clientes podem reservar produtos pelo site sem precisar ir à loja. A reserva bloqueia o item por 48 horas.' },
-      { t: 'Como o cliente reserva', d: 'Na loja online (área do cliente → Loja), clique em "Reservar" no produto. Se tiver variantes, escolhe tamanho e cor. A reserva expira em 48h.' },
-      { t: 'Estoque reservado', d: 'A quantidade reservada é subtraída do estoque disponível para novos pedidos — mas não decrementa o estoque físico ainda.' },
-      { t: 'Confirmar entrega (admin)', d: 'Em Estoque → Reservas, veja as reservas ativas. Clique "Entregar" para confirmar que o cliente retirou. O estoque físico é decrementado neste momento.' },
-      { t: 'Cancelar reserva', d: 'Admin ou o próprio cliente podem cancelar. O estoque fica disponível novamente.' },
-      { t: 'Reservas expiradas', d: 'Reservas não confirmadas em 48h expiram automaticamente e liberam o estoque.' },
+      { t: 'O que é', d: 'Clientes podem reservar produtos pelo site sem precisar ir à loja. A reserva baixa o estoque na hora, sem prazo — fica reservada até ser paga, retirada ou cancelada.' },
+      { t: 'Como o cliente reserva', d: 'Na loja online (área do cliente → Loja), clique em "Reservar" no produto. Se tiver variantes, escolhe tamanho e cor.' },
+      { t: 'Confirmar retirada (admin)', d: 'Em Admin → Reservas, veja as pré-vendas ativas e clique "Homologar" para confirmar que o cliente pagou/retirou.' },
+      { t: 'Cancelar reserva', d: 'Admin ou o próprio cliente podem cancelar a qualquer momento — o estoque volta pra loja na hora e passa pro próximo da fila, se tiver.' },
     ],
     dicas: [
       'A reserva não é uma venda — nenhum pagamento é registrado até o admin confirmar a entrega.',
@@ -191,7 +189,7 @@ const SECOES = [
     titulo: 'Fila de Espera (Pré-venda)',
     cor: '#38BDF8',
     itens: [
-      { t: 'O que é', d: 'Para produtos em pré-venda com estoque zerado, o cliente entra numa fila de espera pelo site em vez de reservar. Diferente da reserva de 48h (que exige estoque disponível).' },
+      { t: 'O que é', d: 'Para produtos em pré-venda com estoque zerado, o cliente entra numa fila de espera pelo site em vez de reservar. Diferente da reserva (que exige estoque disponível).' },
       { t: 'Aviso automático de reestoque', d: 'Quando o estoque do produto sai de zero, todo mundo na fila recebe aviso automático (in-app + push + e-mail) na hora, uma única vez por pessoa.' },
       { t: 'Botão "Avisar fila"', d: 'Em Admin → Pré-vendas → Lista de Espera, o botão "Avisar fila" leva direto pra Mensageria com os clientes daquela fila já selecionados e o título/imagem do produto preenchidos — útil pra mandar um aviso extra além do automático.' },
       { t: 'Minhas Filas (cliente)', d: 'No perfil do cliente, a aba "Filas" mostra a posição em cada lista de espera e as reservas ativas com prazo, com botão pra sair/cancelar.' },

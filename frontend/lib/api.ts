@@ -606,8 +606,10 @@ export interface MyReservation {
   kind: 'pre_venda' | 'fila'
   /** "waiting" (fila) | "active" (pré-venda vigente) | "fulfilled" | "cancelled" | "expired" */
   status: string
-  notes?: string; reservedAt: string; expiresAt: string | null
-  fulfilledAt?: string; cancelledAt?: string; isExpired: boolean
+  notes?: string; reservedAt: string
+  /** Não-nulo = pré-venda ainda não paga. Null = fila ou já paga. Não é mais um prazo. */
+  expiresAt: string | null
+  fulfilledAt?: string; cancelledAt?: string
   /** Posição na fila (só quando kind=fila e status=waiting). */
   posicaoFila?: number | null
   /** Data de rua da pré-venda (retirada a partir dela), se houver. */
@@ -1135,7 +1137,7 @@ export interface AdminReservation {
   variantId?: string; variantLabel?: string; quantity: number
   kind: 'pre_venda' | 'fila'; status: string
   notes?: string; reservedAt: string; expiresAt: string | null
-  fulfilledAt?: string; cancelledAt?: string; isExpired: boolean
+  fulfilledAt?: string; cancelledAt?: string
   posicaoFila?: number | null; preVendaReleaseDate?: string | null
 }
 
@@ -1156,7 +1158,6 @@ export const reservationApi = {
                api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
   getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
-  extend:    (id: string)                          => api.put(`/api/reservations/${id}/extend`),
   homologar: (id: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; comandaId?: string }) =>
                api.post(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),

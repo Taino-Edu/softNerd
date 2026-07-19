@@ -17,8 +17,9 @@ namespace CardGameStore.Controllers;
 // ReservationController.cs — Pré-venda e Fila (modelo unificado da loja)
 //
 // PRÉ-VENDA (kind=pre_venda): item EM ESTOQUE. Baixa o estoque no ato, Pix em
-// tudo, data de rua opcional. Não paga expira (48h ou data de rua + 48h) e o
-// estoque volta. Paga não expira — é venda feita aguardando retirada.
+// tudo, data de rua opcional. Não expira sozinha — fica "active" até o admin
+// cancelar manualmente (o estoque volta e passa pro próximo da fila) ou o Pix
+// confirmar (vira venda feita aguardando retirada).
 //
 // FILA (kind=fila): item que AINDA NÃO CHEGOU. Não mexe em estoque, não expira.
 // Quando o estoque chega, ProductService.ProcessarChegadaFilaAsync converte a
@@ -97,26 +98,58 @@ public class ReservationController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateReservationRequest req)
     {
-        var userId  = GetUserId();
-        var created = await CriarItemAsync(userId, Guid.NewGuid(), req.ProductId, req.VariantId,
-                                           req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
-        if (created.Error is not null) return created.Error switch
-        {
-            "not_found" => NotFound(new { created.Message }),
-            "conflict"  => Conflict(new { created.Message }),
-            _           => BadRequest(new { created.Message }),
-        };
+        var userId = GetUserId();
+        var (r, falha) = await CriarEPersistirAsync(userId, req.ProductId, req.VariantId,
+                                                     req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
+        if (falha is not null) return falha;
 
-        var r = created.Reservation!;
-        r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
-        _db.ProductReservations.Add(r);
-        await _db.SaveChangesAsync();
-
-        if (r.Kind == "pre_venda") await AvisarEstoqueMudouAsync(); // fila não mexe em estoque
+        if (r!.Kind == "pre_venda") await AvisarEstoqueMudouAsync(); // fila não mexe em estoque
 
         await _db.Entry(r).Reference(x => x.Product).LoadAsync();
         await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
         return Ok(ToDto(r));
+    }
+
+    /// <summary>
+    /// Cria o item (CriarItemAsync) e persiste dentro da mesma transação: a baixa de
+    /// estoque do ExecuteUpdateAsync some do banco se o SaveChangesAsync falhar depois
+    /// (era o bug do "estoque some e a pré-venda não vincula" — o insert e a baixa
+    /// rodavam soltos, sem transação, então uma falha no insert não desfazia a baixa).
+    /// Mesmo padrão do CreateCart: bloco inteiro dentro da execution strategy do Npgsql.
+    /// </summary>
+    private async Task<(ProductReservation? Reservation, IActionResult? Error)> CriarEPersistirAsync(
+        Guid userId, Guid productId, Guid? variantId, int qty, string? notes)
+    {
+        var strategy = _db.Database.CreateExecutionStrategy();
+
+        ProductReservation? reservation = null;
+        IActionResult?      falha       = null;
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            var created = await CriarItemAsync(userId, Guid.NewGuid(), productId, variantId, qty, notes);
+            if (created.Error is not null)
+            {
+                falha = created.Error switch
+                {
+                    "not_found" => NotFound(new { created.Message }),
+                    "conflict"  => Conflict(new { created.Message }),
+                    _           => BadRequest(new { created.Message }),
+                };
+                return; // sem Commit: rollback no Dispose devolve o estoque baixado
+            }
+
+            var r = created.Reservation!;
+            r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
+            _db.ProductReservations.Add(r);
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+            reservation = r;
+        });
+
+        return (reservation, falha);
     }
 
     // POST /api/reservations/cart — cria várias de uma vez (carrinho), mesmo ReservationGroupId.
@@ -209,21 +242,11 @@ public class ReservationController : ControllerBase
         var clienteExiste = await _db.Users.AnyAsync(u => u.Id == req.UserId);
         if (!clienteExiste) return NotFound(new { Message = "Cliente não encontrado." });
 
-        var created = await CriarItemAsync(req.UserId, Guid.NewGuid(), req.ProductId, req.VariantId,
-                                           req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
-        if (created.Error is not null) return created.Error switch
-        {
-            "not_found" => NotFound(new { created.Message }),
-            "conflict"  => Conflict(new { created.Message }),
-            _           => BadRequest(new { created.Message }),
-        };
+        var (r, falha) = await CriarEPersistirAsync(req.UserId, req.ProductId, req.VariantId,
+                                                     req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
+        if (falha is not null) return falha;
 
-        var r = created.Reservation!;
-        r.ReservationGroupId = r.Id; // avulsa = grupo de 1 item só
-        _db.ProductReservations.Add(r);
-        await _db.SaveChangesAsync();
-
-        if (r.Kind == "pre_venda") await AvisarEstoqueMudouAsync();
+        if (r!.Kind == "pre_venda") await AvisarEstoqueMudouAsync();
 
         // Auditoria: reserva manual movimenta estoque em nome de terceiro — registra quem fez.
         await _audit.LogAsync("CriouReservaManual", "ProductReservation", r.Id.ToString(),
@@ -290,18 +313,16 @@ public class ReservationController : ControllerBase
 
         if (baixado > 0)
         {
-            // Não pago expira: 48h, ou data de rua + 48h quando ela está no futuro.
-            var release = product.PreVendaReleaseDate;
-            var expira = release.HasValue && release.Value.Date > DateTime.UtcNow.Date
-                ? release.Value.Date.AddDays(2)
-                : DateTime.UtcNow.AddHours(48);
-
+            // ExpiresAt marca "ainda não paga" (some quando o Pix confirma, em
+            // PixReconciliationService.BaixarReservaAsync) — não expira mais sozinha.
+            // Quem devolve o estoque de uma pré-venda não retirada é o admin, cancelando
+            // manualmente pela tela de reservas.
             return (new ProductReservation
             {
                 ReservationGroupId = groupId,
                 UserId = userId, ProductId = productId, VariantId = variant?.Id,
                 Quantity = qty, Notes = notes,
-                Kind = "pre_venda", Status = "active", ExpiresAt = expira,
+                Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
             }, null, null);
         }
 
@@ -532,24 +553,10 @@ public class ReservationController : ControllerBase
         return Ok(new { message = "Pré-venda homologada com sucesso.", reservationId = id, mode = req.Mode });
     }
 
-    // PUT /api/reservations/{id}/extend — admin estende prazo +48h (só pré-venda não paga)
-    [HttpPut("{id:guid}/extend")]
-    [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> Extend(Guid id)
-    {
-        var res = await _db.ProductReservations.FindAsync(id);
-        if (res is null) return NotFound();
-        if (res.Status != "active") return BadRequest(new { Message = "Só pré-vendas ativas têm prazo a estender." });
-
-        res.ExpiresAt = (res.ExpiresAt ?? DateTime.UtcNow).AddHours(48);
-        await _db.SaveChangesAsync();
-        return Ok(ToDto(res));
-    }
-
     // -------------------------------------------------------------------------
     // PAGAMENTO — Pix do carrinho de pré-venda (mesmo padrão da inscrição de
     // campeonato: gerar cobrança + verificar sob demanda, sem webhook).
-    // Pago = pré-venda não expira mais (ExpiresAt vira null — venda feita).
+    // Pago = ExpiresAt vira null (só marcava "ainda não paga") — venda feita.
     // -------------------------------------------------------------------------
 
     /// <summary>Gera cobrança Pix do total das PRÉ-VENDAS do grupo (itens de fila não cobram).</summary>
@@ -681,7 +688,6 @@ public class ReservationController : ControllerBase
         r.ExpiresAt,
         r.FulfilledAt,
         r.CancelledAt,
-        isExpired      = r.IsExpired,
         posicaoFila,
         preVendaReleaseDate = r.Product?.PreVendaReleaseDate,
     };

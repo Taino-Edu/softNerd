@@ -173,14 +173,6 @@ export default function PerfilPage() {
     } catch { toast.error('Erro ao cancelar pré-venda.') }
   }
 
-  function reservaTempoRestante(expiresAt: string) {
-    const diff = new Date(expiresAt).getTime() - Date.now()
-    if (diff <= 0) return 'expirando…'
-    const h = Math.floor(diff / 3_600_000)
-    const m = Math.floor((diff % 3_600_000) / 60_000)
-    return h > 0 ? `${h}h ${m}min restantes` : `${m}min restantes`
-  }
-
   const crediario = crediarios.find(c => c.status === 'Aberto' || c.status === 'Vencido') ?? null
 
   const agora = new Date()
@@ -561,7 +553,7 @@ export default function PerfilPage() {
                               {r.variantLabel && <p className="text-[11px] text-gray-400">{r.variantLabel}</p>}
                               {r.expiresAt ? (
                                 <p className="text-[11px] text-amber-500 font-bold flex items-center gap-1 mt-0.5">
-                                  <Hourglass className="w-3 h-3" /> {reservaTempoRestante(r.expiresAt)}
+                                  <Hourglass className="w-3 h-3" /> Aguardando pagamento
                                 </p>
                               ) : (
                                 <p className="text-[11px] text-emerald-500 font-black uppercase tracking-wide mt-0.5">

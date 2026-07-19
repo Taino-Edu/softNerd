@@ -778,7 +778,7 @@ function ProductModal({
                 onChange={e => set('preVendaReleaseDate', e.target.value || null)}
               />
               <p className="text-xs text-[var(--text-muted)] mt-1">
-                Pré-venda com data de rua: o cliente garante agora (estoque baixa na hora) e retira a partir dessa data. Sem pagamento em até 48h após a data, a pré-venda expira e o estoque volta.
+                Pré-venda com data de rua: o cliente garante agora (estoque baixa na hora) e retira a partir dessa data.
               </p>
             </div>
           </div>
