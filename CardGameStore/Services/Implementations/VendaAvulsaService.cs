@@ -1,9 +1,11 @@
 using System.Text.Json;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
+using CardGameStore.Hubs;
 using CardGameStore.Models.MongoDB;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 
@@ -32,16 +34,19 @@ public class VendaAvulsaService : IVendaAvulsaService
     private readonly IMongoCollection<VendaAvulsa>  _collection;
     private readonly ILogger<VendaAvulsaService>    _logger;
     private readonly IServiceScopeFactory           _scopeFactory;
+    private readonly IHubContext<ComandaHub>        _hub;
 
     private const string CollectionName = "vendas_avulsas";
 
     public VendaAvulsaService(
-        AppDbContext db, IMongoDatabase mongo, ILogger<VendaAvulsaService> logger, IServiceScopeFactory scopeFactory)
+        AppDbContext db, IMongoDatabase mongo, ILogger<VendaAvulsaService> logger,
+        IServiceScopeFactory scopeFactory, IHubContext<ComandaHub> hub)
     {
         _db           = db;
         _collection   = mongo.GetCollection<VendaAvulsa>(CollectionName);
         _logger       = logger;
         _scopeFactory = scopeFactory;
+        _hub          = hub;
     }
 
     public async Task<VendaAvulsaDto> RegisterAsync(VendaAvulsaRequest request, Guid adminId, string adminName)
@@ -220,6 +225,11 @@ public class VendaAvulsaService : IVendaAvulsaService
         _logger.LogInformation(
             "Venda avulsa {Id} registrada por {Admin}: {Count} item(ns), R$ {Total:F2} (desconto R$ {Desc:F2}), {Payment}",
             venda.Id, adminName, vendaItems.Count, finalTotal / 100m, discountInCents / 100m, paymentSummary);
+
+        // Avisa o admin (estoque aberto) que a venda baixou estoque — recarrega sem F5.
+        // SkipStockDecrement = homologação de pré-venda: o estoque já tinha saído no ato.
+        if (!request.SkipStockDecrement)
+            await _hub.Clients.Group(ComandaHub.AdminGroup).SendAsync("StockChanged", new { });
 
         // ── Pós-venda: operações que dependem de cliente cadastrado ──────────────
         var pm = request.PaymentMethod;

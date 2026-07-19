@@ -5,8 +5,10 @@
 // =============================================================================
 
 using CardGameStore.Data;
+using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace CardGameStore.Services.Implementations;
@@ -137,6 +139,12 @@ public class PreVendaExpiryBackgroundService : BackgroundService
         }
 
         if (expiradas > 0)
+        {
             _logger.LogInformation("Expiração de pré-vendas: {Qtd} expirada(s) e estoque devolvido.", expiradas);
+
+            // Avisa o admin (estoque aberto) que os números mudaram — recarrega sem F5.
+            var hub = scope.ServiceProvider.GetRequiredService<IHubContext<ComandaHub>>();
+            await hub.Clients.Group(ComandaHub.AdminGroup).SendAsync("StockChanged", new { });
+        }
     }
 }
