@@ -1,0 +1,54 @@
+# =============================================================================
+# docker-compose.dev.yml — Postgres + Mongo pra desenvolvimento LOCAL
+#
+# Só sobe os bancos (não o backend/frontend, esses rodam direto via dotnet/npm).
+# Portas expostas pro host, diferente do docker-compose.prod.yml (que só fala
+# com os containers pela rede interna do Docker).
+#
+# Uso:
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml down        (mantém os dados)
+#   docker compose -f docker-compose.dev.yml down -v     (apaga os dados)
+#
+# Credenciais batem com o que já estava documentado em GUIA-DE-TESTES.md.
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: santuarionerd_postgres_dev
+    environment:
+      POSTGRES_DB:       cardgamestore
+      POSTGRES_USER:     cardgame_user
+      POSTGRES_PASSWORD: CardGame@2025
+      # trust: dev local descartável, sem dado sensível — evita percalço de
+      # SCRAM/SASL entre o client do Npgsql e essa imagem do Postgres.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      # 5434, não 5432: já tem um PostgreSQL nativo do Windows ocupando a 5432
+      # (serviço postgresql-x64-17) — usar a mesma porta escondia esse container
+      # atrás do serviço nativo (o app conectava sem perceber no Postgres errado).
+      - "5434:5432"
+    volumes:
+      - santuarionerd_postgres_dev_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cardgame_user -d cardgamestore"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    # 4.4 (não 7-jammy): a CPU/VM deste ambiente não tem AVX, que o Mongo 5+ exige
+    # (trava em loop de restart). 4.4 é a última versão sem esse requisito.
+    image: mongo:4.4
+    container_name: santuarionerd_mongo_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - santuarionerd_mongo_dev_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  santuarionerd_postgres_dev_data:
+  santuarionerd_mongo_dev_data:

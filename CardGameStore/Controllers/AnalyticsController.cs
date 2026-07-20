@@ -421,12 +421,33 @@ public class AnalyticsController : ControllerBase
                 return list;
             });
 
+        // Mesmo split de primário/secundário do transacoesComanda acima — sem isso, o valor
+        // do segundo método (ex: parte em Pix de um pagamento dividido) desaparecia do
+        // breakdown por forma de pagamento, ficando tudo somado só no método principal.
         var transacoesAvulsa = avulsasList
-            .Select(v => new TransacaoFinDto
+            .SelectMany(v =>
             {
-                Origem = v.Origem == "Reserva" ? "Pré-venda" : "PDV", Cliente = v.ClientName,
-                Valor = Math.Round(v.TotalInCents / 100m, 2), Data = v.SoldAt,
-                Forma = v.PaymentMethod,
+                var origemLabel = v.Origem == "Reserva" ? "Pré-venda" : "PDV";
+                var hasSecond   = !string.IsNullOrEmpty(v.SecondPaymentMethod) && v.SecondPaymentAmountInCents > 0;
+                var secondAmt   = hasSecond ? v.SecondPaymentAmountInCents : 0;
+                var primaryAmt  = Math.Max(0, v.TotalInCents - secondAmt);
+                var label2nd    = hasSecond ? $"+ {v.SecondPaymentMethod} {fmtReais(secondAmt / 100m)}" : null;
+                var label1st    = hasSecond ? $"+ {v.PaymentMethod} {fmtReais(primaryAmt / 100m)}" : null;
+
+                var list = new List<TransacaoFinDto>
+                {
+                    new() { Origem = origemLabel, Cliente = v.ClientName,
+                            Valor = Math.Round(primaryAmt / 100m, 2), Data = v.SoldAt,
+                            Nota = label2nd, Forma = v.PaymentMethod }
+                };
+                if (hasSecond)
+                    list.Add(new TransacaoFinDto
+                    {
+                        Origem = origemLabel, Cliente = v.ClientName,
+                        Valor = Math.Round(secondAmt / 100m, 2), Data = v.SoldAt,
+                        Nota = label1st, Forma = v.SecondPaymentMethod!,
+                    });
+                return list;
             });
 
         var todasFormas = transacoesComanda.Concat(transacoesAvulsa)
