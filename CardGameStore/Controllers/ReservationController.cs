@@ -802,29 +802,45 @@ public class ReservationController : ControllerBase
         return Ok(new { hasPix = true, pix.Status, pix.PagoEm, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
     }
 
-    private static object ToDto(ProductReservation r, int? posicaoFila = null) => new
+    private static object ToDto(ProductReservation r, int? posicaoFila = null)
     {
-        r.Id,
-        r.ReservationGroupId,
-        r.UserId,
-        userName       = r.User?.Name,
-        userWhatsApp   = r.User?.WhatsApp,
-        r.ProductId,
-        productName    = r.Product?.Name,
-        productImageUrl= r.Product?.ImageUrl,
-        r.VariantId,
-        variantLabel   = r.Variant?.Label,
-        r.Quantity,
-        r.Kind,
-        r.Status,
-        r.Notes,
-        r.ReservedAt,
-        r.ExpiresAt,
-        r.FulfilledAt,
-        r.CancelledAt,
-        posicaoFila,
-        preVendaReleaseDate = r.Product?.PreVendaReleaseDate,
-    };
+        // Preço unitário no momento da consulta — mesma regra do GerarPixReserva
+        // (variante tem prioridade; senão preço promocional se ativo).
+        int? precoUnitario = r.Product is null ? null
+            : r.Variant?.PriceInCents
+              ?? (r.Product.IsOnPromo ? r.Product.DiscountPriceInCents!.Value : r.Product.PriceInCents);
+
+        return new
+        {
+            r.Id,
+            r.ReservationGroupId,
+            r.UserId,
+            userName       = r.User?.Name,
+            userWhatsApp   = r.User?.WhatsApp,
+            r.ProductId,
+            productName    = r.Product?.Name,
+            productImageUrl= r.Product?.ImageUrl,
+            // Kanban admin: "Vendas" (tag desligada) × "Pré-vendas" (produto marcado como
+            // pré-venda) — não é o mesmo conceito de Kind (que só distingue se baixou estoque
+            // na hora ou entrou na fila legada).
+            productIsPreVenda = r.Product?.IsPreVenda ?? false,
+            r.VariantId,
+            variantLabel   = r.Variant?.Label,
+            r.Quantity,
+            r.Kind,
+            r.Status,
+            r.Notes,
+            r.PaymentMethod,
+            r.ReservedAt,
+            r.ExpiresAt,
+            r.FulfilledAt,
+            r.CancelledAt,
+            posicaoFila,
+            preVendaReleaseDate = r.Product?.PreVendaReleaseDate,
+            precoUnitarioEmReais = precoUnitario.HasValue ? precoUnitario.Value / 100m : (decimal?)null,
+            subtotalEmReais      = precoUnitario.HasValue ? precoUnitario.Value * r.Quantity / 100m : (decimal?)null,
+        };
+    }
 }
 
 public class CreateReservationRequest

@@ -1136,12 +1136,16 @@ export interface AdminReservation {
   id: string; reservationGroupId: string; userId: string
   userName?: string; userWhatsApp?: string
   productId: string; productName?: string; productImageUrl?: string
+  /** Produto tem a tag de pré-venda ligada — decide a coluna do kanban (Vendas × Pré-vendas). */
+  productIsPreVenda: boolean
   variantId?: string; variantLabel?: string; quantity: number
   kind: 'pre_venda' | 'fila'; status: string
   notes?: string; reservedAt: string; expiresAt: string | null
   fulfilledAt?: string; cancelledAt?: string
   posicaoFila?: number | null; preVendaReleaseDate?: string | null
   paymentMethod?: string | null
+  precoUnitarioEmReais?: number | null
+  subtotalEmReais?: number | null
 }
 
 export const reservationApi = {

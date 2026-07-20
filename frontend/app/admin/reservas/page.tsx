@@ -8,9 +8,9 @@ import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
-  ShoppingBag, LayoutList, RefreshCw, Loader2, ChevronLeft, ChevronRight,
+  ShoppingBag, LayoutList, RefreshCw, Loader2,
   AlertTriangle, TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
-  Hourglass, Sparkles, QrCode, Layers, UserPlus,
+  QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
@@ -52,6 +52,66 @@ function StatCard({ icon, label, value, tint }: {
         <p className="text-xl font-black text-white leading-tight">{value}</p>
         <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide truncate">{label}</p>
       </div>
+    </div>
+  )
+}
+
+type Lanes = { aPagar: AdminReservation[]; pago: AdminReservation[]; retirado: AdminReservation[]; cancelado: AdminReservation[] }
+
+function Lane({ title, tint, items, renderCard, emptyText }: {
+  title: string; tint: string; items: AdminReservation[]
+  renderCard: (r: AdminReservation) => React.ReactNode; emptyText: string
+}) {
+  return (
+    <div>
+      <p className={clsx('text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5', tint)}>
+        {title} <span className="text-gray-600">({items.length})</span>
+      </p>
+      {items.length === 0 ? (
+        <p className="text-[11px] text-gray-600 italic py-2">{emptyText}</p>
+      ) : (
+        <div className="flex flex-col gap-2">{items.map(renderCard)}</div>
+      )}
+    </div>
+  )
+}
+
+// ── Coluna do kanban (Vendas ou Pré-vendas): raias A pagar → Pago → Retirado, + Cancelados recolhível ──
+function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard, showCancel, setShowCancel }: {
+  title: string; subtitle: string; icon: React.ReactNode; tint: string
+  lanesData: Lanes
+  renderCard: (r: AdminReservation) => React.ReactNode
+  showCancel: boolean; setShowCancel: (v: boolean) => void
+}) {
+  return (
+    <div className={clsx('card !p-4 space-y-5 border', tint)}>
+      <div className="flex items-center gap-2">
+        {icon}
+        <div>
+          <p className="font-black text-white text-sm">{title}</p>
+          <p className="text-[10px] text-gray-500">{subtitle}</p>
+        </div>
+      </div>
+
+      <Lane title="A pagar" tint="text-amber-400" items={lanesData.aPagar} renderCard={renderCard}
+        emptyText="Nada aguardando pagamento." />
+      <Lane title="Pago · aguardando retirada" tint="text-blue-400" items={lanesData.pago} renderCard={renderCard}
+        emptyText="Nada pago aguardando retirada." />
+      <Lane title="Retirado" tint="text-green-400" items={lanesData.retirado} renderCard={renderCard}
+        emptyText="Nenhuma retirada ainda." />
+
+      {lanesData.cancelado.length > 0 && (
+        <div>
+          <button onClick={() => setShowCancel(!showCancel)}
+            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors">
+            {showCancel ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            Cancelados ({lanesData.cancelado.length})
+          </button>
+          {showCancel && (
+            <div className="flex flex-col gap-2 mt-2">{lanesData.cancelado.map(renderCard)}</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -325,16 +385,13 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
 export default function ReservasPage() {
   const router = useRouter()
-  const [tab,         setTab]         = useState<'prevendas' | 'fila'>('prevendas')
+  const [tab,         setTab]         = useState<'pedidos' | 'fila'>('pedidos')
 
-  // ── aba Pré-vendas ──
+  // ── aba Pedidos (kanban Vendas × Pré-vendas) ──
   const [items,       setItems]       = useState<AdminReservation[]>([])
   const [loading,     setLoading]     = useState(true)
-  const [statusFilter,setStatusFilter]= useState('active')
-  const [page,        setPage]        = useState(1)
-  const [totalPages,  setTotalPages]  = useState(1)
-  const [totalCount,  setTotalCount]  = useState(0)
-  const [activeCount, setActiveCount] = useState(0) // "em aberto" — independente do filtro atual
+  const [showCancelVendas, setShowCancelVendas] = useState(false)
+  const [showCancelPre,    setShowCancelPre]    = useState(false)
   const [pixByGroup,  setPixByGroup]  = useState<Record<string, ReservationPixStatus>>({})
 
   // Modal de homologação
@@ -409,20 +466,16 @@ export default function ReservasPage() {
     } catch { toast.error('Erro ao remover') }
   }
 
+  // Kanban mostra tudo de uma vez (sem paginação) — pra loja de bairro o volume de pedidos
+  // "vivos" é pequeno; pageSize alto cobre até um histórico razoável de canceladas/retiradas.
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [{ data }, { data: activeData }] = await Promise.all([
-        reservationApi.list({ kind: 'pre_venda', status: statusFilter || undefined, page, pageSize: 20 }),
-        reservationApi.list({ kind: 'pre_venda', status: 'active', page: 1, pageSize: 1 }),
-      ])
+      const { data } = await reservationApi.list({ kind: 'pre_venda', pageSize: 300 })
       setItems(data.items)
-      setTotalPages(data.totalPages)
-      setTotalCount(data.total)
-      setActiveCount(activeData.total)
-    } catch { toast.error('Erro ao carregar pré-vendas') }
+    } catch { toast.error('Erro ao carregar pedidos') }
     finally  { setLoading(false) }
-  }, [statusFilter, page])
+  }, [])
 
   useEffect(() => { load() }, [load])
 
@@ -447,6 +500,27 @@ export default function ReservasPage() {
     acc[r.reservationGroupId] = (acc[r.reservationGroupId] ?? 0) + 1
     return acc
   }, {})
+
+  // ── Kanban: 2 colunas (Vendas × Pré-vendas, pela tag do produto) × raias de status ──
+  // "A pagar" = active com expiresAt (ainda não confirmou Pix nem foi marcado retirada-paga).
+  // "Pago" = active sem expiresAt (Pix confirmado). "Retirado" = fulfilled. "Cancelado" = cancelled.
+  const vendas    = items.filter(r => !r.productIsPreVenda)
+  const preVendas = items.filter(r => r.productIsPreVenda)
+
+  function lanes(list: AdminReservation[]) {
+    return {
+      aPagar:    list.filter(r => r.status === 'active' && !!r.expiresAt),
+      pago:      list.filter(r => r.status === 'active' && !r.expiresAt),
+      retirado:  list.filter(r => r.status === 'fulfilled'),
+      cancelado: list.filter(r => r.status === 'cancelled'),
+    }
+  }
+  const vendasLanes    = lanes(vendas)
+  const preVendasLanes = lanes(preVendas)
+
+  const valorEmPreVenda = preVendas
+    .filter(r => r.status === 'active')
+    .reduce((sum, r) => sum + (r.subtotalEmReais ?? 0), 0)
 
   async function loadComandas() {
     try {
@@ -502,16 +576,107 @@ export default function ReservasPage() {
     loadFila()
   }
 
-  const badges = [
-    { value: 'active',    label: 'Em aberto' },
-    { value: 'fulfilled', label: 'Homologadas' },
-    { value: 'cancelled', label: 'Canceladas' },
-    { value: 'expired',   label: 'Expiradas' },
-    { value: '',          label: 'Todas' },
-  ]
+  // Card compacto de um pedido — usado em qualquer raia do kanban (A pagar/Pago/Retirado/Cancelado).
+  function renderCard(r: AdminReservation) {
+    const aguardandoPagamento = r.status === 'active' && !!r.expiresAt
+    const paga = r.status === 'active' && !r.expiresAt
+    return (
+      <div key={r.id} className="card !p-3 flex gap-3 items-start">
+        <div className="w-12 h-12 rounded-lg bg-surface-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
+          {r.productImageUrl
+            ? <img src={r.productImageUrl} alt={r.productName} className="w-full h-full object-cover" />
+            : <Package className="w-5 h-5 text-surface-500" />}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-bold text-white text-xs truncate">{r.productName}</p>
+            {r.variantLabel && <span className="text-[11px] text-gray-400">· {r.variantLabel}</span>}
+          </div>
+
+          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400 flex-wrap">
+            <span className="flex items-center gap-1"><UserIcon className="w-2.5 h-2.5" />{r.userName ?? 'Cliente'}</span>
+            <span>Qtd: <strong className="text-white">{r.quantity}</strong></span>
+            {r.subtotalEmReais != null && (
+              <strong className="text-emerald-400">R$ {r.subtotalEmReais.toFixed(2).replace('.', ',')}</strong>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+            {groupCounts[r.reservationGroupId] > 1 && (
+              <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-300">
+                <Layers className="w-2.5 h-2.5" /> Carrinho de {groupCounts[r.reservationGroupId]}
+              </span>
+            )}
+            {pixByGroup[r.reservationGroupId]?.hasPix && (
+              pixByGroup[r.reservationGroupId]?.status === 'CONCLUIDA' ? (
+                <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-green-500/30 bg-green-500/15 text-green-400">
+                  <QrCode className="w-2.5 h-2.5" /> Pago via Pix
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-400">
+                  <QrCode className="w-2.5 h-2.5" /> Pix pendente
+                </span>
+              )
+            )}
+            {r.preVendaReleaseDate && (
+              <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-400">
+                Lançamento {new Date(r.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+              </span>
+            )}
+          </div>
+
+          {aguardandoPagamento && (
+            <p className="flex items-center gap-1 text-[11px] text-amber-400 mt-1 font-semibold">
+              <TimerIcon className="w-2.5 h-2.5" />Aguardando pagamento
+            </p>
+          )}
+          {paga && (
+            <p className="flex items-center gap-1 text-[11px] text-green-400 mt-1">
+              <CheckCircle className="w-2.5 h-2.5" />Paga — aguardando retirada
+            </p>
+          )}
+          {r.status === 'fulfilled' && r.fulfilledAt && (
+            <p className="flex items-center gap-1 text-[11px] text-green-400 mt-1">
+              <CheckCircle className="w-2.5 h-2.5" />Retirado: {fmtDate(r.fulfilledAt)}
+            </p>
+          )}
+          {r.status === 'cancelled' && r.cancelledAt && (
+            <p className="flex items-center gap-1 text-[11px] text-red-400 mt-1">
+              <XCircle className="w-2.5 h-2.5" />Cancelado: {fmtDate(r.cancelledAt)}
+            </p>
+          )}
+          {r.notes && <p className="text-[11px] text-gray-500 mt-1 italic truncate">"{r.notes}"</p>}
+
+          {r.status === 'active' && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <button onClick={() => openHomModal(r)}
+                className="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30
+                           hover:bg-green-500/30 text-[11px] font-semibold transition-colors flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" /> Homologar
+              </button>
+              {r.expiresAt && (
+                <button onClick={() => setPixGroup(r)}
+                  title="Gerar/copiar o código Pix pra mandar no WhatsApp"
+                  className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25
+                             hover:bg-purple-500/20 text-[11px] font-semibold transition-colors flex items-center gap-1">
+                  <QrCode className="w-3 h-3" /> Pix
+                </button>
+              )}
+              <button onClick={() => handleCancel(r)}
+                className="px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20
+                           hover:bg-red-500/20 text-[11px] font-semibold transition-colors flex items-center gap-1">
+                <XCircle className="w-3 h-3" /> Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <Toaster />
 
       {/* Header */}
@@ -520,8 +685,8 @@ export default function ReservasPage() {
           <LayoutList className="w-5 h-5 text-brand-400" />
         </div>
         <div>
-          <h1 className="text-xl font-black text-white">Pré-vendas &amp; Fila</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Pré-venda baixa o estoque na hora · fila é pra item que ainda não chegou</p>
+          <h1 className="text-xl font-black text-white">Pedidos</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Vendas e pré-vendas do site · mesma lógica, colunas separadas pela tag do produto</p>
         </div>
         <button
           onClick={() => setShowNova(true)}
@@ -537,30 +702,28 @@ export default function ReservasPage() {
 
       {/* Faixa de stats */}
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <StatCard icon={<Hourglass className="w-4.5 h-4.5 text-blue-400" />} tint="bg-blue-500/10"
-          label="Em aberto" value={activeCount} />
-        <StatCard icon={<Users className="w-4.5 h-4.5 text-purple-400" />} tint="bg-purple-500/10"
-          label="Na fila" value={wlLoading ? '…' : totalNaFila} />
-        <StatCard icon={<Sparkles className="w-4.5 h-4.5 text-amber-400" />} tint="bg-amber-500/10"
-          label="Com fila aberta" value={wlLoading ? '…' : wlProducts.length} />
+        <StatCard icon={<ShoppingCart className="w-4.5 h-4.5 text-blue-400" />} tint="bg-blue-500/10"
+          label="Vendas em aberto" value={vendasLanes.aPagar.length + vendasLanes.pago.length} />
+        <StatCard icon={<Trophy className="w-4.5 h-4.5 text-amber-400" />} tint="bg-amber-500/10"
+          label="Pré-vendas em aberto" value={preVendasLanes.aPagar.length + preVendasLanes.pago.length} />
+        <StatCard icon={<Wallet className="w-4.5 h-4.5 text-emerald-400" />} tint="bg-emerald-500/10"
+          label="Valor em pré-venda" value={`R$ ${valorEmPreVenda.toFixed(2).replace('.', ',')}`} />
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-surface-800 p-1 rounded-xl mb-5 w-fit">
         <button
-          onClick={() => setTab('prevendas')}
+          onClick={() => setTab('pedidos')}
           className={clsx('px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2',
-            tab === 'prevendas' ? 'bg-surface-600 text-white' : 'text-gray-400 hover:text-gray-300')}>
-          <ShoppingBag className="w-3.5 h-3.5" /> Pré-vendas
-          {activeCount > 0 && (
-            <span className="text-[10px] font-black bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-full">{activeCount}</span>
-          )}
+            tab === 'pedidos' ? 'bg-surface-600 text-white' : 'text-gray-400 hover:text-gray-300')}>
+          <ShoppingBag className="w-3.5 h-3.5" /> Pedidos
         </button>
         <button
           onClick={() => setTab('fila')}
+          title="Fila manual — pra pedido de item sem estoque combinado pelo WhatsApp"
           className={clsx('px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2',
             tab === 'fila' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:text-gray-300')}>
-          <Users className="w-3.5 h-3.5" /> Fila
+          <Users className="w-3.5 h-3.5" /> Fila (manual)
           {totalNaFila > 0 && (
             <span className="text-[10px] font-black bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full">{totalNaFila}</span>
           )}
@@ -666,152 +829,27 @@ export default function ReservasPage() {
         )
       )}
 
-      {/* ── Conteúdo: Pré-vendas ── */}
-      {tab === 'prevendas' && <>
-      {/* Filtros */}
-      <div className="flex gap-2 flex-wrap mb-5">
-        {badges.map(b => (
-          <button
-            key={b.value}
-            onClick={() => { setStatusFilter(b.value); setPage(1) }}
-            className={clsx(
-              'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
-              statusFilter === b.value
-                ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                : 'bg-surface-700 text-gray-400 border-surface-600 hover:border-surface-500'
-            )}
-          >
-            {b.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Lista */}
-      {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <LayoutList className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>Nenhuma pré-venda encontrada</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {items.map(r => {
-            // r.expiresAt não é mais prazo: só marca "pré-venda ainda não paga".
-            const aguardandoPagamento = r.status === 'active' && !!r.expiresAt
-            const paga = r.status === 'active' && !r.expiresAt
-            return (
-              <div key={r.id} className="card flex gap-4 items-start">
-                {/* Imagem */}
-                <div className="w-16 h-16 rounded-xl bg-surface-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                  {r.productImageUrl
-                    ? <img src={r.productImageUrl} alt={r.productName} className="w-full h-full object-cover" />
-                    : <Package className="w-6 h-6 text-surface-500" />}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-white text-sm truncate">{r.productName}</p>
-                    {r.variantLabel && <span className="text-xs text-gray-400">· {r.variantLabel}</span>}
-                    {groupCounts[r.reservationGroupId] > 1 && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-300">
-                        <Layers className="w-2.5 h-2.5" /> Carrinho de {groupCounts[r.reservationGroupId]}
-                      </span>
-                    )}
-                    {pixByGroup[r.reservationGroupId]?.hasPix && (
-                      pixByGroup[r.reservationGroupId]?.status === 'CONCLUIDA' ? (
-                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-500/30 bg-green-500/15 text-green-400">
-                          <QrCode className="w-2.5 h-2.5" /> Pago via Pix
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-400">
-                          <QrCode className="w-2.5 h-2.5" /> Pix pendente
-                        </span>
-                      )
-                    )}
-                    {r.preVendaReleaseDate && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-400">
-                        Lançamento {new Date(r.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
-                      </span>
-                    )}
-                    <span className={clsx('text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ml-auto',
-                      statusCls[r.status] ?? statusCls['expired'])}>
-                      {statusLabel[r.status] ?? r.status}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
-                    <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" />{r.userName ?? 'Cliente'}</span>
-                    <span className="flex items-center gap-1"><ShoppingBag className="w-3 h-3" />Qtd: <strong className="text-white">{r.quantity}</strong></span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Criada: {fmtDate(r.reservedAt)}</span>
-                  </div>
-
-                  {aguardandoPagamento && (
-                    <p className="flex items-center gap-1 text-xs text-amber-400 mt-1.5 font-semibold">
-                      <TimerIcon className="w-3 h-3" />Aguardando pagamento
-                    </p>
-                  )}
-
-                  {paga && (
-                    <p className="flex items-center gap-1 text-xs text-green-400 mt-1.5">
-                      <CheckCircle className="w-3 h-3" />Paga — aguardando retirada
-                    </p>
-                  )}
-
-                  {r.status === 'fulfilled' && r.fulfilledAt && (
-                    <p className="flex items-center gap-1 text-xs text-green-400 mt-1.5">
-                      <CheckCircle className="w-3 h-3" />Homologada: {fmtDate(r.fulfilledAt)}
-                    </p>
-                  )}
-
-                  {r.notes && <p className="text-xs text-gray-500 mt-1 italic">"{r.notes}"</p>}
-                </div>
-
-                {/* Ações */}
-                {r.status === 'active' && (
-                  <div className="flex flex-col gap-2 flex-shrink-0">
-                    <button onClick={() => openHomModal(r)}
-                      className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30
-                                 hover:bg-green-500/30 text-xs font-semibold transition-colors flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" /> Homologar
-                    </button>
-                    {r.expiresAt && (
-                      <button onClick={() => setPixGroup(r)}
-                        title="Gerar/copiar o código Pix pra mandar no WhatsApp"
-                        className="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25
-                                   hover:bg-purple-500/20 text-xs font-semibold transition-colors flex items-center gap-1">
-                        <QrCode className="w-3 h-3" /> Pix
-                      </button>
-                    )}
-                    <button onClick={() => handleCancel(r)}
-                      className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20
-                                 hover:bg-red-500/20 text-xs font-semibold transition-colors flex items-center gap-1">
-                      <XCircle className="w-3 h-3" /> Cancelar
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+      {/* ── Conteúdo: Kanban de pedidos ── */}
+      {tab === 'pedidos' && (
+        loading ? (
+          <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <KanbanColumn
+              title="Vendas" subtitle="produto sem tag de pré-venda"
+              icon={<ShoppingCart className="w-4 h-4 text-blue-400" />} tint="border-blue-500/20"
+              lanesData={vendasLanes} renderCard={renderCard}
+              showCancel={showCancelVendas} setShowCancel={setShowCancelVendas}
+            />
+            <KanbanColumn
+              title="Pré-vendas" subtitle="produto marcado como pré-venda"
+              icon={<Trophy className="w-4 h-4 text-amber-400" />} tint="border-amber-500/20"
+              lanesData={preVendasLanes} renderCard={renderCard}
+              showCancel={showCancelPre} setShowCancel={setShowCancelPre}
+            />
+          </div>
+        )
       )}
-
-      {/* Paginação */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 mt-6">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="p-2 rounded-lg bg-surface-700 disabled:opacity-40">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm text-gray-400">{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="p-2 rounded-lg bg-surface-700 disabled:opacity-40">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      </>}
 
       {/* Modal de Homologação */}
       {homModal && (
