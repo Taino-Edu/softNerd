@@ -10,7 +10,7 @@ import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
   ShoppingBag, LayoutList, RefreshCw, Loader2,
   AlertTriangle, TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
-  QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy,
+  QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
@@ -406,6 +406,11 @@ export default function ReservasPage() {
   const [showNova,    setShowNova]    = useState(false)
   const [pixGroup,    setPixGroup]    = useState<AdminReservation | null>(null)
 
+  // Modal de editar quantidade (corrigir pedido lançado errado)
+  const [editQty,        setEditQty]        = useState<AdminReservation | null>(null)
+  const [editQtyValue,   setEditQtyValue]   = useState(1)
+  const [editQtySaving,  setEditQtySaving]  = useState(false)
+
   // ── aba Fila (item que ainda não chegou) ──
   const [wlProducts,  setWlProducts]  = useState<Product[]>([])
   const [wlLoading,   setWlLoading]   = useState(false)
@@ -576,6 +581,24 @@ export default function ReservasPage() {
     loadFila()
   }
 
+  function openEditQty(r: AdminReservation) {
+    setEditQty(r)
+    setEditQtyValue(r.quantity)
+  }
+
+  async function handleSaveQty() {
+    if (!editQty || editQtyValue < 1) return
+    setEditQtySaving(true)
+    try {
+      await reservationApi.updateQuantity(editQty.id, editQtyValue)
+      toast.success('Quantidade atualizada')
+      setEditQty(null)
+      load()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Erro ao alterar quantidade')
+    } finally { setEditQtySaving(false) }
+  }
+
   // Card compacto de um pedido — usado em qualquer raia do kanban (A pagar/Pago/Retirado/Cancelado).
   function renderCard(r: AdminReservation) {
     const aguardandoPagamento = r.status === 'active' && !!r.expiresAt
@@ -663,6 +686,12 @@ export default function ReservasPage() {
                   <QrCode className="w-3 h-3" /> Pix
                 </button>
               )}
+              <button onClick={() => openEditQty(r)}
+                title="Corrigir a quantidade deste pedido"
+                className="px-2 py-1 rounded-lg bg-surface-600/50 text-gray-300 border border-surface-500
+                           hover:bg-surface-600 text-[11px] font-semibold transition-colors flex items-center gap-1">
+                <Pencil className="w-3 h-3" /> Qtd
+              </button>
               <button onClick={() => handleCancel(r)}
                 className="px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20
                            hover:bg-red-500/20 text-[11px] font-semibold transition-colors flex items-center gap-1">
@@ -974,6 +1003,52 @@ export default function ReservasPage() {
           onClose={() => setPixGroup(null)}
           onPago={load}
         />
+      )}
+
+      {/* Modal: corrigir a quantidade de um pedido lançado errado */}
+      {editQty && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-800 rounded-2xl w-full max-w-sm p-6 flex flex-col gap-5">
+            <div>
+              <h2 className="text-lg font-black text-white">Editar quantidade</h2>
+              <p className="text-sm text-gray-400 mt-0.5">{editQty.productName} · {editQty.userName}</p>
+              {editQty.kind === 'pre_venda' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Aumentar baixa mais estoque; diminuir devolve a diferença pra loja.
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-4">
+              <button onClick={() => setEditQtyValue(v => Math.max(1, v - 1))}
+                className="w-10 h-10 rounded-xl bg-surface-700 hover:bg-surface-600 text-white text-lg font-bold transition-colors">
+                −
+              </button>
+              <input
+                type="number" min={1} value={editQtyValue}
+                onChange={e => setEditQtyValue(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-20 text-center bg-surface-700 border border-surface-600 rounded-xl py-2 text-white text-lg font-black"
+              />
+              <button onClick={() => setEditQtyValue(v => v + 1)}
+                className="w-10 h-10 rounded-xl bg-surface-700 hover:bg-surface-600 text-white text-lg font-bold transition-colors">
+                +
+              </button>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => setEditQty(null)} disabled={editQtySaving}
+                className="flex-1 py-3 rounded-xl bg-surface-700 text-gray-300 text-sm font-semibold">
+                Cancelar
+              </button>
+              <button onClick={handleSaveQty} disabled={editQtySaving || editQtyValue === editQty.quantity}
+                className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-40
+                           text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                {editQtySaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

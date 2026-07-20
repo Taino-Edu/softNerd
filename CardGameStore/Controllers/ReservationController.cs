@@ -582,6 +582,105 @@ public class ReservationController : ControllerBase
         return Ok(ToDto(res));
     }
 
+    // PUT /api/reservations/{id}/quantity — admin corrige a quantidade de uma reserva em
+    // aberto (ex: lançou 1 unidade errado e precisa ajustar). Pré-venda: a diferença mexe
+    // no estoque (atômico, mesmo padrão do Cancel/UpdateStatus); fila: só troca o número.
+    [HttpPut("{id:guid}/quantity")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> UpdateQuantity(Guid id, [FromBody] UpdateReservationQuantityRequest req)
+    {
+        if (req.Quantity < 1) return BadRequest(new { Message = "Quantidade precisa ser pelo menos 1." });
+
+        var res = await _db.ProductReservations.FirstOrDefaultAsync(r => r.Id == id);
+        if (res is null) return NotFound();
+        if (res.Status is not ("active" or "waiting"))
+            return BadRequest(new { Message = "Só é possível alterar a quantidade de reservas em aberto." });
+
+        var quantidadeAntiga = res.Quantity;
+        var delta = req.Quantity - quantidadeAntiga;
+        if (delta == 0)
+        {
+            await _db.Entry(res).Reference(x => x.Product).LoadAsync();
+            await _db.Entry(res).Reference(x => x.Variant).LoadAsync();
+            await _db.Entry(res).Reference(x => x.User).LoadAsync();
+            return Ok(ToDto(res));
+        }
+
+        // Pix já gerado trava o valor cobrado — mudar a quantidade agora deixaria a
+        // cobrança desalinhada do novo total. Pede pra cancelar o Pix antes.
+        if (res.Kind == "pre_venda")
+        {
+            var temPixAtivo = await _db.PixCobrancas.AnyAsync(p =>
+                p.ReservationGroupId == res.ReservationGroupId && p.Status == "ATIVA");
+            if (temPixAtivo)
+                return Conflict(new { Message = "Esta reserva já tem um Pix ativo — cancele o Pix antes de mudar a quantidade." });
+        }
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        IActionResult? falha = null;
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            var claimed = await _db.ProductReservations
+                .Where(r => r.Id == id && r.Status == res.Status && r.Quantity == quantidadeAntiga)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Quantity, req.Quantity));
+            if (claimed == 0)
+            {
+                falha = BadRequest(new { Message = "Esta reserva foi alterada por outra ação — recarregue e tente de novo." });
+                return;
+            }
+
+            if (res.Kind == "pre_venda")
+            {
+                if (delta > 0)
+                {
+                    int baixado;
+                    if (res.VariantId.HasValue)
+                        baixado = await _db.ProductVariants
+                            .Where(v => v.Id == res.VariantId.Value && v.StockQuantity >= delta)
+                            .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - delta));
+                    else
+                        baixado = await _db.Products
+                            .Where(p => p.Id == res.ProductId && p.StockQuantity >= delta)
+                            .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity - delta));
+
+                    if (baixado == 0)
+                    {
+                        falha = Conflict(new { Message = "Estoque insuficiente pra aumentar a quantidade." });
+                        return; // rollback desfaz o claim de quantidade também
+                    }
+                }
+                else
+                {
+                    var devolver = -delta;
+                    if (res.VariantId.HasValue)
+                        await _db.ProductVariants.Where(v => v.Id == res.VariantId.Value)
+                            .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + devolver));
+                    else
+                        await _db.Products.Where(p => p.Id == res.ProductId)
+                            .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity + devolver));
+                }
+            }
+
+            await tx.CommitAsync();
+        });
+
+        if (falha is not null) return falha;
+
+        res.Quantity = req.Quantity;
+        if (res.Kind == "pre_venda") await AvisarEstoqueMudouAsync();
+
+        await _audit.LogAsync("AlterouQuantidadeReserva", "ProductReservation", res.Id.ToString(),
+            details: $"{{\"de\":{quantidadeAntiga},\"para\":{req.Quantity}}}", httpContext: HttpContext);
+
+        await _db.Entry(res).Reference(x => x.Product).LoadAsync();
+        await _db.Entry(res).Reference(x => x.Variant).LoadAsync();
+        await _db.Entry(res).Reference(x => x.User).LoadAsync();
+
+        return Ok(ToDto(res));
+    }
+
     // POST /api/reservations/{id}/homologar — admin homologa pré-venda → lança no PDV ou
     // comanda. SkipStockDecrement: o estoque JÁ saiu no ato da pré-venda; aqui só se
     // registra a venda (e a NFC-e, se for o caso).
@@ -888,6 +987,11 @@ public class AdminCreateReservationRequest
 public class UpdateReservationStatusRequest
 {
     public string Status { get; init; } = "";
+}
+
+public class UpdateReservationQuantityRequest
+{
+    public int Quantity { get; init; }
 }
 
 public class HomologarRequest
