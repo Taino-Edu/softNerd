@@ -1168,7 +1168,7 @@ export const reservationApi = {
                api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
   getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
-  homologar: (id: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number; comandaId?: string }) =>
+  homologar: (id: string, body: { paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number }) =>
                api.post(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),

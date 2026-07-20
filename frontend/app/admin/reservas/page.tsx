@@ -9,18 +9,11 @@ import clsx from 'clsx'
 import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
   LayoutList, RefreshCw, Loader2,
-  AlertTriangle, TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
+  TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
   QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
-
-type OpenComanda = {
-  id: string
-  mesaNumero?: number
-  userName?: string
-  totalInReais?: number
-}
 
 const statusCls: Record<string, string> = {
   active:    'bg-blue-500/15 text-blue-400 border-blue-500/30',
@@ -377,15 +370,13 @@ export default function ReservasPage() {
   const [showCancelPre,    setShowCancelPre]    = useState(false)
   const [pixByGroup,  setPixByGroup]  = useState<Record<string, ReservationPixStatus>>({})
 
-  // Modal de homologação
+  // Modal de homologação — sempre PDV (homologar por comanda misturava o valor
+  // com outros itens do cliente e não dava pra separar "Pré-venda" no Financeiro).
   const [homModal,    setHomModal]    = useState<AdminReservation | null>(null)
-  const [homMode,     setHomMode]     = useState<'pdv' | 'comanda'>('pdv')
   const [homPayment,  setHomPayment]  = useState('Dinheiro')
   const [homSplit,    setHomSplit]    = useState(false)
   const [homSecondPayment, setHomSecondPayment] = useState('')
   const [homSecondAmount,  setHomSecondAmount]  = useState('')
-  const [comandas,    setComandas]    = useState<OpenComanda[]>([])
-  const [homComanda,  setHomComanda]  = useState<string>('')
   const [submitting,  setSubmitting]  = useState(false)
 
   // Modal de nova pré-venda manual + modal de Pix (copiar código / mandar no zap)
@@ -521,36 +512,18 @@ export default function ReservasPage() {
   const totalEmAberto  = vendasLanes.aPagar.length + vendasLanes.pago.length
                         + preVendasLanes.aPagar.length + preVendasLanes.pago.length
 
-  async function loadComandas() {
-    try {
-      const { data } = await api.get('/api/comanda/dashboard')
-      setComandas(data.map((c: any) => ({
-        id: c.id,
-        mesaNumero: c.mesaNumero,
-        userName: c.userName,
-        totalInReais: c.totalInReais,
-      })))
-    } catch { /* silencioso */ }
-  }
-
-  async function openHomModal(r: AdminReservation) {
+  function openHomModal(r: AdminReservation) {
     setHomModal(r)
-    setHomMode('pdv')
     setHomPayment('Dinheiro')
     setHomSplit(false)
     setHomSecondPayment('')
     setHomSecondAmount('')
-    setHomComanda('')
-    await loadComandas()
   }
 
   async function handleHomologar() {
     if (!homModal) return
-    if (homMode === 'comanda' && !homComanda) {
-      toast.error('Selecione uma comanda'); return
-    }
     const secondAmountInCents = homSplit ? Math.round(parseFloat(homSecondAmount.replace(',', '.') || '0') * 100) : 0
-    if (homMode === 'pdv' && homSplit) {
+    if (homSplit) {
       if (!homSecondPayment) { toast.error('Selecione a segunda forma de pagamento'); return }
       if (homSecondPayment === homPayment) { toast.error('A segunda forma não pode ser igual à primeira'); return }
       if (!secondAmountInCents || secondAmountInCents <= 0) { toast.error('Informe o valor pago na segunda forma'); return }
@@ -558,11 +531,9 @@ export default function ReservasPage() {
     setSubmitting(true)
     try {
       await api.post(`/api/reservations/${homModal.id}/homologar`, {
-        mode:          homMode,
-        paymentMethod: homMode === 'pdv' ? homPayment : undefined,
-        secondPaymentMethod:        homMode === 'pdv' && homSplit ? homSecondPayment : undefined,
-        secondPaymentAmountInCents: homMode === 'pdv' && homSplit ? secondAmountInCents : undefined,
-        comandaId:     homMode === 'comanda' ? homComanda : undefined,
+        paymentMethod: homPayment,
+        secondPaymentMethod:        homSplit ? homSecondPayment : undefined,
+        secondPaymentAmountInCents: homSplit ? secondAmountInCents : undefined,
       })
       toast.success('Pré-venda homologada!')
       setHomModal(null)
@@ -911,125 +882,66 @@ export default function ReservasPage() {
               </p>
             </div>
 
-            {/* Modo */}
-            <div className="flex gap-2">
-              {(['pdv', 'comanda'] as const).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setHomMode(m)}
-                  className={clsx(
-                    'flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors',
-                    homMode === m
-                      ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                      : 'bg-surface-700 text-gray-400 border-surface-600'
-                  )}
-                >
-                  {m === 'pdv' ? '🧾 Frente de Caixa (PDV)' : '🪑 Adicionar a uma Comanda'}
-                </button>
-              ))}
-            </div>
-
-            {/* PDV — forma de pagamento */}
-            {homMode === 'pdv' && (
-              <div>
-                <label className="text-xs text-gray-400 mb-2 block font-semibold">Forma de pagamento</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {PAYMENT_METHODS.map(m => (
-                    <button key={m} onClick={() => setHomPayment(m)}
-                      className={clsx(
-                        'py-2 rounded-lg text-xs font-semibold border transition-colors',
-                        homPayment === m
-                          ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                          : 'bg-surface-700 text-gray-400 border-surface-600'
-                      )}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
-
-                <button onClick={() => setHomSplit(v => !v)}
-                  className="text-xs text-brand-300 hover:text-brand-200 font-semibold mt-3 flex items-center gap-1">
-                  {homSplit ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  Dividir pagamento em duas formas
-                </button>
-
-                {homSplit && (
-                  <div className="mt-3 p-3 rounded-xl bg-surface-700 border border-surface-600 space-y-2">
-                    <label className="text-xs text-gray-400 block font-semibold">Segunda forma de pagamento</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {PAYMENT_METHODS.filter(m => m !== homPayment).map(m => (
-                        <button key={m} onClick={() => setHomSecondPayment(m)}
-                          className={clsx(
-                            'py-2 rounded-lg text-xs font-semibold border transition-colors',
-                            homSecondPayment === m
-                              ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                              : 'bg-surface-800 text-gray-400 border-surface-600'
-                          )}>
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="text-xs text-gray-400 block font-semibold mt-1">Valor pago nessa segunda forma (R$)</label>
-                    <input
-                      type="text" inputMode="decimal" value={homSecondAmount}
-                      onChange={e => setHomSecondAmount(e.target.value)}
-                      placeholder="0,00"
-                      className="input w-full"
-                    />
-                    {homModal?.subtotalEmReais != null && (
-                      <p className="text-[11px] text-gray-500">
-                        Total do pedido: R$ {homModal.subtotalEmReais.toFixed(2).replace('.', ',')} · resto fica em {homPayment || '—'}
-                      </p>
-                    )}
-                  </div>
-                )}
+            <div>
+              <label className="text-xs text-gray-400 mb-2 block font-semibold">Forma de pagamento</label>
+              <div className="grid grid-cols-3 gap-2">
+                {PAYMENT_METHODS.map(m => (
+                  <button key={m} onClick={() => setHomPayment(m)}
+                    className={clsx(
+                      'py-2 rounded-lg text-xs font-semibold border transition-colors',
+                      homPayment === m
+                        ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
+                        : 'bg-surface-700 text-gray-400 border-surface-600'
+                    )}>
+                    {m}
+                  </button>
+                ))}
               </div>
-            )}
 
-            {/* Comanda — seleção */}
-            {homMode === 'comanda' && (
-              <div>
-                <label className="text-xs text-gray-400 mb-2 block font-semibold">Selecionar comanda aberta</label>
-                {comandas.length === 0 ? (
-                  <div className="flex items-center gap-2 text-amber-400 text-sm bg-amber-500/10 rounded-xl p-3">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                    Nenhuma comanda aberta no momento
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                    {comandas.map(c => (
-                      <button key={c.id} onClick={() => setHomComanda(c.id)}
+              <button onClick={() => setHomSplit(v => !v)}
+                className="text-xs text-brand-300 hover:text-brand-200 font-semibold mt-3 flex items-center gap-1">
+                {homSplit ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                Dividir pagamento em duas formas
+              </button>
+
+              {homSplit && (
+                <div className="mt-3 p-3 rounded-xl bg-surface-700 border border-surface-600 space-y-2">
+                  <label className="text-xs text-gray-400 block font-semibold">Segunda forma de pagamento</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PAYMENT_METHODS.filter(m => m !== homPayment).map(m => (
+                      <button key={m} onClick={() => setHomSecondPayment(m)}
                         className={clsx(
-                          'flex items-center gap-3 p-3 rounded-xl border text-left transition-colors',
-                          homComanda === c.id
-                            ? 'bg-brand-500/20 border-brand-500/40'
-                            : 'bg-surface-700 border-surface-600 hover:border-surface-500'
+                          'py-2 rounded-lg text-xs font-semibold border transition-colors',
+                          homSecondPayment === m
+                            ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
+                            : 'bg-surface-800 text-gray-400 border-surface-600'
                         )}>
-                        <div className="w-8 h-8 rounded-lg bg-surface-600 flex items-center justify-center text-xs font-bold text-white">
-                          {c.mesaNumero ?? '?'}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-white">Mesa {c.mesaNumero ?? '—'}</p>
-                          {c.userName && <p className="text-xs text-gray-400">{c.userName}</p>}
-                        </div>
-                        {c.totalInReais != null && (
-                          <span className="ml-auto text-sm font-bold text-brand-300">
-                            R$ {c.totalInReais.toFixed(2).replace('.', ',')}
-                          </span>
-                        )}
+                        {m}
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
+                  <label className="text-xs text-gray-400 block font-semibold mt-1">Valor pago nessa segunda forma (R$)</label>
+                  <input
+                    type="text" inputMode="decimal" value={homSecondAmount}
+                    onChange={e => setHomSecondAmount(e.target.value)}
+                    placeholder="0,00"
+                    className="input w-full"
+                  />
+                  {homModal?.subtotalEmReais != null && (
+                    <p className="text-[11px] text-gray-500">
+                      Total do pedido: R$ {homModal.subtotalEmReais.toFixed(2).replace('.', ',')} · resto fica em {homPayment || '—'}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="flex gap-3 pt-1">
               <button onClick={() => setHomModal(null)} disabled={submitting}
                 className="flex-1 py-3 rounded-xl bg-surface-700 text-gray-300 text-sm font-semibold">
                 Cancelar
               </button>
-              <button onClick={handleHomologar} disabled={submitting || (homMode === 'comanda' && !homComanda)}
+              <button onClick={handleHomologar} disabled={submitting}
                 className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-40
                            text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}

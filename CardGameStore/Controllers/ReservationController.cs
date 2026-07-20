@@ -35,7 +35,6 @@ public class ReservationController : ControllerBase
 {
     private readonly AppDbContext        _db;
     private readonly IVendaAvulsaService _vendaService;
-    private readonly IComandaService     _comandaService;
     private readonly InterSyncService    _inter;
     private readonly IPixReconciliationService _pixReconciliation;
     private readonly IPushService        _push;
@@ -43,13 +42,12 @@ public class ReservationController : ControllerBase
     private readonly IHubContext<ComandaHub> _hub;
 
     public ReservationController(
-        AppDbContext db, IVendaAvulsaService vendaService, IComandaService comandaService,
+        AppDbContext db, IVendaAvulsaService vendaService,
         InterSyncService inter, IPixReconciliationService pixReconciliation, IPushService push,
         IAuditService audit, IHubContext<ComandaHub> hub)
     {
         _db                = db;
         _vendaService      = vendaService;
-        _comandaService    = comandaService;
         _inter             = inter;
         _pixReconciliation = pixReconciliation;
         _push              = push;
@@ -681,18 +679,14 @@ public class ReservationController : ControllerBase
         return Ok(ToDto(res));
     }
 
-    // POST /api/reservations/{id}/homologar — admin homologa pré-venda → lança no PDV ou
-    // comanda. SkipStockDecrement: o estoque JÁ saiu no ato da pré-venda; aqui só se
-    // registra a venda (e a NFC-e, se for o caso).
+    // POST /api/reservations/{id}/homologar — admin homologa pré-venda → lança no PDV.
+    // Sempre PDV: homologar por comanda misturava o valor com outros itens do cliente e
+    // ficava impossível separar "Pré-venda" de "Comanda" no Financeiro com segurança.
+    // SkipStockDecrement: o estoque JÁ saiu no ato da pré-venda; aqui só se registra a venda.
     [HttpPost("{id:guid}/homologar")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Homologar(Guid id, [FromBody] HomologarRequest req)
     {
-        if (req.Mode is not ("pdv" or "comanda"))
-            return BadRequest(new { Message = "Mode inválido. Use 'pdv' ou 'comanda'." });
-        if (req.Mode == "comanda" && !req.ComandaId.HasValue)
-            return BadRequest(new { Message = "ComandaId é obrigatório no modo comanda." });
-
         var res = await _db.ProductReservations
             .Include(r => r.User)
             .Include(r => r.Product)
@@ -731,34 +725,20 @@ public class ReservationController : ControllerBase
 
             try
             {
-                if (req.Mode == "pdv")
+                var vendaReq = new VendaAvulsaRequest
                 {
-                    var vendaReq = new VendaAvulsaRequest
-                    {
-                        ClientName                 = res.User?.Name,
-                        UserId                     = res.UserId,
-                        PaymentMethod              = req.PaymentMethod ?? "Dinheiro",
-                        SecondPaymentMethod        = req.SecondPaymentMethod,
-                        SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
-                        SkipStockDecrement         = true, // estoque já baixado na pré-venda
-                        // Marca a origem pra o Financeiro separar "Pré-venda" de venda de balcão comum.
-                        Origem                     = "Reserva",
-                        ReservationId              = res.Id,
-                        Items                      = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
-                    };
-                    await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
-                }
-                else
-                {
-                    await _comandaService.AdminAddItemAsync(req.ComandaId!.Value, adminId,
-                        new AddItemToComandaRequest
-                        {
-                            ProductId          = res.ProductId,
-                            VariantId          = res.VariantId,
-                            Quantity           = res.Quantity,
-                            SkipStockDecrement = true, // estoque já baixado na pré-venda
-                        });
-                }
+                    ClientName                 = res.User?.Name,
+                    UserId                     = res.UserId,
+                    PaymentMethod              = req.PaymentMethod ?? "Dinheiro",
+                    SecondPaymentMethod        = req.SecondPaymentMethod,
+                    SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
+                    SkipStockDecrement         = true, // estoque já baixado na pré-venda
+                    // Marca a origem pra o Financeiro separar "Pré-venda" de venda de balcão comum.
+                    Origem                     = "Reserva",
+                    ReservationId              = res.Id,
+                    Items                      = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
+                };
+                await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
             }
             catch (InvalidOperationException ex)
             {
@@ -771,7 +751,7 @@ public class ReservationController : ControllerBase
 
         if (falha is not null) return falha;
 
-        return Ok(new { message = "Pré-venda homologada com sucesso.", reservationId = id, mode = req.Mode });
+        return Ok(new { message = "Pré-venda homologada com sucesso.", reservationId = id });
     }
 
     // -------------------------------------------------------------------------
@@ -1001,18 +981,12 @@ public class UpdateReservationQuantityRequest
 
 public class HomologarRequest
 {
-    /// <summary>"pdv" | "comanda"</summary>
-    public string Mode { get; init; } = "pdv";
-
-    /// <summary>Forma de pagamento para o modo PDV. Padrão: Dinheiro.</summary>
+    /// <summary>Forma de pagamento. Padrão: Dinheiro.</summary>
     public string? PaymentMethod { get; init; }
 
-    /// <summary>Segundo método de pagamento (modo PDV), quando o cliente divide o pagamento.</summary>
+    /// <summary>Segundo método de pagamento, quando o cliente divide o pagamento.</summary>
     public string? SecondPaymentMethod { get; init; }
 
-    /// <summary>Valor em centavos cobrado no segundo método (modo PDV).</summary>
+    /// <summary>Valor em centavos cobrado no segundo método.</summary>
     public int? SecondPaymentAmountInCents { get; init; }
-
-    /// <summary>ID da comanda aberta (obrigatório no modo comanda).</summary>
-    public Guid? ComandaId { get; init; }
 }
