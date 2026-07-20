@@ -65,6 +65,16 @@ public class ProductReservation
     [Column("notes")]
     public string? Notes { get; set; }
 
+    /// <summary>
+    /// Intenção de pagamento declarada na criação pelo cliente: "pix" (pagar agora)
+    /// ou "retirada" (pagar no balcão). Null em reservas antigas, itens de fila
+    /// legada e criações manuais do admin. Quando o Pix confirma, a reconciliação
+    /// grava "pix" nos itens pagos (ver PixReconciliationService).
+    /// </summary>
+    [MaxLength(20)]
+    [Column("payment_method")]
+    public string? PaymentMethod { get; set; }
+
     [Column("reserved_at")]
     public DateTime ReservedAt { get; set; } = DateTime.UtcNow;
 

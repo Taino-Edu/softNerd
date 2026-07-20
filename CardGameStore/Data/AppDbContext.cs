@@ -401,6 +401,21 @@ public class AppDbContext : DbContext
         });
 
         // =====================================================================
+        // EXTERNAL TRANSACTION (financeiro)
+        // =====================================================================
+        modelBuilder.Entity<ExternalTransaction>(entity =>
+        {
+            // Deduplica lançamentos de origem externa (ex.: txid Pix do Inter) —
+            // última linha de defesa contra baixa dupla em reconciliação concorrente.
+            // O índice já existia no DDL de startup (Program.cs); aqui fica o espelho
+            // no modelo pra EnsureCreated (dev/testes) criar também.
+            entity.HasIndex(x => new { x.Source, x.ExternalId })
+                  .IsUnique()
+                  .HasFilter("external_id IS NOT NULL")
+                  .HasDatabaseName("ix_ext_tx_source_external_id");
+        });
+
+        // =====================================================================
         // LGPD REQUEST
         // =====================================================================
         modelBuilder.Entity<LgpdRequest>(entity =>

@@ -14,16 +14,18 @@ using System.Text.Json;
 namespace CardGameStore.Controllers;
 
 // =============================================================================
-// ReservationController.cs — Pré-venda e Fila (modelo unificado da loja)
+// ReservationController.cs — Pedidos online unificados (pré-venda e venda-reserva)
 //
-// PRÉ-VENDA (kind=pre_venda): item EM ESTOQUE. Baixa o estoque no ato, Pix em
-// tudo, data de rua opcional. Não expira sozinha — fica "active" até o admin
-// cancelar manualmente (o estoque volta e passa pro próximo da fila) ou o Pix
-// confirmar (vira venda feita aguardando retirada).
+// PRÉ-VENDA / RESERVA ONLINE (kind=pre_venda): item EM ESTOQUE. Baixa o estoque
+// no ato, data de rua opcional. Não expira sozinha — fica "active" até o admin
+// cancelar manualmente (o estoque volta e passa pro próximo da fila legada) ou
+// o Pix confirmar (vira venda feita aguardando retirada). O cliente declara a
+// intenção de pagamento na criação: "pix" (pagar agora) ou "retirada" (balcão).
 //
-// FILA (kind=fila): item que AINDA NÃO CHEGOU. Não mexe em estoque, não expira.
-// Quando o estoque chega, ProductService.ProcessarChegadaFilaAsync converte a
-// fila em pré-venda na ordem de entrada.
+// FILA (kind=fila): LEGADA — o site NÃO cria mais fila (sem estoque = 409).
+// As linhas waiting antigas seguem legíveis e a conversão fila→pré-venda
+// (ProductService.ProcessarChegadaFilaAsync) continua funcionando pra elas;
+// o admin também pode registrar fila manualmente (admin-create, pedido WhatsApp).
 // =============================================================================
 
 [ApiController]
@@ -93,14 +95,16 @@ public class ReservationController : ControllerBase
         return Ok(result);
     }
 
-    // POST /api/reservations — cria pré-venda (em estoque) ou entra na fila (não chegou)
+    // POST /api/reservations — cria pré-venda/reserva online (item EM ESTOQUE).
+    // Sem estoque = 409 (o site não cria mais fila — fila é só legada/manual).
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateReservationRequest req)
     {
         var userId = GetUserId();
         var (r, falha) = await CriarEPersistirAsync(userId, req.ProductId, req.VariantId,
-                                                     req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
+                                                     req.Quantity < 1 ? 1 : req.Quantity, req.Notes,
+                                                     permitirFila: false, NormalizarPaymentMethod(req.PaymentMethod));
         if (falha is not null) return falha;
 
         if (r!.Kind == "pre_venda") await AvisarEstoqueMudouAsync(); // fila não mexe em estoque
@@ -110,15 +114,21 @@ public class ReservationController : ControllerBase
         return Ok(ToDto(r));
     }
 
+    /// <summary>Só "pix" e "retirada" são válidos — qualquer outra coisa vira null (não declarado).</summary>
+    private static string? NormalizarPaymentMethod(string? pm) =>
+        pm is "pix" or "retirada" ? pm : null;
+
     /// <summary>
     /// Cria o item (CriarItemAsync) e persiste dentro da mesma transação: a baixa de
     /// estoque do ExecuteUpdateAsync some do banco se o SaveChangesAsync falhar depois
     /// (era o bug do "estoque some e a pré-venda não vincula" — o insert e a baixa
     /// rodavam soltos, sem transação, então uma falha no insert não desfazia a baixa).
     /// Mesmo padrão do CreateCart: bloco inteiro dentro da execution strategy do Npgsql.
+    /// permitirFila=false (site): sem estoque vira erro "sem_estoque" (409) em vez de fila.
     /// </summary>
     private async Task<(ProductReservation? Reservation, IActionResult? Error)> CriarEPersistirAsync(
-        Guid userId, Guid productId, Guid? variantId, int qty, string? notes)
+        Guid userId, Guid productId, Guid? variantId, int qty, string? notes,
+        bool permitirFila = true, string? paymentMethod = null)
     {
         var strategy = _db.Database.CreateExecutionStrategy();
 
@@ -129,14 +139,16 @@ public class ReservationController : ControllerBase
         {
             await using var tx = await _db.Database.BeginTransactionAsync();
 
-            var created = await CriarItemAsync(userId, Guid.NewGuid(), productId, variantId, qty, notes);
+            var created = await CriarItemAsync(userId, Guid.NewGuid(), productId, variantId, qty, notes,
+                                               permitirFila, paymentMethod);
             if (created.Error is not null)
             {
                 falha = created.Error switch
                 {
-                    "not_found" => NotFound(new { created.Message }),
-                    "conflict"  => Conflict(new { created.Message }),
-                    _           => BadRequest(new { created.Message }),
+                    "not_found"   => NotFound(new { created.Message }),
+                    "conflict"    => Conflict(new { created.Message }),
+                    "sem_estoque" => Conflict(new { created.Message }),
+                    _             => BadRequest(new { created.Message }),
                 };
                 return; // sem Commit: rollback no Dispose devolve o estoque baixado
             }
@@ -181,10 +193,15 @@ public class ReservationController : ControllerBase
 
             await using var tx = await _db.Database.BeginTransactionAsync();
 
+            var paymentMethod = NormalizarPaymentMethod(req.PaymentMethod);
             foreach (var item in req.Items)
             {
+                // permitirFila sempre true aqui: deixa o item virar "fila" internamente
+                // (se o produto aceitar) pra decidir DEPOIS se aceita ou recusa o carrinho
+                // inteiro com base em AllowFilaFallback — ver bloco virouFila abaixo.
                 var created = await CriarItemAsync(userId, groupId, item.ProductId, item.VariantId,
-                                                   item.Quantity < 1 ? 1 : item.Quantity, null);
+                                                   item.Quantity < 1 ? 1 : item.Quantity, null,
+                                                   permitirFila: true, paymentMethod: paymentMethod);
                 if (created.Error is not null)
                 {
                     falha = BadRequest(new { created.Message });
@@ -282,7 +299,8 @@ public class ReservationController : ControllerBase
     /// Fila: só se o produto aceita fila (IsPreVenda) e o cliente ainda não está nela.
     /// </summary>
     private async Task<(ProductReservation? Reservation, string? Error, string? Message)> CriarItemAsync(
-        Guid userId, Guid groupId, Guid productId, Guid? variantId, int qty, string? notes)
+        Guid userId, Guid groupId, Guid productId, Guid? variantId, int qty, string? notes,
+        bool permitirFila = true, string? paymentMethod = null)
     {
         var product = await _db.Products
             .Include(p => p.Variants)
@@ -323,11 +341,12 @@ public class ReservationController : ControllerBase
                 UserId = userId, ProductId = productId, VariantId = variant?.Id,
                 Quantity = qty, Notes = notes,
                 Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
+                PaymentMethod = paymentMethod,
             }, null, null);
         }
 
-        // ── Sem estoque: vira FILA se o produto aceita (flag "ainda não chegou") ──
-        if (!product.IsPreVenda)
+        // ── Sem estoque: vira FILA só se quem chamou permite E o produto aceita ──
+        if (!permitirFila || !product.IsPreVenda)
             return (null, "bad_request", $"\"{product.Name}\" está sem estoque no momento.");
 
         var jaNaFila = await _db.ProductReservations.AnyAsync(r =>
@@ -358,7 +377,10 @@ public class ReservationController : ControllerBase
                 .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity + r.Quantity));
     }
 
-    // DELETE /api/reservations/{id} — cancela pré-venda (estoque volta) ou sai da fila
+    // DELETE /api/reservations/{id} — cancela pré-venda (estoque volta) ou sai da fila.
+    // Transação + claim atômico de status: sem isso, duas chamadas concorrentes (ex: cliente
+    // clica cancelar duas vezes, ou cliente cancela no mesmo instante que o admin homologa)
+    // podiam ambas devolver o estoque, duplicando-o (era o bug A2 da auditoria).
     [HttpDelete("{id:guid}")]
     [Authorize]
     public async Task<IActionResult> Cancel(Guid id)
@@ -371,13 +393,47 @@ public class ReservationController : ControllerBase
         if (res.Status is not ("active" or "waiting"))
             return BadRequest(new { Message = "Esta reserva já foi encerrada." });
 
-        var devolveuEstoque = res.Status == "active" && res.Kind == "pre_venda";
-        if (devolveuEstoque)
-            await DevolverEstoqueAsync(res);
+        // M4: pré-venda já paga (ExpiresAt nulo = Pix confirmado) só pode ser cancelada
+        // pelo admin — o pagamento não é estornado automaticamente, precisa de acompanhamento.
+        var jaPaga = res.Status == "active" && res.Kind == "pre_venda" && res.ExpiresAt is null;
+        if (jaPaga && !User.IsInRole("Admin"))
+            return BadRequest(new { Message = "Esta pré-venda já foi paga — fale com a loja pra cancelar e combinar o estorno." });
 
-        res.Status      = "cancelled";
-        res.CancelledAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        var statusOriginal  = res.Status;
+        var devolveuEstoque = false;
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        IActionResult? falha = null;
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            var claimed = await _db.ProductReservations
+                .Where(r => r.Id == id && r.Status == statusOriginal)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.Status, "cancelled")
+                    .SetProperty(r => r.CancelledAt, DateTime.UtcNow));
+            if (claimed == 0)
+            {
+                falha = BadRequest(new { Message = "Esta reserva já foi encerrada." });
+                return;
+            }
+
+            if (statusOriginal == "active" && res.Kind == "pre_venda")
+            {
+                await DevolverEstoqueAsync(res);
+                devolveuEstoque = true;
+            }
+
+            await tx.CommitAsync();
+        });
+
+        if (falha is not null) return falha;
+
+        if (jaPaga)
+            await _audit.LogAsync("CancelouPreVendaPaga", "ProductReservation", res.Id.ToString(),
+                details: $"{{\"produtoId\":\"{res.ProductId}\",\"valorPago\":true,\"observacao\":\"estorno manual pendente\"}}",
+                httpContext: HttpContext);
 
         // Sobrou estoque? Puxa o próximo da fila.
         if (devolveuEstoque)
@@ -386,7 +442,7 @@ public class ReservationController : ControllerBase
             await AvisarEstoqueMudouAsync();
         }
 
-        return NoContent();
+        return Ok(new { jaPaga });
     }
 
     private async Task ProcessarFilaSeguroAsync(Guid productId)
@@ -445,10 +501,14 @@ public class ReservationController : ControllerBase
     // PUT /api/reservations/{id}/status — admin atualiza status
     // fulfilled = retirado (estoque JÁ foi baixado na pré-venda — não baixa de novo)
     // cancelled = devolve o estoque se era pré-venda vigente
+    // Transação + claim atômico (mesmo motivo do Cancel — ver comentário lá).
     [HttpPut("{id:guid}/status")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateReservationStatusRequest req)
     {
+        if (req.Status is not ("fulfilled" or "cancelled"))
+            return BadRequest(new { Message = "Status inválido. Use 'fulfilled' ou 'cancelled'." });
+
         var res = await _db.ProductReservations
             .Include(r => r.Product)
             .Include(r => r.Variant)
@@ -457,29 +517,63 @@ public class ReservationController : ControllerBase
         if (res is null) return NotFound();
         if (res.Status is not ("active" or "waiting"))
             return BadRequest(new { Message = "Esta reserva já foi encerrada." });
+        if (req.Status == "fulfilled" && res.Status != "active")
+            return BadRequest(new { Message = "Só pré-vendas ativas podem ser marcadas como retiradas." });
 
-        if (req.Status == "fulfilled")
+        var jaPaga = req.Status == "cancelled" && res.Status == "active" && res.Kind == "pre_venda" && res.ExpiresAt is null;
+        var statusOriginal  = res.Status;
+        var devolveuEstoque = false;
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        IActionResult? falha = null;
+        await strategy.ExecuteAsync(async () =>
         {
-            if (res.Status != "active")
-                return BadRequest(new { Message = "Só pré-vendas ativas podem ser marcadas como retiradas." });
-            res.Status      = "fulfilled";
-            res.FulfilledAt = DateTime.UtcNow;
-        }
-        else if (req.Status == "cancelled")
-        {
-            if (res.Status == "active" && res.Kind == "pre_venda")
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            int claimed;
+            if (req.Status == "fulfilled")
+            {
+                claimed = await _db.ProductReservations
+                    .Where(r => r.Id == id && r.Status == "active")
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(r => r.Status, "fulfilled")
+                        .SetProperty(r => r.FulfilledAt, DateTime.UtcNow));
+            }
+            else
+            {
+                claimed = await _db.ProductReservations
+                    .Where(r => r.Id == id && r.Status == statusOriginal)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(r => r.Status, "cancelled")
+                        .SetProperty(r => r.CancelledAt, DateTime.UtcNow));
+            }
+            if (claimed == 0)
+            {
+                falha = BadRequest(new { Message = "Esta reserva já foi encerrada." });
+                return;
+            }
+
+            if (req.Status == "cancelled" && statusOriginal == "active" && res.Kind == "pre_venda")
+            {
                 await DevolverEstoqueAsync(res);
-            res.Status      = "cancelled";
-            res.CancelledAt = DateTime.UtcNow;
-        }
-        else
-        {
-            return BadRequest(new { Message = "Status inválido. Use 'fulfilled' ou 'cancelled'." });
-        }
+                devolveuEstoque = true;
+            }
 
-        await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+        });
 
-        if (req.Status == "cancelled" && res.Kind == "pre_venda")
+        if (falha is not null) return falha;
+
+        res.Status = req.Status;
+        if (req.Status == "fulfilled") res.FulfilledAt = DateTime.UtcNow;
+        else res.CancelledAt = DateTime.UtcNow;
+
+        if (jaPaga)
+            await _audit.LogAsync("CancelouPreVendaPaga", "ProductReservation", res.Id.ToString(),
+                details: $"{{\"produtoId\":\"{res.ProductId}\",\"valorPago\":true,\"observacao\":\"estorno manual pendente\"}}",
+                httpContext: HttpContext);
+
+        if (devolveuEstoque)
         {
             await ProcessarFilaSeguroAsync(res.ProductId);
             await AvisarEstoqueMudouAsync();
@@ -495,6 +589,11 @@ public class ReservationController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Homologar(Guid id, [FromBody] HomologarRequest req)
     {
+        if (req.Mode is not ("pdv" or "comanda"))
+            return BadRequest(new { Message = "Mode inválido. Use 'pdv' ou 'comanda'." });
+        if (req.Mode == "comanda" && !req.ComandaId.HasValue)
+            return BadRequest(new { Message = "ComandaId é obrigatório no modo comanda." });
+
         var res = await _db.ProductReservations
             .Include(r => r.User)
             .Include(r => r.Product)
@@ -510,45 +609,63 @@ public class ReservationController : ControllerBase
                      ?? User.FindFirst("name")?.Value
                      ?? "Admin";
 
-        if (req.Mode == "pdv")
+        // Claim atômico + registro da venda/comanda na MESMA transação (mesmo motivo do
+        // Cancel/UpdateStatus — era o M9 da auditoria: duas homologações concorrentes, ou
+        // uma homologação correndo com um cancelamento, podiam lançar a venda duas vezes
+        // ou lançar em cima de uma pré-venda já cancelada).
+        var strategy = _db.Database.CreateExecutionStrategy();
+        IActionResult? falha = null;
+        await strategy.ExecuteAsync(async () =>
         {
-            var vendaReq = new VendaAvulsaRequest
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            var claimed = await _db.ProductReservations
+                .Where(r => r.Id == id && r.Status == "active" && r.Kind == "pre_venda")
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.Status, "fulfilled")
+                    .SetProperty(r => r.FulfilledAt, DateTime.UtcNow));
+            if (claimed == 0)
             {
-                ClientName         = res.User?.Name,
-                UserId             = res.UserId,
-                PaymentMethod      = req.PaymentMethod ?? "Dinheiro",
-                SkipStockDecrement = true, // estoque já baixado na pré-venda
-                Items              = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
-            };
-            try { await _vendaService.RegisterAsync(vendaReq, adminId, adminName); }
-            catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
-        }
-        else if (req.Mode == "comanda")
-        {
-            if (!req.ComandaId.HasValue)
-                return BadRequest(new { Message = "ComandaId é obrigatório no modo comanda." });
+                falha = BadRequest(new { Message = "Esta pré-venda já foi processada." });
+                return;
+            }
 
             try
             {
-                await _comandaService.AdminAddItemAsync(req.ComandaId.Value, adminId,
-                    new AddItemToComandaRequest
+                if (req.Mode == "pdv")
+                {
+                    var vendaReq = new VendaAvulsaRequest
                     {
-                        ProductId          = res.ProductId,
-                        VariantId          = res.VariantId,
-                        Quantity           = res.Quantity,
+                        ClientName         = res.User?.Name,
+                        UserId             = res.UserId,
+                        PaymentMethod      = req.PaymentMethod ?? "Dinheiro",
                         SkipStockDecrement = true, // estoque já baixado na pré-venda
-                    });
+                        Items              = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
+                    };
+                    await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
+                }
+                else
+                {
+                    await _comandaService.AdminAddItemAsync(req.ComandaId!.Value, adminId,
+                        new AddItemToComandaRequest
+                        {
+                            ProductId          = res.ProductId,
+                            VariantId          = res.VariantId,
+                            Quantity           = res.Quantity,
+                            SkipStockDecrement = true, // estoque já baixado na pré-venda
+                        });
+                }
             }
-            catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
-        }
-        else
-        {
-            return BadRequest(new { Message = "Mode inválido. Use 'pdv' ou 'comanda'." });
-        }
+            catch (InvalidOperationException ex)
+            {
+                falha = BadRequest(new { Message = ex.Message });
+                return; // sem Commit: rollback desfaz o claim de status também
+            }
 
-        res.Status      = "fulfilled";
-        res.FulfilledAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+        });
+
+        if (falha is not null) return falha;
 
         return Ok(new { message = "Pré-venda homologada com sucesso.", reservationId = id, mode = req.Mode });
     }
@@ -577,13 +694,27 @@ public class ReservationController : ControllerBase
         // Dono gera o próprio Pix; admin gera pra enviar o código pelo WhatsApp/balcão.
         if (items[0].UserId != userId && !User.IsInRole("Admin")) return Forbid();
 
-        var preVendas = items.Where(r => r.Kind == "pre_venda").ToList();
+        var preVendas = items.Where(r => r.Kind == "pre_venda" && r.Status == "active").ToList();
         if (preVendas.Count == 0)
             return BadRequest(new { Message = "Itens de fila não cobram — o Pix é gerado quando o produto chegar." });
-        if (preVendas.Any(r => r.Status != "active"))
+        if (items.Any(r => r.Kind == "pre_venda" && r.Status != "active"))
             return BadRequest(new { Message = "Só é possível gerar Pix para pré-vendas ativas." });
 
-        var valorEmCentavos = preVendas.Sum(r => (r.Variant?.PriceInCents ?? r.Product.PriceInCents) * r.Quantity);
+        // Reaproveita cobrança ATIVA já existente pra este grupo em vez de gerar uma nova
+        // toda vez que o cliente reabre a tela do Pix (evita cobranças órfãs no Inter).
+        var pixAtivo = await _db.PixCobrancas
+            .Where(p => p.ReservationGroupId == groupId && p.Status == "ATIVA")
+            .OrderByDescending(p => p.CriadoEm)
+            .FirstOrDefaultAsync();
+        if (pixAtivo is not null)
+            return Ok(new { pixAtivo.TxId, pixAtivo.Status, pixAtivo.PixCopiaCola, pixAtivo.ImagemQrCode, pixAtivo.ExpiraEm, pixAtivo.ValorEmReais });
+
+        var valorEmCentavos = preVendas.Sum(r =>
+        {
+            var precoUnit = r.Variant?.PriceInCents
+                ?? (r.Product.IsOnPromo ? r.Product.DiscountPriceInCents!.Value : r.Product.PriceInCents);
+            return precoUnit * r.Quantity;
+        });
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
         if (cfg is null)
@@ -599,16 +730,19 @@ public class ReservationController : ControllerBase
 
         var pix = new PixCobranca
         {
-            Origem             = PixCobrancaOrigem.Reserva,
-            ReservationGroupId = groupId,
-            TxId               = result.TxId!,
-            ValorEmCentavos    = valorEmCentavos,
-            Status             = result.Status ?? "ATIVA",
-            PixCopiaCola       = result.PixCopiaCola,
-            ImagemQrCode       = result.ImagemQrCode,
-            NomeDevedor        = user?.Name,
-            CriadoPorAdminId   = userId, // gerada pelo próprio cliente
-            ExpiraEm           = result.ExpiraEm,
+            Origem                 = PixCobrancaOrigem.Reserva,
+            ReservationGroupId     = groupId,
+            // Trava exatamente quais itens essa cobrança cobre — se o carrinho mudar depois
+            // (item cancelado, novo item adicionado ao grupo), a confirmação só baixa estes.
+            ReservationItemIdsJson = JsonSerializer.Serialize(preVendas.Select(r => r.Id)),
+            TxId                   = result.TxId!,
+            ValorEmCentavos        = valorEmCentavos,
+            Status                 = result.Status ?? "ATIVA",
+            PixCopiaCola           = result.PixCopiaCola,
+            ImagemQrCode           = result.ImagemQrCode,
+            NomeDevedor            = user?.Name,
+            CriadoPorAdminId       = userId, // gerada pelo próprio cliente
+            ExpiraEm               = result.ExpiraEm,
         };
         _db.PixCobrancas.Add(pix);
         await _db.SaveChangesAsync();
@@ -699,6 +833,9 @@ public class CreateReservationRequest
     public Guid? VariantId { get; init; }
     public int   Quantity  { get; init; } = 1;
     public string? Notes   { get; init; }
+
+    /// <summary>Intenção de pagamento declarada pelo cliente: "pix" ou "retirada".</summary>
+    public string? PaymentMethod { get; init; }
 }
 
 public class CreateReservationCartItem
@@ -718,6 +855,9 @@ public class CreateReservationCartRequest
     /// true: conversão explícita pra fila (o cliente já consentiu na tela).
     /// </summary>
     public bool AllowFilaFallback { get; init; } = false;
+
+    /// <summary>Intenção de pagamento declarada pelo cliente para o carrinho inteiro: "pix" ou "retirada".</summary>
+    public string? PaymentMethod { get; init; }
 }
 
 public class AdminCreateReservationRequest

@@ -362,8 +362,8 @@ builder.Services.AddHostedService<FiscalRetryBackgroundService>();
 builder.Services.AddHostedService<SefazDistBackgroundService>();
 
 // Pix — sem webhook do Inter: o robô reconcilia cobranças ATIVA a cada 5 min e
-// dá a baixa por origem (mesmo caminho dos controllers); a expiração de pré-venda
-// também faz uma verificação dupla antes de devolver estoque.
+// dá a baixa por origem (mesmo caminho dos controllers, com claim atômico no
+// banco pra reconciliação concorrente não aplicar efeito duas vezes).
 builder.Services.AddScoped<IPixReconciliationService, PixReconciliationService>();
 builder.Services.AddHostedService<PixReconciliationBackgroundService>();
 
@@ -589,6 +589,11 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'pre_venda';
                 ALTER TABLE product_reservations ALTER COLUMN expires_at DROP NOT NULL;
                 CREATE INDEX IF NOT EXISTS ix_product_reservations_kind ON product_reservations (kind);
+
+                -- Intenção de pagamento declarada na reserva online (pix ou retirada)
+                ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) NULL;
+                -- Snapshot JSON dos itens cobrados numa cobrança Pix de reserva (baixa vinculada)
+                ALTER TABLE pix_cobrancas ADD COLUMN IF NOT EXISTS reservation_item_ids TEXT NULL;
 
                 -- Registro de migrações únicas de dados (protege updates não-idempotentes)
                 CREATE TABLE IF NOT EXISTS app_migrations (

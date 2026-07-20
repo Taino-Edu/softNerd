@@ -614,6 +614,8 @@ export interface MyReservation {
   posicaoFila?: number | null
   /** Data de rua da pré-venda (retirada a partir dela), se houver. */
   preVendaReleaseDate?: string | null
+  /** Intenção de pagamento declarada na criação: "pix" | "retirada" | null (não declarado). */
+  paymentMethod?: string | null
 }
 
 export interface ReservationPixStatus {
@@ -1139,16 +1141,17 @@ export interface AdminReservation {
   notes?: string; reservedAt: string; expiresAt: string | null
   fulfilledAt?: string; cancelledAt?: string
   posicaoFila?: number | null; preVendaReleaseDate?: string | null
+  paymentMethod?: string | null
 }
 
 export const reservationApi = {
   list:      (params?: { status?: string; kind?: string; userId?: string; productId?: string; page?: number; pageSize?: number }) =>
                api.get<{ items: AdminReservation[]; total: number; totalPages: number }>('/api/reservations', { params }),
   mine:      ()                                    => api.get<MyReservation[]>('/api/reservations/mine'),
-  create:    (body: { productId: string; variantId?: string; quantity?: number; notes?: string }) =>
+  create:    (body: { productId: string; variantId?: string; quantity?: number; notes?: string; paymentMethod?: string }) =>
                api.post('/api/reservations', body),
-  createCart: (items: { productId: string; variantId?: string; quantity: number }[], allowFilaFallback = false) =>
-               api.post<{ groupId: string; items: MyReservation[] }>('/api/reservations/cart', { items, allowFilaFallback }),
+  createCart: (items: { productId: string; variantId?: string; quantity: number }[], allowFilaFallback = false, paymentMethod?: string) =>
+               api.post<{ groupId: string; items: MyReservation[] }>('/api/reservations/cart', { items, allowFilaFallback, paymentMethod }),
   adminCreate: (body: { userId: string; productId: string; variantId?: string; quantity?: number; notes?: string }) =>
                api.post<AdminReservation>('/api/reservations/admin-create', body),
   gerarPix:  (groupId: string)                     =>

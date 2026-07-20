@@ -65,6 +65,17 @@ public class PixCobranca
     [Column("reservation_group_id")]
     public Guid? ReservationGroupId { get; set; }
 
+    /// <summary>
+    /// Snapshot (JSON array de Guids) dos itens de pré-venda cobrados nesta cobrança,
+    /// gravado no momento da geração (Origem = Reserva). A baixa só quita itens que
+    /// estão neste snapshot E continuam ativos: item que entra no grupo depois (fila
+    /// legada convertida) não sai "pago de graça", e item cancelado depois da geração
+    /// é sinalizado no lançamento financeiro em vez de baixado.
+    /// Null em cobranças antigas → a baixa usa o comportamento legado (grupo inteiro).
+    /// </summary>
+    [Column("reservation_item_ids", TypeName = "text")]
+    public string? ReservationItemIdsJson { get; set; }
+
     /// <summary>Identificador único da transação Pix (gerado por nós, enviado ao Inter).</summary>
     [Required, MaxLength(35)]
     [Column("tx_id")]

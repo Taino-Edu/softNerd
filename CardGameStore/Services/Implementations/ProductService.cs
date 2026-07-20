@@ -130,42 +130,94 @@ public class ProductService : IProductService
     }
 
     /// <summary>
-    /// Chegada de estoque: converte a fila (kind=fila, status=waiting) em pré-venda
-    /// na ordem de entrada, baixando o estoque de cada convertido, até onde o estoque
-    /// cobrir. Cada convertido vira status=active (ExpiresAt marca só "ainda não paga",
-    /// não expira sozinha) e é notificado (in-app + push + email). Quem não couber no
-    /// lote segue na fila.
+    /// Chegada de estoque: converte a fila (kind=fila, status=waiting — LEGADA, o
+    /// site não cria mais fila) em pré-venda na ordem de entrada, baixando o estoque
+    /// de cada convertido, até onde o estoque cobrir. Cada convertido vira
+    /// status=active (ExpiresAt marca só "ainda não paga") e é notificado
+    /// (in-app + push + email). Quem não couber no lote segue na fila.
+    ///
+    /// Robustez:
+    ///  • Tudo dentro de transação na execution strategy — falha no meio não deixa
+    ///    estoque baixado sem conversão (era o bug do "estoque some").
+    ///  • Reserva com VariantId baixa o estoque DA VARIANTE (ProductVariants),
+    ///    não do produto-pai.
+    ///  • Claim condicional da reserva (UPDATE ... WHERE status='waiting') impede
+    ///    dupla conversão quando duas execuções rodam ao mesmo tempo (restock
+    ///    manual + puxada de fila pós-cancelamento): quem perde o claim estorna
+    ///    o decremento dentro da mesma transação.
     /// </summary>
     public async Task ProcessarChegadaFilaAsync(Guid productId)
     {
         var p = await _db.Products.FindAsync(productId);
         if (p is null) return;
 
+        // Leitura da fila fora da transação — o claim condicional resolve a corrida.
         var fila = await _db.ProductReservations
-            .Include(r => r.User)
             .Where(r => r.ProductId == productId && r.Kind == "fila" && r.Status == "waiting")
             .OrderBy(r => r.ReservedAt)
+            .Select(r => new { r.Id, r.VariantId, r.Quantity })
             .ToListAsync();
         if (fila.Count == 0) return;
 
-        var convertidos = new List<ProductReservation>();
+        var convertidosIds = new List<Guid>();
 
-        foreach (var r in fila)
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            // Decremento atômico: só converte se ainda há estoque para esta reserva.
-            var updated = await _db.Products
-                .Where(x => x.Id == productId && x.StockQuantity >= r.Quantity)
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.StockQuantity, x => x.StockQuantity - r.Quantity));
-            if (updated == 0) break; // lote acabou — resto da fila espera o próximo
+            await using var tx = await _db.Database.BeginTransactionAsync();
 
-            r.Kind      = "pre_venda";
-            r.Status    = "active";
-            r.ExpiresAt = DateTime.UtcNow;
-            convertidos.Add(r);
-        }
+            foreach (var item in fila)
+            {
+                // 1) Decremento atômico COM guarda de saldo — na variante quando houver.
+                int baixado;
+                if (item.VariantId.HasValue)
+                    baixado = await _db.ProductVariants
+                        .Where(v => v.Id == item.VariantId.Value && v.StockQuantity >= item.Quantity)
+                        .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - item.Quantity));
+                else
+                    baixado = await _db.Products
+                        .Where(x => x.Id == productId && x.StockQuantity >= item.Quantity)
+                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.StockQuantity, x => x.StockQuantity - item.Quantity));
 
-        if (convertidos.Count == 0) return;
-        await _db.SaveChangesAsync();
+                if (baixado == 0) break; // lote acabou — resto da fila espera o próximo reestoque
+
+                // 2) Claim atômico da reserva: só converte se AINDA está waiting.
+                var agora = DateTime.UtcNow;
+                var claimed = await _db.ProductReservations
+                    .Where(r => r.Id == item.Id && r.Kind == "fila" && r.Status == "waiting")
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(r => r.Kind, "pre_venda")
+                        .SetProperty(r => r.Status, "active")
+                        .SetProperty(r => r.ExpiresAt, agora));
+
+                if (claimed == 0)
+                {
+                    // Outra execução converteu/cancelou esta linha primeiro — estorna
+                    // o decremento (mesma transação) e segue pra próxima da fila.
+                    if (item.VariantId.HasValue)
+                        await _db.ProductVariants
+                            .Where(v => v.Id == item.VariantId.Value)
+                            .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + item.Quantity));
+                    else
+                        await _db.Products
+                            .Where(x => x.Id == productId)
+                            .ExecuteUpdateAsync(s => s.SetProperty(x => x.StockQuantity, x => x.StockQuantity + item.Quantity));
+                    continue;
+                }
+
+                convertidosIds.Add(item.Id);
+            }
+
+            await tx.CommitAsync();
+        });
+
+        if (convertidosIds.Count == 0) return;
+
+        // ── Notificações fora da transação (melhor-esforço) ─────────────────
+        var convertidos = await _db.ProductReservations
+            .Include(r => r.User)
+            .Where(r => convertidosIds.Contains(r.Id))
+            .ToListAsync();
 
         var titulo = "Chegou! 🎉";
         var corpo  = $"{p.Name} chegou e sua unidade já está separada! Pague no Pix ou na retirada.";
