@@ -381,6 +381,9 @@ export default function ReservasPage() {
   const [homModal,    setHomModal]    = useState<AdminReservation | null>(null)
   const [homMode,     setHomMode]     = useState<'pdv' | 'comanda'>('pdv')
   const [homPayment,  setHomPayment]  = useState('Dinheiro')
+  const [homSplit,    setHomSplit]    = useState(false)
+  const [homSecondPayment, setHomSecondPayment] = useState('')
+  const [homSecondAmount,  setHomSecondAmount]  = useState('')
   const [comandas,    setComandas]    = useState<OpenComanda[]>([])
   const [homComanda,  setHomComanda]  = useState<string>('')
   const [submitting,  setSubmitting]  = useState(false)
@@ -534,6 +537,9 @@ export default function ReservasPage() {
     setHomModal(r)
     setHomMode('pdv')
     setHomPayment('Dinheiro')
+    setHomSplit(false)
+    setHomSecondPayment('')
+    setHomSecondAmount('')
     setHomComanda('')
     await loadComandas()
   }
@@ -543,11 +549,19 @@ export default function ReservasPage() {
     if (homMode === 'comanda' && !homComanda) {
       toast.error('Selecione uma comanda'); return
     }
+    const secondAmountInCents = homSplit ? Math.round(parseFloat(homSecondAmount.replace(',', '.') || '0') * 100) : 0
+    if (homMode === 'pdv' && homSplit) {
+      if (!homSecondPayment) { toast.error('Selecione a segunda forma de pagamento'); return }
+      if (homSecondPayment === homPayment) { toast.error('A segunda forma não pode ser igual à primeira'); return }
+      if (!secondAmountInCents || secondAmountInCents <= 0) { toast.error('Informe o valor pago na segunda forma'); return }
+    }
     setSubmitting(true)
     try {
       await api.post(`/api/reservations/${homModal.id}/homologar`, {
         mode:          homMode,
         paymentMethod: homMode === 'pdv' ? homPayment : undefined,
+        secondPaymentMethod:        homMode === 'pdv' && homSplit ? homSecondPayment : undefined,
+        secondPaymentAmountInCents: homMode === 'pdv' && homSplit ? secondAmountInCents : undefined,
         comandaId:     homMode === 'comanda' ? homComanda : undefined,
       })
       toast.success('Pré-venda homologada!')
@@ -932,6 +946,43 @@ export default function ReservasPage() {
                     </button>
                   ))}
                 </div>
+
+                <button onClick={() => setHomSplit(v => !v)}
+                  className="text-xs text-brand-300 hover:text-brand-200 font-semibold mt-3 flex items-center gap-1">
+                  {homSplit ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  Dividir pagamento em duas formas
+                </button>
+
+                {homSplit && (
+                  <div className="mt-3 p-3 rounded-xl bg-surface-700 border border-surface-600 space-y-2">
+                    <label className="text-xs text-gray-400 block font-semibold">Segunda forma de pagamento</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {PAYMENT_METHODS.filter(m => m !== homPayment).map(m => (
+                        <button key={m} onClick={() => setHomSecondPayment(m)}
+                          className={clsx(
+                            'py-2 rounded-lg text-xs font-semibold border transition-colors',
+                            homSecondPayment === m
+                              ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
+                              : 'bg-surface-800 text-gray-400 border-surface-600'
+                          )}>
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="text-xs text-gray-400 block font-semibold mt-1">Valor pago nessa segunda forma (R$)</label>
+                    <input
+                      type="text" inputMode="decimal" value={homSecondAmount}
+                      onChange={e => setHomSecondAmount(e.target.value)}
+                      placeholder="0,00"
+                      className="input w-full"
+                    />
+                    {homModal?.subtotalEmReais != null && (
+                      <p className="text-[11px] text-gray-500">
+                        Total do pedido: R$ {homModal.subtotalEmReais.toFixed(2).replace('.', ',')} · resto fica em {homPayment || '—'}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

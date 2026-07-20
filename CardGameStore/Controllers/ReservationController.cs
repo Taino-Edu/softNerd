@@ -735,11 +735,16 @@ public class ReservationController : ControllerBase
                 {
                     var vendaReq = new VendaAvulsaRequest
                     {
-                        ClientName         = res.User?.Name,
-                        UserId             = res.UserId,
-                        PaymentMethod      = req.PaymentMethod ?? "Dinheiro",
-                        SkipStockDecrement = true, // estoque já baixado na pré-venda
-                        Items              = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
+                        ClientName                 = res.User?.Name,
+                        UserId                     = res.UserId,
+                        PaymentMethod              = req.PaymentMethod ?? "Dinheiro",
+                        SecondPaymentMethod        = req.SecondPaymentMethod,
+                        SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
+                        SkipStockDecrement         = true, // estoque já baixado na pré-venda
+                        // Marca a origem pra o Financeiro separar "Pré-venda" de venda de balcão comum.
+                        Origem                     = "Reserva",
+                        ReservationId              = res.Id,
+                        Items                      = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
                     };
                     await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
                 }
@@ -1001,6 +1006,12 @@ public class HomologarRequest
 
     /// <summary>Forma de pagamento para o modo PDV. Padrão: Dinheiro.</summary>
     public string? PaymentMethod { get; init; }
+
+    /// <summary>Segundo método de pagamento (modo PDV), quando o cliente divide o pagamento.</summary>
+    public string? SecondPaymentMethod { get; init; }
+
+    /// <summary>Valor em centavos cobrado no segundo método (modo PDV).</summary>
+    public int? SecondPaymentAmountInCents { get; init; }
 
     /// <summary>ID da comanda aberta (obrigatório no modo comanda).</summary>
     public Guid? ComandaId { get; init; }

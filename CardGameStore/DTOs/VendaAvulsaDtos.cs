@@ -41,6 +41,13 @@ public class VendaAvulsaRequest
     /// </summary>
     public bool SkipStockDecrement { get; set; } = false;
 
+    /// <summary>"Reserva" quando vem da homologação de uma pré-venda. Uso interno do
+    /// backend; o PDV nunca envia — fica null pra venda de balcão comum.</summary>
+    public string? Origem { get; set; }
+
+    /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva".</summary>
+    public Guid? ReservationId { get; set; }
+
     public bool IsPaymentMethodValid() =>
         Models.MongoDB.PaymentMethod.IsValid(PaymentMethod) &&
         (SecondPaymentMethod == null || Models.MongoDB.PaymentMethod.IsValid(SecondPaymentMethod));
@@ -72,6 +79,7 @@ public class VendaAvulsaDto
     public int                 DiscountPercent            { get; set; }
     public decimal             DiscountInReais            { get; set; }
     public List<VendaAvulsaItemDto> Items                 { get; set; } = new();
+    public string?              Origem                    { get; set; }
 
     /// <summary>Preenchidos só quando o registro pediu emissão de NFC-e (EmitirNotaFiscal=true) —
     /// permite o front abrir o cupom automaticamente quando autoriza, ou avisar o motivo se não.</summary>

@@ -200,6 +200,8 @@ public class VendaAvulsaService : IVendaAvulsaService
             SoldAt                     = DateTime.UtcNow,
             SoldByAdminId              = adminId,
             SoldByAdminName            = adminName,
+            Origem                     = request.Origem,
+            ReservationId              = request.ReservationId,
         };
 
         await _collection.InsertOneAsync(venda);
@@ -556,6 +558,7 @@ public class VendaAvulsaService : IVendaAvulsaService
         DiscountInReais            = v.DiscountInReais,
         SoldAt                     = v.SoldAt,
         SoldByAdminName            = v.SoldByAdminName,
+        Origem                     = v.Origem,
         Items                      = v.Items.Select(i => new VendaAvulsaItemDto
         {
             ProductName      = i.ProductName,

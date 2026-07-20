@@ -43,6 +43,13 @@ public class VendaAvulsa
     public int DiscountPercent { get; set; } = 0;
     public int DiscountInCents { get; set; } = 0;
 
+    /// <summary>"Reserva" quando a venda vem da homologação de uma pré-venda (modo PDV);
+    /// null/vazio = venda de balcão comum. Usado pro Financeiro separar "Pré-venda" de "PDV".</summary>
+    public string? Origem { get; set; }
+
+    /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva".</summary>
+    public Guid? ReservationId { get; set; }
+
     [BsonIgnore]
     public decimal TotalInReais => TotalInCents / 100m;
 

@@ -938,15 +938,17 @@ export interface TopProductFinDto {
   qtd: number
   qtdComandas: number
   qtdAvulsa: number
+  qtdPreVenda: number
   receita: number
   receitaComandas: number
   receitaAvulsa: number
+  receitaPreVenda: number
   custo: number
   margem: number
 }
 
 export interface TransacaoFinDto {
-  origem: string       // 'Comanda' | 'VendaAvulsa'
+  origem: string       // 'Comanda' | 'PDV' | 'Pré-venda'
   cliente: string | null
   valor: number
   data: string
@@ -973,6 +975,7 @@ export interface FinanceiroDto {
   receita: number
   receitaComandas: number
   receitaAvulsa: number
+  receitaPreVenda: number
   custo: number
   margem: number
   margemPercent: number
@@ -1165,7 +1168,7 @@ export const reservationApi = {
                api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
   getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
-  homologar: (id: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; comandaId?: string }) =>
+  homologar: (id: string, body: { mode: 'pdv' | 'comanda'; paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number; comandaId?: string }) =>
                api.post(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),
