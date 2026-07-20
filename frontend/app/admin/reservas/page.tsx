@@ -8,7 +8,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
-  ShoppingBag, LayoutList, RefreshCw, Loader2,
+  LayoutList, RefreshCw, Loader2,
   AlertTriangle, TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
   QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil,
 } from 'lucide-react'
@@ -38,22 +38,6 @@ const statusLabel: Record<string, string> = {
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
-function StatCard({ icon, label, value, tint }: {
-  icon: React.ReactNode; label: string; value: number | string; tint: string
-}) {
-  return (
-    <div className="card flex items-center gap-3 py-3.5">
-      <div className={clsx('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', tint)}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xl font-black text-white leading-tight">{value}</p>
-        <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide truncate">{label}</p>
-      </div>
-    </div>
-  )
 }
 
 type Lanes = { aPagar: AdminReservation[]; pago: AdminReservation[]; retirado: AdminReservation[]; cancelado: AdminReservation[] }
@@ -237,7 +221,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 <p className="text-[11px] text-gray-400">{user.whatsApp ?? user.email ?? user.cpf ?? ''}</p>
               </div>
               <button onClick={() => { setUser(null); setUserSearch('') }}
-                className="p-1 rounded hover:bg-surface-600 text-gray-400 shrink-0">
+                className="p-1 rounded hover:bg-surface-700 text-gray-400 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -252,7 +236,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
                   <p className="text-xs text-gray-500 text-center py-3">Nenhum cliente encontrado</p>
                 ) : users.map(u => (
                   <button key={u.id} onClick={() => setUser(u)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-600 transition-colors border-b border-surface-700 last:border-0">
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-700 transition-colors border-b border-surface-700 last:border-0">
                     <UserIcon className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                     <span className="text-sm text-white truncate flex-1">{u.name}</span>
                     <span className="text-[11px] text-gray-500 shrink-0">{u.whatsApp ?? ''}</span>
@@ -302,7 +286,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 </p>
               </div>
               <button onClick={() => { setProduct(null); setProdSearch(''); setQty(1) }}
-                className="p-1 rounded hover:bg-surface-600 text-gray-400 shrink-0">
+                className="p-1 rounded hover:bg-surface-700 text-gray-400 shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -315,7 +299,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
                   <p className="text-xs text-gray-500 text-center py-3">Nenhum produto encontrado</p>
                 ) : produtosFiltrados.map(p => (
                   <button key={p.id} onClick={() => { setProduct(p); setQty(1) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-600 transition-colors border-b border-surface-700 last:border-0">
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-700 transition-colors border-b border-surface-700 last:border-0">
                     <Package className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                     <span className="text-sm text-white truncate flex-1">{p.name}</span>
                     <span className={clsx('text-[11px] shrink-0', p.stockQuantity > 0 ? 'text-emerald-400' : 'text-purple-300')}>
@@ -385,9 +369,8 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
 export default function ReservasPage() {
   const router = useRouter()
-  const [tab,         setTab]         = useState<'pedidos' | 'fila'>('pedidos')
 
-  // ── aba Pedidos (kanban Vendas × Pré-vendas) ──
+  // ── Pedidos (kanban Vendas × Pré-vendas) ──
   const [items,       setItems]       = useState<AdminReservation[]>([])
   const [loading,     setLoading]     = useState(true)
   const [showCancelVendas, setShowCancelVendas] = useState(false)
@@ -411,7 +394,8 @@ export default function ReservasPage() {
   const [editQtyValue,   setEditQtyValue]   = useState(1)
   const [editQtySaving,  setEditQtySaving]  = useState(false)
 
-  // ── aba Fila (item que ainda não chegou) ──
+  // ── Fila (item que ainda não chegou) — seção dobrável dentro da mesma tela ──
+  const [showFila,    setShowFila]    = useState(false)
   const [wlProducts,  setWlProducts]  = useState<Product[]>([])
   const [wlLoading,   setWlLoading]   = useState(false)
   const [wlExpanded,  setWlExpanded]  = useState<string | null>(null)
@@ -523,9 +507,16 @@ export default function ReservasPage() {
   const vendasLanes    = lanes(vendas)
   const preVendasLanes = lanes(preVendas)
 
-  const valorEmPreVenda = preVendas
-    .filter(r => r.status === 'active')
-    .reduce((sum, r) => sum + (r.subtotalEmReais ?? 0), 0)
+  // ── Análises de valor (pedido do Maikon): quanto já entrou × quanto ainda falta
+  // entrar. "A receber" junta quem ainda não pagou (Pix pendente ou combinou pagar
+  // na retirada) com quem tá na fila esperando o produto chegar pra decidir.
+  const somaSubtotal = (list: AdminReservation[]) => list.reduce((sum, r) => sum + (r.subtotalEmReais ?? 0), 0)
+  const jaPagoValor    = somaSubtotal([...vendasLanes.pago,   ...preVendasLanes.pago])
+  const aPagarValor    = somaSubtotal([...vendasLanes.aPagar, ...preVendasLanes.aPagar])
+  const filaValor      = somaSubtotal(Object.values(wlData).flat())
+  const aReceberValor  = aPagarValor + filaValor
+  const totalEmAberto  = vendasLanes.aPagar.length + vendasLanes.pago.length
+                        + preVendasLanes.aPagar.length + preVendasLanes.pago.length
 
   async function loadComandas() {
     try {
@@ -689,7 +680,7 @@ export default function ReservasPage() {
               <button onClick={() => openEditQty(r)}
                 title="Corrigir a quantidade deste pedido"
                 className="px-2 py-1 rounded-lg bg-surface-600/50 text-gray-300 border border-surface-500
-                           hover:bg-surface-600 text-[11px] font-semibold transition-colors flex items-center gap-1">
+                           hover:bg-surface-700 text-[11px] font-semibold transition-colors flex items-center gap-1">
                 <Pencil className="w-3 h-3" /> Qtd
               </button>
               <button onClick={() => handleCancel(r)}
@@ -729,39 +720,71 @@ export default function ReservasPage() {
         </button>
       </div>
 
-      {/* Faixa de stats */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        <StatCard icon={<ShoppingCart className="w-4.5 h-4.5 text-blue-400" />} tint="bg-blue-500/10"
-          label="Vendas em aberto" value={vendasLanes.aPagar.length + vendasLanes.pago.length} />
-        <StatCard icon={<Trophy className="w-4.5 h-4.5 text-amber-400" />} tint="bg-amber-500/10"
-          label="Pré-vendas em aberto" value={preVendasLanes.aPagar.length + preVendasLanes.pago.length} />
-        <StatCard icon={<Wallet className="w-4.5 h-4.5 text-emerald-400" />} tint="bg-emerald-500/10"
-          label="Valor em pré-venda" value={`R$ ${valorEmPreVenda.toFixed(2).replace('.', ',')}`} />
+      {/* Faixa de métricas — mesmo padrão da barra do Painel Geral (slim, divisória entre itens) */}
+      <div className="card py-2.5 px-3 sm:px-4 mb-5">
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:divide-x sm:divide-surface-600 gap-3 sm:gap-0">
+          {[
+            { label: 'Em aberto', value: String(totalEmAberto),                                    icon: LayoutList,   color: 'text-brand-400' },
+            { label: 'Já pago',   value: `R$ ${jaPagoValor.toFixed(2).replace('.', ',')}`,          icon: CheckCircle,  color: 'text-emerald-400' },
+            { label: 'A receber', value: `R$ ${aReceberValor.toFixed(2).replace('.', ',')}`,        icon: Wallet,       color: 'text-amber-400' },
+            { label: 'Na fila',   value: String(totalNaFila),                                       icon: Users,        color: totalNaFila > 0 ? 'text-purple-400' : 'text-gray-500' },
+          ].map((m, i) => (
+            <div key={m.label} className={clsx(
+              'flex items-center gap-2 sm:shrink-0',
+              i === 0 ? 'sm:pr-4' : 'sm:px-4',
+              'bg-surface-700 sm:bg-transparent rounded-lg sm:rounded-none p-2.5 sm:p-0'
+            )}>
+              <m.icon className={clsx('w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0', m.color)} />
+              <div className="min-w-0">
+                <span className={clsx('text-sm font-bold font-mono block', m.color)}>{m.value}</span>
+                <span className="text-xs text-gray-500 block sm:inline sm:ml-1">{m.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-surface-800 p-1 rounded-xl mb-5 w-fit">
-        <button
-          onClick={() => setTab('pedidos')}
-          className={clsx('px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2',
-            tab === 'pedidos' ? 'bg-surface-600 text-white' : 'text-gray-400 hover:text-gray-300')}>
-          <ShoppingBag className="w-3.5 h-3.5" /> Pedidos
-        </button>
-        <button
-          onClick={() => setTab('fila')}
-          title="Fila manual — pra pedido de item sem estoque combinado pelo WhatsApp"
-          className={clsx('px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2',
-            tab === 'fila' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:text-gray-300')}>
-          <Users className="w-3.5 h-3.5" /> Fila (manual)
-          {totalNaFila > 0 && (
-            <span className="text-[10px] font-black bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full">{totalNaFila}</span>
-          )}
-        </button>
-      </div>
+      {/* ── Kanban de pedidos: Vendas × Pré-vendas ── */}
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <KanbanColumn
+            title="Vendas" subtitle="produto sem tag de pré-venda"
+            icon={<ShoppingCart className="w-4 h-4 text-blue-400" />} tint="border-blue-500/20"
+            lanesData={vendasLanes} renderCard={renderCard}
+            showCancel={showCancelVendas} setShowCancel={setShowCancelVendas}
+          />
+          <KanbanColumn
+            title="Pré-vendas" subtitle="produto marcado como pré-venda"
+            icon={<Trophy className="w-4 h-4 text-amber-400" />} tint="border-amber-500/20"
+            lanesData={preVendasLanes} renderCard={renderCard}
+            showCancel={showCancelPre} setShowCancel={setShowCancelPre}
+          />
+        </div>
+      )}
 
-      {/* ── Conteúdo: Fila ── */}
-      {tab === 'fila' && (
-        wlLoading ? (
+      {/* ── Fila de espera (manual): dobrável, na mesma tela — pedido sem estoque
+           combinado pelo WhatsApp. Não é mais uma aba separada: é só mais uma
+           seção do mesmo painel de pedidos. ── */}
+      <div className="card !p-4 mt-5">
+        <button onClick={() => setShowFila(v => !v)} className="w-full flex items-center gap-2">
+          <Users className="w-4 h-4 text-purple-400 shrink-0" />
+          <div className="text-left flex-1 min-w-0">
+            <p className="font-black text-white text-sm flex items-center gap-1.5">
+              Fila de espera (manual)
+              {totalNaFila > 0 && (
+                <span className="text-[10px] font-black bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full">{totalNaFila}</span>
+              )}
+            </p>
+            <p className="text-[10px] text-gray-500">Pedido de item sem estoque combinado pelo WhatsApp</p>
+          </div>
+          {showFila ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
+        </button>
+
+      {showFila && (
+        <div className="mt-4">
+        {wlLoading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
         ) : wlProducts.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
@@ -855,30 +878,10 @@ export default function ReservasPage() {
               )
             })}
           </div>
-        )
+        )}
+        </div>
       )}
-
-      {/* ── Conteúdo: Kanban de pedidos ── */}
-      {tab === 'pedidos' && (
-        loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <KanbanColumn
-              title="Vendas" subtitle="produto sem tag de pré-venda"
-              icon={<ShoppingCart className="w-4 h-4 text-blue-400" />} tint="border-blue-500/20"
-              lanesData={vendasLanes} renderCard={renderCard}
-              showCancel={showCancelVendas} setShowCancel={setShowCancelVendas}
-            />
-            <KanbanColumn
-              title="Pré-vendas" subtitle="produto marcado como pré-venda"
-              icon={<Trophy className="w-4 h-4 text-amber-400" />} tint="border-amber-500/20"
-              lanesData={preVendasLanes} renderCard={renderCard}
-              showCancel={showCancelPre} setShowCancel={setShowCancelPre}
-            />
-          </div>
-        )
-      )}
+      </div>
 
       {/* Modal de Homologação */}
       {homModal && (
@@ -1021,7 +1024,7 @@ export default function ReservasPage() {
 
             <div className="flex items-center justify-center gap-4">
               <button onClick={() => setEditQtyValue(v => Math.max(1, v - 1))}
-                className="w-10 h-10 rounded-xl bg-surface-700 hover:bg-surface-600 text-white text-lg font-bold transition-colors">
+                className="w-10 h-10 rounded-xl bg-surface-700 hover:bg-surface-500 text-white text-lg font-bold transition-colors">
                 −
               </button>
               <input
@@ -1030,7 +1033,7 @@ export default function ReservasPage() {
                 className="w-20 text-center bg-surface-700 border border-surface-600 rounded-xl py-2 text-white text-lg font-black"
               />
               <button onClick={() => setEditQtyValue(v => v + 1)}
-                className="w-10 h-10 rounded-xl bg-surface-700 hover:bg-surface-600 text-white text-lg font-bold transition-colors">
+                className="w-10 h-10 rounded-xl bg-surface-700 hover:bg-surface-500 text-white text-lg font-bold transition-colors">
                 +
               </button>
             </div>
