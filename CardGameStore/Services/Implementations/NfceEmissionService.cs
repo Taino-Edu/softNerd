@@ -527,6 +527,17 @@ public class NfceEmissionService : INfceEmissionService
             string.IsNullOrWhiteSpace(cfg.CodigoMunicipioIbge) || string.IsNullOrWhiteSpace(cfg.Uf))
             throw new FiscalNaoConfiguradoException("Dados da empresa (razão social/endereço) incompletos em Admin > Fiscal.");
 
+        // CscId/CscToken são obrigatórios especificamente pra NFC-e (mod=65) — o grupo
+        // <infNFeSupl><qrCode> é exigido pela XSD da SEFAZ só pra NFC-e (não existe essa
+        // exigência pra NF-e mod=55). Sem CSC configurado, TransmitirAsync ainda monta um
+        // <infNFeSupl> vazio (só pra manter a estrutura) e a SEFAZ rejeita o LOTE inteiro
+        // com cStat 225 "Falha no Schema XML do lote de NFe" — sem isso aqui, cada
+        // reprocessamento queima e inutiliza um número novo de NFC-e à toa.
+        if (string.IsNullOrWhiteSpace(cfg.CscId) || string.IsNullOrWhiteSpace(cfg.CscToken))
+            throw new FiscalNaoConfiguradoException(
+                "CSC (Código de Segurança do Contribuinte) ainda não configurado — obrigatório " +
+                "pra NFC-e ter o QR Code exigido pela SEFAZ. Configure em Admin > Fiscal.");
+
         var pfxBytes    = Convert.FromBase64String(_enc.Decrypt(cfg.CertificadoPfxEncrypted!));
         var senha       = _enc.Decrypt(cfg.CertificadoSenhaEncrypted!);
         var certificado = Pkcs12Loader.Abrir(pfxBytes, senha);

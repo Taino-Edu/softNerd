@@ -184,6 +184,8 @@ public class NfceEmissionServiceTests
             Logradouro                = "Rua Teste",
             CodigoMunicipioIbge       = "3550308",
             Uf                        = "SP",
+            CscId                     = "1",
+            CscToken                  = "12345678-1234-1234-1234-123456789012",
             Ambiente                  = AmbienteFiscal.Homologacao,
             ModoSimulacao             = false,
             CertificadoPfxEncrypted   = enc.Encrypt(Convert.ToBase64String(pfxBytes)),
@@ -195,6 +197,44 @@ public class NfceEmissionServiceTests
         var nota = await service.EmitirParaComandaAsync(comanda.Id);
 
         nota.MotivoRejeicao.Should().NotContain("Senha não deve ser informada");
+    }
+
+    [Fact]
+    public async Task EmitirParaComandaAsync_SemCsc_RegistraPendenteEmissaoComMotivoClaro()
+    {
+        // Achado numa auditoria externa (Codex) no Tenant-ERP_Model: sem CSC configurado,
+        // o motor ainda montava um <infNFeSupl> vazio (a NFC-e exige esse grupo, com <qrCode>
+        // preenchido, diferente da NF-e comum) e a SEFAZ rejeitava o LOTE inteiro com cStat
+        // 225 "Falha no Schema XML do lote de NFe" — e cada reprocessamento queimava um
+        // número novo de NFC-e à toa, já que a rejeição não é por contingência. Validar CSC
+        // antes de reservar número evita esse desperdício.
+        const string senha = "senha-teste-123";
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+        var enc = CreateEncryptionService();
+        var pfxBytes = CreateSelfSignedPfx(senha, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
+
+        db.FiscalConfigs.Add(new FiscalConfig
+        {
+            Cnpj                      = "12345678000199",
+            RazaoSocial               = "Loja Teste LTDA",
+            Logradouro                = "Rua Teste",
+            CodigoMunicipioIbge       = "3550308",
+            Uf                        = "SP",
+            // CscId/CscToken deliberadamente ausentes.
+            Ambiente                  = AmbienteFiscal.Homologacao,
+            ModoSimulacao             = false,
+            CertificadoPfxEncrypted   = enc.Encrypt(Convert.ToBase64String(pfxBytes)),
+            CertificadoSenhaEncrypted = enc.Encrypt(senha),
+        });
+        await db.SaveChangesAsync();
+
+        var service = new NfceEmissionService(db, new Mock<IMongoDatabase>().Object, enc, NullLogger<NfceEmissionService>.Instance);
+        var nota = await service.EmitirParaComandaAsync(comanda.Id);
+
+        nota.Status.Should().Be(NotaFiscalStatus.PendenteEmissao);
+        nota.MotivoRejeicao.Should().Contain("CSC");
+        nota.Numero.Should().BeNull("a validação de CSC precisa acontecer ANTES de reservar o número — senão cada tentativa fracassada queima e inutiliza um número de NFC-e à toa");
     }
 
     [Fact]
@@ -225,6 +265,8 @@ public class NfceEmissionServiceTests
             CodigoMunicipioIbge       = "3550308",
             Uf                        = "SP",
             Cep                       = "01310-100",
+            CscId                     = "1",
+            CscToken                  = "12345678-1234-1234-1234-123456789012",
             Ambiente                  = AmbienteFiscal.Homologacao,
             ModoSimulacao             = false,
             CertificadoPfxEncrypted   = enc.Encrypt(Convert.ToBase64String(pfxBytes)),
@@ -261,6 +303,8 @@ public class NfceEmissionServiceTests
             Logradouro                = "Rua Teste",
             CodigoMunicipioIbge       = "3550308",
             Uf                        = "SP",
+            CscId                     = "1",
+            CscToken                  = "12345678-1234-1234-1234-123456789012",
             Ambiente                  = AmbienteFiscal.Homologacao,
             ModoSimulacao             = false,
             CertificadoPfxEncrypted   = enc.Encrypt(Convert.ToBase64String(pfxBytes)),
