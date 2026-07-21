@@ -472,8 +472,11 @@ export default function FiscalPage() {
                    placeholder={config?.cscConfigurado ? '••••••••' : 'Obtido na SEFAZ'} className="input w-full" />
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-1">
-          Sem o CSC, o cupom funciona mas o QR Code fica sem o hash de segurança oficial.
+        <p className="text-xs text-amber-400 mt-1">
+          Obrigatório pra emitir de verdade — sem o CSC a SEFAZ rejeita a nota inteira (não é
+          só o QR Code que fica incompleto). Homologação e Produção têm CSCs diferentes,
+          cadastrados separadamente na SEFAZ — confira se está usando o do ambiente certo
+          (selecionado acima em &quot;Ambiente SEFAZ&quot;).
         </p>
 
         <button onClick={saveConfig} disabled={saving} className="btn-primary mt-4">
