@@ -418,9 +418,19 @@ public class NfceEmissionService : INfceEmissionService
                 $"Produto(s) sem NCM cadastrado (Admin > Estoque): {string.Join(", ", semNcm)}. " +
                 "O NCM deve vir da nota fiscal de compra do produto — não é inventado pelo sistema.");
 
+        var ncmInvalido = comanda.Items
+            .Where(item => SanitizeNcm(item.Product?.Ncm).Length != 8)
+            .Select(item => item.ItemNameSnapshot)
+            .Distinct()
+            .ToList();
+        if (ncmInvalido.Count > 0)
+            throw new FiscalNaoConfiguradoException(
+                $"NCM inválido (precisa ter 8 dígitos) em: {string.Join(", ", ncmInvalido)}. " +
+                "Corrija em Admin > Estoque — só números, sem ponto.");
+
         var itens = comanda.Items.Select(item => new ItemFiscal(
             Nome:                 item.ItemNameSnapshot,
-            Ncm:                  item.Product!.Ncm!,
+            Ncm:                  SanitizeNcm(item.Product!.Ncm),
             Cfop:                 item.Product?.NaturezaOperacao?.Cfop ?? padrao?.Cfop ?? "5102",
             Csosn:                item.Product?.NaturezaOperacao?.Csosn ?? padrao?.Csosn ?? "102",
             PercentualCreditoSn:  item.Product?.NaturezaOperacao?.PercentualCreditoIcmsSn ?? padrao?.PercentualCreditoIcmsSn,
@@ -458,12 +468,22 @@ public class NfceEmissionService : INfceEmissionService
                 $"Produto(s) sem NCM cadastrado (Admin > Estoque): {string.Join(", ", semNcm)}. " +
                 "O NCM deve vir da nota fiscal de compra do produto — não é inventado pelo sistema.");
 
+        var ncmInvalido = venda.Items
+            .Where(item => { products.TryGetValue(item.ProductId, out var p); return SanitizeNcm(p?.Ncm).Length != 8; })
+            .Select(item => item.ProductName)
+            .Distinct()
+            .ToList();
+        if (ncmInvalido.Count > 0)
+            throw new FiscalNaoConfiguradoException(
+                $"NCM inválido (precisa ter 8 dígitos) em: {string.Join(", ", ncmInvalido)}. " +
+                "Corrija em Admin > Estoque — só números, sem ponto.");
+
         var itens = venda.Items.Select(item =>
         {
             products.TryGetValue(item.ProductId, out var product);
             return new ItemFiscal(
                 Nome:                 item.ProductName,
-                Ncm:                  product!.Ncm!,
+                Ncm:                  SanitizeNcm(product!.Ncm),
                 Cfop:                 product?.NaturezaOperacao?.Cfop ?? padrao?.Cfop ?? "5102",
                 Csosn:                product?.NaturezaOperacao?.Csosn ?? padrao?.Csosn ?? "102",
                 PercentualCreditoSn:  product?.NaturezaOperacao?.PercentualCreditoIcmsSn ?? padrao?.PercentualCreditoIcmsSn,
@@ -1014,6 +1034,15 @@ public class NfceEmissionService : INfceEmissionService
         RegimeTributario.LucroReal       => CRT.RegimeNormal,
         _                                => CRT.SimplesNacional,
     };
+
+    /// <summary>
+    /// Remove tudo que não for dígito (o formulário de cadastro do produto mostra o NCM
+    /// no formato "0000.00.00" — a XSD da NFC-e exige exatamente 8 dígitos, sem ponto.
+    /// Enviar com ponto faz a SEFAZ rejeitar a nota; sanitiza aqui pra não depender só
+    /// da validação do formulário nem quebrar produto cadastrado antes dela existir).
+    /// </summary>
+    private static string SanitizeNcm(string? ncm) =>
+        ncm is null ? "" : new string(ncm.Where(char.IsDigit).ToArray());
 
     /// <summary>
     /// Pontos/Cashback/Crediário não são formas de pagamento reconhecidas pela SEFAZ —

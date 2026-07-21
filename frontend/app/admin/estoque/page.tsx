@@ -560,9 +560,10 @@ function ProductModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">NCM</label>
-              <input className="input" value={form.ncm ?? ''} onChange={e => set('ncm', e.target.value || null)}
-                     placeholder="0000.00.00" maxLength={8} />
-              <p className="text-xs text-gray-400 mt-1">Obrigatório pra emitir NFC-e deste produto.</p>
+              <input className="input" value={form.ncm ?? ''}
+                     onChange={e => set('ncm', e.target.value.replace(/\D/g, '').slice(0, 8) || null)}
+                     placeholder="84743100 (8 dígitos, sem ponto)" maxLength={8} inputMode="numeric" />
+              <p className="text-xs text-gray-400 mt-1">Obrigatório pra emitir NFC-e deste produto — só números, sem ponto.</p>
             </div>
             <div>
               <label className="label">Natureza de Operação</label>
