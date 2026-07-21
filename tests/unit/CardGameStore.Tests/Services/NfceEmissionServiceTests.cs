@@ -198,6 +198,48 @@ public class NfceEmissionServiceTests
     }
 
     [Fact]
+    public async Task EmitirParaComandaAsync_ComCepComHifenETpEmisConfigurado_NaoLancaErroDeConfiguracaoDeServico()
+    {
+        // Dois bugs reais de produção descobertos no primeiro teste contra o Homologação de
+        // verdade (SP), nenhum dos dois pego pelo Modo Simulação:
+        // 1) ConfiguracaoServico.tpEmis nunca era setado (ficava 0, valor de enum inválido) —
+        //    a lib usa esse campo pra procurar a URL do webservice numa tabela interna e
+        //    lança "Serviço NFeAutorizacao, versão , não disponível para a UF SP..." (com
+        //    "versão"/"tipo emissão" em branco) pra QUALQUER UF, não só SP.
+        // 2) CEP do emitente ia sem sanitizar — "01310-100" (formato comum de digitar) quebra
+        //    a validação da lib ("enderEmit\CEP deve receber somente números").
+        // Sem rede/homologação de verdade aqui: se os dois bugs estiverem corrigidos, a
+        // ausência de rede no ambiente de teste faz a nota cair em contingência offline
+        // (AutorizadaContingencia) — não mais em PendenteEmissao com esses erros específicos.
+        const string senha = "senha-teste-123";
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+        var enc = CreateEncryptionService();
+        var pfxBytes = CreateSelfSignedPfx(senha, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
+
+        db.FiscalConfigs.Add(new FiscalConfig
+        {
+            Cnpj                      = "12345678000199",
+            RazaoSocial               = "Loja Teste LTDA",
+            Logradouro                = "Rua Teste",
+            CodigoMunicipioIbge       = "3550308",
+            Uf                        = "SP",
+            Cep                       = "01310-100",
+            Ambiente                  = AmbienteFiscal.Homologacao,
+            ModoSimulacao             = false,
+            CertificadoPfxEncrypted   = enc.Encrypt(Convert.ToBase64String(pfxBytes)),
+            CertificadoSenhaEncrypted = enc.Encrypt(senha),
+        });
+        await db.SaveChangesAsync();
+
+        var service = new NfceEmissionService(db, new Mock<IMongoDatabase>().Object, enc, NullLogger<NfceEmissionService>.Instance);
+        var nota = await service.EmitirParaComandaAsync(comanda.Id);
+
+        nota.MotivoRejeicao.Should().NotContain("não disponível para a UF");
+        nota.MotivoRejeicao.Should().NotContain("CEP deve receber somente números");
+    }
+
+    [Fact]
     public async Task EmitirParaComandaAsync_ComandaInexistente_NuncaLancaExcecao()
     {
         using var db = CreateDb();

@@ -552,6 +552,15 @@ public class NfceEmissionService : INfceEmissionService
             tpAmb           = ambiente,
             ModeloDocumento = ModeloDocumento.NFCe,
             VersaoLayout    = VersaoServico.Versao400,
+            // tpEmis fica 0 (valor de enum inválido) se não for setado — a lib usa esse
+            // campo pra procurar a URL do webservice numa tabela interna (UF+ambiente+
+            // serviço+versão+tipoEmissao) e lança "Serviço X, versão , não disponível
+            // para a UF Y..." (mensagem com "versão"/"tipo" em branco) se não achar
+            // entrada pra tipoEmissao=0. teNormal é o certo pra emissão online — quem
+            // entra em contingência offline (TransmitirAsync) sobrescreve pra teOffLine
+            // só na hora de chamar NFeAutorizacao, igual o tpEmis já gravado na própria
+            // NFe (nfe.infNFe.ide.tpEmis).
+            tpEmis          = TipoEmissao.teNormal,
             TimeOut         = 15000,
             // Sem XSDs locais empacotados — a SEFAZ valida o schema no recebimento de qualquer forma.
             ValidarSchemas  = false,
@@ -615,6 +624,10 @@ public class NfceEmissionService : INfceEmissionService
         var dhEmi  = ParaBrasil(nota.CreatedAt);
         var cNf    = jaEmContingencia ? nota.CnfContingencia!.Value : Random.Shared.Next(10_000_000, 99_999_999);
         var tpEmis = jaEmContingencia ? TipoEmissao.teOffLine : TipoEmissao.teNormal;
+        // cfgServico.tpEmis já vem teNormal de AbrirConfiguracaoSefazAsync — só precisa
+        // trocar pra teOffLine aqui quando a retransmissão é de uma nota que já entrou
+        // em contingência (senão o lookup de URL do webservice usa o tipo errado).
+        cfgServico.tpEmis = tpEmis;
         var chave  = ChaveFiscal.ObterChave(estado, dhEmi, cfg.Cnpj, ModeloDocumento.NFCe, cfg.SerieNfce, numero, (int)tpEmis, cNf);
 
         var municipioIbge = long.Parse(cfg.CodigoMunicipioIbge!);
@@ -670,7 +683,11 @@ public class NfceEmissionService : INfceEmissionService
                         cMun    = municipioIbge,
                         xMun    = cfg.Municipio ?? "-",
                         UF      = estado,
-                        CEP     = cfg.Cep,
+                        // Mesma classe de bug do NCM/CFOP: o CEP precisa ir só com dígitos
+                        // (a lib valida "deve receber somente números"). O admin pode ter
+                        // digitado com hífen ("01234-567") no formulário — sanitiza aqui pra
+                        // não depender só da validação de tela nem quebrar config salva antes.
+                        CEP     = SomenteDigitos(cfg.Cep),
                     },
                 },
                 dest = string.IsNullOrWhiteSpace(dados.ClienteCpf) ? null : new dest(VersaoServico.Versao400)
@@ -1067,8 +1084,12 @@ public class NfceEmissionService : INfceEmissionService
     /// Enviar com ponto faz a SEFAZ rejeitar a nota; sanitiza aqui pra não depender só
     /// da validação do formulário nem quebrar produto cadastrado antes dela existir).
     /// </summary>
-    internal static string SanitizeNcm(string? ncm) =>
-        ncm is null ? "" : new string(ncm.Where(char.IsDigit).ToArray());
+    internal static string SanitizeNcm(string? ncm) => SomenteDigitos(ncm);
+
+    /// <summary>Remove tudo que não for dígito — usado em qualquer campo que a SEFAZ exige
+    /// só numérico mas o cadastro/formulário aceita digitar com pontuação (NCM, CEP).</summary>
+    internal static string SomenteDigitos(string? valor) =>
+        valor is null ? "" : new string(valor.Where(char.IsDigit).ToArray());
 
     /// <summary>
     /// CFOP vem da Natureza de Operação (texto livre, sem sanitização no cadastro — só o
@@ -1079,7 +1100,7 @@ public class NfceEmissionService : INfceEmissionService
     /// </summary>
     internal static int ParseCfop(string? cfop)
     {
-        var digits = cfop is null ? "" : new string(cfop.Where(char.IsDigit).ToArray());
+        var digits = SomenteDigitos(cfop);
         if (digits.Length != 4 || !int.TryParse(digits, out var valor))
             throw new FiscalNaoConfiguradoException(
                 $"CFOP \"{cfop}\" inválido (precisa ter 4 dígitos, ex: 5102). " +
