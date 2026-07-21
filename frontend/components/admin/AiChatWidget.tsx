@@ -55,17 +55,6 @@ declare global {
   interface SpeechRecognitionEvent extends Event {
     results: SpeechRecognitionResultList
   }
-  interface SpeechRecognitionResultList {
-    [index: number]: SpeechRecognitionResult
-    length: number
-  }
-  interface SpeechRecognitionResult {
-    [index: number]: SpeechRecognitionAlternative
-    isFinal: boolean
-  }
-  interface SpeechRecognitionAlternative {
-    transcript: string
-  }
   interface SpeechRecognitionErrorEvent extends Event {
     error: string
   }

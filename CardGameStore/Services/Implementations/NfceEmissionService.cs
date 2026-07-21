@@ -530,6 +530,17 @@ public class NfceEmissionService : INfceEmissionService
         var pfxBytes    = Convert.FromBase64String(_enc.Decrypt(cfg.CertificadoPfxEncrypted!));
         var senha       = _enc.Decrypt(cfg.CertificadoSenhaEncrypted!);
         var certificado = Pkcs12Loader.Abrir(pfxBytes, senha);
+
+        // Certificado vencido derruba a autenticação mTLS na hora de falar com a SEFAZ, e o
+        // .NET embrulha isso em HttpRequestException — o MESMO tipo que EhFalhaDeConectividade
+        // usa pra reconhecer "SEFAZ fora do ar" e mandar a nota pra contingência offline. Sem
+        // esse check, um certificado vencido seria tratado como problema de rede: o cliente
+        // sairia com um cupom "válido" que a SEFAZ nunca vai aceitar transmitir de verdade, e
+        // o retry automático ficaria tentando por até 24h achando que é só instabilidade.
+        if (certificado.NotAfter.ToUniversalTime() < DateTime.UtcNow)
+            throw new FiscalNaoConfiguradoException(
+                $"Certificado digital vencido em {certificado.NotAfter:dd/MM/yyyy} — renove em Admin > Fiscal antes de emitir.");
+
         // TipoCertificado precisa vir ANTES de Senha (a ordem importa: o setter de Senha
         // valida contra o tipo já setado). Sem isso, ConfiguracaoCertificado.TipoCertificado
         // fica no padrão A1Repositorio (certificado instalado no repositório do Windows, sem

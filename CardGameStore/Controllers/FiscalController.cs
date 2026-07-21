@@ -377,6 +377,15 @@ public class FiscalController : ControllerBase
         return cupom is null ? NotFound() : Ok(cupom);
     }
 
+    // Fuso horário de Brasília — funciona em Linux (IANA) e Windows (ID legado). Mesmo
+    // padrão usado em ComandaService/VendaAvulsaService/RelatoriosController/AnalyticsController.
+    private static readonly TimeZoneInfo BrazilZone = GetBrazilZone();
+    private static TimeZoneInfo GetBrazilZone()
+    {
+        try { return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
+        catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
+    }
+
     // ── GET /api/fiscal/exportar-xmls?inicio=&fim= ────────────────────────────
     // "Fim" no formulário é o ÚLTIMO DIA a incluir (inclusivo) — GerarZipAsync espera
     // um limite EXCLUSIVO, então soma 1 dia aqui. Sem isso, selecionar o mesmo dia nos
@@ -388,8 +397,12 @@ public class FiscalController : ControllerBase
         if (fim < inicio)
             return BadRequest(new { Message = "O período final não pode ser antes do inicial." });
 
-        var inicioUtc       = inicio.Date.ToUniversalTime();
-        var fimExclusivoUtc = fim.Date.AddDays(1).ToUniversalTime();
+        // DateTime.ToUniversalTime() converte usando o fuso LOCAL DO SERVIDOR, não o do
+        // Brasil — num VPS Linux com TZ=UTC (comum), "hoje" vira meia-noite UTC em vez de
+        // meia-noite de Brasília (defasagem de 3h, dias errados perto da virada). Precisa
+        // do fuso explícito, igual todo outro lugar do sistema que lida com data local.
+        var inicioUtc       = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(inicio.Date, DateTimeKind.Unspecified), BrazilZone);
+        var fimExclusivoUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(fim.Date.AddDays(1), DateTimeKind.Unspecified), BrazilZone);
 
         var zipBytes = await _export.GerarZipAsync(inicioUtc, fimExclusivoUtc);
         var fileName = $"xmls-fiscais-{inicio:yyyy-MM-dd}-a-{fim:yyyy-MM-dd}.zip";

@@ -240,6 +240,42 @@ public class NfceEmissionServiceTests
     }
 
     [Fact]
+    public async Task EmitirParaComandaAsync_ComCertificadoVencido_NaoTrataComoFalhaDeConectividade()
+    {
+        // Risco apontado numa auditoria do Tenant-ERP_Model (fork deste repo): certificado
+        // vencido derruba a autenticação mTLS com a SEFAZ e o .NET embrulha isso em
+        // HttpRequestException — o MESMO tipo que EhFalhaDeConectividade usa pra reconhecer
+        // "SEFAZ fora do ar". Sem um check explícito de validade, o certificado vencido
+        // seria tratado como instabilidade de rede (entra em contingência, cliente sai com
+        // cupom que a SEFAZ nunca vai aceitar) em vez de erro de configuração de verdade.
+        const string senha = "senha-teste-123";
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+        var enc = CreateEncryptionService();
+        var pfxBytes = CreateSelfSignedPfx(senha, DateTimeOffset.UtcNow.AddDays(-30), DateTimeOffset.UtcNow.AddDays(-1));
+
+        db.FiscalConfigs.Add(new FiscalConfig
+        {
+            Cnpj                      = "12345678000199",
+            RazaoSocial               = "Loja Teste LTDA",
+            Logradouro                = "Rua Teste",
+            CodigoMunicipioIbge       = "3550308",
+            Uf                        = "SP",
+            Ambiente                  = AmbienteFiscal.Homologacao,
+            ModoSimulacao             = false,
+            CertificadoPfxEncrypted   = enc.Encrypt(Convert.ToBase64String(pfxBytes)),
+            CertificadoSenhaEncrypted = enc.Encrypt(senha),
+        });
+        await db.SaveChangesAsync();
+
+        var service = new NfceEmissionService(db, new Mock<IMongoDatabase>().Object, enc, NullLogger<NfceEmissionService>.Instance);
+        var nota = await service.EmitirParaComandaAsync(comanda.Id);
+
+        nota.Status.Should().Be(NotaFiscalStatus.PendenteEmissao);
+        nota.MotivoRejeicao.Should().Contain("vencido");
+    }
+
+    [Fact]
     public async Task EmitirParaComandaAsync_ComandaInexistente_NuncaLancaExcecao()
     {
         using var db = CreateDb();

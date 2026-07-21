@@ -829,6 +829,7 @@ export interface AiChatResponse {
   reply:   string
   success: boolean
   error?:  string
+  action?: { type: 'navigate' | 'openWizard'; route?: string }
 }
 
 export const aiApi = {
