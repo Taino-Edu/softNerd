@@ -199,6 +199,63 @@ vai aceitar transmitir) em vez de um erro de configuração claro. Fix: checa
 `FiscalNaoConfiguradoException` com mensagem clara se vencido — mitigado ainda mais pelo
 `FiscalAlertBackgroundService` já existente (avisa por dashboard/email antes do vencimento).
 
+## 9. CSC ausente derrubava o LOTE inteiro (cStat 225) e queimava numeração a cada retry
+
+**Commit:** `3ccd9bc` — `CardGameStore/Services/Implementations/NfceEmissionService.cs`
+
+**Sintoma:** primeiro teste real contra o Homologação de SP (já com #1/#6 corrigidos)
+chegou a transmitir de verdade e recebeu `cStat 225 — Falha no Schema XML do lote de
+NFe` da SEFAZ. Como a rejeição não é por contingência, cada clique em "Reprocessar"
+reservava um número NOVO de NFC-e e o inutilizava automaticamente — queimando
+numeração à toa a cada tentativa, sem nunca corrigir o problema real.
+
+**Causa raiz:** `infNFeSupl`/`qrCode` é um grupo OBRIGATÓRIO pela XSD só pra NFC-e
+(mod=65) — não existe essa exigência pra NF-e comum (mod=55). Sem `CscId`/`CscToken`
+configurado, o motor ainda montava `nfe.infNFeSupl = new infNFeSupl()` mas deixava o
+`qrCode` vazio, violando o schema.
+
+**Fix:** valida `CscId`/`CscToken` em `AbrirConfiguracaoSefazAsync()`, ANTES de
+reservar número — falha limpa com `FiscalNaoConfiguradoException` em vez de queimar
+numeração a cada tentativa.
+
+**No Tenant-ERP_Model:** mesmo bug — `AbrirConfiguracaoSefazAsync` lá também não
+valida CSC antes de reservar número.
+
+## 10. Texto da tela de CSC dava a entender que era só cosmético
+
+**Commit:** `fa39fcd` — `frontend/app/admin/fiscal/page.tsx`
+
+"Sem o CSC, o cupom funciona mas o QR Code fica sem o hash de segurança oficial" foi
+corrigido pra deixar claro que, pra NFC-e, falta de CSC rejeita a nota INTEIRA (não é
+só o QR incompleto) — e que Homologação/Produção usam CSCs diferentes, cadastrados
+separadamente na SEFAZ.
+
+## Sessão de teste real contra o Homologação de SP (21/07/2026)
+
+Depois dos fixes #1/#6/#9 implantados, testamos emissão de verdade pela primeira vez.
+Achados que não são bug de código, mas bloqueiam qualquer tenant que for testar:
+
+- **Credenciamento de NFC-e é separado por ambiente.** O CNPJ do Maikon já estava
+  credenciado em Produção (CSC ativo desde 11/04/25), mas NÃO em Homologação —
+  precisou credenciar voluntariamente em
+  `homologacao.nfce.fazenda.sp.gov.br/NFCeSiteContribuinte/Secure/CredenciamentoVoluntario.aspx`
+  antes de gerar o CSC de teste. **Todo tenant novo (de qualquer estado) vai precisar
+  desse passo antes do primeiro teste em Homologação** — não é algo que o software
+  resolve, é cadastro manual na SEFAZ de cada estado.
+- **NCM e código IBGE do município errados derrubam a nota com mensagem clara da
+  SEFAZ** ("Informado NCM inexistente", "Código Municipal do Fato Gerador do ICMS
+  inexistente") — não é bug, é erro de cadastro. Vale conferir o IBGE do município de
+  qualquer tenant novo contra a tabela oficial do IBGE antes de liberar (achamos um
+  dígito trocado no cadastro do Maikon: `3525708` → correto é `3525706`, José
+  Bonifácio-SP).
+- **Reforma Tributária (IBS/CBS, NT 2025.002) já é exigida em Homologação**, antes do
+  prazo de Produção (04/01/2027 pra Simples Nacional). Sem o Grupo IBS/CBS no XML, a
+  SEFAZ rejeita com "IBS/CBS não informado [nItem]". Implementado no softNerd/Sol
+  usando as alíquotas-teste oficiais de 2026 (IBS-UF 0,1%, IBS-Mun 0%, CBS 0,9%,
+  CST 000, cClassTrib 000001). **Se o Tenant-ERP_Model ainda não tiver isso, qualquer
+  teste em Homologação vai travar no mesmo ponto** — ver checklist em
+  `Tenant-ERP_Model/docs/GO-LIVE-FISCAL-2026-07-25.md`.
+
 ## Auditoria externa (Codex) no Tenant-ERP_Model — o que confirmamos contra o softNerd
 
 Em 21/07/2026 uma auditoria via Codex no Tenant-ERP_Model apontou vários riscos fiscais.
@@ -220,10 +277,14 @@ Como esse repo é fork do softNerd, cada achado foi checado direto contra o cód
 
 ## Ordem sugerida pra portar no Tenant-ERP_Model
 
-1. **Certificado (#1) + tpEmis (#6)** — sem os dois, emissão real não sai do lugar pra
-   nenhum tenant (o certificado destrava a config, o tpEmis destrava o webservice em si).
+1. **Certificado (#1) + tpEmis (#6) + CSC (#9)** — sem os três, emissão real não sai do
+   lugar pra nenhum tenant (certificado destrava a config, tpEmis destrava o webservice,
+   CSC evita queimar numeração a cada retry por schema inválido).
 2. **Desconto/pontos (#4)** — é o único que gera nota com valor ERRADO (os outros travam
    antes de sair; esse deixa passar errado).
 3. **NCM (#2)**, **CFOP (#3)** e **CEP (#6)** — mesma classe de correção (sanitizar dígitos
    antes de mandar pra SEFAZ), aplicar junto.
 4. **ZIP export (#5)** — menor impacto, mas rápido de portar.
+5. **IBS/CBS (Reforma Tributária)** — confirmar se já foi implementado lá (ver seção
+   "Sessão de teste real" acima); sem isso, Homologação trava mesmo com tudo o resto
+   corrigido.
