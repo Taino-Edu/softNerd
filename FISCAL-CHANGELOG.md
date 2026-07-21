@@ -135,10 +135,50 @@ próprio — vale portar os mesmos testes de lá pra pegar regressão futura.
 
 ---
 
+## 6. Emissão real contra a SEFAZ nunca alcançava a rede — `tpEmis` não configurado
+
+**Commit:** `d2aaad0` — `CardGameStore/Services/Implementations/NfceEmissionService.cs`
+
+**Sintoma:** com o bug do certificado (#1) já corrigido e implantado, o primeiro teste real
+contra o Homologação da SEFAZ-SP ainda falhava: `System.Exception: Serviço NFeAutorizacao,
+versão , não disponível para a UF SP, no ambiente de Homologação para emissão tipo ,
+documento: NFC-e!` (repare "versão" e "tipo" em branco na mensagem).
+
+**Causa raiz:** `ConfiguracaoServico.tpEmis` nunca era setado no objeto passado pra lib —
+ficava no padrão `0`, que não é nenhum `TipoEmissao` válido (`teNormal=1`, `teOffLine=9`
+etc.). A lib usa `tpEmis` como parte da chave de busca numa tabela interna de URLs de
+webservice (UF + ambiente + serviço + versão + tipoEmissao); com tipoEmissao=0 a busca não
+encontra NADA, pra nenhuma UF, sempre — não é específico de SP. Reproduzido 100% offline
+(sem precisar de rede/homologação real) com um certificado self-signed gerado em memória
+contra a DLL real da lib — a exceção aparece na hora de montar a URL do webservice, antes
+de qualquer tentativa de rede.
+
+**Fix:** `cfgServico.tpEmis = TipoEmissao.teNormal` já na criação (`AbrirConfiguracaoSefazAsync`),
+sobrescrito pra `TipoEmissao.teOffLine` em `TransmitirAsync` só quando a nota está sendo
+retransmitida a partir de uma contingência offline anterior — mesma lógica que já existia pro
+`tpEmis` gravado dentro do próprio XML da NFe (`nfe.infNFe.ide.tpEmis`), só que nunca era
+espelhada pro objeto de configuração do serviço.
+
+**Bônus (mesmo commit):** CEP do emitente (`FiscalConfig.Cep`) também ia sem sanitizar pro
+XML — "01310-100" quebra a validação da lib (`enderEmit\CEP deve receber somente números`).
+Mesma classe de bug do NCM/CFOP (#2/#3) — sanitizado com o mesmo helper (`SomenteDigitos`,
+extraído de `SanitizeNcm`).
+
+**Consequência prática:** isso significa que, até este fix, **nenhuma emissão real (não
+simulada) pra SEFAZ jamais funcionou** neste sistema — toda nota "Autorizada" vista antes
+disso veio do Modo Simulação (`TransmitirSimuladoAsync` também marca `Status = Autorizada`,
+sem nunca tocar a SEFAZ de verdade — não é prova de emissão real funcionando).
+
+**No Tenant-ERP_Model:** mesmo bug — `AbrirConfiguracaoSefazAsync` nunca seta `tpEmis` lá
+também. Portar junto com o fix do certificado (#1), já que sem os dois nenhuma emissão real
+sai do lugar pra nenhum tenant.
+
 ## Ordem sugerida pra portar no Tenant-ERP_Model
 
-1. **Certificado (#1)** — sem isso, emissão real não sai do lugar pra nenhum tenant.
+1. **Certificado (#1) + tpEmis (#6)** — sem os dois, emissão real não sai do lugar pra
+   nenhum tenant (o certificado destrava a config, o tpEmis destrava o webservice em si).
 2. **Desconto/pontos (#4)** — é o único que gera nota com valor ERRADO (os outros travam
    antes de sair; esse deixa passar errado).
-3. **NCM (#2)** e **CFOP (#3)** — mesma correção, aplicar junto.
+3. **NCM (#2)**, **CFOP (#3)** e **CEP (#6)** — mesma classe de correção (sanitizar dígitos
+   antes de mandar pra SEFAZ), aplicar junto.
 4. **ZIP export (#5)** — menor impacto, mas rápido de portar.
