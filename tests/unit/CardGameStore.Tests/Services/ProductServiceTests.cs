@@ -224,6 +224,31 @@ public class ProductServiceTests
         atualizado.UpdatedAt.Should().BeAfter(antes);
     }
 
+    [Fact]
+    public async Task Update_DevePersistirNcmENaturezaOperacao()
+    {
+        var db      = CreateDb(nameof(Update_DevePersistirNcmENaturezaOperacao));
+        var service = CreateService(db);
+        var p       = MakeProduct("Produto fiscal");
+        p.Ncm       = "84747100";
+        db.Products.Add(p);
+        await db.SaveChangesAsync();
+
+        db.ChangeTracker.Clear();
+        var naturezaId = Guid.NewGuid();
+        var atualizado = MakeProduct("Produto fiscal");
+        atualizado.Id                 = p.Id;
+        atualizado.Ncm                = "95044000";
+        atualizado.NaturezaOperacaoId = naturezaId;
+
+        await service.UpdateAsync(atualizado);
+        db.ChangeTracker.Clear();
+
+        var salvo = await db.Products.FindAsync(p.Id);
+        salvo!.Ncm.Should().Be("95044000");
+        salvo.NaturezaOperacaoId.Should().Be(naturezaId);
+    }
+
     // ── Busca por ID ─────────────────────────────────────────────────────────
 
     [Fact]

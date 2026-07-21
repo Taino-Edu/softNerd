@@ -111,6 +111,8 @@ public class ProductService : IProductService
         existing.ShowOnMarketplace    = updated.ShowOnMarketplace;
         existing.IsPreVenda           = updated.IsPreVenda;
         existing.PreVendaReleaseDate  = updated.PreVendaReleaseDate;
+        existing.Ncm                  = updated.Ncm;
+        existing.NaturezaOperacaoId   = updated.NaturezaOperacaoId;
         existing.UpdatedAt            = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
