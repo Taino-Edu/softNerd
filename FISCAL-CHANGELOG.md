@@ -173,6 +173,51 @@ sem nunca tocar a SEFAZ de verdade — não é prova de emissão real funcionand
 também. Portar junto com o fix do certificado (#1), já que sem os dois nenhuma emissão real
 sai do lugar pra nenhum tenant.
 
+## 7. Exportação manual de XML usava fuso do servidor, não do Brasil
+
+**Commit:** `ba754c2` — `CardGameStore/Controllers/FiscalController.cs`
+
+Achado numa auditoria externa (Codex) rodada no Tenant-ERP_Model e confirmado direto no
+softNerd: `ExportarXmls` usava `DateTime.ToUniversalTime()`, que converte usando o fuso
+LOCAL DO SERVIDOR — não Brasília. Num VPS com `TZ=UTC` (comum em containers Linux), "hoje"
+vira meia-noite UTC em vez de meia-noite de Brasília, defasando o período em 3h perto da
+virada do dia. Corrigido pro mesmo padrão `TimeZoneInfo.ConvertTimeToUtc(..., BrazilZone)`
+já usado em `ComandaService`/`VendaAvulsaService`/`RelatoriosController`/`AnalyticsController`
+— esse arquivo era o único que não seguia o padrão.
+
+## 8. Certificado vencido era tratado como "SEFAZ fora do ar"
+
+**Commit:** `ba754c2` — `CardGameStore/Services/Implementations/NfceEmissionService.cs`
+
+Mesma auditoria externa. Certificado vencido derruba a autenticação mTLS na hora de falar
+com a SEFAZ, e o .NET embrulha essa falha em `HttpRequestException` — o MESMO tipo que
+`EhFalhaDeConectividade` usa pra reconhecer "SEFAZ inalcançável" e mandar a nota pra
+contingência offline. Sem checar a validade do certificado antes, um certificado vencido
+faria a nota "sair" em contingência (cliente recebe cupom com chave/QR que a SEFAZ NUNCA
+vai aceitar transmitir) em vez de um erro de configuração claro. Fix: checa
+`certificado.NotAfter` em `AbrirConfiguracaoSefazAsync()` e lança
+`FiscalNaoConfiguradoException` com mensagem clara se vencido — mitigado ainda mais pelo
+`FiscalAlertBackgroundService` já existente (avisa por dashboard/email antes do vencimento).
+
+## Auditoria externa (Codex) no Tenant-ERP_Model — o que confirmamos contra o softNerd
+
+Em 21/07/2026 uma auditoria via Codex no Tenant-ERP_Model apontou vários riscos fiscais.
+Como esse repo é fork do softNerd, cada achado foi checado direto contra o código daqui:
+
+| Achado do Codex | Aplica no softNerd? |
+|---|---|
+| Retransmissão de contingência encerra em ~2,5h | **Não** — já tem guarda explícita (`!emContingencia` no limite de tentativas) + prazo legal de 24h correto, com comentário no código citando exatamente esse risco |
+| Configuração incompleta pode consumir numeração fiscal | **Não** — itens são validados (CSOSN/NCM/CFOP) e config é validada ANTES de reservar o número, propositalmente |
+| NFC-e duplicada por concorrência | **Não** — idempotência em dois níveis: check-then-insert com `catch DbUpdateException` + índices únicos parciais reais no Postgres (`ix_notas_fiscais_comanda_unica`/`..._venda_avulsa_unica`) |
+| `nfeProc` (XML com protocolo) não é armazenado | **Não** — `XmlAutorizado` já guarda o `nfeProc` completo (NFe + protNFe), não o envelope de envio |
+| Exportações manuais com erro de fuso horário | **Sim, confirmado e corrigido** (#7 acima) |
+| Certificado vencido tratado como indisponibilidade da SEFAZ | **Sim, confirmado e corrigido** (#8 acima) |
+| Cancelamento fiscal não estorna estoque/financeiro/pontos/crediário | **Sim, existe também aqui** — `CancelarAsync` só cancela o documento fiscal (evento SEFAZ), não toca `Comanda`/`VendaAvulsa`. Não corrigido ainda — não é um bug óbvio de código, é uma decisão de escopo que precisa ser confirmada com o Maikon (cancelar a nota fiscal deveria sempre estornar a venda? nem sempre — às vezes só a nota está errada) |
+| Lucro Presumido/Real configurável mas XML usa tributação do Simples | **Sim, existe também aqui** — `MontarIcmsSimplesNacional` é chamado incondicionalmente pra todo item, mesmo se `FiscalConfig.RegimeTributario` for Lucro Presumido/Real (só o campo `CRT` do cabeçalho muda). Hoje é inofensivo pra Maikon (Simples Nacional, ME — ver [[project_santuario_fiscal]]), mas a tela deixa selecionar um regime que geraria nota fiscalmente incorreta. Não corrigido — precisa de regra de CST real, que não deve ser inventada sem validar com contador (mesmo princípio do NCM) |
+| CSC armazenado sem criptografia | **Sim, existe também aqui** — `FiscalConfig.CscToken` é `string?` puro (diferente do certificado, que usa `EncryptionService`). Não corrigido ainda |
+| Contingência pode imprimir chave/QR diferentes dos retransmitidos | **Provavelmente não** — número/cNf/tpEmis são deliberadamente reaproveitados da nota original na retransmissão (mesma chave determinística), mas não construí um teste isolado pra provar isso com 100% de confiança |
+| 4 erros de TypeScript no AiChatWidget (build ignora tipagem) | **Sim, confirmado e corrigido** — mesmo arquivo, mesmos 4 erros, `next.config.js` também tem `ignoreBuildErrors`/`ignoreDuringBuilds` |
+
 ## Ordem sugerida pra portar no Tenant-ERP_Model
 
 1. **Certificado (#1) + tpEmis (#6)** — sem os dois, emissão real não sai do lugar pra
