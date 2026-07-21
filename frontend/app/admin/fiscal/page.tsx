@@ -556,7 +556,8 @@ export default function FiscalPage() {
           </div>
           <div>
             <label className="text-xs text-gray-400 font-semibold mb-1 block">CFOP</label>
-            <input value={novoCfop} onChange={e => setNovoCfop(e.target.value)} placeholder="5102" className="input w-full" />
+            <input value={novoCfop} onChange={e => setNovoCfop(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                   placeholder="5102" maxLength={4} inputMode="numeric" className="input w-full" />
           </div>
           <div>
             <label className="text-xs text-gray-400 font-semibold mb-1 block">CSOSN</label>

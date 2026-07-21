@@ -974,7 +974,7 @@ public class NfceEmissionService : INfceEmissionService
             cEANTrib   = "SEM GTIN",
             xProd      = item.Nome,
             NCM        = item.Ncm,
-            CFOP       = int.Parse(item.Cfop),
+            CFOP       = ParseCfop(item.Cfop),
             uCom       = "UN",
             qCom       = item.Quantidade,
             vUnCom     = item.PrecoUnitarioCentavos / 100m,
@@ -1043,6 +1043,23 @@ public class NfceEmissionService : INfceEmissionService
     /// </summary>
     private static string SanitizeNcm(string? ncm) =>
         ncm is null ? "" : new string(ncm.Where(char.IsDigit).ToArray());
+
+    /// <summary>
+    /// CFOP vem da Natureza de Operação (texto livre, sem sanitização no cadastro — só o
+    /// placeholder "5102" guia o formato certo, ao contrário do NCM que tinha o placeholder
+    /// com ponto). Mesmo assim, tira espaço/pontuação por segurança e valida 4 dígitos antes
+    /// de mandar pra SEFAZ: um CFOP mal digitado virando FormatException aqui derrubaria a
+    /// emissão com uma mensagem de erro sem explicação nenhuma pro admin.
+    /// </summary>
+    private static int ParseCfop(string? cfop)
+    {
+        var digits = cfop is null ? "" : new string(cfop.Where(char.IsDigit).ToArray());
+        if (digits.Length != 4 || !int.TryParse(digits, out var valor))
+            throw new FiscalNaoConfiguradoException(
+                $"CFOP \"{cfop}\" inválido (precisa ter 4 dígitos, ex: 5102). " +
+                "Corrija em Admin > Fiscal > Naturezas de Operação.");
+        return valor;
+    }
 
     /// <summary>
     /// Pontos/Cashback/Crediário não são formas de pagamento reconhecidas pela SEFAZ —
