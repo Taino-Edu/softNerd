@@ -629,6 +629,48 @@ public class NfceEmissionServiceTests
         act.Should().Throw<FiscalNaoConfiguradoException>();
     }
 
+    [Fact]
+    public void MontarItem_ComIbsCbs2026_PreencheClassificacaoAliquotasEValores()
+    {
+        var det = NfceEmissionService.MontarItem(Item("102"), numero: 1, incluirIbsCbs: true);
+
+        var ibsCbs = det.imposto.IBSCBS!;
+        ibsCbs.CST.ToString().Should().Be("Cst000");
+        ibsCbs.cClassTrib.Should().Be("000001");
+        ibsCbs.gIBSCBS!.vBC.Should().Be(10m);
+        ibsCbs.gIBSCBS.gIBSUF!.pIBSUF.Should().Be(0.1m);
+        ibsCbs.gIBSCBS.gIBSUF.vIBSUF.Should().Be(0.01m);
+        ibsCbs.gIBSCBS.gIBSMun!.pIBSMun.Should().Be(0m);
+        ibsCbs.gIBSCBS.gIBSMun.vIBSMun.Should().Be(0m);
+        ibsCbs.gIBSCBS.gCBS!.pCBS.Should().Be(0.9m);
+        ibsCbs.gIBSCBS.gCBS.vCBS.Should().Be(0.09m);
+
+        var xml = DFe.Utils.FuncoesXml.ClasseParaXmlString(det);
+        xml.Should().Contain("<IBSCBS>");
+        xml.Should().Contain("<CST>000</CST>");
+        xml.Should().Contain("<cClassTrib>000001</cClassTrib>");
+        xml.Should().Contain("<pIBSUF>0.1000</pIBSUF>");
+        xml.Should().Contain("<pCBS>0.9000</pCBS>");
+    }
+
+    [Fact]
+    public void MontarTotaisIbsCbs2026_SomaOsValoresDosItens()
+    {
+        var itens = new[]
+        {
+            NfceEmissionService.MontarItem(Item("102"), 1, incluirIbsCbs: true),
+            NfceEmissionService.MontarItem(Item("102"), 2, incluirIbsCbs: true),
+        };
+
+        var total = NfceEmissionService.MontarTotaisIbsCbs2026(itens);
+
+        total.vBCIBSCBS.Should().Be(20m);
+        total.gIBS!.gIBSUF!.vIBSUF.Should().Be(0.02m);
+        total.gIBS.gIBSMun!.vIBSMun.Should().Be(0m);
+        total.gIBS.vIBS.Should().Be(0.02m);
+        total.gCBS!.vCBS.Should().Be(0.18m);
+    }
+
     // ── Sanitização de NCM/CFOP (bug real: cadastro com pontuação ia direto pro XML) ──
 
     [Theory]

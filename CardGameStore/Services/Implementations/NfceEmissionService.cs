@@ -70,6 +70,17 @@ using NFe.Servicos.Retorno;
 using NFe.Utils;
 using NFe.Utils.InformacoesSuplementares;
 using NFe.Utils.NFe;
+using CbsItem = NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.InformacoesIbsCbs.InformacoesCbs.gCBS;
+using CbsTotal = NFe.Classes.Informacoes.Total.IbsCbs.Cbs.gCBSTotal;
+using IbsCbsCst = NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.Tipos.CST;
+using IbsCbsItem = NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.IBSCBS;
+using IbsCbsItemValues = NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.InformacoesIbsCbs.gIBSCBS;
+using IbsCbsTotal = NFe.Classes.Informacoes.Total.IbsCbs.IBSCBSTot;
+using IbsItemMun = NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.InformacoesIbsCbs.InformacoesIbs.gIBSMun;
+using IbsItemUf = NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.InformacoesIbsCbs.InformacoesIbs.gIBSUF;
+using IbsTotal = NFe.Classes.Informacoes.Total.IbsCbs.Ibs.gIBS;
+using IbsTotalMun = NFe.Classes.Informacoes.Total.IbsCbs.Ibs.gIBSMunTotal;
+using IbsTotalUf = NFe.Classes.Informacoes.Total.IbsCbs.Ibs.gIBSUFTotal;
 using NfeDocumento = NFe.Classes.NFe;
 
 namespace CardGameStore.Services.Implementations;
@@ -641,14 +652,25 @@ public class NfceEmissionService : INfceEmissionService
 
         // Monta os itens (e valida CSOSN) ANTES de reservar o número — uma Natureza de
         // Operação mal configurada não pode queimar um número de NFC-e sem transmitir nada.
-        var detItens = dados.Itens.Select((item, idx) => MontarItem(item, idx + 1)).ToList();
+        // A validação 1115 da NT 2025.002 exige o grupo IBS/CBS em homologação desde
+        // 06/10/2025, inclusive para emitentes do Simples. Em produção, o Simples só
+        // passa a destacar esses campos em 2027; durante 2026 a exigência é do regime
+        // normal. As alíquotas abaixo são as alíquotas-teste oficiais de 2026.
+        var jaEmContingencia = nota.CnfContingencia.HasValue;
+        var anoIbsCbs = jaEmContingencia ? ParaBrasil(nota.CreatedAt).Year : AgoraBrasil().Year;
+        var incluirIbsCbs = ambiente == TipoAmbiente.Homologacao ||
+            cfg.RegimeTributario != RegimeTributario.SimplesNacional || anoIbsCbs >= 2027;
+        if (incluirIbsCbs && anoIbsCbs != 2026)
+            throw new FiscalNaoConfiguradoException(
+                $"As alíquotas de IBS/CBS para {anoIbsCbs} ainda não estão configuradas no sistema. " +
+                "Atualize a configuração fiscal conforme a tabela oficial vigente antes de emitir.");
+        var detItens = dados.Itens.Select((item, idx) => MontarItem(item, idx + 1, incluirIbsCbs)).ToList();
         if (ambiente == TipoAmbiente.Homologacao && detItens.Count > 0)
             detItens[0].prod.xProd = ProdutoHomologacao;
 
         // Se esta nota já entrou em contingência offline numa tentativa anterior, a
         // retransmissão precisa reconstruir a MESMA chave de acesso (já mostrada ao
         // cliente no cupom) — número, cNf e tpEmis não podem mudar entre tentativas.
-        var jaEmContingencia = nota.CnfContingencia.HasValue;
         var numero = jaEmContingencia ? nota.Numero!.Value : await ReservarProximoNumeroNfceAsync(cfg.Id);
         // Uma nova tentativa online recebe novo número/chave e precisa usar o horário
         // atual. Reaproveitar nota.CreatedAt depois de alguns minutos é rejeitado pela SEFAZ
@@ -749,6 +771,7 @@ public class NfceEmissionService : INfceEmissionService
                         vPIS     = 0, vCOFINS = 0, vOutro = 0,
                         vNF      = valorTotal,
                     },
+                    IBSCBSTot = incluirIbsCbs ? MontarTotaisIbsCbs2026(detItens) : null,
                 },
                 // O grupo transp é obrigatório no leiaute 4.00 mesmo na NFC-e presencial.
                 // Para NFC-e, a modalidade correta é 9 (sem ocorrência de transporte).
@@ -1069,7 +1092,7 @@ public class NfceEmissionService : INfceEmissionService
         };
     }
 
-    private static det MontarItem(ItemFiscal item, int numero) => new()
+    internal static det MontarItem(ItemFiscal item, int numero, bool incluirIbsCbs = false) => new()
     {
         nItem = numero,
         prod = new prod
@@ -1097,8 +1120,70 @@ public class NfceEmissionService : INfceEmissionService
             // esse regime na NFC-e). Confirmado contra prática de mercado, não é chute.
             PIS    = new PIS    { TipoPIS    = new PISOutr    { CST = CSTPIS.pis99,    vBC = 0, pPIS    = 0, vPIS    = 0 } },
             COFINS = new COFINS { TipoCOFINS = new COFINSOutr { CST = CSTCOFINS.cofins99, vBC = 0, pCOFINS = 0, vCOFINS = 0 } },
+            IBSCBS = incluirIbsCbs ? MontarIbsCbs2026(item) : null,
         },
     };
+
+    /// <summary>
+    /// Grupo de tributação integral usado na fase de testes de 2026 da RTC.
+    /// CST 000 / cClassTrib 000001 representam situações tributadas integralmente;
+    /// as alíquotas oficiais de 2026 são IBS-UF 0,1%, IBS-Mun 0% e CBS 0,9%.
+    /// Os valores não compõem o total da operação em 2026.
+    /// </summary>
+    internal static IbsCbsItem MontarIbsCbs2026(ItemFiscal item)
+    {
+        var baseCalculo = item.SubtotalCentavos / 100m;
+        var valorIbsUf  = ArredondarTributo(baseCalculo * 0.001m);
+        var valorCbs    = ArredondarTributo(baseCalculo * 0.009m);
+
+        return new IbsCbsItem
+        {
+            CST        = IbsCbsCst.Cst000,
+            cClassTrib = "000001",
+            gIBSCBS = new IbsCbsItemValues
+            {
+                vBC = baseCalculo,
+                gIBSUF = new IbsItemUf { pIBSUF = 0.1m, vIBSUF = valorIbsUf },
+                gIBSMun = new IbsItemMun { pIBSMun = 0m, vIBSMun = 0m },
+                vIBS = valorIbsUf,
+                gCBS = new CbsItem { pCBS = 0.9m, vCBS = valorCbs },
+            },
+        };
+    }
+
+    /// <summary>Consolida no grupo total exatamente os valores IBS/CBS dos itens.</summary>
+    internal static IbsCbsTotal MontarTotaisIbsCbs2026(IEnumerable<det> itens)
+    {
+        var grupos = itens.Select(i => i.imposto.IBSCBS!.gIBSCBS!).ToList();
+        var baseTotal   = grupos.Sum(g => g.vBC);
+        var ibsUfTotal  = grupos.Sum(g => g.gIBSUF!.vIBSUF);
+        var ibsMunTotal = grupos.Sum(g => g.gIBSMun!.vIBSMun);
+        var cbsTotal    = grupos.Sum(g => g.gCBS!.vCBS);
+
+        return new IbsCbsTotal
+        {
+            vBCIBSCBS = baseTotal,
+            gIBS = new IbsTotal
+            {
+                gIBSUF = new IbsTotalUf { vDif = 0, vDevTrib = 0, vIBSUF = ibsUfTotal },
+                gIBSMun = new IbsTotalMun { vDif = 0, vDevTrib = 0, vIBSMun = ibsMunTotal },
+                vIBS = ibsUfTotal + ibsMunTotal,
+                vCredPres = 0,
+                vCredPresCondSus = 0,
+            },
+            gCBS = new CbsTotal
+            {
+                vDif = 0,
+                vDevTrib = 0,
+                vCBS = cbsTotal,
+                vCredPres = 0,
+                vCredPresCondSus = 0,
+            },
+        };
+    }
+
+    private static decimal ArredondarTributo(decimal valor) =>
+        Math.Round(valor, 2, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Mapeia o CSOSN da Natureza de Operação pra classe ICMS correta do Simples Nacional.
