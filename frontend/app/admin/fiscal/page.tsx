@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { fiscalApi, FiscalConfigDto, NaturezaOperacaoDto, NotaFiscalDto, COMANDA_PAYMENT_METHODS } from '@/lib/api'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import {
-  Receipt, Upload, Save, Loader2, AlertTriangle, CheckCircle,
+  Upload, Save, Loader2, AlertTriangle, CheckCircle,
   Plus, Trash2, Download, ShieldCheck, Star, RefreshCw, Ban, ScrollText, Printer,
 } from 'lucide-react'
 
@@ -349,16 +350,8 @@ export default function FiscalPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-brand-500/10">
-          <Receipt className="w-5 h-5 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-black text-white">Fiscal — NFC-e</h1>
-          <p className="text-sm text-gray-400">Certificado digital, dados da empresa e naturezas de operação</p>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <PageHeader title="Fiscal — NFC-e" subtitle="Certificado digital, dados da empresa e naturezas de operação" />
 
       {/* Trava geral do motor fiscal */}
       <div className={clsx(
@@ -434,7 +427,7 @@ export default function FiscalPage() {
         )}
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <label className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-700 border border-surface-600 text-sm text-gray-300 cursor-pointer hover:bg-surface-500">
+          <label className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-700 border border-surface-500 text-sm text-gray-300 cursor-pointer hover:bg-surface-500">
             <Upload className="w-4 h-4 shrink-0" />
             <span className="truncate">{certFile ? certFile.name : 'Selecionar arquivo .pfx'}</span>
             <input type="file" accept=".pfx,.p12" className="hidden"
@@ -754,13 +747,13 @@ export default function FiscalPage() {
                   <div className="flex items-center gap-2 shrink-0">
                     {n.chaveAcesso && (
                       <Link href={`/admin/fiscal/cupom/${n.id}`} target="_blank"
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-500 border border-surface-600 text-sm text-gray-300">
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-500 border border-surface-500 text-sm text-gray-300">
                         <Printer className="w-3.5 h-3.5" /> Cupom
                       </Link>
                     )}
                     {(n.status === 'PendenteEmissao' || n.status === 'Rejeitada' || n.status === 'AutorizadaContingencia') && (
                       <button onClick={() => reprocessarNota(n.id)} disabled={reprocessingId === n.id}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-500 border border-surface-600 text-sm text-gray-300">
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-500 border border-surface-500 text-sm text-gray-300">
                         {reprocessingId === n.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                         Reprocessar
                       </button>

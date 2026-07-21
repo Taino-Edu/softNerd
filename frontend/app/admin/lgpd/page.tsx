@@ -507,7 +507,7 @@ export default function LgpdAdminPage() {
                   auditActionFilter === f
                     ? f === 'Auth' ? 'bg-red-500/20 text-red-400 border border-red-500/40'
                       : 'bg-brand-500/20 text-brand-400 border border-brand-500/40'
-                    : 'bg-surface-700 text-gray-400 hover:text-white border border-surface-600'
+                    : 'bg-surface-700 text-gray-400 hover:text-white border border-surface-500'
                 }`}>
                 {f === '' ? 'Todos' : f === 'Auth' ? '🔐 Segurança' : f === 'User' ? '👤 Usuários' : '📋 LGPD'}
               </button>

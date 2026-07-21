@@ -237,7 +237,7 @@ export default function AnunciosPage() {
         ) : (
           <div className="space-y-3">
             {banners.map(b => (
-              <div key={b.id} className={clsx('flex items-center gap-3 rounded-xl border p-3', !b.isActive && 'opacity-50', 'border-surface-600 bg-surface-700/30')}>
+              <div key={b.id} className={clsx('flex items-center gap-3 rounded-xl border p-3', !b.isActive && 'opacity-50', 'border-surface-500 bg-surface-700/30')}>
                 {b.imageUrl && (
                   <img src={b.imageUrl} alt="Banner" className="w-32 h-16 object-cover rounded-lg shrink-0 bg-surface-600" />
                 )}

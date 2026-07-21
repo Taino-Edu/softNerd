@@ -92,7 +92,7 @@ export default function KeyboardShortcutsOverlay() {
       onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}
     >
       <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-600">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-500">
           <div className="flex items-center gap-2">
             <Keyboard className="w-4 h-4 text-brand-400" />
             <h3 className="font-semibold text-white text-sm">Atalhos de Teclado</h3>

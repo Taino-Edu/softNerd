@@ -779,7 +779,7 @@ export default function CartasPage() {
 
             {/* Filtros exclusivos Pokémon */}
             {isPokemon && (
-              <div className="border border-surface-600 rounded-xl p-3 space-y-2 bg-surface-800/40">
+              <div className="border border-surface-500 rounded-xl p-3 space-y-2 bg-surface-800/40">
                 <p className="text-[10px] font-bold text-brand-400 uppercase tracking-widest">Filtros Pokémon</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {/* Subtipo */}

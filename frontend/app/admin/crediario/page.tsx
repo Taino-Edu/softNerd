@@ -191,7 +191,7 @@ function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 
             {/* Lista de itens adicionados */}
             {itens.length > 0 && (
-              <div className="bg-surface-900 rounded-xl border border-surface-600 divide-y divide-surface-600 mb-2">
+              <div className="bg-surface-900 rounded-xl border border-surface-500 divide-y divide-surface-500 mb-2">
                 {itens.map((it, idx) => (
                   <div key={idx} className="flex items-center gap-2 px-3 py-2 text-sm">
                     <span className="flex-1 text-white truncate">{it.nome}</span>
@@ -445,7 +445,7 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
 
               {/* Lista de itens existentes */}
               {itens.length > 0 ? (
-                <div className="bg-surface-900 rounded-xl border border-surface-600 divide-y divide-surface-700 mb-3 max-h-40 overflow-y-auto">
+                <div className="bg-surface-900 rounded-xl border border-surface-500 divide-y divide-surface-700 mb-3 max-h-40 overflow-y-auto">
                   {itens.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2 px-3 py-2">
                       <span className="text-xs text-gray-400 flex-1 truncate">
@@ -901,7 +901,7 @@ function CrediarioCard({
 
       {/* Itens da comanda de origem */}
       {c.itensComanda.length > 0 && (
-        <div className="mt-3 border-t border-surface-600 pt-3">
+        <div className="mt-3 border-t border-surface-500 pt-3">
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setExpandItens(v => !v)}
@@ -938,7 +938,7 @@ function CrediarioCard({
 
       {/* Histórico de pagamentos */}
       {c.pagamentos.length > 0 && (
-        <div className="mt-3 border-t border-surface-600 pt-3">
+        <div className="mt-3 border-t border-surface-500 pt-3">
           <button
             onClick={() => setExpandido(v => !v)}
             className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
@@ -1050,7 +1050,7 @@ function ClienteCrediarioCard({
 
       {/* Dívidas individuais */}
       {aberto && (
-        <div className="mt-4 space-y-3 border-t border-surface-600 pt-4">
+        <div className="mt-4 space-y-3 border-t border-surface-500 pt-4">
           {grupo.dividas.map(c => (
             <CrediarioCard
               key={c.id}

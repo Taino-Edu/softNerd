@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Badge, BadgeTone } from '@/components/ui/Badge'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
@@ -72,11 +74,11 @@ const TYPE_OPTS = [
 
 const CATEGORIES = ['Fornecedor', 'Aluguel', 'Salário', 'Imposto', 'Marketing', 'Serviço', 'Equipamento', 'Outro']
 
-const statusCls: Record<string, string> = {
-  pending:   'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  overdue:   'bg-red-500/15 text-red-400 border-red-500/30',
-  paid:      'bg-green-500/15 text-green-400 border-green-500/30',
-  cancelled: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
+const statusTone: Record<string, BadgeTone> = {
+  pending:   'info',
+  overdue:   'danger',
+  paid:      'success',
+  cancelled: 'neutral',
 }
 
 const statusLabel: Record<string, string> = {
@@ -189,7 +191,7 @@ function TransactionModal({ initial, onClose, onSaved }: {
                 type === t
                   ? t === 'expense' ? 'bg-red-500/20 text-red-300 border-red-500/40'
                                     : 'bg-green-500/20 text-green-300 border-green-500/40'
-                  : 'bg-surface-700 text-gray-400 border-surface-600')}>
+                  : 'bg-surface-700 text-gray-400 border-surface-500')}>
               {t === 'expense' ? '💸 A Pagar' : '💰 A Receber'}
             </button>
           ))}
@@ -477,24 +479,18 @@ export default function ContasReceberPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       <Toaster />
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <div className="p-2 rounded-xl bg-brand-500/10">
-          <Wallet className="w-5 h-5 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-black text-white">Contas a Receber / Pagar</h1>
-          <p className="text-sm text-gray-400">{totalCount} lançamentos</p>
-        </div>
-        {tab === 'lancamentos' && (
-          <div className="ml-auto flex items-center gap-2 flex-wrap">
+      <PageHeader
+        title="Contas a Receber / Pagar"
+        subtitle={`${totalCount} lançamentos`}
+        actions={tab === 'lancamentos' && (
+          <>
             {/* Upload OFX */}
             <label className={clsx(
               'flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-700 hover:bg-surface-500',
-              'border border-surface-600 text-sm text-gray-300 cursor-pointer transition-colors',
+              'border border-surface-500 text-sm text-gray-300 cursor-pointer transition-colors',
               ofxLoading && 'opacity-60 pointer-events-none')}>
               {ofxLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {ofxLoading ? 'Importando…' : 'Importar OFX'}
@@ -505,12 +501,12 @@ export default function ContasReceberPage() {
                          text-white text-sm font-semibold transition-colors">
               <Plus className="w-4 h-4" /> Novo lançamento
             </button>
-          </div>
+          </>
         )}
-      </div>
+      />
 
       {/* Abas */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2">
         {([
           { id: 'lancamentos', label: 'Lançamentos',     icon: <Wallet className="w-4 h-4" /> },
           { id: 'notas',       label: 'Notas Recebidas', icon: <Inbox  className="w-4 h-4" /> },
@@ -519,7 +515,7 @@ export default function ContasReceberPage() {
             className={clsx('flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors',
               tab === t.id
                 ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                : 'bg-surface-700 text-gray-400 border-surface-600 hover:text-gray-300')}>
+                : 'bg-surface-700 text-gray-400 border-surface-500 hover:text-gray-300')}>
             {t.icon} {t.label}
           </button>
         ))}
@@ -556,7 +552,7 @@ export default function ContasReceberPage() {
             className={clsx('px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
               typeFilter === o.value
                 ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                : 'bg-surface-700 text-gray-400 border-surface-600')}>
+                : 'bg-surface-700 text-gray-400 border-surface-500')}>
             {o.label}
           </button>
         ))}
@@ -566,7 +562,7 @@ export default function ContasReceberPage() {
             className={clsx('px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
               statusFilter === o.value
                 ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                : 'bg-surface-700 text-gray-400 border-surface-600')}>
+                : 'bg-surface-700 text-gray-400 border-surface-500')}>
             {o.label}
           </button>
         ))}
@@ -623,10 +619,9 @@ export default function ContasReceberPage() {
                     t.type === 'expense' ? 'text-red-400' : 'text-green-400')}>
                     {t.type === 'expense' ? '−' : '+'}{fmtMoney(t.amount)}
                   </p>
-                  <span className={clsx('text-[10px] font-bold px-1.5 py-0.5 rounded-full border',
-                    statusCls[overdue ? 'overdue' : t.status] ?? statusCls['pending'])}>
+                  <Badge tone={statusTone[overdue ? 'overdue' : t.status] ?? 'info'} className="text-[10px]">
                     {statusLabel[overdue ? 'overdue' : t.status] ?? t.status}
-                  </span>
+                  </Badge>
                 </div>
 
                 {/* Ações */}

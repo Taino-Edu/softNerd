@@ -60,7 +60,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
       <div className="fixed right-0 top-0 h-full w-full max-w-sm z-50 bg-surface-800 border-l border-surface-500 shadow-2xl flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-600 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-500 shrink-0">
           <span className="text-sm font-semibold text-gray-300">Detalhes do Produto</span>
           <div className="flex items-center gap-2">
             <button onClick={onEdit} className="btn-primary py-1.5 px-3 text-xs flex items-center gap-1.5">
@@ -76,14 +76,14 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
           {/* Imagem */}
           {images.length > 0 ? (
             <div className="space-y-2">
-              <div className="aspect-square rounded-xl overflow-hidden bg-surface-700 border border-surface-600">
+              <div className="aspect-square rounded-xl overflow-hidden bg-surface-700 border border-surface-500">
                 <img src={images[imgIdx]} alt={product.name} className="w-full h-full object-contain" />
               </div>
               {images.length > 1 && (
                 <div className="flex gap-2 justify-center flex-wrap">
                   {images.map((url, i) => (
                     <button key={i} onClick={() => setImgIdx(i)}
-                      className={`w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${i === imgIdx ? 'border-brand-400' : 'border-surface-600 opacity-40 hover:opacity-70'}`}
+                      className={`w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${i === imgIdx ? 'border-brand-400' : 'border-surface-500 opacity-40 hover:opacity-70'}`}
                     >
                       <img src={url} alt="" className="w-full h-full object-cover" />
                     </button>
@@ -92,7 +92,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
               )}
             </div>
           ) : (
-            <div className="aspect-square rounded-xl bg-surface-700 border border-surface-600 flex items-center justify-center">
+            <div className="aspect-square rounded-xl bg-surface-700 border border-surface-500 flex items-center justify-center">
               <Package className="w-16 h-16 text-gray-600" />
             </div>
           )}
@@ -122,7 +122,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
           </div>
 
           {/* Preços */}
-          <div className="bg-surface-700 rounded-xl p-4 space-y-3 border border-surface-600">
+          <div className="bg-surface-700 rounded-xl p-4 space-y-3 border border-surface-500">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Preço de Venda</span>
               <span className="text-lg font-black font-mono text-accent-gold">
@@ -150,7 +150,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
           </div>
 
           {/* Estoque */}
-          <div className="bg-surface-700 rounded-xl p-4 space-y-3 border border-surface-600">
+          <div className="bg-surface-700 rounded-xl p-4 space-y-3 border border-surface-500">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Estoque Atual</span>
               <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
               }`} style={{ width: `${Math.min(100, stockPct)}%` }} />
             </div>
             {product.costPriceInCents > 0 && (
-              <div className="flex items-center justify-between text-xs pt-1 border-t border-surface-600">
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-surface-500">
                 <span className="text-gray-500">Valor imobilizado</span>
                 <span className="font-mono font-semibold text-brand-400">
                   R$ {valorImob.toFixed(2).replace('.', ',')}
@@ -185,7 +185,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
           {/* ── Fila (produto que ainda não chegou) ── */}
           {product.isPreVenda && (
             <div className="bg-surface-700 rounded-xl border border-purple-500/30 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-surface-600">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-surface-500">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-purple-400" />
                   <span className="text-xs font-black uppercase tracking-wider text-purple-300">Fila de Espera</span>
@@ -202,7 +202,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
               ) : wlEntries.length === 0 ? (
                 <p className="text-center text-xs text-gray-500 py-5">Ninguém na fila ainda</p>
               ) : (
-                <div className="divide-y divide-surface-600 max-h-52 overflow-y-auto">
+                <div className="divide-y divide-surface-500 max-h-52 overflow-y-auto">
                   {wlEntries.map(e => (
                     <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
                       <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-300 shrink-0">
@@ -370,7 +370,7 @@ function VariantsPanel({ productId }: { productId: string }) {
         <div className="rounded-xl border border-surface-500 overflow-hidden">
           {Object.entries(grouped).map(([size, vars]) => (
             <div key={size}>
-              <div className="px-3 py-1.5 bg-surface-700/80 text-xs font-bold text-gray-400 uppercase tracking-wide border-b border-surface-600">
+              <div className="px-3 py-1.5 bg-surface-700/80 text-xs font-bold text-gray-400 uppercase tracking-wide border-b border-surface-500">
                 Tamanho {size}
               </div>
               {vars.map(v => (
@@ -495,8 +495,8 @@ function ProductModal({
       <CameraScanner onDetected={handleCameraDetected} onClose={() => setCameraOpen(false)} />
     )}
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 p-4 overflow-y-auto flex items-start sm:items-center justify-center">
-      <div className="w-full max-w-md bg-surface-800 border border-surface-600 rounded-2xl shadow-xl max-h-[calc(100dvh-2rem)] flex flex-col my-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-600 shrink-0">
+      <div className="w-full max-w-md bg-surface-800 border border-surface-500 rounded-2xl shadow-xl max-h-[calc(100dvh-2rem)] flex flex-col my-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-500 shrink-0">
           <h2 className="text-lg font-bold text-white">{form.id ? 'Editar Produto' : 'Novo Produto'}</h2>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-500 text-gray-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
         </div>
@@ -519,7 +519,7 @@ function ProductModal({
               <button
                 type="button"
                 onClick={() => setCameraOpen(true)}
-                className="shrink-0 px-3 rounded-lg bg-surface-700 hover:bg-brand-600/20 border border-surface-600 hover:border-brand-500/40 text-gray-400 hover:text-brand-400 transition-colors"
+                className="shrink-0 px-3 rounded-lg bg-surface-700 hover:bg-brand-600/20 border border-surface-500 hover:border-brand-500/40 text-gray-400 hover:text-brand-400 transition-colors"
                 title="Usar câmera"
               >
                 <Camera className="w-4 h-4" />
@@ -623,7 +623,7 @@ function ProductModal({
             )}
           </div>
           {/* Grade de tamanhos/cores toggle */}
-          <div className="rounded-lg bg-surface-700/60 border border-surface-600 px-4 py-3">
+          <div className="rounded-lg bg-surface-700/60 border border-surface-500 px-4 py-3">
             <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">👕 Grade de tamanhos/cores</p>
@@ -643,7 +643,7 @@ function ProductModal({
               </div>
             </label>
             {form.hasVariants && form.id && (
-              <div className="mt-3 pt-3 border-t border-surface-600">
+              <div className="mt-3 pt-3 border-t border-surface-500">
                 <VariantsPanel productId={form.id} />
               </div>
             )}
@@ -691,7 +691,7 @@ function ProductModal({
             <label className="label">Fotos adicionais <span className="text-gray-500 font-normal">(galeria na página do produto)</span></label>
             <div className="grid grid-cols-2 gap-3">
               {(form.imageUrls ?? []).map((url, i) => (
-                <div key={i} className="relative rounded-xl overflow-hidden border border-surface-600 bg-surface-700 group" style={{ aspectRatio: '1' }}>
+                <div key={i} className="relative rounded-xl overflow-hidden border border-surface-500 bg-surface-700 group" style={{ aspectRatio: '1' }}>
                   <img src={url} alt={`Foto ${i + 1}`} className="w-full h-full object-contain p-2" />
                   <button
                     type="button"
@@ -714,7 +714,7 @@ function ProductModal({
             </div>
             <p className="text-xs text-gray-500">Máximo 6 fotos adicionais</p>
           </div>
-          <div className="rounded-lg bg-surface-700/60 border border-surface-600 px-4 py-3 space-y-3">
+          <div className="rounded-lg bg-surface-700/60 border border-surface-500 px-4 py-3 space-y-3">
             <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">🛍️ Marketplace</p>
@@ -784,7 +784,7 @@ function ProductModal({
             </div>
           </div>
         </div>
-        <div className="flex gap-3 px-6 py-4 border-t border-surface-600 shrink-0">
+        <div className="flex gap-3 px-6 py-4 border-t border-surface-500 shrink-0">
           <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancelar</button>
           <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -1027,7 +1027,7 @@ export default function EstoquePage() {
           ] as const).map(({ key, label, count, cls }) => (
             <button key={key} onClick={() => setStockFilter(key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                stockFilter === key ? `${cls} bg-surface-700` : 'border-surface-600 text-gray-500 hover:border-surface-500 hover:text-gray-300'
+                stockFilter === key ? `${cls} bg-surface-700` : 'border-surface-500 text-gray-500 hover:border-surface-500 hover:text-gray-300'
               }`}>
               {label}
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${

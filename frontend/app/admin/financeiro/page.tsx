@@ -76,7 +76,7 @@ type AbcSortCol = 'receita' | 'qtd' | 'margemPct' | 'precoMedio'
 function AbcExplainer() {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-xl border border-surface-600 bg-surface-800 overflow-hidden">
+    <div className="rounded-xl border border-surface-500 bg-surface-800 overflow-hidden">
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-700 transition-colors text-left"
@@ -238,7 +238,7 @@ function CurvaABCSection({ produtos, targetPct }: {
           const isActive = filterClass === cls
           return (
             <button key={cls} onClick={() => setFilterClass(isActive ? null : cls)}
-              className={`rounded-xl p-4 border text-left transition-all ${isActive ? `${c.bg} ${c.border} border-2` : 'bg-surface-800 border-surface-600 hover:border-surface-400'}`}
+              className={`rounded-xl p-4 border text-left transition-all ${isActive ? `${c.bg} ${c.border} border-2` : 'bg-surface-800 border-surface-500 hover:border-surface-400'}`}
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className={`text-2xl font-black ${c.text}`}>{cls}</span>
@@ -254,7 +254,7 @@ function CurvaABCSection({ produtos, targetPct }: {
       </div>
 
       {/* Pareto Chart */}
-      <div className="bg-surface-800 rounded-xl p-4 border border-surface-600">
+      <div className="bg-surface-800 rounded-xl p-4 border border-surface-500">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
             <BarChart2 className="w-3.5 h-3.5 text-brand-400" /> Curva ABC — Pareto
@@ -350,11 +350,11 @@ function CurvaABCSection({ produtos, targetPct }: {
       </div>
 
       {/* Peso por categoria */}
-      <div className="bg-surface-800 rounded-xl border border-surface-600 overflow-hidden">
-        <div className="px-4 py-3 border-b border-surface-600">
+      <div className="bg-surface-800 rounded-xl border border-surface-500 overflow-hidden">
+        <div className="px-4 py-3 border-b border-surface-500">
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Peso por Categoria</h4>
         </div>
-        <div className="divide-y divide-surface-700">
+        <div className="divide-y divide-surface-500">
           {catWeights.map(cw => {
             const clr = ABC_COLORS[cw.cls]
             const isFiltered = filterCat === cw.cat
@@ -383,9 +383,9 @@ function CurvaABCSection({ produtos, targetPct }: {
       </div>
 
       {/* Tabela com headers clicáveis */}
-      <div className="rounded-xl border border-surface-600 overflow-x-auto">
+      <div className="card p-0 overflow-hidden">
         {hasFilters && (
-          <div className="px-4 py-2 bg-surface-800 border-b border-surface-600 flex items-center gap-2 text-xs text-gray-400">
+          <div className="px-4 py-2 bg-surface-800 border-b border-surface-500 flex items-center gap-2 text-xs text-gray-400">
             Filtrando:
             {filterClass && <span className={`font-bold ${ABC_COLORS[filterClass].text}`}>Classe {filterClass}</span>}
             {filterCat   && <span className="text-brand-300">{filterCat}</span>}
@@ -395,6 +395,7 @@ function CurvaABCSection({ produtos, targetPct }: {
             </button>
           </div>
         )}
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-surface-800">
             <tr className="text-left">
@@ -422,7 +423,7 @@ function CurvaABCSection({ produtos, targetPct }: {
               <th className="px-4 py-2.5 text-xs text-gray-500 uppercase tracking-wider font-semibold whitespace-nowrap">% Acum.</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-surface-600">
+          <tbody className="divide-y divide-surface-500">
             {tableData.map((p, i) => {
               const precoMedio = p.qtd > 0 ? p.receita / p.qtd : 0
               const custoMedio = p.qtd > 0 ? p.custo  / p.qtd : 0
@@ -475,7 +476,8 @@ function CurvaABCSection({ produtos, targetPct }: {
             })}
           </tbody>
         </table>
-        <div className="px-4 py-2.5 border-t border-surface-600 flex flex-wrap gap-4 text-[10px] text-gray-500">
+        </div>
+        <div className="px-4 py-2.5 border-t border-surface-500 flex flex-wrap gap-4 text-[10px] text-gray-500">
           <span><span className="text-emerald-400 font-bold">A</span> = produtos vitais que formam 80% da receita</span>
           <span><span className="text-yellow-400 font-bold">B</span> = importantes · 80–95%</span>
           <span><span className="text-red-400 font-bold">C</span> = periféricos · acima de 95%</span>
@@ -523,7 +525,7 @@ function KpiChartModal({
     >
       <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-lg shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-600">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-500">
           <h3 className="font-semibold text-white">{title}</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
             <X className="w-5 h-5" />
@@ -691,7 +693,7 @@ function FormasPagamentoSection({ formas }: { formas: FormaPagamentoTotalDto[] }
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
               showFilters || hasFilters
                 ? 'bg-brand-600/20 border-brand-500/50 text-brand-300'
-                : 'bg-surface-700 border-surface-600 text-gray-400 hover:text-gray-200'
+                : 'bg-surface-700 border-surface-500 text-gray-400 hover:text-gray-200'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
@@ -712,7 +714,7 @@ function FormasPagamentoSection({ formas }: { formas: FormaPagamentoTotalDto[] }
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                     filterForma === forma
                       ? 'bg-brand-600/30 border-brand-500 text-brand-200'
-                      : 'bg-surface-700 border-surface-600 text-gray-400 hover:border-surface-500'
+                      : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
                   }`}
                 >
                   {forma === 'Todas' ? 'Todas' : (FORMA_LABELS[forma] ?? forma)}
@@ -760,7 +762,7 @@ function FormasPagamentoSection({ formas }: { formas: FormaPagamentoTotalDto[] }
       </div>
 
       {/* Lista */}
-      <div className="divide-y divide-surface-600">
+      <div className="divide-y divide-surface-500">
         {formasFiltradas.length === 0 ? (
           <p className="text-center text-gray-500 text-sm py-8">Nenhuma forma de pagamento no filtro.</p>
         ) : (
@@ -794,7 +796,7 @@ function FormasPagamentoSection({ formas }: { formas: FormaPagamentoTotalDto[] }
                 </button>
 
                 {isOpen && (
-                  <div className="bg-surface-800 border-t border-surface-600 divide-y divide-surface-700">
+                  <div className="bg-surface-800 border-t border-surface-500 divide-y divide-surface-500">
                     {txsFiltradas.length === 0 ? (
                       <p className="text-center text-gray-500 text-xs py-4">Nenhuma transação no filtro.</p>
                     ) : (
@@ -867,7 +869,7 @@ function DayDetailModal({ day, onClose }: {
     >
       <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-surface-600 bg-gradient-to-r from-brand-600/10 to-transparent flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-surface-500 bg-gradient-to-r from-brand-600/10 to-transparent flex items-center justify-between">
           <div>
             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Resumo do dia</p>
             <h3 className="font-semibold text-white capitalize mt-0.5">{dayLabel}</h3>
@@ -974,14 +976,14 @@ function DateQuickFilter({ preset, onPreset, inicio, fim }: {
           className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
             preset === p
               ? 'bg-brand-600/25 border-brand-500/60 text-brand-200'
-              : 'bg-surface-700 border-surface-600 text-gray-400 hover:border-surface-500 hover:text-gray-200'
+              : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500 hover:text-gray-200'
           }`}
         >
           {LABELS[p]}
         </button>
       ))}
       {preset === 'custom' && (
-        <span className="text-xs text-gray-500 font-mono bg-surface-700 border border-surface-600 px-2 py-1 rounded-lg">
+        <span className="text-xs text-gray-500 font-mono bg-surface-700 border border-surface-500 px-2 py-1 rounded-lg">
           {inicio.slice(5).replace('-', '/')} → {fim.slice(5).replace('-', '/')}
         </span>
       )}
@@ -1272,7 +1274,7 @@ function DayPieChart({ formas, receita, custo, date }: {
             )
           })}
           {custo > 0 && (
-            <div className="mt-2 pt-2 border-t border-surface-600 flex items-center justify-between px-3">
+            <div className="mt-2 pt-2 border-t border-surface-500 flex items-center justify-between px-3">
               <span className="text-xs text-gray-500">Margem estimada</span>
               <span className={`text-xs font-mono font-bold ${receita > custo ? 'text-emerald-400' : 'text-red-400'}`}>
                 {fmt(receita - custo)} · {receita > 0 ? (((receita - custo) / receita) * 100).toFixed(1) : 0}%
@@ -1609,7 +1611,7 @@ export default function FinanceiroPage() {
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                   filterPaymentMethod === pm
                     ? 'bg-brand-600/30 border-brand-500 text-brand-200'
-                    : 'bg-surface-700 border-surface-600 text-gray-400 hover:border-surface-500 hover:text-gray-200'
+                    : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500 hover:text-gray-200'
                 }`}
               >
                 {pm ? FORMA_ICONS[pm] : null}
@@ -1743,7 +1745,7 @@ export default function FinanceiroPage() {
 
               <div className="p-5 space-y-0">
                 {/* Receita Bruta */}
-                <div className="flex items-center justify-between py-2.5 border-b border-surface-600">
+                <div className="flex items-center justify-between py-2.5 border-b border-surface-500">
                   <div>
                     <p className="text-sm font-semibold text-gray-200">Receita Bruta</p>
                     <div className="flex gap-4 mt-1">
@@ -1759,7 +1761,7 @@ export default function FinanceiroPage() {
                 {/* CMV */}
                 {d.custo > 0 ? (
                   <>
-                    <div className="flex items-center justify-between py-2.5 border-b border-surface-600">
+                    <div className="flex items-center justify-between py-2.5 border-b border-surface-500">
                       <p className="text-sm text-gray-400">(−) CMV — Custo das Mercadorias Vendidas</p>
                       <span className="text-red-400 font-mono">({fmt(d.custo)})</span>
                     </div>
@@ -1778,11 +1780,11 @@ export default function FinanceiroPage() {
                     {/* Crediários */}
                     {d.crediarios > 0 && (
                       <>
-                        <div className="flex items-center justify-between py-2.5 border-b border-surface-600">
+                        <div className="flex items-center justify-between py-2.5 border-b border-surface-500">
                           <p className="text-sm text-gray-400">(−) Crediários em Aberto</p>
                           <span className="text-amber-400 font-mono">({fmt(d.crediarios)})</span>
                         </div>
-                        <div className="flex items-center justify-between py-2.5 border-b border-surface-600">
+                        <div className="flex items-center justify-between py-2.5 border-b border-surface-500">
                           <p className="text-sm text-gray-300">Resultado Estimado</p>
                           <span className={`font-semibold font-mono ${d.margem - d.crediarios >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {fmt(d.margem - d.crediarios)}
@@ -1829,7 +1831,7 @@ export default function FinanceiroPage() {
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
                         targetPct === pct
                           ? 'bg-brand-500/20 border-brand-500/60 text-brand-300'
-                          : 'bg-surface-700 border-surface-600 text-gray-400 hover:text-gray-200'
+                          : 'bg-surface-700 border-surface-500 text-gray-400 hover:text-gray-200'
                       }`}>
                       {pct}%
                     </button>
@@ -1839,13 +1841,13 @@ export default function FinanceiroPage() {
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Meta automática */}
-                  <div className="bg-surface-800 rounded-xl p-4 border border-surface-600">
+                  <div className="bg-surface-800 rounded-xl p-4 border border-surface-500">
                     <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Meta Automática</p>
                     <p className="text-lg font-bold font-mono text-brand-400">{metaAuto > 0 ? fmt(metaAuto) : '—'}</p>
                     <p className="text-[10px] text-gray-500 mt-1">Custo ÷ (1 − {targetPct}%) · baseada no CMV do período</p>
                   </div>
                   {/* Meta manual */}
-                  <div className="bg-surface-800 rounded-xl p-4 border border-surface-600">
+                  <div className="bg-surface-800 rounded-xl p-4 border border-surface-500">
                     <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Meta Manual</p>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-400 text-sm">R$</span>
@@ -1867,7 +1869,7 @@ export default function FinanceiroPage() {
                     </p>
                   </div>
                   {/* Realizado */}
-                  <div className="bg-surface-800 rounded-xl p-4 border border-surface-600">
+                  <div className="bg-surface-800 rounded-xl p-4 border border-surface-500">
                     <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Realizado</p>
                     <p className={`text-lg font-bold font-mono ${metaPct >= 100 ? 'text-emerald-400' : metaPct >= 75 ? 'text-brand-400' : metaPct >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
                       {fmt(d.receita)}
@@ -1954,18 +1956,18 @@ export default function FinanceiroPage() {
                   </div>
                   <div className="flex items-center gap-3 flex-wrap">
                     {/* Toggle Simples / Análise / Curva ABC */}
-                    <div className="flex rounded-lg overflow-hidden border border-surface-600 text-xs font-semibold">
+                    <div className="flex rounded-lg overflow-hidden border border-surface-500 text-xs font-semibold">
                       <button
                         onClick={() => setTableView('simples')}
                         className={`px-3 py-1.5 transition-colors ${tableView === 'simples' ? 'bg-brand-600/30 text-brand-300' : 'text-gray-400 hover:text-gray-200'}`}
                       >Simples</button>
                       <button
                         onClick={() => setTableView('analise')}
-                        className={`px-3 py-1.5 transition-colors border-l border-surface-600 ${tableView === 'analise' ? 'bg-brand-500/20 text-brand-300' : 'text-gray-400 hover:text-gray-200'}`}
+                        className={`px-3 py-1.5 transition-colors border-l border-surface-500 ${tableView === 'analise' ? 'bg-brand-500/20 text-brand-300' : 'text-gray-400 hover:text-gray-200'}`}
                       >Análise</button>
                       <button
                         onClick={() => setTableView('abc')}
-                        className={`px-3 py-1.5 transition-colors border-l border-surface-600 flex items-center gap-1 ${tableView === 'abc' ? 'bg-emerald-500/20 text-emerald-300' : 'text-gray-400 hover:text-gray-200'}`}
+                        className={`px-3 py-1.5 transition-colors border-l border-surface-500 flex items-center gap-1 ${tableView === 'abc' ? 'bg-emerald-500/20 text-emerald-300' : 'text-gray-400 hover:text-gray-200'}`}
                       >
                         <span className="text-emerald-400 font-black text-[10px]">ABC</span>
                         Curva
@@ -1976,12 +1978,12 @@ export default function FinanceiroPage() {
 
                 {/* Filtro por origem */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  <div className="flex rounded-lg overflow-hidden border border-surface-600 text-xs font-semibold">
+                  <div className="flex rounded-lg overflow-hidden border border-surface-500 text-xs font-semibold">
                     {(['Todos', 'Comanda', 'PDV', 'Site', 'PréVenda'] as const).map(o => (
                       <button
                         key={o}
                         onClick={() => setTopOrigemFilter(o)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${o !== 'Todos' ? 'border-l border-surface-600' : ''} ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${o !== 'Todos' ? 'border-l border-surface-500' : ''} ${
                           topOrigemFilter === o ? 'bg-brand-500/20 text-brand-300' : 'text-gray-400 hover:text-gray-200'
                         }`}
                       >
@@ -2002,7 +2004,7 @@ export default function FinanceiroPage() {
                         className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                           topCatFilter === null
                             ? 'bg-surface-600 border-surface-400 text-white'
-                            : 'bg-surface-700 border-surface-600 text-gray-400 hover:border-surface-500'
+                            : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
                         }`}
                       >Todas</button>
                       {topCats.map(cat => (
@@ -2012,7 +2014,7 @@ export default function FinanceiroPage() {
                           className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                             topCatFilter === cat
                               ? 'bg-brand-600/30 border-brand-500 text-brand-200'
-                              : 'bg-surface-700 border-surface-600 text-gray-400 hover:border-surface-500'
+                              : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
                           }`}
                         >{cat}</button>
                       ))}
@@ -2154,7 +2156,7 @@ export default function FinanceiroPage() {
                   </table>
                 )}
                 {/* Legenda */}
-                <div className="px-4 py-3 border-t border-surface-600 flex flex-wrap gap-4 text-[11px] text-gray-500">
+                <div className="px-4 py-3 border-t border-surface-500 flex flex-wrap gap-4 text-[11px] text-gray-500">
                   <span><span className="text-brand-400 font-bold">Comanda</span> = mesas · <span className="text-amber-400 font-bold">PDV</span> = balcão avulso · <span className="text-blue-400 font-bold">Site</span> = pedido normal do site · <span className="text-purple-400 font-bold">Pré-venda</span> = produto marcado como pré-venda</span>
                   {tableView === 'analise' && <>
                     <span><span className="text-brand-400 font-bold">Sugestão</span> = Custo Médio ÷ (1 − {targetPct}%)</span>

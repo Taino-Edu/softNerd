@@ -114,7 +114,7 @@ function ListingModal({ initial, onClose, onSave }: {
             disabled={uploading}
             className={clsx(
               'w-full rounded-xl border-2 border-dashed transition-colors flex flex-col items-center justify-center gap-2 overflow-hidden',
-              imageUrl ? 'border-brand-500/40 p-1' : 'border-surface-600 hover:border-brand-500/60 p-6 text-gray-400',
+              imageUrl ? 'border-brand-500/40 p-1' : 'border-surface-500 hover:border-brand-500/60 p-6 text-gray-400',
             )}
           >
             {uploading ? (
@@ -454,7 +454,7 @@ export default function AdminMarketplacePage() {
                         onChange={e => handleStatus(l, e.target.value)}
                         className={clsx(
                           'text-xs font-semibold px-2 py-1 rounded-lg border bg-transparent cursor-pointer focus:outline-none',
-                          statusCls[l.status] ?? 'border-surface-600 text-gray-400',
+                          statusCls[l.status] ?? 'border-surface-500 text-gray-400',
                         )}
                       >
                         <option value="Available">Disponível</option>

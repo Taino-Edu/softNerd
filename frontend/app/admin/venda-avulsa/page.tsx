@@ -251,7 +251,7 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
     >
       <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
 
-        <div className="flex items-start justify-between px-5 py-4 border-b border-surface-600">
+        <div className="flex items-start justify-between px-5 py-4 border-b border-surface-500">
           <div>
             <h3 className="font-bold text-white text-lg flex items-center gap-2">
               <Receipt className="w-5 h-5 text-brand-400" />
@@ -290,7 +290,7 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
           ))}
         </div>
 
-        <div className="border-t border-surface-600 px-5 py-4 space-y-2">
+        <div className="border-t border-surface-500 px-5 py-4 space-y-2">
           {venda.discountPercent > 0 && (
             <>
               <div className="flex justify-between text-sm">
@@ -693,7 +693,7 @@ function VendaWizard({
       )}>
 
         {/* Header + step indicator */}
-        <div className="px-5 pt-4 pb-3 border-b border-surface-600 shrink-0">
+        <div className="px-5 pt-4 pb-3 border-b border-surface-500 shrink-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-white flex items-center gap-2 text-base">
               <ShoppingBag className="w-4 h-4 text-brand-400" /> Nova Venda
@@ -784,7 +784,7 @@ function VendaWizard({
                     <button
                       key={u.id}
                       onClick={() => selectClient(u)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-700 transition-colors text-left border-b border-surface-600 last:border-0 text-white"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-700 transition-colors text-left border-b border-surface-500 last:border-0 text-white"
                     >
                       <div className="w-7 h-7 rounded-full bg-brand-600/20 flex items-center justify-center shrink-0">
                         <User className="w-3.5 h-3.5 text-brand-400" />
@@ -858,7 +858,7 @@ function VendaWizard({
                         key={p.id}
                         className={clsx(
                           'flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all',
-                          inCart ? 'border-brand-500/40 bg-brand-600/5' : 'bg-surface-700 border-surface-600 hover:border-surface-500'
+                          inCart ? 'border-brand-500/40 bg-brand-600/5' : 'bg-surface-700 border-surface-500 hover:border-surface-500'
                         )}
                       >
                         <div className="flex-1 min-w-0">
@@ -916,7 +916,7 @@ function VendaWizard({
                       const price = product.isOnPromo && product.discountPriceInCents != null
                         ? product.discountPriceInCents : product.priceInCents
                       return (
-                        <div key={cartKey} className="bg-surface-700 border border-surface-600 rounded-xl px-2.5 py-2 space-y-1.5">
+                        <div key={cartKey} className="bg-surface-700 border border-surface-500 rounded-xl px-2.5 py-2 space-y-1.5">
                           <p className="text-xs text-white font-medium leading-tight truncate">{product.name}</p>
                           {variantLabel && (
                             <p className="text-[10px] text-violet-400 font-medium">{variantLabel}</p>
@@ -948,7 +948,7 @@ function VendaWizard({
                 )}
 
                 {cart.length > 0 && (
-                  <div className="bg-surface-900 rounded-xl px-3 py-2.5 border border-surface-600 shrink-0">
+                  <div className="bg-surface-900 rounded-xl px-3 py-2.5 border border-surface-500 shrink-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-gray-400 uppercase tracking-wider">Total</span>
                       <span className="text-accent-gold font-black text-base">{fmt(subtotal / 100)}</span>
@@ -1009,7 +1009,7 @@ function VendaWizard({
                           'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all',
                           discountPct === d
                             ? 'bg-accent-green/20 border-accent-green/50 text-accent-green'
-                            : 'bg-surface-700 border-surface-600 text-gray-400 hover:border-surface-500'
+                            : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
                         )}
                       >{d === 0 ? '—' : `${d}%`}</button>
                     ))}
@@ -1262,7 +1262,7 @@ function VendaWizard({
         </div>
 
         {/* Rodapé de navegação */}
-        <div className="flex gap-2 px-5 py-4 border-t border-surface-600 shrink-0">
+        <div className="flex gap-2 px-5 py-4 border-t border-surface-500 shrink-0">
           {step === 1 ? (
             <>
               <button onClick={onClose} className="btn-secondary flex-1 justify-center text-sm py-2">Cancelar</button>
@@ -1494,7 +1494,7 @@ export default function VendaAvulsaPage() {
           <p className="text-gray-400 text-sm mt-0.5">Venda direta no balcão</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex gap-1 bg-surface-800 border border-surface-600 p-1 rounded-xl">
+          <div className="flex gap-1 bg-surface-800 border border-surface-500 p-1 rounded-xl">
             <button
               onClick={() => setTab('venda')}
               className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',

@@ -236,7 +236,7 @@ function TimerCard({
 
       {/* Config */}
       {showConfig && (
-        <div className="border-t border-surface-600 pt-3 flex flex-col gap-3">
+        <div className="border-t border-surface-500 pt-3 flex flex-col gap-3">
           <div className="flex gap-2 items-center">
             <label className="text-xs text-gray-400 w-24">Duração (min)</label>
             <input type="number" min={1} max={999} className="input text-sm flex-1"

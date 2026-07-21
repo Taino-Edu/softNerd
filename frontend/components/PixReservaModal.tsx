@@ -78,7 +78,7 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className={clsx('w-full max-w-sm rounded-2xl p-6 space-y-4 border',
-        dark ? 'bg-surface-800 border-surface-600' : 'bg-white border-gray-100 shadow-xl')}
+        dark ? 'bg-surface-800 border-surface-500' : 'bg-white border-gray-100 shadow-xl')}
         onClick={e => e.stopPropagation()}>
 
         <div className="flex items-center justify-between">
@@ -107,12 +107,12 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
           <div className="space-y-3">
             {pix?.imagemQrCode && (
               <img src={pix.imagemQrCode} alt="QR Code Pix"
-                className={clsx('w-44 h-44 mx-auto rounded-xl border', dark ? 'border-surface-600' : 'border-gray-200')} />
+                className={clsx('w-44 h-44 mx-auto rounded-xl border', dark ? 'border-surface-500' : 'border-gray-200')} />
             )}
             {pix?.pixCopiaCola && (
               <button onClick={copiar}
                 className={clsx('w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold border transition-colors',
-                  dark ? 'border-surface-600 text-gray-300 hover:bg-surface-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50')}>
+                  dark ? 'border-surface-500 text-gray-300 hover:bg-surface-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50')}>
                 <Copy className="w-3.5 h-3.5" /> Copiar código Pix
               </button>
             )}

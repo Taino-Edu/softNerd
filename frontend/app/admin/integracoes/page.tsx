@@ -263,7 +263,7 @@ export default function IntegracoesPage() {
                     <button
                       onClick={() => openConfig(int.source, int)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-500
-                                 border border-surface-600 text-sm text-gray-300 transition-colors">
+                                 border border-surface-500 text-sm text-gray-300 transition-colors">
                       <Settings className="w-3.5 h-3.5" />
                       {isReady ? 'Reconfigurar' : 'Configurar'}
                     </button>
@@ -390,7 +390,7 @@ export default function IntegracoesPage() {
               )}
 
               {configModal.source === 'inter' && (
-                <div className="border border-surface-600 rounded-xl p-3 flex flex-col gap-2">
+                <div className="border border-surface-500 rounded-xl p-3 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-gray-400 font-semibold flex-1">
                       Certificado mTLS (.crt + .key)

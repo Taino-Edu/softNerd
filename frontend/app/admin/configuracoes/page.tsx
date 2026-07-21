@@ -260,7 +260,7 @@ export default function ConfiguracoesPage() {
         </div>
 
         {/* Reset layout */}
-        <div className="pt-2 border-t border-surface-600">
+        <div className="pt-2 border-t border-surface-500">
           <Row label="Resetar layout" desc="Reabre todos os painéis colapsados (preferência local)">
             <button
               onClick={() => {

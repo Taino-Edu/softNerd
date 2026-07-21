@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, productApi, reservationApi, userApi, variantApi, Product, AdminReservation, ReservationPixStatus, UserSummary, ProductVariant } from '@/lib/api'
 import PixReservaModal from '@/components/PixReservaModal'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
@@ -14,20 +15,6 @@ import {
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
-
-const statusCls: Record<string, string> = {
-  active:    'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  fulfilled: 'bg-green-500/15 text-green-400 border-green-500/30',
-  cancelled: 'bg-red-500/15 text-red-400 border-red-500/30',
-  expired:   'bg-gray-500/15 text-gray-400 border-gray-500/30',
-}
-
-const statusLabel: Record<string, string> = {
-  active:    'Em aberto',
-  fulfilled: 'Homologada',
-  cancelled: 'Cancelada',
-  expired:   'Expirada',
-}
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -191,7 +178,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
     } finally { setNcSaving(false) }
   }
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-surface-700 border border-surface-600 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500'
+  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-surface-700 border border-surface-500 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500'
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -222,7 +209,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
             <>
               <input className={inputCls} placeholder="Buscar por nome, WhatsApp ou CPF..."
                 value={userSearch} onChange={e => setUserSearch(e.target.value)} />
-              <div className="mt-1.5 rounded-xl border border-surface-600 overflow-hidden">
+              <div className="mt-1.5 rounded-xl border border-surface-500 overflow-hidden">
                 {userLoading ? (
                   <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-gray-500" /></div>
                 ) : users.length === 0 ? (
@@ -240,11 +227,11 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
               {/* Cliente sem conta (chegou pelo WhatsApp): cadastro rápido sem sair do modal */}
               {!novoCliente ? (
                 <button type="button" onClick={() => { setNovoCliente(true); setNcName(userSearch) }}
-                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-surface-600 text-xs font-semibold text-gray-400 hover:text-white hover:border-brand-500 transition-colors">
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-surface-500 text-xs font-semibold text-gray-400 hover:text-white hover:border-brand-500 transition-colors">
                   <UserPlus className="w-3.5 h-3.5" /> Cliente novo? Cadastrar agora
                 </button>
               ) : (
-                <div className="mt-2 rounded-xl border border-surface-600 p-3 space-y-2">
+                <div className="mt-2 rounded-xl border border-surface-500 p-3 space-y-2">
                   <p className="text-xs font-bold text-gray-300">Cadastro rápido do cliente</p>
                   <input className={inputCls} placeholder="Nome *" value={ncName} onChange={e => setNcName(e.target.value)} />
                   <input className={inputCls} placeholder="WhatsApp * (11999999999)" value={ncWhatsApp} onChange={e => setNcWhatsApp(e.target.value)} />
@@ -257,7 +244,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
                       Cadastrar e selecionar
                     </button>
                     <button type="button" onClick={() => setNovoCliente(false)}
-                      className="px-3 py-2 rounded-xl border border-surface-600 text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+                      className="px-3 py-2 rounded-xl border border-surface-500 text-xs font-semibold text-gray-400 hover:text-white transition-colors">
                       Cancelar
                     </button>
                   </div>
@@ -287,7 +274,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
             <>
               <input className={inputCls} placeholder="Buscar produto..."
                 value={prodSearch} onChange={e => setProdSearch(e.target.value)} />
-              <div className="mt-1.5 rounded-xl border border-surface-600 overflow-hidden">
+              <div className="mt-1.5 rounded-xl border border-surface-500 overflow-hidden">
                 {produtosFiltrados.length === 0 ? (
                   <p className="text-xs text-gray-500 text-center py-3">Nenhum produto encontrado</p>
                 ) : produtosFiltrados.map(p => (
@@ -681,33 +668,31 @@ export default function ReservasPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       <Toaster />
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="p-2 rounded-xl bg-brand-500/10">
-          <LayoutList className="w-5 h-5 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-black text-white">Pedidos</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Vendas e pré-vendas do site · mesma lógica, colunas separadas pela tag do produto</p>
-        </div>
-        <button
-          onClick={() => setShowNova(true)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-bold transition-colors">
-          <Plus className="w-4 h-4" /> Nova pré-venda
-        </button>
-        <button
-          onClick={refreshAll}
-          className="p-2 rounded-xl bg-surface-700 hover:bg-surface-500 transition-colors text-gray-400">
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </div>
+      <PageHeader
+        title="Pedidos"
+        subtitle="Vendas e pré-vendas do site · mesma lógica, colunas separadas pela tag do produto"
+        actions={
+          <>
+            <button
+              onClick={() => setShowNova(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-bold transition-colors">
+              <Plus className="w-4 h-4" /> Nova pré-venda
+            </button>
+            <button
+              onClick={refreshAll}
+              className="p-2 rounded-xl bg-surface-700 hover:bg-surface-500 transition-colors text-gray-400">
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </>
+        }
+      />
 
       {/* Faixa de métricas — mesmo padrão da barra do Painel Geral (slim, divisória entre itens) */}
-      <div className="card py-2.5 px-3 sm:px-4 mb-5">
-        <div className="grid grid-cols-2 sm:flex sm:items-center sm:divide-x sm:divide-surface-600 gap-3 sm:gap-0">
+      <div className="card py-2.5 px-3 sm:px-4">
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:divide-x sm:divide-surface-500 gap-3 sm:gap-0">
           {[
             { label: 'Em aberto', value: String(totalEmAberto),                                    icon: LayoutList,   color: 'text-brand-400' },
             { label: 'Já pago',   value: `R$ ${jaPagoValor.toFixed(2).replace('.', ',')}`,          icon: CheckCircle,  color: 'text-emerald-400' },
@@ -818,7 +803,7 @@ export default function ReservasPage() {
                       onClick={() => toggleProduct(p.id)}
                       disabled={entries.length === 0}
                       className="shrink-0 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-700
-                                 border border-surface-600 hover:border-purple-500/40 disabled:opacity-40 disabled:cursor-not-allowed
+                                 border border-surface-500 hover:border-purple-500/40 disabled:opacity-40 disabled:cursor-not-allowed
                                  text-xs font-semibold text-gray-300 transition-colors">
                       Ver
                       {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -891,7 +876,7 @@ export default function ReservasPage() {
                       'py-2 rounded-lg text-xs font-semibold border transition-colors',
                       homPayment === m
                         ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                        : 'bg-surface-700 text-gray-400 border-surface-600'
+                        : 'bg-surface-700 text-gray-400 border-surface-500'
                     )}>
                     {m}
                   </button>
@@ -905,7 +890,7 @@ export default function ReservasPage() {
               </button>
 
               {homSplit && (
-                <div className="mt-3 p-3 rounded-xl bg-surface-700 border border-surface-600 space-y-2">
+                <div className="mt-3 p-3 rounded-xl bg-surface-700 border border-surface-500 space-y-2">
                   <label className="text-xs text-gray-400 block font-semibold">Segunda forma de pagamento</label>
                   <div className="grid grid-cols-3 gap-2">
                     {PAYMENT_METHODS.filter(m => m !== homPayment).map(m => (
@@ -914,7 +899,7 @@ export default function ReservasPage() {
                           'py-2 rounded-lg text-xs font-semibold border transition-colors',
                           homSecondPayment === m
                             ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                            : 'bg-surface-800 text-gray-400 border-surface-600'
+                            : 'bg-surface-800 text-gray-400 border-surface-500'
                         )}>
                         {m}
                       </button>
@@ -993,7 +978,7 @@ export default function ReservasPage() {
               <input
                 type="number" min={1} value={editQtyValue}
                 onChange={e => setEditQtyValue(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 text-center bg-surface-700 border border-surface-600 rounded-xl py-2 text-white text-lg font-black"
+                className="w-20 text-center bg-surface-700 border border-surface-500 rounded-xl py-2 text-white text-lg font-black"
               />
               <button onClick={() => setEditQtyValue(v => v + 1)}
                 className="w-10 h-10 rounded-xl bg-surface-700 hover:bg-surface-500 text-white text-lg font-bold transition-colors">

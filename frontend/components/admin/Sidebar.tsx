@@ -122,7 +122,7 @@ function NavItems({ pathname, onClose, unreadCount, fiscalAlerta, collapsed = fa
                         </span>
                       )}
                       {shortcut && !active && (
-                        <kbd className="hidden md:inline-block text-[9px] text-gray-600 bg-surface-800 border border-surface-600 rounded px-1.5 py-0.5 font-mono font-bold leading-none opacity-0 group-hover:opacity-100 transition-opacity">
+                        <kbd className="hidden md:inline-block text-[9px] text-gray-600 bg-surface-800 border border-surface-500 rounded px-1.5 py-0.5 font-mono font-bold leading-none opacity-0 group-hover:opacity-100 transition-opacity">
                           {shortcut}
                         </kbd>
                       )}

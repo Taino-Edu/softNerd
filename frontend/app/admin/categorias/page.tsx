@@ -290,7 +290,7 @@ export default function CategoriasPage() {
         </div>
       )}
 
-      <div className="card bg-surface-800/50 border-surface-600">
+      <div className="card bg-surface-800/50 border-surface-500">
         <p className="text-xs text-gray-400 leading-relaxed">
           <strong className="text-gray-300">Dica:</strong> As categorias aparecem no cadastro de produtos e na tela dos clientes.
           O emoji é exibido na comanda do cliente. Ao remover uma categoria, os produtos vinculados a ela <strong className="text-gray-300">não são apagados</strong> — apenas ficam sem categoria definida.

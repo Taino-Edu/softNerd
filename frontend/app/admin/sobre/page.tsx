@@ -318,7 +318,7 @@ function ManualSection({ section }: { section: ManualSection }) {
   const [open, setOpen] = useState(false)
 
   return (
-    <div className={`border rounded-xl overflow-hidden transition-all ${open ? 'border-surface-400' : 'border-surface-600'}`}>
+    <div className={`border rounded-xl overflow-hidden transition-all ${open ? 'border-surface-400' : 'border-surface-500'}`}>
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-surface-700/50 transition-colors"
@@ -332,7 +332,7 @@ function ManualSection({ section }: { section: ManualSection }) {
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-3 border-t border-surface-600">
+        <div className="px-4 pb-4 space-y-3 border-t border-surface-500">
           <div className="pt-3 space-y-2.5">
             {section.steps.map((step, i) => (
               <div key={i} className="flex gap-3">
@@ -348,7 +348,7 @@ function ManualSection({ section }: { section: ManualSection }) {
           </div>
 
           {section.tips && section.tips.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-surface-600 space-y-1.5">
+            <div className="mt-3 pt-3 border-t border-surface-500 space-y-1.5">
               <p className="text-[10px] font-semibold text-brand-400 uppercase tracking-wider">Dicas</p>
               {section.tips.map((tip, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-gray-400">

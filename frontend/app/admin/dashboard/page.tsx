@@ -498,7 +498,7 @@ function EscolherContaCrediarioModal({
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
       <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-md shadow-2xl">
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-4 border-b border-surface-600">
+        <div className="flex items-start justify-between px-6 py-4 border-b border-surface-500">
           <div>
             <h2 className="font-bold text-white text-lg flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-amber-400" /> Conta de Crediário
@@ -550,7 +550,7 @@ function EscolherContaCrediarioModal({
             )
           })}
 
-          <div className="border-t border-surface-600 pt-3">
+          <div className="border-t border-surface-500 pt-3">
             <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">Ou criar conta nova</p>
             <button
               onClick={() => setEscolhido('__nova__')}
@@ -796,7 +796,7 @@ function CloseComandaModal({
               )}
             </div>
             {secondAmtCents > 0 && primaryAmtCents > 0 && !splitInvalido && (
-              <div className="text-xs text-gray-400 pt-1 border-t border-surface-600 space-y-1">
+              <div className="text-xs text-gray-400 pt-1 border-t border-surface-500 space-y-1">
                 <div className="flex justify-between">
                   <span>{SECOND_PAYMENT_METHODS.find(m => m.value === secondMethod)?.label}:</span>
                   <span className="text-white font-mono">R$ {(secondAmtCents / 100).toFixed(2).replace('.', ',')}</span>
@@ -1084,10 +1084,10 @@ function ComandaCard({
               <img
                 src={comanda.profileImageUrl}
                 alt=""
-                className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 ring-2 ring-surface-600"
+                className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 ring-2 ring-surface-500"
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 mt-0.5 ring-2 ring-surface-600">
+              <div className="w-9 h-9 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 mt-0.5 ring-2 ring-surface-500">
                 <span className="text-sm font-bold text-brand-300 leading-none">
                   {comanda.userName[0]?.toUpperCase() ?? '?'}
                 </span>
@@ -1348,7 +1348,7 @@ function EditarComandaModal({
       <div className="w-full max-w-lg bg-surface-800 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-600 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-500 shrink-0">
           <div>
             <h2 className="text-sm font-bold text-white">Editar Comanda</h2>
             <p className="text-xs text-gray-500 mt-0.5">{comanda.userName} · {fmt(comanda.totalInReais)}</p>
@@ -1412,7 +1412,7 @@ function EditarComandaModal({
               />
             </div>
             {showClienteList && filteredClientes.length > 0 && (
-              <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-surface-700 border border-surface-600 rounded-xl shadow-xl overflow-hidden">
+              <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-surface-700 border border-surface-500 rounded-xl shadow-xl overflow-hidden">
                 {filteredClientes.map(u => (
                   <button key={u.id} onMouseDown={() => { setClienteId(u.id); setShowClienteList(false) }}
                     className="w-full flex items-center gap-2 px-4 py-2 hover:bg-surface-500 transition-colors text-left">
@@ -1459,9 +1459,9 @@ function EditarComandaModal({
                     onFocus={() => setShowProdList(true)}
                     onBlur={() => setTimeout(() => setShowProdList(false), 150)}
                     placeholder="Buscar produto no estoque..."
-                    className="w-full pl-8 pr-3 py-2 bg-surface-700 border border-surface-600 rounded-xl text-xs text-white placeholder-gray-500 outline-none" />
+                    className="w-full pl-8 pr-3 py-2 bg-surface-700 border border-surface-500 rounded-xl text-xs text-white placeholder-gray-500 outline-none" />
                   {showProdList && filteredProds.length > 0 && (
-                    <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-surface-700 border border-surface-600 rounded-xl shadow-xl overflow-hidden">
+                    <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-surface-700 border border-surface-500 rounded-xl shadow-xl overflow-hidden">
                       {filteredProds.map(p => {
                         const onPromo = p.isOnPromo && p.discountPriceInReais != null
                         return (
@@ -1485,7 +1485,7 @@ function EditarComandaModal({
                   )}
                 </div>
                 <button onClick={addManualItem}
-                  className="shrink-0 flex items-center gap-1 px-3 py-2 bg-surface-700 border border-surface-600 rounded-xl text-xs text-gray-300 hover:text-white hover:border-brand-500 transition-colors">
+                  className="shrink-0 flex items-center gap-1 px-3 py-2 bg-surface-700 border border-surface-500 rounded-xl text-xs text-gray-300 hover:text-white hover:border-brand-500 transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Manual
                 </button>
               </div>
@@ -1494,7 +1494,7 @@ function EditarComandaModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-surface-600 shrink-0">
+        <div className="px-5 py-4 border-t border-surface-500 shrink-0">
           <button onClick={handleSave} disabled={saving}
             className="w-full btn-primary justify-center py-2.5">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
@@ -1921,7 +1921,7 @@ export default function DashboardPage() {
 
       {/* Métricas ao vivo — grid 2×2 no mobile, barra slim no desktop */}
       <div className="card py-2.5 px-3 sm:px-4">
-        <div className="grid grid-cols-2 sm:flex sm:items-center sm:divide-x sm:divide-surface-600 gap-3 sm:gap-0">
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:divide-x sm:divide-surface-500 gap-3 sm:gap-0">
           {[
             { label: 'Ativas',        value: String(comandas.length),                 icon: Users,         color: 'text-brand-400'   },
             { label: 'Receita hoje',  value: finHoje ? fmt(finHoje.receita) : '—',   icon: DollarSign,    color: 'text-accent-gold'  },
@@ -2175,14 +2175,14 @@ export default function DashboardPage() {
                     </button>
 
                     {isExpanded && c.items.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-surface-600 space-y-1">
+                      <div className="mt-3 pt-3 border-t border-surface-500 space-y-1">
                         {c.items.map(item => (
                           <div key={item.id} className="flex items-center justify-between text-xs text-gray-300 py-0.5">
                             <span className="flex-1 truncate">{item.quantity}× {item.itemNameSnapshot}</span>
                             <span className="text-gray-500 ml-2 shrink-0">{fmt(item.subtotalInReais)}</span>
                           </div>
                         ))}
-                        <div className="flex justify-between text-xs font-semibold text-gray-200 pt-1 border-t border-surface-600">
+                        <div className="flex justify-between text-xs font-semibold text-gray-200 pt-1 border-t border-surface-500">
                           <span>Total</span>
                           <span className="text-accent-gold">{fmt(c.totalInReais)}</span>
                         </div>
@@ -2270,7 +2270,7 @@ export default function DashboardPage() {
                 const totalTx = (finHoje.pagamentosPorForma ?? []).reduce((s, f) => s + f.quantidade, 0)
                 const ticketMedio = totalTx > 0 ? finHoje.receita / totalTx : 0
                 return (
-                  <div className="mt-4 pt-4 border-t border-surface-600 animate-fade-in space-y-4">
+                  <div className="mt-4 pt-4 border-t border-surface-500 animate-fade-in space-y-4">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { label: 'Receita total',  value: fmt(finHoje.receita),  color: 'text-accent-gold',  sub: finHoje.receitaComandas > 0 ? 'cmd + avulsa' : undefined },
@@ -2337,7 +2337,7 @@ export default function DashboardPage() {
                 </div>
               </button>
               {panelPrevisao && (
-                <div className="mt-4 pt-4 border-t border-surface-600">
+                <div className="mt-4 pt-4 border-t border-surface-500">
                   <div className="flex flex-wrap gap-6 items-end mb-4">
                     <div>
                       <p className="text-2xl font-bold text-accent-gold">{fmt(prevFin.projecaoMes)}</p>
@@ -2395,7 +2395,7 @@ export default function DashboardPage() {
                       { label: 'Margem',       value: fmt(lucroEstoque),     color: lucroEstoque >= 0 ? 'text-emerald-400' : 'text-red-400' },
                       { label: 'Total peças',  value: totalPecas.toLocaleString('pt-BR'), color: 'text-brand-400' },
                     ].map(r => (
-                      <div key={r.label} className="flex justify-between items-center text-xs py-1 border-b border-surface-600 last:border-0">
+                      <div key={r.label} className="flex justify-between items-center text-xs py-1 border-b border-surface-500 last:border-0">
                         <span className="text-gray-500">{r.label}</span>
                         <span className={clsx('font-mono font-bold', r.color)}>{r.value}</span>
                       </div>
@@ -2540,7 +2540,7 @@ export default function DashboardPage() {
                       </div>
                       <button
                         onClick={() => { setProdDe(''); setProdAte(''); fetchProdutos('', '') }}
-                        className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-surface-700 text-gray-500 border border-surface-600 hover:text-gray-300 transition-colors"
+                        className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-surface-700 text-gray-500 border border-surface-500 hover:text-gray-300 transition-colors"
                       >
                         Geral
                       </button>
@@ -2550,7 +2550,7 @@ export default function DashboardPage() {
                     {finProdutos && finProdutos.topProdutos.length > 0 ? (
                       <div className="space-y-1">
                         {finProdutos.topProdutos.slice(0, 5).map((p, i) => (
-                          <div key={p.nome} className="flex items-center gap-2 py-1.5 border-b border-surface-600 last:border-0">
+                          <div key={p.nome} className="flex items-center gap-2 py-1.5 border-b border-surface-500 last:border-0">
                             <span className="text-xs text-gray-600 w-3.5 shrink-0">{i + 1}</span>
                             <span className="text-sm text-gray-300 flex-1 truncate">{p.nome}</span>
                             <span className="text-xs text-gray-500 shrink-0">{p.qtd}un</span>

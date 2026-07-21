@@ -52,7 +52,7 @@ function CategoriaCard({ cat, totalGeral }: { cat: RelatorioCategoria; totalGera
       </button>
 
       {open && (
-        <div className="mt-3 border-t border-surface-600 pt-3 space-y-1">
+        <div className="mt-3 border-t border-surface-500 pt-3 space-y-1">
           {cat.produtos.map((p, i) => (
             <div key={i} className="flex items-center justify-between bg-surface-700 rounded-lg px-3 py-2 text-sm">
               <div className="flex items-center gap-2 min-w-0">
@@ -484,7 +484,7 @@ export default function RelatoriosPage() {
                 </div>
 
                 {/* Controle + botão */}
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-surface-600">
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-surface-500">
                   <div>{r.control ?? <span />}</div>
                   <button
                     onClick={r.onGenerate}
@@ -509,7 +509,7 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-surface-800 border border-surface-600 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-surface-800 border border-surface-500 p-1 rounded-xl w-fit">
         {([
           { key: 'vendas',    label: 'Vendas',    icon: ShoppingCart },
           { key: 'crediario', label: 'Crediário', icon: CreditCard },

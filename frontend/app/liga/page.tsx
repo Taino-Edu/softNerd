@@ -53,7 +53,7 @@ export default function LigaMensalPage() {
             <select
               value={selecionado}
               onChange={e => setSelecionado(e.target.value)}
-              className="w-full appearance-none bg-surface-800 border border-surface-600 rounded-xl px-4 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full appearance-none bg-surface-800 border border-surface-500 rounded-xl px-4 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-brand-500 transition-colors"
             >
               {!meses.some(m => `${m.ano}-${m.mes}` === selecionado) && data && (
                 <option value={`${data.ano}-${data.mes}`}>{data.mesLabel}</option>
@@ -73,7 +73,7 @@ export default function LigaMensalPage() {
         )}
 
         {!loading && data && data.ranking.length === 0 && (
-          <div className="bg-surface-800 rounded-xl p-8 border border-surface-600 text-center">
+          <div className="bg-surface-800 rounded-xl p-8 border border-surface-500 text-center">
             <Trophy className="w-10 h-10 mx-auto mb-3 text-gray-600" />
             <p className="text-gray-400 text-sm">Nenhuma pontuação registrada em {data.mesLabel.toLowerCase()} ainda.</p>
           </div>
@@ -86,7 +86,7 @@ export default function LigaMensalPage() {
               const MedalIcon = i < 3 ? Medal : (isTop4 ? Award : null)
               return (
                 <div key={r.userId}
-                  className={`bg-surface-800 rounded-xl p-4 border flex items-center gap-4 ${isTop4 ? 'border-brand-500/40' : 'border-surface-600'}`}>
+                  className={`bg-surface-800 rounded-xl p-4 border flex items-center gap-4 ${isTop4 ? 'border-brand-500/40' : 'border-surface-500'}`}>
                   <div className="w-8 flex-shrink-0 flex items-center justify-center">
                     {MedalIcon
                       ? <MedalIcon className={`w-6 h-6 ${MEDAL_COLOR[i]}`} />

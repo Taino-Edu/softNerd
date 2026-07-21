@@ -129,7 +129,7 @@ export default function CameraScanner({ onDetected, onClose }: Props) {
   if (!supported) {
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80">
-        <div className="bg-surface-800 border border-surface-600 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
+        <div className="bg-surface-800 border border-surface-500 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
           <AlertCircle className="w-10 h-10 text-yellow-400 mx-auto" />
           <h3 className="text-white font-semibold">Câmera não suportada neste browser</h3>
           <p className="text-gray-400 text-sm">
@@ -146,7 +146,7 @@ export default function CameraScanner({ onDetected, onClose }: Props) {
   if (error) {
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80">
-        <div className="bg-surface-800 border border-surface-600 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
+        <div className="bg-surface-800 border border-surface-500 rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
           <h3 className="text-white font-semibold">Erro ao acessar câmera</h3>
           <p className="text-gray-400 text-sm">{error}</p>

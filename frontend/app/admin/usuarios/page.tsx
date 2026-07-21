@@ -4,6 +4,7 @@ import { userApi, crediarioApi, analyticsApi, perfisApi, CrediariosDto, UserSumm
 import toast from 'react-hot-toast'
 import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wallet, Minus, UserPlus, KeyRound, X, UserX, History, ShoppingBag, ShoppingCart, Trophy, ChevronDown, ChevronUp, ChevronLeft, TrendingUp, UserCog, Shield, Pencil } from 'lucide-react'
 import Link from 'next/link'
+import { Badge, BadgeTone } from '@/components/ui/Badge'
 
 // ── Modal: Novo Cliente ───────────────────────────────────────────────────────
 function NovoClienteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (u: UserSummary) => void }) {
@@ -476,12 +477,12 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR')
   const fmtDateTime = (d: string) => new Date(d).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
-  const statusColor: Record<string, string> = {
-    Aberta: 'text-yellow-400', EmAndamento: 'text-blue-400',
-    Fechada: 'text-green-400', Cancelada: 'text-gray-500',
-    Aberto: 'text-orange-400', Pago: 'text-green-400',
-    Planejado: 'text-gray-400', Inscricoes: 'text-blue-400',
-    EmAndamento2: 'text-blue-400', Finalizado: 'text-green-400', Cancelado: 'text-gray-500',
+  const statusTone: Record<string, BadgeTone> = {
+    Aberta: 'warning', EmAndamento: 'info',
+    Fechada: 'success', Cancelada: 'neutral',
+    Aberto: 'warning', Pago: 'success',
+    Planejado: 'neutral', Inscricoes: 'info',
+    Finalizado: 'success', Cancelado: 'neutral',
   }
 
   return (
@@ -490,13 +491,13 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
       <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* drawer */}
-      <div className="w-full max-w-2xl bg-surface-900 border-l border-surface-600 flex flex-col shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl bg-surface-900 border-l border-surface-500 flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-surface-600 shrink-0">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-surface-500 shrink-0">
           {user.profileImageUrl ? (
-            <img src={user.profileImageUrl} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-surface-600 shrink-0" />
+            <img src={user.profileImageUrl} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-surface-500 shrink-0" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 ring-2 ring-surface-600">
+            <div className="w-10 h-10 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 ring-2 ring-surface-500">
               <span className="text-sm font-black text-brand-300">{user.name[0]?.toUpperCase()}</span>
             </div>
           )}
@@ -548,7 +549,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
         ) : (
           <>
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 py-4 border-b border-surface-600 shrink-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 py-4 border-b border-surface-500 shrink-0">
               <div className="text-center">
                 <p className="text-2xl font-black text-brand-400">{data.totalVisitas}</p>
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider">Visitas</p>
@@ -568,7 +569,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 px-5 py-3 border-b border-surface-600 shrink-0 overflow-x-auto">
+            <div className="flex gap-1 px-5 py-3 border-b border-surface-500 shrink-0 overflow-x-auto">
               {([
                 { key: 'comandas',    label: 'Comandas',   icon: <ShoppingBag className="w-3.5 h-3.5" />, count: data.comandas.length },
                 { key: 'pdv',         label: 'Caixa (PDV)', icon: <ShoppingCart className="w-3.5 h-3.5" />, count: data.vendasAvulsas.length },
@@ -604,7 +605,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                       <div className="flex items-center justify-between gap-2 cursor-pointer" onClick={() => toggle(c.id)}>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`font-semibold ${statusColor[c.status] ?? 'text-gray-400'}`}>{c.status}</span>
+                            <Badge tone={statusTone[c.status] ?? 'neutral'}>{c.status}</Badge>
                             {c.tableIdentifier && <span className="text-xs text-gray-500">· {c.tableIdentifier}</span>}
                             {c.paymentMethod && <span className="text-xs text-gray-400">· {pmLabel(c.paymentMethod)}</span>}
                           </div>
@@ -616,7 +617,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                         </div>
                       </div>
                       {expanded.has(c.id) && c.items.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-surface-600 space-y-1.5">
+                        <div className="mt-3 pt-3 border-t border-surface-500 space-y-1.5">
                           {c.items.map((item, i) => (
                             <div key={i} className="flex justify-between text-xs text-gray-400">
                               <span>{item.quantity}× {item.itemName}</span>
@@ -646,7 +647,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                         </div>
                       </div>
                       {expanded.has(v.id) && v.items.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-surface-600 space-y-1.5">
+                        <div className="mt-3 pt-3 border-t border-surface-500 space-y-1.5">
                           {v.items.map((item, i) => (
                             <div key={i} className="flex justify-between text-xs text-gray-400">
                               <span>{item.quantity}× {item.productName}</span>
@@ -668,9 +669,9 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`font-semibold ${c.vencido ? 'text-red-400' : statusColor[c.status] ?? 'text-gray-400'}`}>
+                            <Badge tone={c.vencido ? 'danger' : statusTone[c.status] ?? 'neutral'}>
                               {c.vencido ? 'Vencido' : c.status}
-                            </span>
+                            </Badge>
                             <span className="text-xs text-gray-500">Abertura: {fmtDate(c.dataAbertura)}</span>
                           </div>
                           {c.observacao && <p className="text-xs text-gray-500 mt-0.5 truncate">{c.observacao}</p>}
@@ -699,7 +700,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                           <div className="flex items-center gap-2 flex-wrap mt-0.5">
                             <span className="text-xs text-gray-500">{c.game}</span>
                             <span className="text-xs text-gray-500">· {fmtDate(c.startDate)}</span>
-                            <span className={`text-xs ${statusColor[c.status] ?? 'text-gray-400'}`}>· {c.status}</span>
+                            <Badge tone={statusTone[c.status] ?? 'neutral'} className="text-[10px]">{c.status}</Badge>
                           </div>
                           {c.deckName && <p className="text-xs text-gray-400 mt-0.5">Deck: {c.deckName}</p>}
                         </div>
@@ -1040,9 +1041,9 @@ export default function UsuariosPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2.5 flex-1 min-w-0">
                       {u.profileImageUrl ? (
-                        <img src={u.profileImageUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-surface-600" />
+                        <img src={u.profileImageUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-surface-500" />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-surface-600">
+                        <div className="w-8 h-8 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-surface-500">
                           <span className="text-xs font-bold text-brand-300 leading-none">{u.name[0]?.toUpperCase()}</span>
                         </div>
                       )}
@@ -1123,9 +1124,9 @@ export default function UsuariosPage() {
               <div>
                 <div className="flex items-center gap-3 mb-3">
                   {selected.profileImageUrl ? (
-                    <img src={selected.profileImageUrl} alt="" className="w-14 h-14 rounded-full object-cover shrink-0 ring-2 ring-surface-600" />
+                    <img src={selected.profileImageUrl} alt="" className="w-14 h-14 rounded-full object-cover shrink-0 ring-2 ring-surface-500" />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 ring-2 ring-surface-600">
+                    <div className="w-14 h-14 rounded-full bg-brand-600/25 flex items-center justify-center shrink-0 ring-2 ring-surface-500">
                       <span className="text-xl font-black text-brand-300 leading-none">{selected.name[0]?.toUpperCase()}</span>
                     </div>
                   )}

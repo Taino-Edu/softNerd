@@ -248,7 +248,7 @@ export default function ChampionshipPublicPage() {
 
         {/* Infos */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-surface-800 rounded-xl p-3 border border-surface-600">
+          <div className="bg-surface-800 rounded-xl p-3 border border-surface-500">
             <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
               <Calendar className="w-3.5 h-3.5" /> Data
             </div>
@@ -257,7 +257,7 @@ export default function ChampionshipPublicPage() {
             </p>
             <p className="text-xs text-gray-400 mt-0.5">{formatTime(ch.startDate)}</p>
           </div>
-          <div className="bg-surface-800 rounded-xl p-3 border border-surface-600">
+          <div className="bg-surface-800 rounded-xl p-3 border border-surface-500">
             <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
               <Trophy className="w-3.5 h-3.5" /> Inscrição
             </div>
@@ -269,7 +269,7 @@ export default function ChampionshipPublicPage() {
 
         {/* Vagas */}
         {(max !== null || ch.preInscricaoCount > 0) && (
-          <div className="bg-surface-800 rounded-xl p-4 border border-surface-600 space-y-2">
+          <div className="bg-surface-800 rounded-xl p-4 border border-surface-500 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-1.5 text-gray-400">
                 <Users className="w-4 h-4" /> Vagas preenchidas
@@ -297,7 +297,7 @@ export default function ChampionshipPublicPage() {
 
         {/* Descrição */}
         {ch.description && (
-          <div className="bg-surface-800 rounded-xl p-4 border border-surface-600">
+          <div className="bg-surface-800 rounded-xl p-4 border border-surface-500">
             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sobre o torneio</h2>
             <p className="text-sm text-gray-300 whitespace-pre-line leading-relaxed">{ch.description}</p>
           </div>
@@ -360,7 +360,7 @@ export default function ChampionshipPublicPage() {
         {/* Inscrições oficialmente abertas — exige login, deck opcional */}
         {!registerResult?.ok && canRegister && ch.status === 'Inscricoes' && (
           loggedIn ? (
-            <div className="bg-surface-800 rounded-xl p-5 border border-surface-600 space-y-4">
+            <div className="bg-surface-800 rounded-xl p-5 border border-surface-500 space-y-4">
               <div>
                 <h2 className="font-bold text-white text-lg">Confirmar inscrição</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
@@ -413,7 +413,7 @@ export default function ChampionshipPublicPage() {
               </form>
             </div>
           ) : (
-            <div className="bg-surface-800 rounded-xl p-5 border border-surface-600 text-center space-y-3">
+            <div className="bg-surface-800 rounded-xl p-5 border border-surface-500 text-center space-y-3">
               <LogIn className="w-8 h-8 text-brand-400 mx-auto" />
               <p className="font-semibold text-white">Faça login pra se inscrever</p>
               <p className="text-sm text-gray-400">
@@ -440,7 +440,7 @@ export default function ChampionshipPublicPage() {
         {/* Formulário de pré-inscrição (antes das inscrições abrirem oficialmente) */}
         {!result?.ok && ch.status !== 'Inscricoes' && (
           canRegister ? (
-            <div className="bg-surface-800 rounded-xl p-5 border border-surface-600 space-y-4">
+            <div className="bg-surface-800 rounded-xl p-5 border border-surface-500 space-y-4">
               <div>
                 <h2 className="font-bold text-white text-lg">
                   {isFull ? 'Entrar na lista de espera' : 'Fazer pré-inscrição'}
@@ -506,7 +506,7 @@ export default function ChampionshipPublicPage() {
               </form>
             </div>
           ) : (
-            <div className="bg-surface-800 rounded-xl p-5 border border-surface-600 text-center space-y-2">
+            <div className="bg-surface-800 rounded-xl p-5 border border-surface-500 text-center space-y-2">
               <AlertCircle className="w-8 h-8 text-gray-500 mx-auto" />
               <p className="font-semibold text-gray-300">
                 {ch.status === 'Cancelado'

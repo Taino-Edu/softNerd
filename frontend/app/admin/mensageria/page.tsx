@@ -280,7 +280,7 @@ function MensageriaForm() {
                         placeholder="Buscar por nome, e-mail ou WhatsApp…"
                         value={search} onChange={e => setSearch(e.target.value)} />
                     </div>
-                    <div className="max-h-52 overflow-y-auto divide-y divide-surface-600">
+                    <div className="max-h-52 overflow-y-auto divide-y divide-surface-500">
                       {filtered.length === 0
                         ? <p className="text-center text-sm text-gray-500 py-6">Nenhum cliente encontrado.</p>
                         : filtered.map(c => (
@@ -326,7 +326,7 @@ function MensageriaForm() {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <Smartphone className="w-3.5 h-3.5" /> Como o cliente vai ver
             </p>
-            <div className="rounded-2xl bg-surface-900 border border-surface-600 p-4">
+            <div className="rounded-2xl bg-surface-900 border border-surface-500 p-4">
               <div className="rounded-xl bg-surface-800 border border-surface-500 overflow-hidden shadow-lg">
                 {imageUrl.trim() && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -376,7 +376,7 @@ function MensageriaForm() {
               </span>
               <span className="text-white font-medium truncate max-w-[180px]">{targetSummary}</span>
             </div>
-            <div className={clsx('flex items-center gap-2 text-xs font-semibold pt-2 mt-1 border-t border-surface-600',
+            <div className={clsx('flex items-center gap-2 text-xs font-semibold pt-2 mt-1 border-t border-surface-500',
               isReady ? 'text-accent-green' : 'text-amber-400')}>
               {isReady ? <CheckCircle className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
               {isReady ? 'Pronto para enviar' : 'Preencha título, texto e destinatário'}
