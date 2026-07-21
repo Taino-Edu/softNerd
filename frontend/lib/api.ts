@@ -938,17 +938,19 @@ export interface TopProductFinDto {
   qtd: number
   qtdComandas: number
   qtdAvulsa: number
+  qtdSite: number
   qtdPreVenda: number
   receita: number
   receitaComandas: number
   receitaAvulsa: number
+  receitaSite: number
   receitaPreVenda: number
   custo: number
   margem: number
 }
 
 export interface TransacaoFinDto {
-  origem: string       // 'Comanda' | 'PDV' | 'Pré-venda'
+  origem: string       // 'Comanda' | 'PDV' | 'Site' | 'Pré-venda'
   cliente: string | null
   valor: number
   data: string
@@ -975,6 +977,7 @@ export interface FinanceiroDto {
   receita: number
   receitaComandas: number
   receitaAvulsa: number
+  receitaSite: number
   receitaPreVenda: number
   custo: number
   margem: number

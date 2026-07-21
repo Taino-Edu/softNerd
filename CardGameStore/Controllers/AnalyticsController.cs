@@ -283,14 +283,17 @@ public class AnalyticsController : ControllerBase
 
         var avulsasList = avulsasPeriodo.ToList();
 
-        // ── Separa pré-venda homologada (Origem == "Reserva") de venda de balcão comum,
-        // pra Financeiro mostrar "Pré-venda" como origem própria em vez de somar no PDV.
+        // ── Separa venda homologada do site (Origem == "Reserva") de venda de balcão comum,
+        // e dentro do site ainda separa "Site" × "Pré-venda" pela tag do produto (mesma
+        // divisão das colunas Vendas × Pré-vendas no kanban de Pedidos).
         var avulsasPdv      = avulsasList.Where(v => v.Origem != "Reserva").ToList();
-        var avulsasPreVenda = avulsasList.Where(v => v.Origem == "Reserva").ToList();
+        var avulsasSite     = avulsasList.Where(v => v.Origem == "Reserva" && !v.ProductIsPreVenda).ToList();
+        var avulsasPreVenda = avulsasList.Where(v => v.Origem == "Reserva" && v.ProductIsPreVenda).ToList();
         var receitaAvulsa   = avulsasPdv.Sum(v => (decimal)v.TotalInCents) / 100m;
+        var receitaSite     = avulsasSite.Sum(v => (decimal)v.TotalInCents) / 100m;
         var receitaPreVenda = avulsasPreVenda.Sum(v => (decimal)v.TotalInCents) / 100m;
 
-        var receita = receitaComandas + receitaAvulsa + receitaPreVenda;
+        var receita = receitaComandas + receitaAvulsa + receitaSite + receitaPreVenda;
 
         // ── Itens de comanda — com categoria e método de pagamento do pai ─────
         var itensRaw = await _db.ComandaItems
@@ -324,11 +327,15 @@ public class AnalyticsController : ControllerBase
             .SelectMany(v => v.Items)
             .Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m;
 
+        var custoSite = avulsasSite
+            .SelectMany(v => v.Items)
+            .Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m;
+
         var custoPreVenda = avulsasPreVenda
             .SelectMany(v => v.Items)
             .Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m;
 
-        var custo = custoComandas + custoAvulsa + custoPreVenda;
+        var custo = custoComandas + custoAvulsa + custoSite + custoPreVenda;
         var margem        = receita - custo;
         var margemPercent = custo > 0 ? Math.Round(margem / custo * 100, 1) : 0;
 
@@ -427,7 +434,7 @@ public class AnalyticsController : ControllerBase
         var transacoesAvulsa = avulsasList
             .SelectMany(v =>
             {
-                var origemLabel = v.Origem == "Reserva" ? "Pré-venda" : "PDV";
+                var origemLabel = v.Origem != "Reserva" ? "PDV" : v.ProductIsPreVenda ? "Pré-venda" : "Site";
                 var hasSecond   = !string.IsNullOrEmpty(v.SecondPaymentMethod) && v.SecondPaymentAmountInCents > 0;
                 var secondAmt   = hasSecond ? v.SecondPaymentAmountInCents : 0;
                 var primaryAmt  = Math.Max(0, v.TotalInCents - secondAmt);
@@ -484,6 +491,17 @@ public class AnalyticsController : ControllerBase
                 Custo     = Math.Round(g.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m, 2),
             });
 
+        var topDeSite = avulsasSite
+            .SelectMany(v => v.Items)
+            .GroupBy(i => i.ProductName)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Categoria = g.First().ProductCategory ?? "Outros",
+                Qtd       = g.Sum(i => i.Quantity),
+                Receita   = Math.Round(g.Sum(i => i.UnitPriceInReais * i.Quantity), 2),
+                Custo     = Math.Round(g.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m, 2),
+            });
+
         var topDePreVenda = avulsasPreVenda
             .SelectMany(v => v.Items)
             .GroupBy(i => i.ProductName)
@@ -495,29 +513,33 @@ public class AnalyticsController : ControllerBase
                 Custo     = Math.Round(g.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m, 2),
             });
 
-        var todosNomes = topDeComandas.Keys.Union(topDePdv.Keys).Union(topDePreVenda.Keys);
+        var todosNomes = topDeComandas.Keys.Union(topDePdv.Keys).Union(topDeSite.Keys).Union(topDePreVenda.Keys);
 
         var topProdutos = todosNomes.Select(nome =>
         {
             topDeComandas.TryGetValue(nome, out var c);
             topDePdv.TryGetValue(nome, out var a);
+            topDeSite.TryGetValue(nome, out var s);
             topDePreVenda.TryGetValue(nome, out var pv);
             var recC  = c?.Receita ?? 0m;
             var recA  = a?.Receita ?? 0m;
+            var recS  = s?.Receita ?? 0m;
             var recPv = pv?.Receita ?? 0m;
-            var tot   = recC + recA + recPv;
-            var cus   = (c?.Custo ?? 0m) + (a?.Custo ?? 0m) + (pv?.Custo ?? 0m);
+            var tot   = recC + recA + recS + recPv;
+            var cus   = (c?.Custo ?? 0m) + (a?.Custo ?? 0m) + (s?.Custo ?? 0m) + (pv?.Custo ?? 0m);
             return new TopProductFinDto
             {
                 Nome            = nome,
-                Categoria       = c?.Categoria ?? a?.Categoria ?? pv?.Categoria ?? "Outros",
-                Qtd             = (c?.Qtd ?? 0) + (a?.Qtd ?? 0) + (pv?.Qtd ?? 0),
+                Categoria       = c?.Categoria ?? a?.Categoria ?? s?.Categoria ?? pv?.Categoria ?? "Outros",
+                Qtd             = (c?.Qtd ?? 0) + (a?.Qtd ?? 0) + (s?.Qtd ?? 0) + (pv?.Qtd ?? 0),
                 QtdComandas     = c?.Qtd ?? 0,
                 QtdAvulsa       = a?.Qtd ?? 0,
+                QtdSite         = s?.Qtd ?? 0,
                 QtdPreVenda     = pv?.Qtd ?? 0,
                 Receita         = Math.Round(tot, 2),
                 ReceitaComandas = Math.Round(recC, 2),
                 ReceitaAvulsa   = Math.Round(recA, 2),
+                ReceitaSite     = Math.Round(recS, 2),
                 ReceitaPreVenda = Math.Round(recPv, 2),
                 Custo           = Math.Round(cus, 2),
                 Margem          = Math.Round(tot - cus, 2),
@@ -551,6 +573,7 @@ public class AnalyticsController : ControllerBase
             Receita                    = Math.Round(receita, 2),
             ReceitaComandas            = Math.Round(receitaComandas, 2),
             ReceitaAvulsa              = Math.Round(receitaAvulsa, 2),
+            ReceitaSite                = Math.Round(receitaSite, 2),
             ReceitaPreVenda            = Math.Round(receitaPreVenda, 2),
             Custo                      = Math.Round(custo, 2),
             Margem                     = Math.Round(margem, 2),

@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, AlertCircle,
   RefreshCw, Printer, Package, ShoppingBag, BarChart2,
   Banknote, CreditCard, QrCode, Receipt, ChevronDown, ChevronUp,
-  Store, ShoppingCart, X, Search, Star, Wallet, Filter, Trophy,
+  Store, ShoppingCart, X, Search, Star, Wallet, Filter, Trophy, Globe,
   FileText, Lightbulb, ArrowUp, ArrowDown, Minus,
 } from 'lucide-react'
 
@@ -798,21 +798,22 @@ function FormasPagamentoSection({ formas }: { formas: FormaPagamentoTotalDto[] }
                     {txsFiltradas.length === 0 ? (
                       <p className="text-center text-gray-500 text-xs py-4">Nenhuma transação no filtro.</p>
                     ) : (
-                      txsFiltradas.map((t, i) => (
+                      txsFiltradas.map((t, i) => {
+                        const origemIcon = t.origem === 'Comanda' ? <ShoppingCart className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                          : t.origem === 'Site'      ? <Globe  className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                          : t.origem === 'Pré-venda' ? <Trophy className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          : <Store className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        const origemLabel = t.origem === 'Comanda' ? 'Mesa' : t.origem === 'Site' ? 'Site' : t.origem === 'Pré-venda' ? 'Pré-venda' : 'Balcão'
+                        return (
                         <div key={i} className="flex items-center justify-between px-6 py-2.5">
                           <div className="flex items-center gap-2">
-                            {t.origem === 'Comanda'
-                              ? <ShoppingCart className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-                              : t.origem === 'Pré-venda'
-                                ? <Trophy      className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                                : <Store       className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                            }
+                            {origemIcon}
                             <div>
                               <p className="text-xs text-white font-medium">
-                                {t.cliente ?? (t.origem === 'Comanda' ? 'Comanda' : t.origem === 'Pré-venda' ? 'Pré-venda' : 'Balcão')}
+                                {t.cliente ?? origemLabel}
                               </p>
                               <p className="text-[10px] text-gray-500">
-                                {t.origem === 'Comanda' ? 'Mesa' : t.origem === 'Pré-venda' ? 'Pré-venda' : 'Balcão'} ·{' '}
+                                {origemLabel} ·{' '}
                                 {new Date(t.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                 {t.nota && <span className="ml-1 text-amber-500">{t.nota}</span>}
                               </p>
@@ -822,7 +823,8 @@ function FormasPagamentoSection({ formas }: { formas: FormaPagamentoTotalDto[] }
                             {fmt(t.valor)}
                           </p>
                         </div>
-                      ))
+                        )
+                      })
                     )}
                   </div>
                 )}
@@ -1335,7 +1337,7 @@ export default function FinanceiroPage() {
   const [tableView,  setTableView]  = useState<'simples' | 'analise' | 'abc'>('analise')
   const [prevData,   setPrevData]   = useState<FinanceiroDto | null>(null)
   const [filterPaymentMethod, setFilterPaymentMethod] = useState('')
-  const [topOrigemFilter, setTopOrigemFilter] = useState<'Todos' | 'Comanda' | 'PDV' | 'PréVenda'>('Todos')
+  const [topOrigemFilter, setTopOrigemFilter] = useState<'Todos' | 'Comanda' | 'PDV' | 'Site' | 'PréVenda'>('Todos')
   const [topCatFilter, setTopCatFilter] = useState<string | null>(null)
   const [metaManualInput, setMetaManualInput] = useState('')
   const [dayModal,  setDayModal]  = useState<FinanceiroDto['diaDia'][0] | null>(null)
@@ -1415,6 +1417,7 @@ export default function FinanceiroPage() {
     return d.topProdutos.filter(p => {
       if (topOrigemFilter === 'Comanda'  && p.receitaComandas === 0 && p.qtdComandas === 0) return false
       if (topOrigemFilter === 'PDV'      && p.receitaAvulsa   === 0 && p.qtdAvulsa   === 0) return false
+      if (topOrigemFilter === 'Site'     && p.receitaSite     === 0 && p.qtdSite     === 0) return false
       if (topOrigemFilter === 'PréVenda' && p.receitaPreVenda === 0 && p.qtdPreVenda === 0) return false
       if (topCatFilter && p.categoria !== topCatFilter) return false
       return true
@@ -1675,8 +1678,8 @@ export default function FinanceiroPage() {
             )
           })()}
 
-          {/* Breakdown Comandas vs PDV vs Pré-venda */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Breakdown Comandas vs PDV vs Site vs Pré-venda */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="card flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-brand-600/15 flex items-center justify-center shrink-0">
                 <ShoppingBag className="w-5 h-5 text-brand-400" />
@@ -1698,6 +1701,18 @@ export default function FinanceiroPage() {
                 <p className="text-xl font-bold font-mono text-emerald-400">{fmt(d.receitaAvulsa)}</p>
                 {d.receita > 0 && (
                   <p className="text-xs text-gray-400 mt-0.5">{((d.receitaAvulsa / d.receita) * 100).toFixed(1)}% do total</p>
+                )}
+              </div>
+            </div>
+            <div className="card flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
+                <Globe className="w-5 h-5 text-blue-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Venda pelo site</p>
+                <p className="text-xl font-bold font-mono text-blue-400">{fmt(d.receitaSite)}</p>
+                {d.receita > 0 && (
+                  <p className="text-xs text-gray-400 mt-0.5">{((d.receitaSite / d.receita) * 100).toFixed(1)}% do total</p>
                 )}
               </div>
             </div>
@@ -1734,6 +1749,7 @@ export default function FinanceiroPage() {
                     <div className="flex gap-4 mt-1">
                       <span className="text-xs text-gray-500">Comandas: <span className="text-gray-300">{fmt(d.receitaComandas)}</span></span>
                       <span className="text-xs text-gray-500">Avulsas: <span className="text-gray-300">{fmt(d.receitaAvulsa)}</span></span>
+                      <span className="text-xs text-gray-500">Site: <span className="text-gray-300">{fmt(d.receitaSite)}</span></span>
                       <span className="text-xs text-gray-500">Pré-venda: <span className="text-gray-300">{fmt(d.receitaPreVenda)}</span></span>
                     </div>
                   </div>
@@ -1961,7 +1977,7 @@ export default function FinanceiroPage() {
                 {/* Filtro por origem */}
                 <div className="flex flex-wrap gap-2 items-center">
                   <div className="flex rounded-lg overflow-hidden border border-surface-600 text-xs font-semibold">
-                    {(['Todos', 'Comanda', 'PDV', 'PréVenda'] as const).map(o => (
+                    {(['Todos', 'Comanda', 'PDV', 'Site', 'PréVenda'] as const).map(o => (
                       <button
                         key={o}
                         onClick={() => setTopOrigemFilter(o)}
@@ -1971,6 +1987,7 @@ export default function FinanceiroPage() {
                       >
                         {o === 'Comanda'  && <ShoppingCart className="w-3 h-3" />}
                         {o === 'PDV'      && <Store        className="w-3 h-3" />}
+                        {o === 'Site'     && <Globe        className="w-3 h-3" />}
                         {o === 'PréVenda' && <Trophy       className="w-3 h-3" />}
                         {o === 'PréVenda' ? 'Pré-venda' : o}
                       </button>
@@ -2016,16 +2033,16 @@ export default function FinanceiroPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-surface-800">
                       <tr className="text-left">
-                        {['#', 'Produto', 'Categoria', 'Qtd', 'Comanda', 'PDV', 'Pré-venda', 'Receita'].map(h => (
+                        {['#', 'Produto', 'Categoria', 'Qtd', 'Comanda', 'PDV', 'Site', 'Pré-venda', 'Receita'].map(h => (
                           <th key={h} className="px-4 py-2.5 text-xs text-gray-500 uppercase tracking-wider font-semibold whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-500">
                       {topFiltered.map((p, i) => {
-                        const qtdShow     = topOrigemFilter === 'Comanda' ? p.qtdComandas : topOrigemFilter === 'PDV' ? p.qtdAvulsa : topOrigemFilter === 'PréVenda' ? p.qtdPreVenda : p.qtd
-                        const receitaShow = topOrigemFilter === 'Comanda' ? p.receitaComandas : topOrigemFilter === 'PDV' ? p.receitaAvulsa : topOrigemFilter === 'PréVenda' ? p.receitaPreVenda : p.receita
-                        const misturado   = [p.receitaComandas > 0, p.receitaAvulsa > 0, p.receitaPreVenda > 0].filter(Boolean).length > 1
+                        const qtdShow     = topOrigemFilter === 'Comanda' ? p.qtdComandas : topOrigemFilter === 'PDV' ? p.qtdAvulsa : topOrigemFilter === 'Site' ? p.qtdSite : topOrigemFilter === 'PréVenda' ? p.qtdPreVenda : p.qtd
+                        const receitaShow = topOrigemFilter === 'Comanda' ? p.receitaComandas : topOrigemFilter === 'PDV' ? p.receitaAvulsa : topOrigemFilter === 'Site' ? p.receitaSite : topOrigemFilter === 'PréVenda' ? p.receitaPreVenda : p.receita
+                        const misturado   = [p.receitaComandas > 0, p.receitaAvulsa > 0, p.receitaSite > 0, p.receitaPreVenda > 0].filter(Boolean).length > 1
                         return (
                           <tr key={p.nome} className="hover:bg-surface-500/20 transition-colors">
                             <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">{i + 1}</td>
@@ -2042,6 +2059,9 @@ export default function FinanceiroPage() {
                             <td className="px-4 py-2.5 text-amber-400 text-xs font-mono">
                               {p.qtdAvulsa > 0 ? `${p.qtdAvulsa}x` : <span className="text-gray-600">—</span>}
                             </td>
+                            <td className="px-4 py-2.5 text-blue-400 text-xs font-mono">
+                              {p.qtdSite > 0 ? `${p.qtdSite}x` : <span className="text-gray-600">—</span>}
+                            </td>
                             <td className="px-4 py-2.5 text-purple-400 text-xs font-mono">
                               {p.qtdPreVenda > 0 ? `${p.qtdPreVenda}x` : <span className="text-gray-600">—</span>}
                             </td>
@@ -2049,7 +2069,7 @@ export default function FinanceiroPage() {
                               {fmt(receitaShow)}
                               {topOrigemFilter === 'Todos' && misturado && (
                                 <p className="text-[10px] text-gray-500 font-normal">
-                                  <span className="text-brand-400/70">{fmt(p.receitaComandas)}</span> · <span className="text-amber-400/70">{fmt(p.receitaAvulsa)}</span> · <span className="text-purple-400/70">{fmt(p.receitaPreVenda)}</span>
+                                  <span className="text-brand-400/70">{fmt(p.receitaComandas)}</span> · <span className="text-amber-400/70">{fmt(p.receitaAvulsa)}</span> · <span className="text-blue-400/70">{fmt(p.receitaSite)}</span> · <span className="text-purple-400/70">{fmt(p.receitaPreVenda)}</span>
                                 </p>
                               )}
                             </td>
@@ -2069,8 +2089,8 @@ export default function FinanceiroPage() {
                     </thead>
                     <tbody className="divide-y divide-surface-500">
                       {topFiltered.map((p, i) => {
-                        const qtdShow    = topOrigemFilter === 'Comanda' ? p.qtdComandas : topOrigemFilter === 'PDV' ? p.qtdAvulsa : topOrigemFilter === 'PréVenda' ? p.qtdPreVenda : p.qtd
-                        const recShow    = topOrigemFilter === 'Comanda' ? p.receitaComandas : topOrigemFilter === 'PDV' ? p.receitaAvulsa : topOrigemFilter === 'PréVenda' ? p.receitaPreVenda : p.receita
+                        const qtdShow    = topOrigemFilter === 'Comanda' ? p.qtdComandas : topOrigemFilter === 'PDV' ? p.qtdAvulsa : topOrigemFilter === 'Site' ? p.qtdSite : topOrigemFilter === 'PréVenda' ? p.qtdPreVenda : p.qtd
+                        const recShow    = topOrigemFilter === 'Comanda' ? p.receitaComandas : topOrigemFilter === 'PDV' ? p.receitaAvulsa : topOrigemFilter === 'Site' ? p.receitaSite : topOrigemFilter === 'PréVenda' ? p.receitaPreVenda : p.receita
                         const precoMedio  = qtdShow > 0 ? recShow / qtdShow : 0
                         const custoMedio  = p.qtd > 0 ? p.custo / p.qtd : 0
                         const margemAtual = precoMedio > 0 && custoMedio > 0
@@ -2087,6 +2107,7 @@ export default function FinanceiroPage() {
                                 <span className="text-[10px] bg-surface-600 text-gray-400 px-1.5 py-0 rounded">{p.categoria || '—'}</span>
                                 {p.qtdComandas > 0 && <span className="text-[10px] text-brand-400/70">{p.qtdComandas}x cmd</span>}
                                 {p.qtdAvulsa > 0   && <span className="text-[10px] text-amber-400/70">{p.qtdAvulsa}x pdv</span>}
+                                {p.qtdSite > 0     && <span className="text-[10px] text-blue-400/70">{p.qtdSite}x site</span>}
                                 {p.qtdPreVenda > 0 && <span className="text-[10px] text-purple-400/70">{p.qtdPreVenda}x pré</span>}
                               </div>
                             </td>
@@ -2134,7 +2155,7 @@ export default function FinanceiroPage() {
                 )}
                 {/* Legenda */}
                 <div className="px-4 py-3 border-t border-surface-600 flex flex-wrap gap-4 text-[11px] text-gray-500">
-                  <span><span className="text-brand-400 font-bold">Comanda</span> = mesas · <span className="text-amber-400 font-bold">PDV</span> = balcão avulso · <span className="text-purple-400 font-bold">Pré-venda</span> = homologada do site</span>
+                  <span><span className="text-brand-400 font-bold">Comanda</span> = mesas · <span className="text-amber-400 font-bold">PDV</span> = balcão avulso · <span className="text-blue-400 font-bold">Site</span> = pedido normal do site · <span className="text-purple-400 font-bold">Pré-venda</span> = produto marcado como pré-venda</span>
                   {tableView === 'analise' && <>
                     <span><span className="text-brand-400 font-bold">Sugestão</span> = Custo Médio ÷ (1 − {targetPct}%)</span>
                     <span><ArrowUp className="w-3 h-3 text-red-400 inline" /> subir preço · <ArrowDown className="w-3 h-3 text-emerald-400 inline" /> pode baixar · <Minus className="w-3 h-3 text-emerald-400 inline" /> preço ok</span>

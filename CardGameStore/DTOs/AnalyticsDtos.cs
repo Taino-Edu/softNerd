@@ -68,10 +68,11 @@ public class ClienteInsightDto
 
 public class FinanceiroDto
 {
-    public decimal Receita          { get; set; } // total (comandas + avulsas + pré-venda)
+    public decimal Receita          { get; set; } // total (comandas + avulsas + site + pré-venda)
     public decimal ReceitaComandas  { get; set; } // só comandas fechadas
-    public decimal ReceitaAvulsa    { get; set; } // só vendas avulsas de balcão (PDV, sem pré-venda)
-    public decimal ReceitaPreVenda  { get; set; } // pré-vendas homologadas em modo PDV
+    public decimal ReceitaAvulsa    { get; set; } // só vendas avulsas de balcão (PDV, sem site/pré-venda)
+    public decimal ReceitaSite      { get; set; } // pedido do site homologado, produto SEM tag de pré-venda
+    public decimal ReceitaPreVenda  { get; set; } // pedido do site homologado, produto COM tag de pré-venda
     public decimal Custo            { get; set; } // custo dos produtos vendidos (R$)
     public decimal Margem           { get; set; } // receita - custo
     public decimal MargemPercent    { get; set; } // (margem / custo) * 100
@@ -107,10 +108,12 @@ public class TopProductFinDto
     public int     Qtd             { get; set; }
     public int     QtdComandas     { get; set; }
     public int     QtdAvulsa       { get; set; }
+    public int     QtdSite         { get; set; }
     public int     QtdPreVenda     { get; set; }
     public decimal Receita         { get; set; }
     public decimal ReceitaComandas { get; set; }
     public decimal ReceitaAvulsa   { get; set; }
+    public decimal ReceitaSite     { get; set; }
     public decimal ReceitaPreVenda { get; set; }
     public decimal Custo           { get; set; }
     public decimal Margem          { get; set; }
@@ -128,7 +131,7 @@ public class FormaPagamentoTotalDto
 
 public class TransacaoFinDto
 {
-    /// <summary>"Comanda", "PDV" ou "Pré-venda".</summary>
+    /// <summary>"Comanda", "PDV", "Site" ou "Pré-venda".</summary>
     public string  Origem  { get; set; } = string.Empty;
     public string? Cliente { get; set; }
     public decimal Valor   { get; set; }

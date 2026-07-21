@@ -202,6 +202,7 @@ public class VendaAvulsaService : IVendaAvulsaService
             SoldByAdminName            = adminName,
             Origem                     = request.Origem,
             ReservationId              = request.ReservationId,
+            ProductIsPreVenda          = request.ProductIsPreVenda,
         };
 
         await _collection.InsertOneAsync(venda);
@@ -559,6 +560,7 @@ public class VendaAvulsaService : IVendaAvulsaService
         SoldAt                     = v.SoldAt,
         SoldByAdminName            = v.SoldByAdminName,
         Origem                     = v.Origem,
+        ProductIsPreVenda          = v.ProductIsPreVenda,
         Items                      = v.Items.Select(i => new VendaAvulsaItemDto
         {
             ProductName      = i.ProductName,

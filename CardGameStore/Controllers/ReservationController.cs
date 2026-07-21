@@ -733,9 +733,12 @@ public class ReservationController : ControllerBase
                     SecondPaymentMethod        = req.SecondPaymentMethod,
                     SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
                     SkipStockDecrement         = true, // estoque já baixado na pré-venda
-                    // Marca a origem pra o Financeiro separar "Pré-venda" de venda de balcão comum.
+                    // Marca a origem pra o Financeiro separar Comanda/PDV de venda do site — que
+                    // ainda se divide em "Site" × "Pré-venda" pela tag do produto (mesma lógica
+                    // que separa as colunas do kanban de Pedidos).
                     Origem                     = "Reserva",
                     ReservationId              = res.Id,
+                    ProductIsPreVenda          = res.Product?.IsPreVenda ?? false,
                     Items                      = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
                 };
                 await _vendaService.RegisterAsync(vendaReq, adminId, adminName);

@@ -43,12 +43,17 @@ public class VendaAvulsa
     public int DiscountPercent { get; set; } = 0;
     public int DiscountInCents { get; set; } = 0;
 
-    /// <summary>"Reserva" quando a venda vem da homologação de uma pré-venda (modo PDV);
-    /// null/vazio = venda de balcão comum. Usado pro Financeiro separar "Pré-venda" de "PDV".</summary>
+    /// <summary>"Reserva" quando a venda vem da homologação de um pedido do site (kanban de
+    /// Pedidos); null/vazio = venda de balcão comum. O Financeiro ainda subdivide isso em
+    /// "Site" × "Pré-venda" via ProductIsPreVenda, mesma tag que separa as colunas do kanban.</summary>
     public string? Origem { get; set; }
 
     /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva".</summary>
     public Guid? ReservationId { get; set; }
+
+    /// <summary>Snapshot de Product.IsPreVenda no momento da homologação. Só relevante quando
+    /// Origem == "Reserva" — decide se cai em "Site" ou "Pré-venda" no Financeiro.</summary>
+    public bool ProductIsPreVenda { get; set; }
 
     [BsonIgnore]
     public decimal TotalInReais => TotalInCents / 100m;
