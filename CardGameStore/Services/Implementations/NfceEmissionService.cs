@@ -1041,7 +1041,7 @@ public class NfceEmissionService : INfceEmissionService
     /// Enviar com ponto faz a SEFAZ rejeitar a nota; sanitiza aqui pra não depender só
     /// da validação do formulário nem quebrar produto cadastrado antes dela existir).
     /// </summary>
-    private static string SanitizeNcm(string? ncm) =>
+    internal static string SanitizeNcm(string? ncm) =>
         ncm is null ? "" : new string(ncm.Where(char.IsDigit).ToArray());
 
     /// <summary>
@@ -1051,7 +1051,7 @@ public class NfceEmissionService : INfceEmissionService
     /// de mandar pra SEFAZ: um CFOP mal digitado virando FormatException aqui derrubaria a
     /// emissão com uma mensagem de erro sem explicação nenhuma pro admin.
     /// </summary>
-    private static int ParseCfop(string? cfop)
+    internal static int ParseCfop(string? cfop)
     {
         var digits = cfop is null ? "" : new string(cfop.Where(char.IsDigit).ToArray());
         if (digits.Length != 4 || !int.TryParse(digits, out var valor))

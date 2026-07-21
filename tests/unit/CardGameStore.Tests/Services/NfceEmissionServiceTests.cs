@@ -413,6 +413,52 @@ public class NfceEmissionServiceTests
         act.Should().Throw<FiscalNaoConfiguradoException>();
     }
 
+    // ── Sanitização de NCM/CFOP (bug real: cadastro com pontuação ia direto pro XML) ──
+
+    [Theory]
+    [InlineData("84743100",   "84743100")] // já limpo
+    [InlineData("8474.31.00", "84743100")] // formato do placeholder antigo do formulário
+    [InlineData(" 8474 3100 ", "84743100")] // espaço também some
+    [InlineData(null,         "")]
+    [InlineData("",           "")]
+    public void SanitizeNcm_RemoveTudoQueNaoEDigito(string? entrada, string esperado)
+    {
+        NfceEmissionService.SanitizeNcm(entrada).Should().Be(esperado);
+    }
+
+    [Theory]
+    [InlineData("1234567")]   // 7 dígitos
+    [InlineData("123456789")] // 9 dígitos
+    [InlineData("")]
+    public void SanitizeNcm_ForaDe8Digitos_NaoEhValidoPraEmissao(string entrada)
+    {
+        // A validação de 8 dígitos mora no controller (CarregarDados*Async) — aqui só
+        // confirma que o sanitizador não "conserta" quantidade errada de dígitos sozinho.
+        NfceEmissionService.SanitizeNcm(entrada).Length.Should().NotBe(8);
+    }
+
+    [Theory]
+    [InlineData("5102", 5102)]
+    [InlineData(" 5102 ", 5102)]
+    [InlineData("5.102", 5102)]
+    public void ParseCfop_AceitaComOuSemPontuacao(string entrada, int esperado)
+    {
+        NfceEmissionService.ParseCfop(entrada).Should().Be(esperado);
+    }
+
+    [Theory]
+    [InlineData("510")]   // 3 dígitos
+    [InlineData("51022")] // 5 dígitos
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("abcd")]
+    public void ParseCfop_ForaDe4Digitos_LancaFiscalNaoConfigurado(string? entrada)
+    {
+        var act = () => NfceEmissionService.ParseCfop(entrada);
+
+        act.Should().Throw<FiscalNaoConfiguradoException>().WithMessage("*CFOP*");
+    }
+
     // ── Detecção de falha de conectividade (contingência) ─────────────────────
 
     [Theory]

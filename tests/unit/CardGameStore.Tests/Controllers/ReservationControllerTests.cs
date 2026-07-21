@@ -80,7 +80,6 @@ public class ReservationControllerTests
         var controller = new ReservationController(
             db,
             new Mock<IVendaAvulsaService>().Object,
-            new Mock<IComandaService>().Object,
             CreateInterStub(),
             new Mock<IPixReconciliationService>().Object,
             new Mock<IPushService>().Object,
