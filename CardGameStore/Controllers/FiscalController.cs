@@ -378,13 +378,20 @@ public class FiscalController : ControllerBase
     }
 
     // ── GET /api/fiscal/exportar-xmls?inicio=&fim= ────────────────────────────
+    // "Fim" no formulário é o ÚLTIMO DIA a incluir (inclusivo) — GerarZipAsync espera
+    // um limite EXCLUSIVO, então soma 1 dia aqui. Sem isso, selecionar o mesmo dia nos
+    // dois campos (o caso mais comum: "baixar só hoje") tanto era rejeitado (fim <= inicio)
+    // quanto, mesmo se passasse, devolvia o ZIP vazio (fim à meia-noite exclui o dia inteiro).
     [HttpGet("exportar-xmls")]
     public async Task<IActionResult> ExportarXmls([FromQuery] DateTime inicio, [FromQuery] DateTime fim)
     {
-        if (fim <= inicio)
-            return BadRequest(new { Message = "O período final deve ser depois do inicial." });
+        if (fim < inicio)
+            return BadRequest(new { Message = "O período final não pode ser antes do inicial." });
 
-        var zipBytes = await _export.GerarZipAsync(inicio.ToUniversalTime(), fim.ToUniversalTime());
+        var inicioUtc       = inicio.Date.ToUniversalTime();
+        var fimExclusivoUtc = fim.Date.AddDays(1).ToUniversalTime();
+
+        var zipBytes = await _export.GerarZipAsync(inicioUtc, fimExclusivoUtc);
         var fileName = $"xmls-fiscais-{inicio:yyyy-MM-dd}-a-{fim:yyyy-MM-dd}.zip";
 
         return File(zipBytes, "application/zip", fileName);
