@@ -151,6 +151,8 @@ public class NfceEmissionService : INfceEmissionService
 
     public async Task<NotaFiscalEmitida> ReprocessarAsync(Guid notaId)
     {
+        await GarantirModuloFiscalAtivoAsync();
+
         var nota = await _db.NotasFiscaisEmitidas.FindAsync(notaId)
             ?? throw new InvalidOperationException($"Nota {notaId} não encontrada.");
 
@@ -207,6 +209,8 @@ public class NfceEmissionService : INfceEmissionService
 
     public async Task<NotaFiscalEmitida> CancelarAsync(Guid notaId, string justificativa)
     {
+        await GarantirModuloFiscalAtivoAsync();
+
         if (string.IsNullOrWhiteSpace(justificativa) || justificativa.Trim().Length < 15)
             throw new InvalidOperationException("A justificativa do cancelamento precisa ter pelo menos 15 caracteres (exigência da SEFAZ).");
 
@@ -262,6 +266,8 @@ public class NfceEmissionService : INfceEmissionService
 
     public async Task<CupomDto?> ObterCupomAsync(Guid notaId)
     {
+        await GarantirModuloFiscalAtivoAsync();
+
         var nota = await _db.NotasFiscaisEmitidas.FindAsync(notaId);
         if (nota is null) return null;
 
@@ -292,6 +298,10 @@ public class NfceEmissionService : INfceEmissionService
 
     private async Task<NotaFiscalEmitida> EmitirAsync(NotaFiscalOrigem origem, Guid? comandaId, string? vendaAvulsaId)
     {
+        // Defesa central: controllers, jobs e telas não são a fronteira de segurança.
+        // Qualquer caller precisa passar pela trava antes de criar ou transmitir uma nota.
+        await GarantirModuloFiscalAtivoAsync();
+
         // Idempotência: uma origem (comanda/venda avulsa) tem NO MÁXIMO uma nota. Sem isso,
         // clique duplo ou requisições concorrentes criavam duas notas pra mesma venda — e
         // duas NFC-e autorizadas pra uma venda só é problema fiscal sério. Reforçada pelos
@@ -346,9 +356,24 @@ public class NfceEmissionService : INfceEmissionService
         return nota;
     }
 
+    private async Task GarantirModuloFiscalAtivoAsync()
+    {
+        var moduloAtivo = await _db.FiscalConfigs
+            .Where(c => c.Id == FiscalConfig.SingletonId)
+            .Select(c => (bool?)c.ModuloFiscalAtivo)
+            .FirstOrDefaultAsync();
+
+        // Sem configuração não há dados/certificado suficientes para transmitir e o
+        // fluxo antigo continua registrando a pendência de configuração. Assim que a
+        // configuração existe, a liberação explícita passa a ser obrigatória.
+        if (moduloAtivo == false)
+            throw new FiscalModuloBloqueadoException();
+    }
+
     /// <summary>
-    /// Garantia central do serviço: emissão/reprocessamento NUNCA lança exceção —
-    /// falha vira PendenteEmissao (com log apropriado) em vez de derrubar o caller.
+    /// Garantia central do serviço: falhas de emissão/reprocessamento viram
+    /// PendenteEmissao (com log apropriado) em vez de derrubar o caller. A única exceção
+    /// intencional é a trava geral, verificada antes de qualquer nota ser criada.
     /// </summary>
     private async Task ExecutarComTratamentoDeErroAsync(NotaFiscalEmitida nota, Func<Task> acao)
     {
@@ -1274,6 +1299,14 @@ public class NfceEmissionService : INfceEmissionService
 public class FiscalNaoConfiguradoException : Exception
 {
     public FiscalNaoConfiguradoException(string message) : base(message) { }
+}
+
+/// <summary>Interrompe qualquer operação do motor quando a trava geral está desligada.</summary>
+public sealed class FiscalModuloBloqueadoException : InvalidOperationException
+{
+    public const string Mensagem = "Módulo bloqueado por hora";
+
+    public FiscalModuloBloqueadoException() : base(Mensagem) { }
 }
 
 /// <summary>Sinaliza que a comanda de origem foi cancelada antes da NFC-e ser

@@ -46,6 +46,16 @@ public class FiscalRetryBackgroundService : BackgroundService
         var db      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var emissao = scope.ServiceProvider.GetRequiredService<INfceEmissionService>();
 
+        var moduloAtivo = await db.FiscalConfigs
+            .Where(c => c.Id == FiscalConfig.SingletonId)
+            .Select(c => (bool?)c.ModuloFiscalAtivo)
+            .FirstOrDefaultAsync();
+        if (moduloAtivo == false)
+        {
+            _logger.LogDebug("Reprocessamento fiscal ignorado: módulo bloqueado.");
+            return;
+        }
+
         var pendentesIds = await db.NotasFiscaisEmitidas
             .Where(n => n.Status == NotaFiscalStatus.PendenteEmissao || n.Status == NotaFiscalStatus.AutorizadaContingencia)
             .OrderBy(n => n.CreatedAt)

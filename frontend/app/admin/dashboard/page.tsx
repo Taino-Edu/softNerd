@@ -23,6 +23,10 @@ const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
  * ou avisa o motivo se rejeitou/ficou pendente (SEFAZ fora do ar — o retry automático tenta de novo). */
 function handleNotaFiscalResult(notaId?: string | null, status?: string | null, motivo?: string | null) {
   if (!status) return
+  if (status === 'Bloqueada') {
+    toast.error(motivo ?? 'Módulo bloqueado por hora')
+    return
+  }
   if (status === 'Autorizada' && notaId) {
     window.open(`/admin/fiscal/cupom/${notaId}`, '_blank')
   } else {
@@ -592,25 +596,27 @@ function EscolherContaCrediarioModal({
 // ── Modal: selecionar pagamento ao fechar comanda ────────────────────────────
 
 function CloseComandaModal({
-  comanda, onConfirm, onCancel, onGerarPix, autoEmitMethods,
+  comanda, onConfirm, onCancel, onGerarPix, autoEmitMethods, fiscalModuloAtivo,
 }: {
   comanda:   ComandaDto
   onConfirm: (paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number, emitirNotaFiscal?: boolean) => void
   onCancel:  () => void
   onGerarPix: () => void
   autoEmitMethods: string[]
+  fiscalModuloAtivo: boolean
 }) {
   const [method,        setMethod]        = useState('Dinheiro')
   const [splitEnabled,  setSplitEnabled]  = useState(false)
   const [secondMethod,  setSecondMethod]  = useState('Cashback')
   const [secondAmtStr,  setSecondAmtStr]  = useState('')
   const [descontoStr,   setDescontoStr]   = useState('')
-  const [emitirNota,    setEmitirNota]    = useState(() => autoEmitMethods.includes('Dinheiro'))
+  const [emitirNota,    setEmitirNota]    = useState(() => fiscalModuloAtivo && autoEmitMethods.includes('Dinheiro'))
   const [notaTouched,   setNotaTouched]   = useState(false)
 
   useEffect(() => {
-    if (!notaTouched) setEmitirNota(autoEmitMethods.includes(method))
-  }, [method, autoEmitMethods, notaTouched])
+    if (!fiscalModuloAtivo) setEmitirNota(false)
+    else if (!notaTouched) setEmitirNota(autoEmitMethods.includes(method))
+  }, [method, autoEmitMethods, notaTouched, fiscalModuloAtivo])
 
   const totalAntesDesconto = comanda.totalInReais - comanda.pointsApplied / 100
   const descontoCents  = Math.min(
@@ -848,9 +854,10 @@ function CloseComandaModal({
 
         <button
           type="button"
+          disabled={!fiscalModuloAtivo}
           onClick={() => { setEmitirNota(v => !v); setNotaTouched(true) }}
           className={clsx(
-            'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all',
+            'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all disabled:cursor-not-allowed disabled:opacity-60',
             emitirNota
               ? 'bg-brand-600/10 border-brand-500/40 text-brand-300'
               : 'border-surface-500 text-gray-500 hover:border-surface-400 hover:text-gray-300'
@@ -863,7 +870,9 @@ function CloseComandaModal({
             {emitirNota && '✓'}
           </span>
         </button>
-        {!emitirNota && (
+        {!fiscalModuloAtivo ? (
+          <p className="text-xs text-red-400 -mt-1">Módulo bloqueado por hora</p>
+        ) : !emitirNota && (
           <p className="text-xs text-gray-500 -mt-1">
             Sem nota agora. Depois é possível emitir pelo histórico da comanda.
           </p>
@@ -931,7 +940,7 @@ function ConfirmModal({
 // ── Card de Comanda ───────────────────────────────────────────────────────────
 
 function ComandaCard({
-  comanda, onClose, onCancel, onUpdate, onClosedExternally, isNew, recentChange, autoEmitMethods,
+  comanda, onClose, onCancel, onUpdate, onClosedExternally, isNew, recentChange, autoEmitMethods, fiscalModuloAtivo,
 }: {
   comanda: ComandaDto
   onClose:  (id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number, emitirNotaFiscal?: boolean) => void
@@ -941,6 +950,7 @@ function ComandaCard({
   isNew:    boolean
   recentChange: 'add' | 'remove' | null
   autoEmitMethods: string[]
+  fiscalModuloAtivo: boolean
 }) {
   const [expanded, setExpanded]   = useState(false)
   const [loading, setLoading]     = useState(false)
@@ -1037,6 +1047,7 @@ function ComandaCard({
           onCancel={() => setCloseOpen(false)}
           onGerarPix={() => { setCloseOpen(false); setPixOpen(true) }}
           autoEmitMethods={autoEmitMethods}
+          fiscalModuloAtivo={fiscalModuloAtivo}
         />
       )}
       {pixOpen && (
@@ -1527,6 +1538,7 @@ export default function DashboardPage() {
     userId: string; userName: string; valorPrincipal: number
   } | null>(null)
   const [autoEmitMethods, setAutoEmitMethods] = useState<string[]>([])
+  const [fiscalModuloAtivo, setFiscalModuloAtivo] = useState(false)
   const [emitindoNotaId, setEmitindoNotaId]   = useState<string | null>(null)
   const [contasAbertas, setContasAbertas] = useState<CrediariosDto[]>([])
   const [histSearch,   setHistSearch]   = useState('')
@@ -1604,7 +1616,10 @@ export default function DashboardPage() {
     lgpdAdminApi.listRequests('Pendente').then(r => setPendingLgpd(r.data)).catch(() => {})
     notificationsApi.unreadCount().then(r => setUnreadNotif(r.data.count)).catch(() => {})
     reservationApi.filaPendentesCount().then(r => setPendingPreVenda(r.data.count)).catch(() => {})
-    fiscalApi.getConfig().then(r => setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])).catch(() => {})
+    fiscalApi.getConfig().then(r => {
+      setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])
+      setFiscalModuloAtivo(r.data.moduloFiscalAtivo ?? false)
+    }).catch(() => {})
   }, [])
 
   async function fetchProdutos(de: string, ate: string) {
@@ -2013,6 +2028,7 @@ export default function DashboardPage() {
                 isNew={newIds.has(c.id)}
                 recentChange={recentChanges.get(c.id)?.type ?? null}
                 autoEmitMethods={autoEmitMethods}
+                fiscalModuloAtivo={fiscalModuloAtivo}
               />
             ))}
           </div>

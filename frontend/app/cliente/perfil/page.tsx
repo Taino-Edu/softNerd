@@ -127,6 +127,7 @@ export default function PerfilPage() {
   const [fila,           setFila]           = useState<MyReservation[]>([])
   const [reservations,   setReservations]   = useState<MyReservation[]>([])
   const [notas,          setNotas]          = useState<MinhaNotaDto[]>([])
+  const [notasBloqueadas, setNotasBloqueadas] = useState(false)
   const [loading,        setLoading]        = useState(true)
   const [expanded,       setExpanded]       = useState<string | null>(null)
   const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas' | 'notas'>('pontos')
@@ -152,7 +153,10 @@ export default function PerfilPage() {
         setReservations(r.data.filter(x => x.kind === 'pre_venda' && x.status === 'active'))
         setFila(r.data.filter(x => x.kind === 'fila' && x.status === 'waiting'))
       }).catch(() => {}),
-      minhasNotasApi.list().then(r => setNotas(r.data)).catch(() => {}),
+      minhasNotasApi.list().then(r => setNotas(r.data)).catch((err: unknown) => {
+        const status = (err as { response?: { status?: number } })?.response?.status
+        if (status === 423) setNotasBloqueadas(true)
+      }),
     ]).finally(() => setLoading(false))
   }, [])
 
@@ -659,7 +663,12 @@ export default function PerfilPage() {
             {/* ── TAB: NOTAS FISCAIS ── */}
             {tab === 'notas' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {notas.length === 0 ? (
+                {notasBloqueadas ? (
+                  <div className="bg-red-50 border border-red-100 rounded-2xl py-14 text-center shadow-sm">
+                    <FileText className="w-10 h-10 mx-auto mb-3 text-red-300" />
+                    <p className="text-sm font-bold text-red-500">Módulo bloqueado por hora</p>
+                  </div>
+                ) : notas.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
                     <FileText className="w-10 h-10 mx-auto mb-3 text-gray-200" />
                     <p className="text-sm text-gray-400 italic">Nenhuma nota fiscal emitida ainda.</p>

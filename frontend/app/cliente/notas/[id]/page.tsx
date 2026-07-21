@@ -28,7 +28,10 @@ export default function MeuCupomNfcePage() {
     if (!id) return
     minhasNotasApi.obterCupom(id)
       .then(r => setCupom(r.data))
-      .catch(() => setError('Não foi possível carregar o cupom. Verifique se você está logado e se essa nota é sua.'))
+      .catch((err: unknown) => setError(
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+          ?? 'Não foi possível carregar o cupom. Verifique se você está logado e se essa nota é sua.',
+      ))
   }, [id])
 
   const print = () => window.print()

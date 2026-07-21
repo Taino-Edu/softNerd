@@ -28,7 +28,10 @@ export default function CupomNfcePage() {
     if (!id) return
     fiscalApi.obterCupom(id)
       .then(r => setCupom(r.data))
-      .catch(() => setError('Não foi possível carregar o cupom. Verifique se você está autenticado como administrador.'))
+      .catch((err: unknown) => setError(
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+          ?? 'Não foi possível carregar o cupom. Verifique se você está autenticado como administrador.',
+      ))
   }, [id])
 
   const print = () => window.print()

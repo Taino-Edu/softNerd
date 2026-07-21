@@ -686,22 +686,31 @@ public class ComandaService : IComandaService
         // Emite a NFC-e referente a esta comanda — só quando o admin escolheu explicitamente
         // emitir no fechamento (Maikon não quer nota emitida sem antes perguntar). Aguarda o
         // resultado (em vez de fire-and-forget) pra poder devolver o status pro caixa na hora
-        // e permitir abrir o cupom automaticamente quando autorizar — a chamada nunca lança
-        // exceção (garantia do NfceEmissionService), então não tem risco de travar o fechamento.
+        // e permitir abrir o cupom automaticamente quando autorizar. Falhas fiscais comuns não
+        // derrubam o fechamento; a exceção da trava geral é tratada logo abaixo.
         // Se não marcou, nenhuma NotaFiscalEmitida é criada; a emissão pode ser feita depois
         // manualmente pelo histórico.
         NotaFiscalEmitida? nota = null;
+        string? bloqueioFiscal = null;
         if (emitirNotaFiscal)
         {
-            using var scope = _scopeFactory.CreateScope();
-            var emissao = scope.ServiceProvider.GetRequiredService<INfceEmissionService>();
-            nota = await emissao.EmitirParaComandaAsync(comandaId);
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var emissao = scope.ServiceProvider.GetRequiredService<INfceEmissionService>();
+                nota = await emissao.EmitirParaComandaAsync(comandaId);
+            }
+            catch (FiscalModuloBloqueadoException ex)
+            {
+                // A venda já foi fechada com sucesso; a trava impede somente a NFC-e.
+                bloqueioFiscal = ex.Message;
+            }
         }
 
         var dto = MapToDto(comanda);
         dto.NotaFiscalId              = nota?.Id;
-        dto.NotaFiscalStatus          = nota?.Status.ToString();
-        dto.NotaFiscalMotivoRejeicao  = nota?.MotivoRejeicao;
+        dto.NotaFiscalStatus          = bloqueioFiscal is null ? nota?.Status.ToString() : "Bloqueada";
+        dto.NotaFiscalMotivoRejeicao  = bloqueioFiscal ?? nota?.MotivoRejeicao;
         // Notifica o cliente que a comanda foi fechada
         await _hub.Clients.Group(ComandaHub.GetComandaGroup(comandaId))
             .SendAsync("ComandaClosed", new { ComandaId = comandaId, PaymentMethod = paymentMethod });

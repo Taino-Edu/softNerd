@@ -81,6 +81,9 @@ public class FiscalController : ControllerBase
         if (req.ModoSimulacao.HasValue)
             cfg.ModoSimulacao = req.ModoSimulacao.Value;
 
+        if (req.ModuloFiscalAtivo.HasValue)
+            cfg.ModuloFiscalAtivo = req.ModuloFiscalAtivo.Value;
+
         if (req.FormasPagamentoAutoEmissao is not null)
         {
             var invalidas = req.FormasPagamentoAutoEmissao.Where(f => !PaymentMethod.IsValid(f)).ToList();
@@ -274,6 +277,8 @@ public class FiscalController : ControllerBase
     public async Task<IActionResult> ListNotas(
         [FromQuery] string? status = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 30)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         var q = _db.NotasFiscaisEmitidas.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<NotaFiscalStatus>(status, out var statusEnum))
@@ -326,6 +331,8 @@ public class FiscalController : ControllerBase
     [HttpPost("emitir/comanda/{id:guid}")]
     public async Task<IActionResult> EmitirNotaComanda(Guid id)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         var jaExiste = await _db.NotasFiscaisEmitidas.AnyAsync(n => n.Origem == NotaFiscalOrigem.Comanda && n.ComandaId == id);
         if (jaExiste)
             return Conflict(new { Message = "Já existe uma nota fiscal para esta comanda. Use reprocessar/cancelar em vez de emitir de novo." });
@@ -338,6 +345,8 @@ public class FiscalController : ControllerBase
     [HttpPost("emitir/venda-avulsa/{id}")]
     public async Task<IActionResult> EmitirNotaVendaAvulsa(string id)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         var jaExiste = await _db.NotasFiscaisEmitidas.AnyAsync(n => n.Origem == NotaFiscalOrigem.VendaAvulsa && n.VendaAvulsaId == id);
         if (jaExiste)
             return Conflict(new { Message = "Já existe uma nota fiscal para esta venda. Use reprocessar/cancelar em vez de emitir de novo." });
@@ -350,6 +359,8 @@ public class FiscalController : ControllerBase
     [HttpPost("notas/{id:guid}/reprocessar")]
     public async Task<IActionResult> ReprocessarNota(Guid id)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         var nota = await _emissao.ReprocessarAsync(id);
         return Ok(new { nota.Id, Status = nota.Status.ToString(), nota.MotivoRejeicao });
     }
@@ -358,6 +369,8 @@ public class FiscalController : ControllerBase
     [HttpPost("notas/{id:guid}/cancelar")]
     public async Task<IActionResult> CancelarNota(Guid id, [FromBody] CancelarNotaRequest req)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         try
         {
             var nota = await _emissao.CancelarAsync(id, req.Justificativa);
@@ -373,6 +386,8 @@ public class FiscalController : ControllerBase
     [HttpGet("notas/{id:guid}/cupom")]
     public async Task<IActionResult> ObterCupom(Guid id)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         var cupom = await _emissao.ObterCupomAsync(id);
         return cupom is null ? NotFound() : Ok(cupom);
     }
@@ -394,6 +409,8 @@ public class FiscalController : ControllerBase
     [HttpGet("exportar-xmls")]
     public async Task<IActionResult> ExportarXmls([FromQuery] DateTime inicio, [FromQuery] DateTime fim)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         if (fim < inicio)
             return BadRequest(new { Message = "O período final não pode ser antes do inicial." });
 
@@ -414,6 +431,8 @@ public class FiscalController : ControllerBase
     [HttpPost("test-emissao-sefaz")]
     public async Task<IActionResult> TestEmissaoSefaz()
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         // Verificar config fiscal
         var cfg = await _db.FiscalConfigs.FindAsync(FiscalConfig.SingletonId);
         if (cfg is null || !cfg.CertificadoConfigurado)
@@ -480,6 +499,18 @@ public class FiscalController : ControllerBase
         return cfg;
     }
 
+    private async Task<IActionResult?> BloquearSeModuloInativoAsync()
+    {
+        var moduloAtivo = await _db.FiscalConfigs
+            .Where(c => c.Id == FiscalConfig.SingletonId)
+            .Select(c => (bool?)c.ModuloFiscalAtivo)
+            .FirstOrDefaultAsync();
+
+        return moduloAtivo == false
+            ? StatusCode(StatusCodes.Status423Locked, new { Message = FiscalModuloBloqueadoException.Mensagem })
+            : null;
+    }
+
     private static object ToDto(FiscalConfig? cfg)
     {
         cfg ??= new FiscalConfig();
@@ -506,6 +537,7 @@ public class FiscalController : ControllerBase
             RegimeTributario = cfg.RegimeTributario.ToString(),
             Ambiente         = cfg.Ambiente.ToString(),
             cfg.ModoSimulacao,
+            cfg.ModuloFiscalAtivo,
             cfg.SerieNfce,
             cfg.ProximoNumeroNfce,
             cfg.EmailContador,
@@ -539,6 +571,7 @@ public class SaveFiscalConfigRequest
     public string? RegimeTributario  { get; init; }
     public string? Ambiente          { get; init; }
     public bool?   ModoSimulacao     { get; init; }
+    public bool?   ModuloFiscalAtivo { get; init; }
     public int?    SerieNfce         { get; init; }
     public string? EmailContador     { get; init; }
 

@@ -211,15 +211,24 @@ public class VendaAvulsaService : IVendaAvulsaService
         // explicitamente emitir no fechamento (Maikon não quer nota emitida sem antes
         // perguntar). Aguarda o resultado (em vez de fire-and-forget) pra devolver o status
         // pro caixa na hora e permitir abrir o cupom automaticamente quando autorizar — a
-        // chamada nunca lança exceção (garantia do NfceEmissionService). Se não marcou,
+        // falhas fiscais comuns não derrubam a venda; a trava geral é tratada logo abaixo. Se não marcou,
         // nenhuma NotaFiscalEmitida é criada; a emissão pode ser feita depois manualmente
         // pelo histórico.
         NotaFiscalEmitida? nota = null;
+        string? bloqueioFiscal = null;
         if (request.EmitirNotaFiscal)
         {
-            using var scope = _scopeFactory.CreateScope();
-            var emissao = scope.ServiceProvider.GetRequiredService<INfceEmissionService>();
-            nota = await emissao.EmitirParaVendaAvulsaAsync(venda.Id);
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var emissao = scope.ServiceProvider.GetRequiredService<INfceEmissionService>();
+                nota = await emissao.EmitirParaVendaAvulsaAsync(venda.Id);
+            }
+            catch (FiscalModuloBloqueadoException ex)
+            {
+                // A venda continua válida; apenas a operação fiscal foi bloqueada.
+                bloqueioFiscal = ex.Message;
+            }
         }
 
         var paymentSummary = secondPm != null
@@ -415,8 +424,8 @@ public class VendaAvulsaService : IVendaAvulsaService
 
         var dto = MapToDto(venda);
         dto.NotaFiscalId             = nota?.Id;
-        dto.NotaFiscalStatus         = nota?.Status.ToString();
-        dto.NotaFiscalMotivoRejeicao = nota?.MotivoRejeicao;
+        dto.NotaFiscalStatus         = bloqueioFiscal is null ? nota?.Status.ToString() : "Bloqueada";
+        dto.NotaFiscalMotivoRejeicao = bloqueioFiscal ?? nota?.MotivoRejeicao;
         return dto;
     }
 

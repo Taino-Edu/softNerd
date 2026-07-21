@@ -11,6 +11,7 @@
 
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
+using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -39,6 +40,8 @@ public class MinhasNotasController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> ListMinhasNotas()
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         var userId = GetUserId();
 
         var comandaIds = await _db.Comandas
@@ -72,6 +75,8 @@ public class MinhasNotasController : ControllerBase
     [HttpGet("{id:guid}/cupom")]
     public async Task<IActionResult> ObterMeuCupom(Guid id)
     {
+        if (await BloquearSeModuloInativoAsync() is { } bloqueio) return bloqueio;
+
         var userId = GetUserId();
 
         var nota = await _db.NotasFiscaisEmitidas.FindAsync(id);
@@ -93,6 +98,18 @@ public class MinhasNotasController : ControllerBase
 
         var cupom = await _emissao.ObterCupomAsync(id);
         return cupom is null ? NotFound() : Ok(cupom);
+    }
+
+    private async Task<IActionResult?> BloquearSeModuloInativoAsync()
+    {
+        var moduloAtivo = await _db.FiscalConfigs
+            .Where(c => c.Id == FiscalConfig.SingletonId)
+            .Select(c => (bool?)c.ModuloFiscalAtivo)
+            .FirstOrDefaultAsync();
+
+        return moduloAtivo == false
+            ? StatusCode(StatusCodes.Status423Locked, new { Message = FiscalModuloBloqueadoException.Mensagem })
+            : null;
     }
 
     private Guid GetUserId()

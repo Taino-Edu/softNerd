@@ -52,6 +52,8 @@ export default function FiscalPage() {
   const [config,   setConfig]   = useState<FiscalConfigDto | null>(null)
   const [loading,  setLoading]  = useState(true)
   const [saving,   setSaving]   = useState(false)
+  const [savingTrava, setSavingTrava] = useState(false)
+  const [moduloFiscalAtivo, setModuloFiscalAtivo] = useState(false)
 
   // Formulário de dados da empresa
   const [cnpj, setCnpj]                   = useState('')
@@ -125,8 +127,6 @@ export default function FiscalPage() {
     }
   }
 
-  useEffect(() => { loadNotas() }, [])
-
   async function reprocessarNota(id: string) {
     setReprocessingId(id)
     try {
@@ -181,6 +181,7 @@ export default function FiscalPage() {
       setRegime(cfg.regimeTributario ?? 'SimplesNacional')
       setAmbiente(cfg.ambiente ?? 'Homologacao')
       setModoSimulacao(cfg.modoSimulacao ?? false)
+      setModuloFiscalAtivo(cfg.moduloFiscalAtivo ?? false)
       setSerieNfce(cfg.serieNfce ?? 1)
       setEmailContador(cfg.emailContador ?? '')
       setLogradouro(cfg.logradouro ?? '')
@@ -194,6 +195,14 @@ export default function FiscalPage() {
       setCscId(cfg.cscId ?? '')
       setAutoEmit(cfg.formasPagamentoAutoEmissao ?? [])
       setNaturezas(nats)
+      if (cfg.moduloFiscalAtivo) {
+        await loadNotas()
+      } else {
+        setNotas([])
+        setPendentesCount(0)
+        setPendenteMaisAntiga(undefined)
+        setNotasLoading(false)
+      }
     } catch {
       toast.error('Erro ao carregar dados fiscais')
     } finally {
@@ -208,7 +217,7 @@ export default function FiscalPage() {
     try {
       const { data } = await fiscalApi.saveConfig({
         cnpj, razaoSocial, inscricaoEstadual: ie, regimeTributario: regime,
-        ambiente, modoSimulacao, serieNfce, emailContador,
+        ambiente, modoSimulacao, moduloFiscalAtivo, serieNfce, emailContador,
         logradouro, numero, complemento, bairro,
         codigoMunicipioIbge, municipio, uf, cep,
         cscId, ...(cscToken ? { cscToken } : {}),
@@ -220,6 +229,30 @@ export default function FiscalPage() {
       toast.error('Erro ao salvar configuração fiscal')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function salvarTravaFiscal() {
+    setSavingTrava(true)
+    try {
+      const { data } = await fiscalApi.saveConfig({ moduloFiscalAtivo })
+      setConfig(data)
+      setModuloFiscalAtivo(data.moduloFiscalAtivo)
+      if (data.moduloFiscalAtivo) {
+        await loadNotas()
+        toast.success('Módulo fiscal liberado.')
+      } else {
+        setNotas([])
+        setPendentesCount(0)
+        setPendenteMaisAntiga(undefined)
+        setNotasLoading(false)
+        toast.success('Módulo fiscal bloqueado.')
+      }
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message ?? 'Erro ao salvar a trava fiscal')
+    } finally {
+      setSavingTrava(false)
     }
   }
 
@@ -301,6 +334,8 @@ export default function FiscalPage() {
   }
 
   const diasParaVencer = config?.diasParaVencer
+  const moduloFiscalPersistido = config?.moduloFiscalAtivo ?? false
+  const travaAlterada = moduloFiscalAtivo !== moduloFiscalPersistido
   const certStatusColor = !config?.certificadoConfigurado
     ? 'gray'
     : diasParaVencer !== undefined && diasParaVencer !== null && diasParaVencer <= 7
@@ -322,6 +357,54 @@ export default function FiscalPage() {
         <div>
           <h1 className="text-xl font-black text-white">Fiscal — NFC-e</h1>
           <p className="text-sm text-gray-400">Certificado digital, dados da empresa e naturezas de operação</p>
+        </div>
+      </div>
+
+      {/* Trava geral do motor fiscal */}
+      <div className={clsx(
+        'card p-5 border',
+        moduloFiscalAtivo ? 'border-green-500/30' : 'border-red-500/40 bg-red-500/5',
+      )}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <h3 className="font-bold text-white flex items-center gap-2">
+              {moduloFiscalAtivo
+                ? <ShieldCheck className="w-5 h-5 text-green-400" />
+                : <Ban className="w-5 h-5 text-red-400" />}
+              Trava geral do módulo fiscal
+            </h3>
+            <p className={clsx('text-sm font-semibold mt-2', moduloFiscalAtivo ? 'text-green-400' : 'text-red-400')}>
+              {travaAlterada
+                ? (moduloFiscalAtivo ? 'Liberação pendente — clique em Salvar trava' : 'Bloqueio pendente — clique em Salvar trava')
+                : (moduloFiscalAtivo ? 'Módulo liberado para emissão' : 'Módulo bloqueado por hora')}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Quando bloqueado, nenhuma NFC-e é emitida, reprocessada, cancelada ou exportada,
+              inclusive pelos processos automáticos. As vendas e comandas continuam funcionando.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={moduloFiscalAtivo}
+              aria-label="Liberar módulo fiscal"
+              onClick={() => setModuloFiscalAtivo(v => !v)}
+              className={clsx(
+                'relative w-12 h-7 rounded-full transition-colors',
+                moduloFiscalAtivo ? 'bg-green-500' : 'bg-surface-500',
+              )}
+            >
+              <span className={clsx(
+                'absolute top-1 w-5 h-5 rounded-full bg-white transition-transform',
+                moduloFiscalAtivo ? 'translate-x-6' : 'translate-x-1',
+              )} />
+            </button>
+            <button onClick={salvarTravaFiscal} disabled={savingTrava || !travaAlterada} className="btn-primary justify-center">
+              {savingTrava ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Salvar trava
+            </button>
+          </div>
         </div>
       </div>
 
@@ -596,7 +679,11 @@ export default function FiscalPage() {
           Gera um .zip com as NFC-e autorizadas e canceladas no período selecionado.
           Um envio automático também acontece todo dia 1 do mês para o email do contador, se configurado.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 items-end">
+        {!moduloFiscalPersistido ? (
+          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-semibold text-red-400">
+            <Ban className="w-4 h-4 shrink-0" /> Módulo bloqueado por hora
+          </div>
+        ) : <div className="flex flex-col sm:flex-row gap-3 items-end">
           <div className="flex-1">
             <label className="text-xs text-gray-400 font-semibold mb-1 block">Início</label>
             <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} className="input w-full" />
@@ -609,7 +696,7 @@ export default function FiscalPage() {
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Baixar ZIP
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Histórico de notas emitidas */}
@@ -618,11 +705,17 @@ export default function FiscalPage() {
           <h3 className="font-bold text-white flex items-center gap-2">
             <ScrollText className="w-4 h-4 text-brand-400" /> Notas Emitidas
           </h3>
-          <button onClick={() => loadNotas()} className="p-2 rounded-lg bg-surface-700 hover:bg-surface-500 text-gray-400">
+          <button onClick={() => loadNotas()} disabled={!moduloFiscalPersistido}
+                  className="p-2 rounded-lg bg-surface-700 hover:bg-surface-500 text-gray-400 disabled:opacity-40 disabled:cursor-not-allowed">
             <RefreshCw className={clsx('w-4 h-4', notasLoading && 'animate-spin')} />
           </button>
         </div>
 
+        {!moduloFiscalPersistido ? (
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-8 text-sm font-semibold text-red-400">
+            <Ban className="w-5 h-5 shrink-0" /> Módulo bloqueado por hora
+          </div>
+        ) : <>
         {pendentesCount > 0 && (
           <div className="flex items-center gap-2 text-sm bg-amber-500/10 text-amber-400 rounded-lg p-3 mb-3">
             <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -684,6 +777,7 @@ export default function FiscalPage() {
             })}
           </div>
         )}
+        </>}
       </div>
 
       {/* Modal de cancelamento */}

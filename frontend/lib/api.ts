@@ -1208,6 +1208,7 @@ export interface FiscalConfigDto {
   codigoMunicipioIbge?: string; municipio?: string; uf?: string; cep?: string
   cscId?: string; cscConfigurado: boolean
   regimeTributario: string; ambiente: string; modoSimulacao: boolean
+  moduloFiscalAtivo: boolean
   serieNfce: number; proximoNumeroNfce: number
   emailContador?: string
   certificadoConfigurado: boolean
@@ -1253,7 +1254,7 @@ export const fiscalApi = {
     logradouro: string; numero: string; complemento: string; bairro: string
     codigoMunicipioIbge: string; municipio: string; uf: string; cep: string
     cscId: string; cscToken: string
-    regimeTributario: string; ambiente: string; modoSimulacao: boolean; serieNfce: number; emailContador: string
+    regimeTributario: string; ambiente: string; modoSimulacao: boolean; moduloFiscalAtivo: boolean; serieNfce: number; emailContador: string
     formasPagamentoAutoEmissao: string[]
   }>) => api.put<FiscalConfigDto>('/api/fiscal/config', body),
 

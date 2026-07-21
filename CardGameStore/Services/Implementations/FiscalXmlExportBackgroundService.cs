@@ -59,7 +59,7 @@ public class FiscalXmlExportBackgroundService : BackgroundService
         var export = scope.ServiceProvider.GetRequiredService<FiscalXmlExportService>();
 
         var cfg = await db.FiscalConfigs.FindAsync(FiscalConfig.SingletonId);
-        if (cfg is null || string.IsNullOrWhiteSpace(cfg.EmailContador)) return;
+        if (cfg is null || !cfg.ModuloFiscalAtivo || string.IsNullOrWhiteSpace(cfg.EmailContador)) return;
 
         var jaEnviouEsseMes = cfg.UltimoEnvioMensalXmls.HasValue
             && cfg.UltimoEnvioMensalXmls.Value.Year  == hojeBrasil.Year

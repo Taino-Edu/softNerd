@@ -2,8 +2,8 @@
 // NfceEmissionServiceTests.cs — Testes do motor de emissão de NFC-e.
 // Não há como testar uma transmissão real à SEFAZ neste ambiente (sem
 // certificado de homologação nem rede) — os testes aqui verificam a garantia
-// central do serviço: nunca lançar exceção e sempre deixar a nota registrada
-// como PendenteEmissao quando a emissão não pode ser concluída.
+// central do serviço: falhas fiscais viram PendenteEmissao; a trava geral é a
+// exceção intencional e precisa abortar antes de criar qualquer registro.
 // =============================================================================
 
 using System.Security.Cryptography;
@@ -124,6 +124,46 @@ public class NfceEmissionServiceTests
     }
 
     [Fact]
+    public async Task EmitirParaComandaAsync_ModuloBloqueado_NaoCriaNemTransmiteNota()
+    {
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+        db.FiscalConfigs.Add(new FiscalConfig
+        {
+            Cnpj = "12345678000100",
+            ModuloFiscalAtivo = false,
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        Func<Task> act = () => service.EmitirParaComandaAsync(comanda.Id);
+
+        await act.Should().ThrowAsync<FiscalModuloBloqueadoException>()
+            .WithMessage(FiscalModuloBloqueadoException.Mensagem);
+        (await db.NotasFiscaisEmitidas.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ReprocessarAsync_ModuloBloqueado_NaoIncrementaTentativas()
+    {
+        using var db = CreateDb();
+        db.FiscalConfigs.Add(new FiscalConfig { Cnpj = "12345678000100", ModuloFiscalAtivo = false });
+        var nota = new NotaFiscalEmitida
+        {
+            Status = NotaFiscalStatus.PendenteEmissao,
+            TentativasReprocessamento = 3,
+        };
+        db.NotasFiscaisEmitidas.Add(nota);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        Func<Task> act = () => service.ReprocessarAsync(nota.Id);
+
+        await act.Should().ThrowAsync<FiscalModuloBloqueadoException>();
+        nota.TentativasReprocessamento.Should().Be(3);
+    }
+
+    [Fact]
     public async Task EmitirParaComandaAsync_ComDesconto_ValorTotalEhOLiquidoNaoOBrutoDosItens()
     {
         // Bug real: a nota saía pelo valor BRUTO dos itens (1500), ignorando o desconto
@@ -144,7 +184,7 @@ public class NfceEmissionServiceTests
         var comanda = await SeedComandaFechadaAsync(db);
 
         // Config existe mas sem certificado/endereço — deve cair no caminho "não configurado".
-        db.FiscalConfigs.Add(new FiscalConfig { Cnpj = "12345678000100" });
+        db.FiscalConfigs.Add(new FiscalConfig { Cnpj = "12345678000100", ModuloFiscalAtivo = true });
         await db.SaveChangesAsync();
 
         var service = CreateService(db);
@@ -179,6 +219,7 @@ public class NfceEmissionServiceTests
 
         db.FiscalConfigs.Add(new FiscalConfig
         {
+            ModuloFiscalAtivo         = true,
             Cnpj                      = "12345678000199",
             RazaoSocial               = "Loja Teste LTDA",
             Logradouro                = "Rua Teste",
@@ -216,6 +257,7 @@ public class NfceEmissionServiceTests
 
         db.FiscalConfigs.Add(new FiscalConfig
         {
+            ModuloFiscalAtivo         = true,
             Cnpj                      = "12345678000199",
             RazaoSocial               = "Loja Teste LTDA",
             Logradouro                = "Rua Teste",
@@ -259,6 +301,7 @@ public class NfceEmissionServiceTests
 
         db.FiscalConfigs.Add(new FiscalConfig
         {
+            ModuloFiscalAtivo         = true,
             Cnpj                      = "12345678000199",
             RazaoSocial               = "Loja Teste LTDA",
             Logradouro                = "Rua Teste",
@@ -298,6 +341,7 @@ public class NfceEmissionServiceTests
 
         db.FiscalConfigs.Add(new FiscalConfig
         {
+            ModuloFiscalAtivo         = true,
             Cnpj                      = "12345678000199",
             RazaoSocial               = "Loja Teste LTDA",
             Logradouro                = "Rua Teste",

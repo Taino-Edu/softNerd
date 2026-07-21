@@ -121,6 +121,14 @@ public class FiscalConfig
     [Column("proximo_numero_nfce")]
     public int ProximoNumeroNfce { get; set; } = 1;
 
+    /// <summary>
+    /// Trava geral do motor fiscal. Desligada por padrão: nenhuma emissão,
+    /// retransmissão, cancelamento ou exportação fiscal pode ocorrer enquanto
+    /// o administrador não a habilitar explicitamente.
+    /// </summary>
+    [Column("modulo_fiscal_ativo")]
+    public bool ModuloFiscalAtivo { get; set; } = false;
+
     /// <summary>Email do contador — destino do ZIP mensal de XMLs autorizados/cancelados.</summary>
     [MaxLength(200)]
     [Column("email_contador")]

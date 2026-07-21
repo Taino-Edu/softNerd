@@ -905,6 +905,10 @@ using (var scope = app.Services.CreateScope())
                 -- pagamento explicitamente listadas aqui emitem nota sozinhas ao fechar a venda.
                 ALTER TABLE fiscal_config ADD COLUMN IF NOT EXISTS formas_pagamento_auto_emissao TEXT NOT NULL DEFAULT '';
 
+                -- Trava geral de segurança. Todo ambiente atualizado inicia bloqueado e exige
+                -- liberação consciente do administrador antes de transmitir qualquer NFC-e.
+                ALTER TABLE fiscal_config ADD COLUMN IF NOT EXISTS modulo_fiscal_ativo BOOLEAN NOT NULL DEFAULT FALSE;
+
                 -- Personalização da landing page (nome, textos, cores) — singleton, defaults
                 -- iguais aos valores hardcoded originais pra não mudar nada até o admin editar.
                 CREATE TABLE IF NOT EXISTS site_config (

@@ -429,6 +429,10 @@ const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
  * ou avisa o motivo se rejeitou/ficou pendente (SEFAZ fora do ar — o retry automático tenta de novo). */
 function handleNotaFiscalResult(notaId?: string | null, status?: string | null, motivo?: string | null) {
   if (!status) return
+  if (status === 'Bloqueada') {
+    toast.error(motivo ?? 'Módulo bloqueado por hora')
+    return
+  }
   if (status === 'Autorizada' && notaId) {
     window.open(`/admin/fiscal/cupom/${notaId}`, '_blank')
   } else {
@@ -484,11 +488,15 @@ function VendaWizard({
   // nota emitida sem antes perguntar); só vem pré-marcado pras formas de pagamento que ele
   // configurou como auto-emissão em Admin > Fiscal.
   const [autoEmitMethods, setAutoEmitMethods] = useState<string[]>([])
+  const [fiscalModuloAtivo, setFiscalModuloAtivo] = useState(false)
   const [emitirNota, setEmitirNota] = useState(false)
   const [notaTouched, setNotaTouched] = useState(false)
 
   useEffect(() => {
-    fiscalApi.getConfig().then(r => setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])).catch(() => {})
+    fiscalApi.getConfig().then(r => {
+      setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])
+      setFiscalModuloAtivo(r.data.moduloFiscalAtivo ?? false)
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -496,8 +504,9 @@ function VendaWizard({
   }, [])
 
   useEffect(() => {
-    if (!notaTouched) setEmitirNota(autoEmitMethods.includes(payment))
-  }, [payment, autoEmitMethods, notaTouched])
+    if (!fiscalModuloAtivo) setEmitirNota(false)
+    else if (!notaTouched) setEmitirNota(autoEmitMethods.includes(payment))
+  }, [payment, autoEmitMethods, notaTouched, fiscalModuloAtivo])
 
   useEffect(() => {
     if (step === 2) setTimeout(() => searchRef.current?.focus(), 80)
@@ -1225,9 +1234,10 @@ function VendaWizard({
 
               <button
                 type="button"
+                disabled={!fiscalModuloAtivo}
                 onClick={() => { setEmitirNota(v => !v); setNotaTouched(true) }}
                 className={clsx(
-                  'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all',
+                  'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all disabled:cursor-not-allowed disabled:opacity-60',
                   emitirNota
                     ? 'bg-brand-600/10 border-brand-500/40 text-brand-300'
                     : 'border-surface-500 text-gray-500 hover:border-surface-400 hover:text-gray-300'
@@ -1240,7 +1250,9 @@ function VendaWizard({
                   {emitirNota && '✓'}
                 </span>
               </button>
-              {!emitirNota && (
+              {!fiscalModuloAtivo ? (
+                <p className="text-xs text-red-400 -mt-1">Módulo bloqueado por hora</p>
+              ) : !emitirNota && (
                 <p className="text-xs text-gray-500 -mt-1">
                   Sem nota agora. Depois é possível emitir pelo histórico de vendas.
                 </p>
