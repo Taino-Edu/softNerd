@@ -13,9 +13,8 @@
 //    sentido pra um lojista que NÃO é substituto tributário). 201/202/203
 //    (ICMS-ST como substituto) são bloqueados de propósito — exigem MVA/base
 //    reduzida que ninguém aqui calcula sozinho; ver MontarIcmsSimplesNacional.
-//  - dhEmi usa nota.CreatedAt (momento real da venda/fechamento da comanda),
-//    não o momento da transmissão — importante pro caso comum de retry
-//    automático rodar minutos/horas depois da venda de verdade.
+//  - dhEmi usa o momento da tentativa para emissão normal: a SEFAZ rejeita NFC-e online
+//    transmitida com horário antigo. Em contingência, preserva o horário original.
 //  - Todos os timestamps enviados à SEFAZ usam o fuso America/Sao_Paulo
 //    explicitamente (ParaBrasil/AgoraBrasil), independente do fuso do
 //    servidor onde a API está hospedada.
@@ -642,9 +641,11 @@ public class NfceEmissionService : INfceEmissionService
         // cliente no cupom) — número, cNf e tpEmis não podem mudar entre tentativas.
         var jaEmContingencia = nota.CnfContingencia.HasValue;
         var numero = jaEmContingencia ? nota.Numero!.Value : await ReservarProximoNumeroNfceAsync(cfg.Id);
-        // dhEmi é o momento REAL da venda (quando a nota foi criada como PendenteEmissao),
-        // não o momento desta transmissão — que pode ser minutos/horas depois num retry.
-        var dhEmi  = ParaBrasil(nota.CreatedAt);
+        // Uma nova tentativa online recebe novo número/chave e precisa usar o horário
+        // atual. Reaproveitar nota.CreatedAt depois de alguns minutos é rejeitado pela SEFAZ
+        // como "Data-Hora de emissão atrasada". Só a contingência retransmitida preserva
+        // o horário original porque precisa reconstruir a mesma emissão entregue ao cliente.
+        var dhEmi  = jaEmContingencia ? ParaBrasil(nota.CreatedAt) : AgoraBrasil();
         var cNf    = jaEmContingencia ? nota.CnfContingencia!.Value : Random.Shared.Next(10_000_000, 99_999_999);
         var tpEmis = jaEmContingencia ? TipoEmissao.teOffLine : TipoEmissao.teNormal;
         // cfgServico.tpEmis já vem teNormal de AbrirConfiguracaoSefazAsync — só precisa
@@ -874,7 +875,7 @@ public class NfceEmissionService : INfceEmissionService
         {
             try
             {
-                await InutilizarNumeroAsync(cfg, cfgServico, certificado, nota, numero);
+                await InutilizarNumeroAsync(cfg, cfgServico, certificado, nota, numero, dhEmi.Year);
             }
             catch (Exception ex)
             {
@@ -1015,14 +1016,14 @@ public class NfceEmissionService : INfceEmissionService
     }
 
     private async Task InutilizarNumeroAsync(
-        FiscalConfig cfg, ConfiguracaoServico cfgServico, X509Certificate2 certificado, NotaFiscalEmitida nota, int numero)
+        FiscalConfig cfg, ConfiguracaoServico cfgServico, X509Certificate2 certificado,
+        NotaFiscalEmitida nota, int numero, int anoEmissao)
     {
         using var servico = new ServicosNFe(cfgServico, certificado);
         var justificativa = $"Numero da NFCe {nota.Id} rejeitado pela SEFAZ, inutilizado automaticamente.";
-        // O ano da inutilização é o ano da NUMERAÇÃO da nota (quando ela foi criada),
-        // não o ano corrente — sem isso, uma nota de dezembro rejeitada em janeiro
-        // inutilizava o número no ano errado.
-        var retorno = servico.NfeInutilizacao(cfg.Cnpj, ParaBrasil(nota.CreatedAt).Year, ModeloDocumento.NFCe, cfg.SerieNfce, numero, numero, justificativa);
+        // O ano precisa ser o mesmo usado no dhEmi/chave desta tentativa. Isso importa
+        // quando uma venda pendente de dezembro é reprocessada online em janeiro.
+        var retorno = servico.NfeInutilizacao(cfg.Cnpj, anoEmissao, ModeloDocumento.NFCe, cfg.SerieNfce, numero, numero, justificativa);
 
         var infInut = retorno.Retorno?.infInut;
         if (infInut is not null && infInut.cStat == 102)
