@@ -6,6 +6,8 @@
 // como PendenteEmissao quando a emissão não pode ser concluída.
 // =============================================================================
 
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
@@ -149,6 +151,50 @@ public class NfceEmissionServiceTests
         var nota = await service.EmitirParaComandaAsync(comanda.Id);
 
         nota.Status.Should().Be(NotaFiscalStatus.PendenteEmissao);
+    }
+
+    private static byte[] CreateSelfSignedPfx(string senha, DateTimeOffset notBefore, DateTimeOffset notAfter)
+    {
+        using var rsa = RSA.Create(2048);
+        var req = new CertificateRequest("CN=Fiscal Teste", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var cert = req.CreateSelfSigned(notBefore, notAfter);
+        return cert.Export(X509ContentType.Pfx, senha);
+    }
+
+    [Fact]
+    public async Task EmitirParaComandaAsync_ComCertificadoEDadosCompletos_NaoLancaErroDeConfiguracaoDeCertificado()
+    {
+        // Bug real de produção: ConfiguracaoCertificado.TipoCertificado nunca era setado,
+        // caindo no padrão A1Repositorio (certificado do repositório do Windows — sem senha
+        // nenhuma). Setar Senha nesse modo lançava "Para Certificado A1 o Senha não deve ser
+        // informada!" mesmo com CNPJ/senha corretos, porque o motor guarda o .pfx como bytes
+        // no banco (A1ByteArray), não no repositório do Windows. Esse teste não prova que a
+        // SEFAZ aceita a nota (não há rede/homologação aqui) — só que a configuração do
+        // certificado em si não quebra mais com esse erro específico.
+        const string senha = "senha-teste-123";
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaAsync(db);
+        var enc = CreateEncryptionService();
+        var pfxBytes = CreateSelfSignedPfx(senha, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
+
+        db.FiscalConfigs.Add(new FiscalConfig
+        {
+            Cnpj                      = "12345678000199",
+            RazaoSocial               = "Loja Teste LTDA",
+            Logradouro                = "Rua Teste",
+            CodigoMunicipioIbge       = "3550308",
+            Uf                        = "SP",
+            Ambiente                  = AmbienteFiscal.Homologacao,
+            ModoSimulacao             = false,
+            CertificadoPfxEncrypted   = enc.Encrypt(Convert.ToBase64String(pfxBytes)),
+            CertificadoSenhaEncrypted = enc.Encrypt(senha),
+        });
+        await db.SaveChangesAsync();
+
+        var service = new NfceEmissionService(db, new Mock<IMongoDatabase>().Object, enc, NullLogger<NfceEmissionService>.Instance);
+        var nota = await service.EmitirParaComandaAsync(comanda.Id);
+
+        nota.MotivoRejeicao.Should().NotContain("Senha não deve ser informada");
     }
 
     [Fact]

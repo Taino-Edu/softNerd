@@ -530,7 +530,18 @@ public class NfceEmissionService : INfceEmissionService
         var pfxBytes    = Convert.FromBase64String(_enc.Decrypt(cfg.CertificadoPfxEncrypted!));
         var senha       = _enc.Decrypt(cfg.CertificadoSenhaEncrypted!);
         var certificado = Pkcs12Loader.Abrir(pfxBytes, senha);
-        var cfgCertificado = new ConfiguracaoCertificado { ArrayBytesArquivo = pfxBytes, Senha = senha };
+        // TipoCertificado precisa vir ANTES de Senha (a ordem importa: o setter de Senha
+        // valida contra o tipo já setado). Sem isso, ConfiguracaoCertificado.TipoCertificado
+        // fica no padrão A1Repositorio (certificado instalado no repositório do Windows, sem
+        // senha nenhuma) — e setar Senha nesse modo lança "Para Certificado A1 o Senha não
+        // deve ser informada!". A gente guarda o .pfx como bytes no banco (A1ByteArray), não
+        // no repositório do Windows — esse era o bug real por trás do erro confuso de "senha".
+        var cfgCertificado = new ConfiguracaoCertificado
+        {
+            TipoCertificado    = TipoCertificado.A1ByteArray,
+            ArrayBytesArquivo  = pfxBytes,
+            Senha              = senha,
+        };
 
         var estado   = Enum.Parse<Estado>(cfg.Uf);
         var ambiente = cfg.Ambiente == AmbienteFiscal.Producao ? TipoAmbiente.Producao : TipoAmbiente.Homologacao;
