@@ -76,6 +76,13 @@ namespace CardGameStore.Services.Implementations;
 
 public class NfceEmissionService : INfceEmissionService
 {
+    // Textos literais exigidos pelas regras de validação da SEFAZ quando tpAmb=2.
+    // Só entram no XML de homologação; os dados reais permanecem intactos no banco.
+    private const string DestinatarioHomologacao =
+        "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
+    private const string ProdutoHomologacao =
+        "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
+
     // Janela legal pra cancelar uma NFC-e após autorizada (padrão nacional: 30 minutos).
     private static readonly TimeSpan JanelaCancelamento = TimeSpan.FromMinutes(30);
 
@@ -635,6 +642,8 @@ public class NfceEmissionService : INfceEmissionService
         // Monta os itens (e valida CSOSN) ANTES de reservar o número — uma Natureza de
         // Operação mal configurada não pode queimar um número de NFC-e sem transmitir nada.
         var detItens = dados.Itens.Select((item, idx) => MontarItem(item, idx + 1)).ToList();
+        if (ambiente == TipoAmbiente.Homologacao && detItens.Count > 0)
+            detItens[0].prod.xProd = ProdutoHomologacao;
 
         // Se esta nota já entrou em contingência offline numa tentativa anterior, a
         // retransmissão precisa reconstruir a MESMA chave de acesso (já mostrada ao
@@ -721,6 +730,7 @@ public class NfceEmissionService : INfceEmissionService
                 dest = string.IsNullOrWhiteSpace(dados.ClienteCpf) ? null : new dest(VersaoServico.Versao400)
                 {
                     CPF       = dados.ClienteCpf,
+                    xNome     = ambiente == TipoAmbiente.Homologacao ? DestinatarioHomologacao : null,
                     indIEDest = indIEDest.NaoContribuinte,
                 },
                 det = detItens,
