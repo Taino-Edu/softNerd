@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { fiscalApi, FiscalConfigDto, NaturezaOperacaoDto, NotaFiscalDto, COMANDA_PAYMENT_METHODS } from '@/lib/api'
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   Receipt, Upload, Save, Loader2, AlertTriangle, CheckCircle,
@@ -111,8 +111,8 @@ export default function FiscalPage() {
   const [cancelJustificativa, setCancelJustificativa] = useState('')
   const [cancelling, setCancelling] = useState(false)
 
-  async function loadNotas() {
-    setNotasLoading(true)
+  async function loadNotas(showLoading = true) {
+    if (showLoading) setNotasLoading(true)
     try {
       const { data } = await fiscalApi.listNotas({ pageSize: 30 })
       setNotas(data.items)
@@ -121,7 +121,7 @@ export default function FiscalPage() {
     } catch {
       toast.error('Erro ao carregar notas emitidas')
     } finally {
-      setNotasLoading(false)
+      if (showLoading) setNotasLoading(false)
     }
   }
 
@@ -131,11 +131,17 @@ export default function FiscalPage() {
     setReprocessingId(id)
     try {
       const { data } = await fiscalApi.reprocessarNota(id)
+      // Reflete o retorno imediatamente no cartão. A consulta seguinte reconcilia os
+      // demais campos sem esconder toda a lista atrás de um spinner.
+      setNotas(prev => prev.map(n => n.id === id
+        ? { ...n, status: data.status, motivoRejeicao: data.motivoRejeicao }
+        : n))
       toast[data.status === 'Autorizada' ? 'success' : 'error'](
-        data.status === 'Autorizada' ? 'Nota autorizada!' : `Ainda não autorizou: ${data.status}${data.motivoRejeicao ? ' — ' + data.motivoRejeicao : ''}`)
-      loadNotas()
-    } catch {
-      toast.error('Erro ao reprocessar')
+        data.status === 'Autorizada' ? 'Nota autorizada!' : `Ainda não autorizou: ${data.status}${data.motivoRejeicao ? ' — ' + data.motivoRejeicao : ''}`,
+        { duration: data.status === 'Autorizada' ? 4000 : 10000 })
+      await loadNotas(false)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Erro ao reprocessar', { duration: 10000 })
     } finally {
       setReprocessingId(null)
     }
@@ -309,8 +315,6 @@ export default function FiscalPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto flex flex-col gap-6">
-      <Toaster />
-
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-xl bg-brand-500/10">
           <Receipt className="w-5 h-5 text-brand-400" />
@@ -614,7 +618,7 @@ export default function FiscalPage() {
           <h3 className="font-bold text-white flex items-center gap-2">
             <ScrollText className="w-4 h-4 text-brand-400" /> Notas Emitidas
           </h3>
-          <button onClick={loadNotas} className="p-2 rounded-lg bg-surface-700 hover:bg-surface-500 text-gray-400">
+          <button onClick={() => loadNotas()} className="p-2 rounded-lg bg-surface-700 hover:bg-surface-500 text-gray-400">
             <RefreshCw className={clsx('w-4 h-4', notasLoading && 'animate-spin')} />
           </button>
         </div>
