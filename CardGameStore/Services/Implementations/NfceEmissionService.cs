@@ -743,11 +743,13 @@ public class NfceEmissionService : INfceEmissionService
         nfe.Assina(cfgServico, certificado);
 
         // QR Code: usa a própria lib (sabe a URL certa de cada estado e o hash do CSC) em vez
-        // de reimplementar isso na mão — evita erro de domínio/fórmula por estado.
+        // de reimplementar isso na mão — evita erro de domínio/fórmula por estado. A versão 3
+        // foi implantada nacionalmente pela NT 2025.001; enviar o leiaute v2 atualmente faz a
+        // NFC-e falhar na validação do XML (cStat 225) antes das rejeições específicas.
         nfe.infNFeSupl = new infNFeSupl();
         var qrCodeUrl = string.IsNullOrWhiteSpace(cfg.CscId) || string.IsNullOrWhiteSpace(cfg.CscToken)
             ? null
-            : ExtinfNFeSupl.ObterUrlQrCode(nfe.infNFeSupl, nfe, VersaoQrCode.QrCodeVersao2, cfg.CscId, cfg.CscToken, cfgCertificado);
+            : ExtinfNFeSupl.ObterUrlQrCode(nfe.infNFeSupl, nfe, VersaoQrCode.QrCodeVersao3, cfg.CscId, cfg.CscToken, cfgCertificado);
         if (qrCodeUrl is not null)
             nfe.infNFeSupl.qrCode = qrCodeUrl;
 
