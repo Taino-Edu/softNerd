@@ -64,6 +64,7 @@ using NFe.Classes.Informacoes.Identificacao;
 using NFe.Classes.Informacoes.Identificacao.Tipos;
 using NFe.Classes.Informacoes.Pagamento;
 using NFe.Classes.Informacoes.Total;
+using NFe.Classes.Informacoes.Transporte;
 using NFe.Classes.Servicos.Tipos;
 using NFe.Servicos;
 using NFe.Servicos.Retorno;
@@ -694,7 +695,11 @@ public class NfceEmissionService : INfceEmissionService
                 {
                     CNPJ  = cfg.Cnpj,
                     xNome = cfg.RazaoSocial,
-                    IE    = string.IsNullOrWhiteSpace(cfg.InscricaoEstadual) ? null : cfg.InscricaoEstadual,
+                    // A IE usa o tipo TIE no XSD: somente dígitos. O formato
+                    // comum da tela, "405.112.760.115", fazia o lote inteiro cair no cStat 225.
+                    IE    = string.IsNullOrWhiteSpace(cfg.InscricaoEstadual)
+                        ? null
+                        : SomenteDigitos(cfg.InscricaoEstadual),
                     CRT   = MapCrt(cfg.RegimeTributario),
                     enderEmit = new enderEmit
                     {
@@ -714,20 +719,29 @@ public class NfceEmissionService : INfceEmissionService
                 },
                 dest = string.IsNullOrWhiteSpace(dados.ClienteCpf) ? null : new dest(VersaoServico.Versao400)
                 {
-                    CPF = dados.ClienteCpf,
+                    CPF       = dados.ClienteCpf,
+                    indIEDest = indIEDest.NaoContribuinte,
                 },
                 det = detItens,
                 total = new total
                 {
                     ICMSTot = new ICMSTot
                     {
-                        vBC = 0, vICMS = 0, vBCST = 0, vST = 0,
+                        // Apesar de serem zero no Simples Nacional, estes campos são 1-1
+                        // no leiaute 4.00. Na classe da Zeus eles são nullable por compatibilidade
+                        // com layouts antigos e somem do XML se não forem setados, causando 225.
+                        vBC = 0, vICMS = 0, vICMSDeson = 0, vFCP = 0,
+                        vBCST = 0, vST = 0, vFCPST = 0, vFCPSTRet = 0,
                         vProd    = valorBrutoItens,
                         vFrete   = 0, vSeg = 0, vDesc = valorDesconto, vII = 0, vIPI = 0,
+                        vIPIDevol = 0,
                         vPIS     = 0, vCOFINS = 0, vOutro = 0,
                         vNF      = valorTotal,
                     },
                 },
+                // O grupo transp é obrigatório no leiaute 4.00 mesmo na NFC-e presencial.
+                // Para NFC-e, a modalidade correta é 9 (sem ocorrência de transporte).
+                transp = new transp { modFrete = ModalidadeFrete.mfSemFrete },
                 pag = new List<pag> { new pag { detPag = MontarDetPag(dados, valorTotal) } },
             },
         };
@@ -752,6 +766,10 @@ public class NfceEmissionService : INfceEmissionService
             : ExtinfNFeSupl.ObterUrlQrCode(nfe.infNFeSupl, nfe, VersaoQrCode.QrCodeVersao3, cfg.CscId, cfg.CscToken, cfgCertificado);
         if (qrCodeUrl is not null)
             nfe.infNFeSupl.qrCode = qrCodeUrl;
+        // No QR Code v3, urlChave passou a ser obrigatória no infNFeSupl. O helper de
+        // ObterUrlQrCode monta apenas o QR; a URL de consulta precisa ser preenchida à parte.
+        nfe.infNFeSupl.urlChave = ExtinfNFeSupl.ObterUrlConsulta(
+            nfe.infNFeSupl, nfe, VersaoQrCode.QrCodeVersao3);
 
         using var servico = new ServicosNFe(cfgServico, certificado);
         RetornoNFeAutorizacao retorno;
