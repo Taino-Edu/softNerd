@@ -831,6 +831,15 @@ public class NfceEmissionService : INfceEmissionService
         {
             nota.Status         = NotaFiscalStatus.Rejeitada;
             nota.MotivoRejeicao = protInfo?.xMotivo ?? retorno.RetornoStr ?? "SEFAZ não retornou motivo.";
+
+            // A rejeição 225 acontece no schema do lote, antes de a SEFAZ informar qual
+            // campo da NFC-e está inválido. Guardar o XML na entidade confundiria um XML
+            // rejeitado com XmlAutorizado; por isso ele vai somente para o log de erro, onde
+            // pode ser coletado pontualmente para validação contra a XSD oficial.
+            if (retorno.Retorno?.cStat == 225)
+                _logger.LogError(
+                    "SEFAZ rejeitou NFC-e {NotaId} com cStat 225. XML exato enviado: {XmlEnvio}",
+                    nota.Id, retorno.EnvioStr);
         }
 
         await _db.SaveChangesAsync();
