@@ -73,6 +73,40 @@ public class NfceEmissionServiceTests
         return comanda;
     }
 
+    /// <summary>Comanda com item de R$15,00 mas desconto de R$5,00 aplicado no fechamento —
+    /// TotalInCents (1000) já sai líquido, igual ComandaService.CloseComandaAsync faz de
+    /// verdade. Usada pra provar que a nota fiscal declara o valor PAGO, não o bruto dos itens.</summary>
+    private static async Task<Comanda> SeedComandaFechadaComDescontoAsync(AppDbContext db)
+    {
+        var user = new User { Id = Guid.NewGuid(), Name = "Cliente Teste", Role = UserRole.Customer };
+        db.Users.Add(user);
+
+        var product = new Product { Id = Guid.NewGuid(), Name = "Booster Pack", Category = "MTG", PriceInCents = 1500, StockQuantity = 10, Ncm = "95044000" };
+        db.Products.Add(product);
+
+        var comanda = new Comanda
+        {
+            Id              = Guid.NewGuid(),
+            UserId          = user.Id,
+            Status          = ComandaStatus.Fechada,
+            TotalInCents    = 1000, // 1500 (itens) - 500 (desconto) = líquido cobrado de verdade
+            DiscountInCents = 500,
+            PaymentMethod   = "Dinheiro",
+        };
+        comanda.Items.Add(new ComandaItem
+        {
+            ComandaId          = comanda.Id,
+            ProductId          = product.Id,
+            ItemNameSnapshot    = product.Name,
+            UnitPriceInCents    = 1500,
+            Quantity            = 1,
+            SubtotalInCents     = 1500, // bruto do item — NÃO reflete o desconto
+        });
+        db.Comandas.Add(comanda);
+        await db.SaveChangesAsync();
+        return comanda;
+    }
+
     [Fact]
     public async Task EmitirParaComandaAsync_SemFiscalConfig_RegistraPendenteEmissaoSemLancarExcecao()
     {
@@ -85,6 +119,20 @@ public class NfceEmissionServiceTests
         nota.Status.Should().Be(NotaFiscalStatus.PendenteEmissao);
         nota.ComandaId.Should().Be(comanda.Id);
         nota.ValorTotalEmCentavos.Should().Be(1500);
+    }
+
+    [Fact]
+    public async Task EmitirParaComandaAsync_ComDesconto_ValorTotalEhOLiquidoNaoOBrutoDosItens()
+    {
+        // Bug real: a nota saía pelo valor BRUTO dos itens (1500), ignorando o desconto
+        // de R$5 aplicado no fechamento — o cliente pagou 1000, a nota tinha que declarar 1000.
+        using var db = CreateDb();
+        var comanda = await SeedComandaFechadaComDescontoAsync(db);
+        var service = CreateService(db);
+
+        var nota = await service.EmitirParaComandaAsync(comanda.Id);
+
+        nota.ValorTotalEmCentavos.Should().Be(1000);
     }
 
     [Fact]

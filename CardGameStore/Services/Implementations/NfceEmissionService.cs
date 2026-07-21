@@ -180,7 +180,7 @@ public class NfceEmissionService : INfceEmissionService
                 ? await CarregarDadosComandaAsync(nota.ComandaId!.Value)
                 : await CarregarDadosVendaAvulsaAsync(nota.VendaAvulsaId!);
 
-            nota.ValorTotalEmCentavos = dados.Itens.Sum(i => i.SubtotalCentavos);
+            nota.ValorTotalEmCentavos = dados.TotalCentavos; // líquido de desconto/pontos — não o bruto dos itens
             await TransmitirAsync(nota, dados);
         });
 
@@ -321,7 +321,7 @@ public class NfceEmissionService : INfceEmissionService
                 ? await CarregarDadosComandaAsync(comandaId!.Value)
                 : await CarregarDadosVendaAvulsaAsync(vendaAvulsaId!);
 
-            nota.ValorTotalEmCentavos = dados.Itens.Sum(i => i.SubtotalCentavos);
+            nota.ValorTotalEmCentavos = dados.TotalCentavos; // líquido de desconto/pontos — não o bruto dos itens
             await TransmitirAsync(nota, dados);
         });
 
@@ -393,7 +393,12 @@ public class NfceEmissionService : INfceEmissionService
 
     private record DadosEmissao(
         List<ItemFiscal> Itens, string FormaPagamento, string? ClienteCpf,
-        string? SegundaFormaPagamento, int SegundoValorCentavos);
+        string? SegundaFormaPagamento, int SegundoValorCentavos,
+        // Total REALMENTE cobrado do cliente (já líquido de desconto/pontos aplicados) —
+        // diferente de Itens.Sum(SubtotalCentavos), que é o valor BRUTO dos itens. Usado
+        // pra declarar vNF/vDesc corretos na nota — sem isso a NFC-e saía pelo valor cheio
+        // mesmo quando o cliente pagou menos (desconto/pontos nunca chegavam na nota).
+        int TotalCentavos);
 
     private async Task<DadosEmissao> CarregarDadosComandaAsync(Guid comandaId)
     {
@@ -441,7 +446,8 @@ public class NfceEmissionService : INfceEmissionService
 
         return new DadosEmissao(
             itens, comanda.PaymentMethod ?? "Dinheiro", comanda.User?.Cpf,
-            comanda.SecondPaymentMethod, comanda.SecondPaymentAmountInCents);
+            comanda.SecondPaymentMethod, comanda.SecondPaymentAmountInCents,
+            comanda.TotalInCents); // já líquido de PointsApplied/DiscountInCents (ver ComandaService)
     }
 
     private async Task<DadosEmissao> CarregarDadosVendaAvulsaAsync(string vendaAvulsaId)
@@ -499,7 +505,8 @@ public class NfceEmissionService : INfceEmissionService
 
         return new DadosEmissao(
             itens, venda.PaymentMethod, cpf,
-            venda.SecondPaymentMethod, venda.SecondPaymentAmountInCents);
+            venda.SecondPaymentMethod, venda.SecondPaymentAmountInCents,
+            venda.TotalInCents); // já líquido de DiscountInCents (ver VendaAvulsaService)
     }
 
     // ── Montagem, assinatura e transmissão ─────────────────────────────────────
@@ -600,7 +607,15 @@ public class NfceEmissionService : INfceEmissionService
         var chave  = ChaveFiscal.ObterChave(estado, dhEmi, cfg.Cnpj, ModeloDocumento.NFCe, cfg.SerieNfce, numero, (int)tpEmis, cNf);
 
         var municipioIbge = long.Parse(cfg.CodigoMunicipioIbge!);
-        var valorTotal     = dados.Itens.Sum(i => i.SubtotalCentavos) / 100m;
+        // vProd = valor BRUTO dos itens (soma dos subtotais, sem desconto/pontos) — é o
+        // valor de mercadoria de cada item, igual ao det. vNF = TotalCentavos, o valor
+        // REALMENTE cobrado (já líquido de desconto/pontos aplicados na comanda/venda
+        // avulsa). A diferença vira vDesc — sem isso a nota saía pelo valor cheio mesmo
+        // quando o cliente pagou menos (ex: desconto de R$10 numa comanda de R$50 saía
+        // como R$50 na NFC-e, não R$40).
+        var valorBrutoItens = dados.Itens.Sum(i => i.SubtotalCentavos) / 100m;
+        var valorTotal      = dados.TotalCentavos / 100m;
+        var valorDesconto   = Math.Max(0, valorBrutoItens - valorTotal);
 
         var nfe = new NfeDocumento
         {
@@ -657,8 +672,8 @@ public class NfceEmissionService : INfceEmissionService
                     ICMSTot = new ICMSTot
                     {
                         vBC = 0, vICMS = 0, vBCST = 0, vST = 0,
-                        vProd    = valorTotal,
-                        vFrete   = 0, vSeg = 0, vDesc = 0, vII = 0, vIPI = 0,
+                        vProd    = valorBrutoItens,
+                        vFrete   = 0, vSeg = 0, vDesc = valorDesconto, vII = 0, vIPI = 0,
                         vPIS     = 0, vCOFINS = 0, vOutro = 0,
                         vNF      = valorTotal,
                     },
