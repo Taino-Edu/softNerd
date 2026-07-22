@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '@/lib/api'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Badge, BadgeTone } from '@/components/ui/Badge'
 import { FileText, Clock, CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight, Paperclip, Download, FileDown } from 'lucide-react'
 import Link from 'next/link'
 
@@ -51,37 +52,16 @@ interface AuditPagedResponse {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-  Recebido:  {
-    label:     'Recebido',
-    className: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-    icon:      <Clock className="w-3 h-3" />,
-  },
-  EmAnalise: {
-    label:     'Em Análise',
-    className: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-    icon:      <FileText className="w-3 h-3" />,
-  },
-  Concluido: {
-    label:     'Concluído',
-    className: 'bg-accent-green/20 text-accent-green border border-accent-green/30',
-    icon:      <CheckCircle className="w-3 h-3" />,
-  },
-  Negado: {
-    label:     'Negado',
-    className: 'bg-accent-red/20 text-accent-red border border-accent-red/30',
-    icon:      <XCircle className="w-3 h-3" />,
-  },
+const STATUS_STYLES: Record<string, { label: string; tone: BadgeTone; icon: React.ReactNode }> = {
+  Recebido:  { label: 'Recebido',    tone: 'warning', icon: <Clock className="w-3 h-3" /> },
+  EmAnalise: { label: 'Em Análise',  tone: 'info',    icon: <FileText className="w-3 h-3" /> },
+  Concluido: { label: 'Concluído',   tone: 'success', icon: <CheckCircle className="w-3 h-3" /> },
+  Negado:    { label: 'Negado',      tone: 'danger',  icon: <XCircle className="w-3 h-3" /> },
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLES[status] ?? { label: status, className: 'bg-gray-500/20 text-gray-400 border border-gray-500/30', icon: null }
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${s.className}`}>
-      {s.icon}
-      {s.label}
-    </span>
-  )
+  const s = STATUS_STYLES[status] ?? { label: status, tone: 'neutral' as BadgeTone, icon: null }
+  return <Badge tone={s.tone} icon={s.icon}>{s.label}</Badge>
 }
 
 function fmtDate(iso: string) {

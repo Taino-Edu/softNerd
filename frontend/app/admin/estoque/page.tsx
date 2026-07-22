@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { productApi, variantApi, categoryApi, reservationApi, fiscalApi, Product, ProductCategory, ProductVariant, AdminReservation, NaturezaOperacaoDto } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { Badge } from '@/components/ui/Badge'
 import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X, Loader2, Check, ScanBarcode, Camera, Download, FileText, BarChart2, Layers, DollarSign, TrendingDown, CircleOff, Grid3X3, ChevronDown, ChevronUp, Users, Bell } from 'lucide-react'
 import ImageUpload from '@/components/admin/ImageUpload'
 import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relatorio-estoque'
@@ -112,7 +113,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
             </div>
             <h2 className="text-base font-bold text-white leading-snug">{product.name}</h2>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="badge bg-surface-600 text-gray-300 border-surface-500">{product.category}</span>
+              <Badge tone="neutral">{product.category}</Badge>
               {product.barcode && (
                 <span className="text-[10px] font-mono text-gray-500 flex items-center gap-1">
                   <ScanBarcode className="w-3 h-3" />{product.barcode}
@@ -1069,7 +1070,7 @@ export default function EstoquePage() {
                     {p.description && <p className="text-xs text-gray-500 truncate max-w-[200px]">{p.description}</p>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="badge bg-surface-600 text-gray-300 border-surface-500">{p.category}</span>
+                    <Badge tone="neutral">{p.category}</Badge>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-400">
                     {p.barcode ?? <span className="text-gray-400">—</span>}
@@ -1160,7 +1161,7 @@ export default function EstoquePage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="badge bg-surface-600 text-gray-300 border-surface-500 text-[10px]">{p.category}</span>
+                    <Badge tone="neutral" className="text-[10px]">{p.category}</Badge>
                     {p.barcode && <span className="text-[10px] font-mono text-gray-500">{p.barcode}</span>}
                   </div>
                 </div>

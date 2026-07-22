@@ -14,6 +14,7 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
 interface BadgeProps {
   tone: BadgeTone
   children: ReactNode
+  icon?: ReactNode
   className?: string
 }
 
@@ -21,9 +22,10 @@ interface BadgeProps {
  * `.badge-aberta` etc., só que com o tom escolhido pela página em vez de um
  * nome fixo. Cada domínio (fiscal, contas a receber, pré-venda...) mapeia seu
  * próprio status pro tone mais próximo. */
-export function Badge({ tone, children, className }: BadgeProps) {
+export function Badge({ tone, children, icon, className }: BadgeProps) {
   return (
-    <span className={clsx('badge', TONE_CLASSES[tone], className)}>
+    <span className={clsx('badge', icon && 'gap-1', TONE_CLASSES[tone], className)}>
+      {icon}
       {children}
     </span>
   )

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { categoryApi, ProductCategory } from '@/lib/api'
+import { Badge } from '@/components/ui/Badge'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, Tag, X, Loader2, Check, GripVertical } from 'lucide-react'
 
@@ -260,11 +261,9 @@ export default function CategoriasPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-400">{c.displayOrder}</td>
                   <td className="px-4 py-3">
-                    <span className={c.isActive
-                      ? 'badge bg-accent-green/10 text-accent-green border-accent-green/30'
-                      : 'badge bg-surface-600 text-gray-500 border-surface-500'}>
+                    <Badge tone={c.isActive ? 'success' : 'neutral'}>
                       {c.isActive ? 'Ativa' : 'Inativa'}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import {
   FORMAS_PAGAMENTO_CREDIARIO, UserSummary,
 } from '@/lib/api'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Badge } from '@/components/ui/Badge'
 import toast from 'react-hot-toast'
 import {
   CreditCard, CheckCircle, Clock, AlertTriangle,
@@ -1297,9 +1298,7 @@ export default function CrediarioPage() {
 }
 
 function StatusBadge({ status, vencido }: { status: string; vencido: boolean }) {
-  if (status === 'Pago')
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-accent-green/10 text-accent-green border border-accent-green/20">Quitado</span>
-  if (vencido)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Vencido</span>
-  return <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Em Aberto</span>
+  if (status === 'Pago') return <Badge tone="success">Quitado</Badge>
+  if (vencido) return <Badge tone="danger">Vencido</Badge>
+  return <Badge tone="warning">Em Aberto</Badge>
 }

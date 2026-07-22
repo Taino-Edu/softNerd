@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { championshipApi, userApi, deckApi, Championship, ChampionshipParticipant, ChampionshipPreInscricao, DeckListDto, uploadApi, PodioItem } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { Badge, BadgeTone } from '@/components/ui/Badge'
 import {
   Trophy, Plus, Users, Swords, X, Check, Loader2,
   ChevronDown, ChevronUp, UserPlus, Trash2, Medal, Search, ImagePlus, Edit2, MessageCircle, Award, Link2, Eye,
@@ -13,12 +14,12 @@ const STATUS_LABELS: Record<string, string> = {
   Planejado: '📋 Planejado', Inscricoes: '📝 Inscrições',
   EmAndamento: '⚔️ Em Andamento', Finalizado: '🏆 Finalizado', Cancelado: '❌ Cancelado',
 }
-const STATUS_CLASSES: Record<string, string> = {
-  Planejado:   'badge bg-blue-500/10 text-blue-400 border-blue-500/20',
-  Inscricoes:  'badge bg-brand-500/10 text-brand-300 border-brand-500/20',
-  EmAndamento: 'badge bg-amber-500/10 text-amber-400 border-amber-500/20',
-  Finalizado:  'badge bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  Cancelado:   'badge bg-red-500/10 text-red-400 border-red-500/20',
+const STATUS_TONES: Record<string, BadgeTone> = {
+  Planejado:   'info',
+  Inscricoes:  'info',
+  EmAndamento: 'warning',
+  Finalizado:  'success',
+  Cancelado:   'danger',
 }
 const GAMES = ['Pokemon', 'Magic: The Gathering', 'Yu-Gi-Oh!', 'One Piece TCG', 'Dragon Ball Super']
 const NEXT_STATUS: Record<string, string[]> = {
@@ -616,9 +617,9 @@ function ChampionshipCard({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-surface-900/80 to-transparent" />
-            <span className={clsx('absolute bottom-2 left-3', STATUS_CLASSES[c.status] ?? 'badge')}>
+            <Badge tone={STATUS_TONES[c.status] ?? 'neutral'} className="absolute bottom-2 left-3">
               {STATUS_LABELS[c.status]}
-            </span>
+            </Badge>
           </div>
         )}
 
@@ -628,7 +629,7 @@ function ChampionshipCard({
           <div className="flex-1">
             {!c.imageUrl && (
               <div className="flex items-center gap-2 mb-2">
-                <span className={STATUS_CLASSES[c.status] ?? 'badge'}>{STATUS_LABELS[c.status]}</span>
+                <Badge tone={STATUS_TONES[c.status] ?? 'neutral'}>{STATUS_LABELS[c.status]}</Badge>
               </div>
             )}
             <h3 className="font-bold text-white">{c.name}</h3>

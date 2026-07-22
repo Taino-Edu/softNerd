@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Badge } from '@/components/ui/Badge'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
@@ -220,14 +221,9 @@ export default function IntegracoesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold text-white">{info.label}</h3>
-                    <span className={clsx(
-                      'text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase',
-                      isReady
-                        ? 'bg-green-500/15 text-green-400 border-green-500/30'
-                        : 'bg-gray-500/15 text-gray-400 border-gray-500/30'
-                    )}>
+                    <Badge tone={isReady ? 'success' : 'neutral'} className="uppercase">
                       {isReady ? '✓ Conectado' : 'Não configurado'}
-                    </span>
+                    </Badge>
                     <span className="text-xs text-green-500 font-semibold ml-auto">Grátis</span>
                   </div>
 
