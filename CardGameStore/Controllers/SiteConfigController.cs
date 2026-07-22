@@ -40,10 +40,14 @@ public class SiteConfigController : ControllerBase
         if (req.HeroSubtitle         is not null) cfg.HeroSubtitle         = req.HeroSubtitle;
         if (req.AddressLine          is not null) cfg.AddressLine          = req.AddressLine;
         if (req.ContactPersonName    is not null) cfg.ContactPersonName    = req.ContactPersonName;
-        if (req.LogoUrl              is not null) cfg.LogoUrl              = req.LogoUrl;
-        if (req.FaviconUrl           is not null) cfg.FaviconUrl           = req.FaviconUrl;
-        if (req.PwaIconUrl           is not null) cfg.PwaIconUrl           = req.PwaIconUrl;
-        if (req.AdminIconUrl         is not null) cfg.AdminIconUrl         = req.AdminIconUrl;
+        // Ícones são a exceção: null aqui é um valor de verdade ("remover ícone"), não
+        // "campo não enviado" — diferente de todo o resto desta request, onde null só
+        // significa "não mexe nesse campo". Sem esse tratamento à parte, limpar um ícone
+        // no admin e salvar não tinha efeito nenhum (o valor antigo do banco voltava).
+        cfg.LogoUrl      = req.LogoUrl;
+        cfg.FaviconUrl   = req.FaviconUrl;
+        cfg.PwaIconUrl   = req.PwaIconUrl;
+        cfg.AdminIconUrl = req.AdminIconUrl;
         if (req.WhatsappNumber       is not null) cfg.WhatsappNumber       = req.WhatsappNumber;
         if (req.ContactEmail         is not null) cfg.ContactEmail         = req.ContactEmail;
         if (req.NavTorneiosLabel     is not null) cfg.NavTorneiosLabel     = req.NavTorneiosLabel;
