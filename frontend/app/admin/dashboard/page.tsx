@@ -609,6 +609,10 @@ function CloseComandaModal({
   const [splitEnabled,  setSplitEnabled]  = useState(false)
   const [secondMethod,  setSecondMethod]  = useState('Cashback')
   const [secondAmtStr,  setSecondAmtStr]  = useState('')
+  // Comanda só guarda desconto em centavos no banco (sem campo de percentual) — o
+  // percentual é resolvido aqui no front antes de mandar, mesmo padrão do Venda Avulsa.
+  const [discountMode,  setDiscountMode]  = useState<'percent' | 'cents'>('percent')
+  const [discountPct,   setDiscountPct]   = useState(0)
   const [descontoStr,   setDescontoStr]   = useState('')
   const [emitirNota,    setEmitirNota]    = useState(() => fiscalModuloAtivo && autoEmitMethods.includes('Dinheiro'))
   const [notaTouched,   setNotaTouched]   = useState(false)
@@ -619,9 +623,12 @@ function CloseComandaModal({
   }, [method, autoEmitMethods, notaTouched, fiscalModuloAtivo])
 
   const totalAntesDesconto = comanda.totalInReais - comanda.pointsApplied / 100
+  const totalAntesDescontoCents = Math.round(totalAntesDesconto * 100)
   const descontoCents  = Math.min(
-    Math.round(parseFloat(descontoStr.replace(',', '.') || '0') * 100),
-    Math.round(totalAntesDesconto * 100),
+    discountMode === 'percent'
+      ? Math.round(totalAntesDescontoCents * discountPct / 100)
+      : Math.round(parseFloat(descontoStr.replace(',', '.') || '0') * 100),
+    totalAntesDescontoCents,
   )
   const totalRestante  = totalAntesDesconto - descontoCents / 100
   const saldoCashback  = comanda.userBalanceInCents / 100
@@ -671,15 +678,50 @@ function CloseComandaModal({
         </div>
 
         <div>
-          <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">Desconto (R$)</p>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="0,00"
-            value={descontoStr}
-            onChange={e => setDescontoStr(e.target.value)}
-            className="input text-sm w-full font-mono"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Desconto</p>
+            <div className="flex gap-1 bg-surface-900 rounded-lg p-0.5">
+              {(['percent', 'cents'] as const).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setDiscountMode(mode)}
+                  className={clsx(
+                    'px-2.5 py-1 rounded-md text-[11px] font-bold transition-all',
+                    discountMode === mode
+                      ? 'bg-accent-green/20 text-accent-green'
+                      : 'text-gray-500 hover:text-gray-300'
+                  )}
+                >{mode === 'percent' ? '%' : 'R$'}</button>
+              ))}
+            </div>
+          </div>
+
+          {discountMode === 'percent' ? (
+            <div className="flex gap-1.5">
+              {[0, 5, 10, 15, 20].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDiscountPct(d)}
+                  className={clsx(
+                    'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all',
+                    discountPct === d
+                      ? 'bg-accent-green/20 border-accent-green/50 text-accent-green'
+                      : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
+                  )}
+                >{d === 0 ? '—' : `${d}%`}</button>
+              ))}
+            </div>
+          ) : (
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={descontoStr}
+              onChange={e => setDescontoStr(e.target.value)}
+              className="input text-sm w-full font-mono"
+            />
+          )}
+
           {descontoCents > 0 && (
             <p className="text-xs text-accent-green mt-1">
               Total após desconto: R$ {totalRestante.toFixed(2).replace('.', ',')}
@@ -1271,6 +1313,10 @@ function EditarComandaModal({
   const [pm,       setPm]       = useState(comanda.paymentMethod ?? 'Dinheiro')
   const [pm2,      setPm2]      = useState(comanda.secondPaymentMethod ?? '')
   const [pm2val,   setPm2val]   = useState(String(comanda.secondPaymentAmountInCents / 100))
+  // Mesmo padrão do fechamento de comanda — Comanda só guarda desconto em centavos no
+  // banco, o percentual é resolvido aqui no front antes de mandar.
+  const [descontoMode, setDescontoMode] = useState<'percent' | 'cents'>('cents')
+  const [descontoPct,  setDescontoPct]  = useState(0)
   const [desconto, setDesconto] = useState(String(comanda.discountInCents / 100))
   const [clienteId, setClienteId] = useState(comanda.userId)
   const [clienteSearch, setClienteSearch] = useState('')
@@ -1295,6 +1341,12 @@ function EditarComandaModal({
     p.name.toLowerCase().includes(prodSearch.toLowerCase()) && p.isActive
   ).slice(0, 6)
 
+  const itensSubtotalCents = items.filter(it => !it.remover)
+    .reduce((s, it) => s + it.unitPriceInCents * it.quantity, 0)
+  const descontoCentsResolvido = descontoMode === 'percent'
+    ? Math.round(itensSubtotalCents * descontoPct / 100)
+    : Math.round(parseFloat(desconto.replace(',', '.') || '0') * 100)
+
   function updateItem(idx: number, patch: Partial<EditItemState>) {
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it))
   }
@@ -1317,7 +1369,6 @@ function EditarComandaModal({
   async function handleSave() {
     setSaving(true)
     try {
-      const descontoNum = Math.round(parseFloat(desconto.replace(',', '.') || '0') * 100)
       const pm2valNum   = Math.round(parseFloat(pm2val.replace(',', '.') || '0') * 100)
 
       const itens: EditarItemRequest[] = items.map(it => ({
@@ -1334,7 +1385,7 @@ function EditarComandaModal({
         secondPaymentMethod: pm2 === '' ? '' : pm2 || undefined,
         secondPaymentAmountInCents: pm2 ? pm2valNum : 0,
         novoClienteId: clienteId !== comanda.userId ? clienteId : undefined,
-        descontoEmCentavos: descontoNum,
+        descontoEmCentavos: descontoCentsResolvido,
         itens,
       })
     } finally {
@@ -1392,9 +1443,45 @@ function EditarComandaModal({
 
           {/* Desconto */}
           <div>
-            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Desconto (R$)</p>
-            <input type="number" step="0.01" min="0" value={desconto} onChange={e => setDesconto(e.target.value)}
-              className="w-full bg-surface-700 border border-surface-500 text-white rounded-xl px-3 py-2 text-sm" />
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Desconto</p>
+              <div className="flex gap-1 bg-surface-900 rounded-lg p-0.5">
+                {(['percent', 'cents'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setDescontoMode(mode)}
+                    className={clsx(
+                      'px-2.5 py-1 rounded-md text-[11px] font-bold transition-all',
+                      descontoMode === mode
+                        ? 'bg-accent-green/20 text-accent-green'
+                        : 'text-gray-500 hover:text-gray-300'
+                    )}
+                  >{mode === 'percent' ? '%' : 'R$'}</button>
+                ))}
+              </div>
+            </div>
+
+            {descontoMode === 'percent' ? (
+              <div className="flex gap-1.5">
+                {[0, 5, 10, 15, 20].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDescontoPct(d)}
+                    className={clsx(
+                      'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all',
+                      descontoPct === d
+                        ? 'bg-accent-green/20 border-accent-green/50 text-accent-green'
+                        : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
+                    )}
+                  >{d === 0 ? '—' : `${d}%`}</button>
+                ))}
+              </div>
+            ) : (
+              <input type="number" step="0.01" min="0" value={desconto} onChange={e => setDesconto(e.target.value)}
+                className="w-full bg-surface-700 border border-surface-500 text-white rounded-xl px-3 py-2 text-sm" />
+            )}
           </div>
 
           {/* Cliente */}
