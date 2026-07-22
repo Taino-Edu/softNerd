@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { productApi, categoryApi, vendaAvulsaApi, userApi, fiscalApi, PAYMENT_METHODS, PAYMENT_NEEDS_USER, SECOND_PAYMENT_METHODS, Product, ProductCategory, ProductVariant, VendaAvulsaDto, UserSummary, EditarPagamentoVendaAvulsaRequest } from '@/lib/api'
 import { useThrottle } from '@/lib/hooks'
 import { usePreferences } from '@/hooks/usePreferences'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast from 'react-hot-toast'
 import {
   ShoppingBag, Plus, Minus, User, CheckCircle, RotateCcw,
@@ -1489,42 +1490,39 @@ export default function VendaAvulsaPage() {
         document.body
       )}
 
-      {/* Header */}
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <ShoppingBag className="w-6 h-6 text-brand-400" /> Frente de Caixa
-          </h1>
-          <p className="text-gray-400 text-sm mt-0.5">Venda direta no balcão</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 bg-surface-800 border border-surface-500 p-1 rounded-xl">
-            <button
-              onClick={() => setTab('venda')}
-              className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
-                tab === 'venda' ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20' : 'text-gray-400 hover:text-gray-200')}
-            >
-              <TrendingUp className="w-3.5 h-3.5" /> PDV
-            </button>
-            <button
-              onClick={() => setTab('historico')}
-              className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
-                tab === 'historico' ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20' : 'text-gray-400 hover:text-gray-200')}
-            >
-              <History className="w-3.5 h-3.5" /> Histórico
-            </button>
-          </div>
-          {tab === 'venda' && (
-            <button
-              onClick={() => setWizard(true)}
-              disabled={loading}
-              className="btn-primary disabled:opacity-50"
-            >
-              <Plus className="w-4 h-4" /> Começar venda
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Frente de Caixa"
+        subtitle="Venda direta no balcão"
+        actions={
+          <>
+            <div className="flex gap-1 bg-surface-800 border border-surface-500 p-1 rounded-xl">
+              <button
+                onClick={() => setTab('venda')}
+                className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
+                  tab === 'venda' ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20' : 'text-gray-400 hover:text-gray-200')}
+              >
+                <TrendingUp className="w-3.5 h-3.5" /> PDV
+              </button>
+              <button
+                onClick={() => setTab('historico')}
+                className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
+                  tab === 'historico' ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20' : 'text-gray-400 hover:text-gray-200')}
+              >
+                <History className="w-3.5 h-3.5" /> Histórico
+              </button>
+            </div>
+            {tab === 'venda' && (
+              <button
+                onClick={() => setWizard(true)}
+                disabled={loading}
+                className="btn-primary disabled:opacity-50"
+              >
+                <Plus className="w-4 h-4" /> Começar venda
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* ── Tab: PDV ──────────────────────────────────────────────────────── */}
       {tab === 'venda' && (

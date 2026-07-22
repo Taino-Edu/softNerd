@@ -1,6 +1,7 @@
 'use client'
 
-import { BookOpen, Zap, Wrench, Shield, Star, Package, Trophy, Timer, ShoppingBag, Users } from 'lucide-react'
+import { Zap, Wrench, Shield, Star, Package, Trophy, Timer, ShoppingBag, Users } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface Release {
   version: string
@@ -13,7 +14,7 @@ interface Release {
 const tagStyle: Record<Release['tag'], string> = {
   feature:     'bg-brand-500/20 text-brand-300 border-brand-500/30',
   fix:         'bg-red-500/20 text-red-400 border-red-500/30',
-  security:    'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  security:    'bg-amber-500/20 text-amber-400 border-amber-500/30',
   improvement: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 const tagLabel: Record<Release['tag'], string> = {
@@ -155,16 +156,8 @@ const RELEASES: Release[] = [
 
 export default function ChangelogPage() {
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center">
-          <BookOpen className="w-5 h-5 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-black text-white">Changelog</h1>
-          <p className="text-sm text-gray-400">Histórico de atualizações do sistema</p>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <PageHeader title="Changelog" subtitle="Histórico de atualizações do sistema" />
 
       <div className="relative">
         {/* Linha vertical */}

@@ -4,6 +4,7 @@ import {
   crediarioApi, userApi, CrediariosDto, CrediariosClienteDto, PagamentoCrediarioDto,
   FORMAS_PAGAMENTO_CREDIARIO, UserSummary,
 } from '@/lib/api'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast from 'react-hot-toast'
 import {
   CreditCard, CheckCircle, Clock, AlertTriangle,
@@ -1177,23 +1178,15 @@ export default function CrediarioPage() {
         />
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <CreditCard className="w-6 h-6 text-brand-400" /> Crediário
-          </h1>
-          <p className="text-gray-400 text-sm mt-0.5">
-            Clientes com pagamento em aberto — suporta pagamentos parciais
-          </p>
-        </div>
-        <button
-          onClick={() => setShowNovaDivida(true)}
-          className="btn-primary shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Nova Dívida
-        </button>
-      </div>
+      <PageHeader
+        title="Crediário"
+        subtitle="Clientes com pagamento em aberto — suporta pagamentos parciais"
+        actions={
+          <button onClick={() => setShowNovaDivida(true)} className="btn-primary shrink-0">
+            <Plus className="w-4 h-4" /> Nova Dívida
+          </button>
+        }
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

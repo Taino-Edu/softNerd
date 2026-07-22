@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
-  Plug, CheckCircle, XCircle, Settings, Loader2, RefreshCw,
+  CheckCircle, XCircle, Settings, Loader2, RefreshCw,
   Upload, Info, AlertTriangle, ExternalLink, X, Save,
 } from 'lucide-react'
 
@@ -187,22 +188,18 @@ export default function IntegracoesPage() {
   const cfgInfo = configModal ? INTEGRACAO_INFO[configModal.source] : null
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       <Toaster />
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-xl bg-brand-500/10">
-          <Plug className="w-5 h-5 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-black text-white">Integrações Financeiras</h1>
-          <p className="text-sm text-gray-400">Conecte fontes de dados — todas gratuitas</p>
-        </div>
-        <button onClick={load} className="ml-auto p-2 rounded-xl bg-surface-700 hover:bg-surface-500 text-gray-400">
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </div>
+      <PageHeader
+        title="Integrações Financeiras"
+        subtitle="Conecte fontes de dados — todas gratuitas"
+        actions={
+          <button onClick={load} className="p-2 rounded-xl bg-surface-700 hover:bg-surface-500 text-gray-400">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>

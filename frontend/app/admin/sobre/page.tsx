@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import {
-  Info, Tag, Calendar, CheckCircle, Wrench, Zap,
+  Tag, Calendar, CheckCircle, Wrench, Zap,
   BookOpen, ChevronDown, ChevronUp, FileDown,
   LayoutDashboard, ShoppingBag, ShoppingCart, Package,
   Users, CreditCard, Trophy, BarChart2, Layers, Megaphone, Settings, Keyboard,
 } from 'lucide-react'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 // ── Minimal Markdown Renderer ──────────────────────────────────────────────────
 
@@ -386,28 +387,24 @@ export default function SobrePage() {
   const blocks = raw ? parseMd(raw) : []
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center shrink-0">
-          <Info className="w-6 h-6 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-white">Sobre o Sistema</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Santuário Nerd — Plataforma de Gestão</p>
-        </div>
-        <div className="ml-auto flex items-center gap-3">
-          <Tag className="w-4 h-4 text-brand-400" />
-          <span className="text-sm font-mono font-semibold text-brand-400">{version}</span>
-          <Link
-            href="/admin/manual"
-            target="_blank"
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-400 hover:bg-brand-500/20 transition-colors"
-          >
-            <FileDown className="w-3.5 h-3.5" /> Manual PDF
-          </Link>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <PageHeader
+        title="Sobre o Sistema"
+        subtitle="Santuário Nerd — Plataforma de Gestão"
+        actions={
+          <>
+            <Tag className="w-4 h-4 text-brand-400" />
+            <span className="text-sm font-mono font-semibold text-brand-400">{version}</span>
+            <Link
+              href="/admin/manual"
+              target="_blank"
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-400 hover:bg-brand-500/20 transition-colors"
+            >
+              <FileDown className="w-3.5 h-3.5" /> Manual PDF
+            </Link>
+          </>
+        }
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 bg-surface-800 p-1 rounded-xl mb-6">

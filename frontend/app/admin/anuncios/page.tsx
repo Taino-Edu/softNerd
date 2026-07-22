@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { announcementApi, AnnouncementDto } from '@/lib/api'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast from 'react-hot-toast'
 import { Plus, Trash2, Eye, EyeOff, Megaphone, Edit2, Loader2, ImageIcon, Images } from 'lucide-react'
 import clsx from 'clsx'
@@ -193,15 +194,7 @@ export default function AnunciosPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
 
-      {/* ── Cabeçalho ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Megaphone className="w-6 h-6 text-brand-400" /> Anúncios
-          </h1>
-          <p className="text-gray-500 text-sm mt-0.5">Carrossel de banners e avisos exibidos na landing page</p>
-        </div>
-      </div>
+      <PageHeader title="Anúncios" subtitle="Carrossel de banners e avisos exibidos na landing page" />
 
       {/* ── Carrossel de Banners ── */}
       <div className="card space-y-4">

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { perfisApi, PerfilDto } from '@/lib/api'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { UserCog, Plus, Trash2, Edit2, Check, X, Loader2, Shield, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -245,23 +246,16 @@ export default function PerfisPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-500/15 border border-brand-500/20 flex items-center justify-center">
-            <UserCog className="w-5 h-5 text-brand-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Perfis de Acesso</h1>
-            <p className="text-sm text-gray-500">Crie perfis com permissões customizadas para operadores</p>
-          </div>
-        </div>
-        {!creating && !editing && (
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <PageHeader
+        title="Perfis de Acesso"
+        subtitle="Crie perfis com permissões customizadas para operadores"
+        actions={!creating && !editing && (
           <button onClick={() => setCreating(true)} className="btn-primary gap-2">
             <Plus className="w-4 h-4" /> Novo Perfil
           </button>
         )}
-      </div>
+      />
 
       {/* Formulário de criação */}
       {creating && (

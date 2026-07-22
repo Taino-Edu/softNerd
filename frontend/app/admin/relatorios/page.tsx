@@ -8,6 +8,7 @@ import {
 import { gerarRelatorioPDF } from '@/lib/relatorio'
 import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relatorio-estoque'
 import { gerarRelatorioClientes, gerarRelatorioPDV, gerarRelatorioComandas, gerarRelatorioCrediario } from '@/lib/relatorio-admin'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast from 'react-hot-toast'
 import {
   BarChart2, ChevronDown, ChevronUp, Loader2, Package,
@@ -438,23 +439,20 @@ export default function RelatoriosPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <BarChart2 className="w-6 h-6 text-brand-400" /> Relatórios
-          </h1>
-          <p className="text-gray-400 text-sm mt-0.5">Análise de vendas, estoque e clientes</p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <select value={mes} onChange={e => setMes(Number(e.target.value))} className="input py-1.5 text-sm max-w-[130px]">
-            {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-          </select>
-          <select value={ano} onChange={e => setAno(Number(e.target.value))} className="input py-1.5 text-sm w-[80px]">
-            {anos.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </div>
-      </div>
+      <PageHeader
+        title="Relatórios"
+        subtitle="Análise de vendas, estoque e clientes"
+        actions={
+          <>
+            <select value={mes} onChange={e => setMes(Number(e.target.value))} className="input py-1.5 text-sm max-w-[130px]">
+              {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+            </select>
+            <select value={ano} onChange={e => setAno(Number(e.target.value))} className="input py-1.5 text-sm w-[80px]">
+              {anos.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </>
+        }
+      />
 
       {/* Grid de relatórios PDF */}
       <div>

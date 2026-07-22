@@ -6,7 +6,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '@/lib/api'
-import { Shield, FileText, Clock, CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight, Paperclip, Download, FileDown } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { FileText, Clock, CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight, Paperclip, Download, FileDown } from 'lucide-react'
 import Link from 'next/link'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -342,17 +343,8 @@ export default function LgpdAdminPage() {
   }, [tab, loadAudit])
 
   return (
-    <div className="p-4 sm:p-6">
-      {/* Título */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
-          <Shield className="w-5 h-5 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-white">LGPD &amp; Privacidade</h1>
-          <p className="text-xs text-gray-400">Gestão de solicitações e trilha de auditoria</p>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <PageHeader title="LGPD & Privacidade" subtitle="Gestão de solicitações e trilha de auditoria" />
 
       {/* Abas */}
       <div className="flex gap-1 bg-surface-700 rounded-xl p-1 w-fit mb-6">

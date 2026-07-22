@@ -1,6 +1,7 @@
 'use client'
 import { usePreferences } from '@/hooks/usePreferences'
-import { Settings, BrainCircuit, Bell, Tag, Check, Loader2, Accessibility, LayoutDashboard, RotateCcw } from 'lucide-react'
+import { BrainCircuit, Bell, Tag, Check, Loader2, Accessibility, LayoutDashboard, RotateCcw } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
 import { UserPreferences, DashboardPanels, DEFAULT_DASHBOARD_PANELS } from '@/lib/api'
@@ -65,18 +66,14 @@ export default function ConfiguracoesPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-2xl">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       <Toaster position="top-center" />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Settings className="w-6 h-6 text-brand-400" /> Configurações
-          </h1>
-          <p className="text-gray-500 text-sm mt-0.5">Preferências salvas por perfil de usuário</p>
-        </div>
-        {saving && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
-      </div>
+      <PageHeader
+        title="Configurações"
+        subtitle="Preferências salvas por perfil de usuário"
+        actions={saving && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+      />
 
       {/* ── Botão IA ── */}
       <Section title="Assistente IA" icon={<BrainCircuit className="w-5 h-5 text-violet-400" />}>

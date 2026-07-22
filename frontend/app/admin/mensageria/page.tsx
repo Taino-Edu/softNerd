@@ -6,9 +6,10 @@ import toast from 'react-hot-toast'
 import {
   Send, Users, User, Mail, Bell, BellRing,
   Search, X, CheckCircle, ChevronDown, ChevronUp, ListFilter,
-  Megaphone, Image as ImageIcon, Link2, Smartphone, Wallet, Star, Sparkles,
+  Image as ImageIcon, Link2, Smartphone, Wallet, Star, Sparkles,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 type Channel    = 'inapp' | 'email' | 'both'
 type TargetMode = 'segment' | 'specific'
@@ -121,16 +122,8 @@ function MensageriaForm() {
     : `${selected.size} cliente${selected.size !== 1 ? 's' : ''} selecionado${selected.size !== 1 ? 's' : ''}`
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-brand-500/10">
-          <Megaphone className="w-5 h-5 text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-white">Mensageria</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Fale com seus clientes por notificação e e-mail.</p>
-        </div>
-      </div>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <PageHeader title="Mensageria" subtitle="Fale com seus clientes por notificação e e-mail." />
 
       {fromWaitlistProduct && (
         <div className="card flex items-center gap-3 border-brand-500/30 bg-brand-500/10 animate-fade-in">

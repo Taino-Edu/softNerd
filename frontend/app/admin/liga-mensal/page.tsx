@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { PageHeader } from '@/components/ui/PageHeader'
 import {
-  Trophy, Medal, Award, Loader2, Layers, ChevronDown, Check, Swords, ExternalLink,
+  Medal, Award, Loader2, Layers, ChevronDown, Check, Swords, ExternalLink,
   Plus, Pencil, Trash2, X, PenLine,
 } from 'lucide-react'
 import {
@@ -246,17 +247,12 @@ export default function AdminLigaMensalPage() {
         />
       )}
 
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-brand-400" /> Liga Mensal
-          </h1>
-          <p className="text-gray-400 text-sm mt-0.5">
-            Pontos somados a partir da colocação dos campeonatos semanais. Público em <Link href="/liga" target="_blank" className="text-brand-400 hover:underline inline-flex items-center gap-1">/liga <ExternalLink className="w-3 h-3" /></Link>
-          </p>
-        </div>
-
-        {meses.length > 0 && (
+      <PageHeader
+        title="Liga Mensal"
+        subtitle={
+          <>Pontos somados a partir da colocação dos campeonatos semanais. Público em <Link href="/liga" target="_blank" className="text-brand-400 hover:underline inline-flex items-center gap-1">/liga <ExternalLink className="w-3 h-3" /></Link></>
+        }
+        actions={meses.length > 0 && (
           <select
             value={selecionado}
             onChange={e => setSelecionado(e.target.value)}
@@ -270,7 +266,7 @@ export default function AdminLigaMensalPage() {
             ))}
           </select>
         )}
-      </div>
+      />
 
       {loading ? (
         <div className="flex justify-center py-16">
