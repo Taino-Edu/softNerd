@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -702,6 +703,8 @@ public class ReservationController : ControllerBase
                      ?? User.FindFirst("name")?.Value
                      ?? "Admin";
 
+        VendaAvulsaDto? vendaResult = null;
+
         // Claim atômico + registro da venda/comanda na MESMA transação (mesmo motivo do
         // Cancel/UpdateStatus — era o M9 da auditoria: duas homologações concorrentes, ou
         // uma homologação correndo com um cancelamento, podiam lançar a venda duas vezes
@@ -732,6 +735,10 @@ public class ReservationController : ControllerBase
                     PaymentMethod              = req.PaymentMethod ?? "Dinheiro",
                     SecondPaymentMethod        = req.SecondPaymentMethod,
                     SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
+                    // Decidido pelo admin só agora, na homologação — o cliente nunca viu esse
+                    // desconto no carrinho/Pix (pode já ter pago o valor cheio antes disso).
+                    DiscountPercent            = req.DiscountPercent,
+                    DiscountInCents            = req.DiscountInCents,
                     SkipStockDecrement         = true, // estoque já baixado na pré-venda
                     // Marca a origem pra o Financeiro separar Comanda/PDV de venda do site — que
                     // ainda se divide em "Site" × "Pré-venda" pela tag do produto (mesma lógica
@@ -741,7 +748,7 @@ public class ReservationController : ControllerBase
                     ProductIsPreVenda          = res.Product?.IsPreVenda ?? false,
                     Items                      = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
                 };
-                await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
+                vendaResult = await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
             }
             catch (InvalidOperationException ex)
             {
@@ -754,7 +761,12 @@ public class ReservationController : ControllerBase
 
         if (falha is not null) return falha;
 
-        return Ok(new { message = "Pré-venda homologada com sucesso.", reservationId = id });
+        return Ok(new {
+            message = "Pré-venda homologada com sucesso.",
+            reservationId = id,
+            discountPercent = vendaResult?.DiscountPercent ?? 0,
+            discountInReais = vendaResult?.DiscountInReais ?? 0,
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -992,4 +1004,15 @@ public class HomologarRequest
 
     /// <summary>Valor em centavos cobrado no segundo método.</summary>
     public int? SecondPaymentAmountInCents { get; init; }
+
+    /// <summary>Desconto percentual decidido pelo admin só nesta homologação (0-100) — nunca
+    /// visto pelo cliente antes disso (ele já pode ter pago o valor cheio via Pix). Ignorado
+    /// se DiscountInCents vier preenchido.</summary>
+    [Range(0, 100)]
+    public int DiscountPercent { get; init; } = 0;
+
+    /// <summary>Se preenchido, sobrepõe DiscountPercent — desconto direto em centavos. Mesmo
+    /// padrão de VendaAvulsaRequest.</summary>
+    [Range(0, int.MaxValue)]
+    public int? DiscountInCents { get; init; }
 }

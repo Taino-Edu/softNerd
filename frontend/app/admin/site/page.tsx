@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { siteConfigApi, uploadApi, SiteConfigDto } from '@/lib/api'
 import { mixHex, getContrastText } from '@/lib/colors'
+import { PageHeader } from '@/components/ui/PageHeader'
 import toast, { Toaster } from 'react-hot-toast'
-import { Palette, Save, Loader2, ExternalLink, Upload, Image as ImageIcon } from 'lucide-react'
+import { Save, Loader2, ExternalLink, Upload, Image as ImageIcon, X, RotateCcw } from 'lucide-react'
 
 const DEFAULTS: SiteConfigDto = {
   siteName: 'Santuário Nerd',
@@ -90,8 +91,8 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
  * retornada no estado local do formulário; só persiste de verdade quando o admin clica em
  * "Salvar", igual todo o resto desta tela. */
 function IconUploadField({
-  label, desc, value, uploading, onUpload,
-}: { label: string; desc: string; value: string | null | undefined; uploading: boolean; onUpload: (file: File) => void }) {
+  label, desc, value, uploading, onUpload, onRemove,
+}: { label: string; desc: string; value: string | null | undefined; uploading: boolean; onUpload: (file: File) => void; onRemove: () => void }) {
   return (
     <div>
       <label className="text-xs text-gray-400 font-semibold mb-1 block">{label}</label>
@@ -111,6 +112,12 @@ function IconUploadField({
             onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = '' }}
           />
         </label>
+        {value && (
+          <button type="button" onClick={onRemove} disabled={uploading}
+            className="p-1.5 text-gray-500 hover:text-red-400 transition-colors" title="Remover">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
       <p className="text-[11px] text-gray-500 mt-1">{desc}</p>
     </div>
@@ -223,6 +230,12 @@ export default function SiteConfigPage() {
     }
   }
 
+  function restoreDefaults() {
+    if (!confirm('Restaurar todas as personalizações (nome, cores, textos, ícones) para o padrão? Isso substitui tudo que você editou nesta tela — clique em Salvar depois pra aplicar.')) return
+    setCfg(DEFAULTS)
+    toast.success('Restaurado para o padrão. Clique em Salvar pra aplicar.')
+  }
+
   async function save() {
     setSaving(true)
     try {
@@ -245,21 +258,19 @@ export default function SiteConfigPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       <Toaster position="top-center" />
 
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Palette className="w-6 h-6 text-brand-400" /> Personalizar Site
-          </h1>
-          <p className="text-gray-500 text-sm mt-0.5">Nome, textos e cores da página pública — mudanças aparecem pra todo mundo</p>
-        </div>
-        <a href="/" target="_blank" rel="noreferrer"
-          className="flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">
-          Ver site <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
+      <PageHeader
+        title="Personalizar Site"
+        subtitle="Nome, textos e cores da página pública — mudanças aparecem pra todo mundo"
+        actions={
+          <a href="/" target="_blank" rel="noreferrer"
+            className="flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">
+            Ver site <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        }
+      />
 
       <div className="lg:grid lg:grid-cols-[1fr_320px] gap-6 items-start">
       <div className="space-y-6">
@@ -290,21 +301,25 @@ export default function SiteConfigPage() {
             label="Logo da loja" desc="Aparece ao lado do nome na navbar"
             value={cfg.logoUrl} uploading={uploadingIcon === 'logoUrl'}
             onUpload={f => uploadIcon('logoUrl', f)}
+            onRemove={() => set('logoUrl', null)}
           />
           <IconUploadField
             label="Favicon" desc="Aparece na aba do navegador"
             value={cfg.faviconUrl} uploading={uploadingIcon === 'faviconUrl'}
             onUpload={f => uploadIcon('faviconUrl', f)}
+            onRemove={() => set('faviconUrl', null)}
           />
           <IconUploadField
             label="Ícone do PWA" desc="Aparece quando o cliente instala o site como app"
             value={cfg.pwaIconUrl} uploading={uploadingIcon === 'pwaIconUrl'}
             onUpload={f => uploadIcon('pwaIconUrl', f)}
+            onRemove={() => set('pwaIconUrl', null)}
           />
           <IconUploadField
             label="Ícone do admin" desc="Aparece no painel administrativo. Vazio = usa a logo da loja"
             value={cfg.adminIconUrl} uploading={uploadingIcon === 'adminIconUrl'}
             onUpload={f => uploadIcon('adminIconUrl', f)}
+            onRemove={() => set('adminIconUrl', null)}
           />
         </div>
       </div>
@@ -423,10 +438,16 @@ export default function SiteConfigPage() {
         </Field>
       </div>
 
-      <button onClick={save} disabled={saving} className="btn-primary">
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        Salvar
-      </button>
+      <div className="flex items-center gap-3">
+        <button onClick={save} disabled={saving} className="btn-primary">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Salvar
+        </button>
+        <button onClick={restoreDefaults} disabled={saving} className="btn-secondary">
+          <RotateCcw className="w-4 h-4" />
+          Restaurar padrão
+        </button>
+      </div>
 
       </div>
 

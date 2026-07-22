@@ -1172,8 +1172,10 @@ export const reservationApi = {
                api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
   getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
-  homologar: (id: string, body: { paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number }) =>
-               api.post(`/api/reservations/${id}/homologar`, body),
+  homologar: (id: string, body: {
+    paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
+    discountPercent?: number; discountInCents?: number
+  }) => api.post<{ message: string; reservationId: string; discountPercent: number; discountInReais: number }>(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),
   /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */

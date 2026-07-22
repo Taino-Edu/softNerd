@@ -11,7 +11,7 @@ import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
   LayoutList, RefreshCw, Loader2,
   TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
-  QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil,
+  QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil, Tag,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
@@ -364,6 +364,11 @@ export default function ReservasPage() {
   const [homSplit,    setHomSplit]    = useState(false)
   const [homSecondPayment, setHomSecondPayment] = useState('')
   const [homSecondAmount,  setHomSecondAmount]  = useState('')
+  // Desconto decidido só agora, na homologação — nunca visto pelo cliente antes (ver
+  // PLANEJAMENTO/contexto: cliente já pode ter pago o valor cheio via Pix).
+  const [homDiscountMode,     setHomDiscountMode]     = useState<'percent' | 'cents'>('percent')
+  const [homDiscountPct,      setHomDiscountPct]      = useState(0)
+  const [homDiscountValueStr, setHomDiscountValueStr] = useState('')
   const [submitting,  setSubmitting]  = useState(false)
 
   // Modal de nova pré-venda manual + modal de Pix (copiar código / mandar no zap)
@@ -505,7 +510,16 @@ export default function ReservasPage() {
     setHomSplit(false)
     setHomSecondPayment('')
     setHomSecondAmount('')
+    setHomDiscountMode('percent')
+    setHomDiscountPct(0)
+    setHomDiscountValueStr('')
   }
+
+  const homSubtotalCents = Math.round((homModal?.subtotalEmReais ?? 0) * 100)
+  const homDiscountCents = homDiscountMode === 'cents'
+    ? Math.min(Math.round(parseFloat(homDiscountValueStr.replace(',', '.') || '0') * 100), homSubtotalCents)
+    : Math.round(homSubtotalCents * homDiscountPct / 100)
+  const homTotalCents = homSubtotalCents - homDiscountCents
 
   async function handleHomologar() {
     if (!homModal) return
@@ -517,12 +531,16 @@ export default function ReservasPage() {
     }
     setSubmitting(true)
     try {
-      await api.post(`/api/reservations/${homModal.id}/homologar`, {
+      const { data } = await reservationApi.homologar(homModal.id, {
         paymentMethod: homPayment,
         secondPaymentMethod:        homSplit ? homSecondPayment : undefined,
         secondPaymentAmountInCents: homSplit ? secondAmountInCents : undefined,
+        discountPercent: homDiscountMode === 'percent' ? homDiscountPct : 0,
+        discountInCents: homDiscountMode === 'cents' ? homDiscountCents : undefined,
       })
-      toast.success('Pré-venda homologada!')
+      toast.success(data.discountInReais > 0
+        ? `Pré-venda homologada com desconto de R$ ${data.discountInReais.toFixed(2).replace('.', ',')}!`
+        : 'Pré-venda homologada!')
       setHomModal(null)
       load()
     } catch (e: any) {
@@ -918,6 +936,63 @@ export default function ReservasPage() {
                     </p>
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* Desconto — decidido só agora, na homologação; o cliente não viu isso antes */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <Tag className="w-3.5 h-3.5" /> Desconto
+                </p>
+                <div className="flex gap-1 bg-surface-900 rounded-lg p-0.5">
+                  {(['percent', 'cents'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => setHomDiscountMode(mode)}
+                      className={clsx(
+                        'px-2.5 py-1 rounded-md text-[11px] font-bold transition-all',
+                        homDiscountMode === mode
+                          ? 'bg-accent-green/20 text-accent-green'
+                          : 'text-gray-500 hover:text-gray-300'
+                      )}
+                    >{mode === 'percent' ? '%' : 'R$'}</button>
+                  ))}
+                </div>
+              </div>
+
+              {homDiscountMode === 'percent' ? (
+                <div className="flex gap-1.5">
+                  {[0, 5, 10, 15, 20].map(d => (
+                    <button
+                      key={d}
+                      onClick={() => setHomDiscountPct(d)}
+                      className={clsx(
+                        'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all',
+                        homDiscountPct === d
+                          ? 'bg-accent-green/20 border-accent-green/50 text-accent-green'
+                          : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
+                      )}
+                    >{d === 0 ? '—' : `${d}%`}</button>
+                  ))}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={homDiscountValueStr}
+                  onChange={e => setHomDiscountValueStr(e.target.value)}
+                  className="input text-sm w-full font-mono"
+                />
+              )}
+
+              {homSubtotalCents > 0 && homDiscountCents > 0 && (
+                <p className="text-[11px] text-gray-500 mt-2">
+                  Subtotal R$ {(homSubtotalCents / 100).toFixed(2).replace('.', ',')} − desconto
+                  R$ {(homDiscountCents / 100).toFixed(2).replace('.', ',')} = <span className="text-gray-300 font-semibold">
+                  R$ {(homTotalCents / 100).toFixed(2).replace('.', ',')}</span>
+                </p>
               )}
             </div>
 
