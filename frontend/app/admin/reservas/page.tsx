@@ -669,8 +669,8 @@ export default function ReservasPage() {
               )}
               <button onClick={() => openEditQty(r)}
                 title="Corrigir a quantidade deste pedido"
-                className="px-2 py-1 rounded-lg bg-surface-600/50 text-gray-300 border border-surface-500
-                           hover:bg-surface-700 text-[11px] font-semibold transition-colors flex items-center gap-1">
+                className="px-2 py-1 rounded-lg bg-brand-500/10 text-brand-300 border border-brand-500/25
+                           hover:bg-brand-500/20 text-[11px] font-semibold transition-colors flex items-center gap-1">
                 <Pencil className="w-3 h-3" /> Qtd
               </button>
               <button onClick={() => handleCancel(r)}
