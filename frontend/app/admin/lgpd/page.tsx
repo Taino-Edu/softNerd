@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '@/lib/api'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Badge, BadgeTone } from '@/components/ui/Badge'
+import { Table } from '@/components/ui/Table'
 import { FileText, Clock, CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight, Paperclip, Download, FileDown } from 'lucide-react'
 import Link from 'next/link'
 
@@ -379,8 +380,8 @@ export default function LgpdAdminPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-surface-500 text-xs text-gray-400">
+                    <Table.Head>
+                      <tr className="text-xs text-gray-400">
                         <th className="text-left px-4 py-3 font-medium">Protocolo</th>
                         <th className="text-left px-4 py-3 font-medium">Solicitante</th>
                         <th className="text-left px-4 py-3 font-medium">Tipo</th>
@@ -388,13 +389,13 @@ export default function LgpdAdminPage() {
                         <th className="text-left px-4 py-3 font-medium">Prazo</th>
                         <th className="text-left px-4 py-3 font-medium">Ação</th>
                       </tr>
-                    </thead>
-                    <tbody>
+                    </Table.Head>
+                    <Table.Body>
                       {requests.map(req => (
                         <tr
                           key={req.id}
-                          className={`border-b border-surface-500/50 hover:bg-surface-700/50 transition-colors ${
-                            req.isOverdue ? 'bg-red-900/10' : req.isUrgent ? 'bg-yellow-900/10' : ''
+                          className={`hover:bg-surface-500/30 transition-colors ${
+                            req.isOverdue ? 'bg-red-900/10' : req.isUrgent ? 'bg-amber-900/10' : ''
                           }`}
                         >
                           <td className="px-4 py-3">
@@ -458,7 +459,7 @@ export default function LgpdAdminPage() {
                           </td>
                         </tr>
                       ))}
-                    </tbody>
+                    </Table.Body>
                   </table>
                 </div>
               )}
@@ -511,20 +512,20 @@ export default function LgpdAdminPage() {
               <div className="bg-surface-800 rounded-2xl border border-surface-500 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-surface-500 text-xs text-gray-400">
+                    <Table.Head>
+                      <tr className="text-xs text-gray-400">
                         <th className="text-left px-4 py-3 font-medium">Data</th>
                         <th className="text-left px-4 py-3 font-medium">Ator</th>
                         <th className="text-left px-4 py-3 font-medium">Ação</th>
                         <th className="text-left px-4 py-3 font-medium">Entidade</th>
                         <th className="text-left px-4 py-3 font-medium">Detalhes</th>
                       </tr>
-                    </thead>
-                    <tbody>
+                    </Table.Head>
+                    <Table.Body>
                       {auditData.items.map(log => {
                         const isFail = log.action === 'LoginFalhou'
                         return (
-                          <tr key={log.id} className={`border-b border-surface-500/50 hover:bg-surface-700/50 transition-colors ${isFail ? 'bg-red-500/5' : ''}`}>
+                          <tr key={log.id} className={`hover:bg-surface-500/30 transition-colors ${isFail ? 'bg-red-500/5' : ''}`}>
                             <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
                               {fmtDateTime(log.createdAt)}
                             </td>
@@ -553,7 +554,7 @@ export default function LgpdAdminPage() {
                           </tr>
                         )
                       })}
-                    </tbody>
+                    </Table.Body>
                   </table>
                 </div>
               </div>

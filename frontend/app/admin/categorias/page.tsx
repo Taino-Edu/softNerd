@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { categoryApi, ProductCategory } from '@/lib/api'
 import { Badge } from '@/components/ui/Badge'
+import { Table } from '@/components/ui/Table'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, Tag, X, Loader2, Check, GripVertical } from 'lucide-react'
 
@@ -234,17 +235,15 @@ export default function CategoriasPage() {
           <p className="text-gray-400 text-sm mt-1">Crie categorias para organizar os produtos</p>
         </div>
       ) : (
-        <div className="card p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[460px]">
-            <thead className="bg-surface-800 border-b border-surface-500">
+        <Table minWidth="min-w-[460px]">
+          <Table.Head>
               <tr className="text-left">
                 {['', 'Categoria', 'Emoji', 'Ordem', 'Status', 'Ações'].map(h => (
                   <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-500">
+          </Table.Head>
+          <Table.Body>
               {orderedCategories.map(({ category: c, isChild }) => (
                 <tr key={c.id} className="hover:bg-surface-500/30 transition-colors">
                   <td className="px-3 py-3 text-gray-500">
@@ -283,10 +282,8 @@ export default function CategoriasPage() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-          </div>
-        </div>
+          </Table.Body>
+        </Table>
       )}
 
       <div className="card bg-surface-800/50 border-surface-500">

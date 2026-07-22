@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { productApi, variantApi, categoryApi, reservationApi, fiscalApi, Product, ProductCategory, ProductVariant, AdminReservation, NaturezaOperacaoDto } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Badge } from '@/components/ui/Badge'
+import { Table } from '@/components/ui/Table'
 import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X, Loader2, Check, ScanBarcode, Camera, Download, FileText, BarChart2, Layers, DollarSign, TrendingDown, CircleOff, Grid3X3, ChevronDown, ChevronUp, Users, Bell } from 'lucide-react'
 import ImageUpload from '@/components/admin/ImageUpload'
 import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relatorio-estoque'
@@ -1045,17 +1046,15 @@ export default function EstoquePage() {
       ) : (
         <>
         {/* ── Desktop: tabela ── */}
-        <div className="hidden sm:block card p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-surface-800 border-b border-surface-500">
+        <Table className="hidden sm:block" minWidth="min-w-[640px]">
+          <Table.Head>
               <tr className="text-left">
                 {['Produto', 'Categoria', 'Cód. Barras', 'Custo', 'Venda', 'Margem', 'Estoque', 'Mkt', 'Ações'].map(h => (
                   <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-500">
+          </Table.Head>
+          <Table.Body>
               {filtered.map(p => (
                 <tr key={p.id} className="hover:bg-surface-500/30 transition-colors cursor-pointer" onClick={() => setDrawer(p)}>
                   <td className="px-4 py-3">
@@ -1126,16 +1125,14 @@ export default function EstoquePage() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              <Package className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              Nenhum produto encontrado
-            </div>
-          )}
+          </Table.Body>
+        </Table>
+        {filtered.length === 0 && (
+          <div className="hidden sm:block text-center py-12 text-gray-500">
+            <Package className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+            Nenhum produto encontrado
           </div>
-        </div>
+        )}
 
         {/* ── Mobile: cards ── */}
         <div className="sm:hidden space-y-2">
