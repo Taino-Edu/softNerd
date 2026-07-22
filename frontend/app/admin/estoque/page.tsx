@@ -102,10 +102,10 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${status.cls}`}>{status.label}</span>
               {product.isPreVenda && (
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Aceita fila</span>
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-600 text-white">Aceita fila</span>
               )}
               {product.preVendaReleaseDate && (
-                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded" style={{ backgroundColor: '#B45309', color: '#fff' }}>
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-700 text-white">
                   Lançamento {new Date(product.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                 </span>
               )}
@@ -1061,7 +1061,7 @@ export default function EstoquePage() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-white">{p.name}</p>
                       {p.isPreVenda && (
-                        <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
+                        <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 bg-purple-600 text-white">
                           Aceita fila
                         </span>
                       )}
@@ -1151,7 +1151,7 @@ export default function EstoquePage() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="font-medium text-white text-sm leading-tight">{p.name}</p>
                     {p.isPreVenda && (
-                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Aceita fila</span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0 bg-purple-600 text-white">Aceita fila</span>
                     )}
                     {p.isLowStock && (
                       <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20 flex items-center gap-0.5 shrink-0">

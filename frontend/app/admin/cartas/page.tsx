@@ -302,11 +302,11 @@ function CardDetailModal({ card, brlRate, onClose, onAddStock }: {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface-900 border border-surface-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+      <div className="bg-surface-900 border border-surface-500 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-surface-700">
+        <div className="flex items-center justify-between p-5 border-b border-surface-500">
           <div>
             <h2 className="text-lg font-bold text-white">{current.name}</h2>
             <p className="text-xs text-gray-400 mt-0.5">{current.game}{current.setName && ` · ${current.setName}`}{current.number && ` #${current.number}`}</p>
@@ -687,7 +687,7 @@ export default function CartasPage() {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {/* BRL Rate */}
-          <div className="flex items-center gap-2 bg-surface-800 border border-surface-700 rounded-xl px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 bg-surface-800 border border-surface-500 rounded-xl px-3 py-2 text-sm">
             <span className="text-gray-400">USD/BRL</span>
             {brlRate ? (
               <span className="font-bold text-green-400">R$ {brlRate.toFixed(2)}</span>
@@ -754,7 +754,7 @@ export default function CartasPage() {
 
         {/* Filtros avançados */}
         {showFilter && (
-          <div className="flex flex-col gap-3 pt-2 border-t border-surface-700">
+          <div className="flex flex-col gap-3 pt-2 border-t border-surface-500">
             {/* Linha 1 — Set + Raridade + Supertipo */}
             <div className="flex flex-col sm:flex-row gap-2">
               {sets.length > 0 && (

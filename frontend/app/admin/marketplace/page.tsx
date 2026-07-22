@@ -5,6 +5,7 @@ import { marketplaceApi, CardListingDto, MarketplaceInterestDto } from '@/lib/ap
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { Table } from '@/components/ui/Table'
 import {
   Search, Package, Loader2, Trash2, Eye, ChevronLeft, ChevronRight,
   User as UserIcon, ShoppingBag, CheckCircle, XCircle, Clock,
@@ -410,11 +411,9 @@ export default function AdminMarketplacePage() {
           </button>
         </div>
       ) : (
-        <div className="card overflow-hidden p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-surface-700">
+        <Table>
+          <Table.Head>
+                <tr>
                   <th className="text-left p-4 text-gray-400 font-semibold">Carta</th>
                   <th className="text-left p-4 text-gray-400 font-semibold">Preço</th>
                   <th className="text-left p-4 text-gray-400 font-semibold">Status</th>
@@ -422,10 +421,10 @@ export default function AdminMarketplacePage() {
                   <th className="text-left p-4 text-gray-400 font-semibold">Data</th>
                   <th className="text-right p-4 text-gray-400 font-semibold">Ações</th>
                 </tr>
-              </thead>
-              <tbody>
+          </Table.Head>
+          <Table.Body>
                 {items.map(l => (
-                  <tr key={l.id} className="border-b border-surface-700/50 hover:bg-surface-700/30 transition-colors">
+                  <tr key={l.id} className="hover:bg-surface-500/30 transition-colors">
                     {/* Carta */}
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -509,10 +508,8 @@ export default function AdminMarketplacePage() {
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          </Table.Body>
+        </Table>
       )}
 
       {/* Paginação */}

@@ -923,7 +923,7 @@ function ChampionshipCard({
                 const url = `${window.location.origin}/campeonato/${c.id}`
                 navigator.clipboard.writeText(url).then(() => toast.success('Link copiado!'))
               }}
-              className="text-xs px-3 py-1.5 rounded-lg font-medium bg-surface-700 text-gray-300 hover:bg-surface-500 border border-surface-500 transition-colors flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded-lg font-medium bg-brand-500/10 text-brand-300 hover:bg-brand-500/20 border border-brand-500/25 transition-colors flex items-center gap-1.5"
               title="Copiar link público de inscrição"
             >
               <Link2 className="w-3.5 h-3.5" /> Link
@@ -931,7 +931,7 @@ function ChampionshipCard({
             {onEdit && (
               <button
                 onClick={() => onEdit(c)}
-                className="text-xs px-3 py-1.5 rounded-lg font-medium bg-surface-700 text-gray-300 hover:bg-surface-500 border border-surface-500 transition-colors flex items-center gap-1.5"
+                className="text-xs px-3 py-1.5 rounded-lg font-medium bg-brand-500/10 text-brand-300 hover:bg-brand-500/20 border border-brand-500/25 transition-colors flex items-center gap-1.5"
               >
                 <Edit2 className="w-3.5 h-3.5" /> Editar
               </button>

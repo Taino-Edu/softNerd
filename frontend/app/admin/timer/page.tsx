@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { timerApi, TimerDto } from '@/lib/api'
 import toast from 'react-hot-toast'
+import clsx from 'clsx'
 import { Plus, Trash2, Play, Pause, RotateCcw, Volume2, PlayCircle, Settings } from 'lucide-react'
 
 // ── Web Audio ────────────────────────────────────────────────────────────────
@@ -166,7 +167,11 @@ function TimerCard({
   const pct  = Math.max(0, Math.min(100, ((timer.durationSeconds - remaining) / timer.durationSeconds) * 100))
   const isRed    = remaining <= 30 && timer.state === 'running'
   const isYellow = remaining <= timer.warnAtSeconds && remaining > 30 && timer.state === 'running'
-  const color    = isRed ? '#ef4444' : isYellow ? '#f59e0b' : timer.state === 'running' ? '#22c55e' : '#6b7280'
+  // Classes literais (não template string) — o Tailwind JIT precisa achar o nome
+  // inteiro da classe no código-fonte pra gerar o CSS dela.
+  const tone = isRed ? 'red' : isYellow ? 'amber' : timer.state === 'running' ? 'green' : 'gray'
+  const TONE_TEXT: Record<string, string> = { red: 'text-red-500', amber: 'text-amber-500', green: 'text-green-500', gray: 'text-gray-500' }
+  const TONE_BG:   Record<string, string> = { red: 'bg-red-500',   amber: 'bg-amber-500',   green: 'bg-green-500',   gray: 'bg-gray-500' }
 
   return (
     <div className="card flex flex-col gap-4">
@@ -190,8 +195,7 @@ function TimerCard({
 
       {/* Display de tempo */}
       <div className="text-center">
-        <span className="font-mono text-6xl font-bold tabular-nums transition-colors"
-          style={{ color }}>{fmt(remaining)}</span>
+        <span className={clsx('font-mono text-6xl font-bold tabular-nums transition-colors', TONE_TEXT[tone])}>{fmt(remaining)}</span>
         <p className="text-xs text-gray-500 mt-1">
           {timer.state === 'finished'
             ? <span className="text-red-400 font-semibold animate-pulse">🔔 Alarme tocando — clique Resetar para parar</span>
@@ -204,15 +208,15 @@ function TimerCard({
 
       {/* Barra de progresso */}
       <div className="w-full h-2 bg-surface-700 rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-1000"
-          style={{ width: `${pct}%`, backgroundColor: color }} />
+        <div className={clsx('h-full rounded-full transition-all duration-1000', TONE_BG[tone])}
+          style={{ width: `${pct}%` }} />
       </div>
 
       {/* Controles */}
       <div className="flex gap-2 justify-center">
         {timer.state === 'finished' ? (
           <button onClick={() => doAction('reset')}
-            className="btn-primary flex items-center gap-1.5 px-6 bg-red-600 hover:bg-red-500 animate-pulse">
+            className="btn-danger flex items-center gap-1.5 px-6 animate-pulse">
             <RotateCcw className="w-4 h-4" /> Parar alarme
           </button>
         ) : timer.state !== 'running' ? (

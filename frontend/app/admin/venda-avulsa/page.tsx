@@ -22,11 +22,15 @@ interface CartItem {
   cartKey: string   // product.id + (variantId || '') — permite mesma peça em tamanhos diferentes
 }
 
+// Usado via style inline (cor dinâmica por chave de pagamento, não dá pra virar
+// className do Tailwind) — os hex espelham exatamente os tokens de
+// tailwind.config.ts (brand.500/accent.gold/accent.green/accent.orange) onde existe
+// token equivalente, pra não ter duas fontes de verdade pra mesma cor.
 const PAY_COLORS: Record<string, string> = {
-  Pix:           '#42B6EE',
-  Dinheiro:      '#FFE45E',
-  CartaoCredito: '#00F0A8',
-  CartaoDebito:  '#f97316',
+  Pix:           '#3EC2F2', // brand.500
+  Dinheiro:      '#FFE45E', // accent.gold
+  CartaoCredito: '#00F0A8', // accent.green
+  CartaoDebito:  '#f97316', // accent.orange
   Crediario:     '#f59e0b',
   Pontos:        '#a78bfa',
   Cashback:      '#34d399',
@@ -863,10 +867,10 @@ function VendaWizard({
                       >
                         <div className="flex-1 min-w-0">
                           {p.isPreVenda && (
-                            <span className="text-[9px] font-black uppercase px-1 py-0.5 rounded mr-1" style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré</span>
+                            <span className="text-[9px] font-black uppercase px-1 py-0.5 rounded mr-1 bg-purple-600 text-white">Pré</span>
                           )}
                           {!p.isPreVenda && p.isOnPromo && (
-                            <span className="text-[9px] font-black uppercase px-1 py-0.5 rounded mr-1" style={{ backgroundColor: '#EF4444', color: '#fff' }}>Promo</span>
+                            <span className="text-[9px] font-black uppercase px-1 py-0.5 rounded mr-1 bg-red-500 text-white">Promo</span>
                           )}
                           <span className="text-sm text-white font-medium">{p.name}</span>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -1532,7 +1536,7 @@ export default function VendaAvulsaPage() {
               { icon: <Receipt className="w-4 h-4 text-brand-400" />,      bg: 'bg-brand-600/10',    val: todaySales,                                  label: 'Vendas hoje',    color: 'text-white'        },
               { icon: <TrendingUp className="w-4 h-4 text-accent-gold" />, bg: 'bg-amber-500/10',    val: fmt(todayTotal),                             label: 'Total hoje',     color: 'text-accent-gold'  },
               { icon: <CreditCard className="w-4 h-4 text-brand-400" />,   bg: 'bg-brand-600/10',    val: todaySales > 0 ? fmt(ticketMedio) : '—',     label: 'Ticket médio',   color: 'text-brand-300'    },
-              { icon: <PackageOpen className="w-4 h-4 text-gray-400" />,   bg: 'bg-surface-600',     val: products.length,                             label: 'Produtos ativos',color: 'text-white'        },
+              { icon: <PackageOpen className="w-4 h-4 text-purple-400" />, bg: 'bg-purple-500/10',   val: products.length,                             label: 'Produtos ativos',color: 'text-white'        },
             ].map((k, i) => (
               <div key={i} className="card flex items-center gap-3 py-3">
                 <div className={clsx('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', k.bg)}>{k.icon}</div>

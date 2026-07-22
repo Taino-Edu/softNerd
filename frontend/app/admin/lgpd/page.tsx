@@ -53,28 +53,28 @@ interface AuditPagedResponse {
 const STATUS_STYLES: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
   Recebido:  {
     label:     'Recebido',
-    className: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+    className: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
     icon:      <Clock className="w-3 h-3" />,
   },
   EmAnalise: {
     label:     'Em Análise',
-    className: 'bg-blue-100 text-blue-800 border border-blue-200',
+    className: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
     icon:      <FileText className="w-3 h-3" />,
   },
   Concluido: {
     label:     'Concluído',
-    className: 'bg-green-100 text-green-800 border border-green-200',
+    className: 'bg-accent-green/20 text-accent-green border border-accent-green/30',
     icon:      <CheckCircle className="w-3 h-3" />,
   },
   Negado: {
     label:     'Negado',
-    className: 'bg-red-100 text-red-800 border border-red-200',
+    className: 'bg-accent-red/20 text-accent-red border border-accent-red/30',
     icon:      <XCircle className="w-3 h-3" />,
   },
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLES[status] ?? { label: status, className: 'bg-gray-100 text-gray-700', icon: null }
+  const s = STATUS_STYLES[status] ?? { label: status, className: 'bg-gray-500/20 text-gray-400 border border-gray-500/30', icon: null }
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${s.className}`}>
       {s.icon}

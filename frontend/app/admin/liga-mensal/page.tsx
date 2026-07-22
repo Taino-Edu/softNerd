@@ -93,13 +93,13 @@ function ChampionshipCard({ ch, onPlacementSaved }: { ch: Championship; onPlacem
       </button>
 
       {open && (
-        <div className="mt-3 pt-3 border-t border-surface-700">
+        <div className="mt-3 pt-3 border-t border-surface-500">
           {participants === null ? (
             <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 text-brand-400 animate-spin" /></div>
           ) : participants.length === 0 ? (
             <p className="text-xs text-gray-500 py-2">Sem participantes inscritos.</p>
           ) : (
-            <div className="divide-y divide-surface-700/60">
+            <div className="divide-y divide-surface-500/60">
               {participants.map(p => (
                 <PlacementRow key={p.id} championshipId={ch.id} p={p}
                   onSaved={() => { load(); onPlacementSaved() }} />
@@ -328,7 +328,7 @@ export default function AdminLigaMensalPage() {
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                 <PenLine className="w-3.5 h-3.5" /> Lançamentos manuais do mês
               </p>
-              <div className="card divide-y divide-surface-700/60 !p-0">
+              <div className="card divide-y divide-surface-500/60 !p-0">
                 {manualEntries.map(entry => (
                   <div key={entry.id} className="flex items-center gap-3 px-4 py-2.5">
                     <div className="flex-1 min-w-0">
