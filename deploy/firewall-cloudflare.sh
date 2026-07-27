@@ -96,6 +96,11 @@ ip6tables -A "$CHAIN" -j RETURN
 
 echo -e "${GREEN}✅ Pronto. 80/443 só aceitam tráfego vindo da Cloudflare.${NC}"
 echo
-echo "   Conferir de fora:  curl -m 10 http://2.24.121.247/   (deve dar timeout)"
-echo "   Conferir o site:   curl -sI https://santuarionerd.com.br | head -1"
-echo "   Desfazer:          sudo bash $0 --undo"
+echo -e "   ${YELLOW}⚠️  NÃO teste o bloqueio a partir deste servidor.${NC} Tráfego que sai do"
+echo "      próprio host pra uma porta publicada não passa pela DOCKER-USER, então"
+echo "      'curl http://IP' aqui dentro responde normal mesmo com o firewall ativo."
+echo "      Teste de OUTRA máquina (seu notebook):"
+echo "        curl -m 10 http://2.24.121.247/          → tem que dar timeout"
+echo "        curl -sI https://santuarionerd.com.br    → tem que dar 200"
+echo
+echo "   Desfazer:  sudo bash $0 --undo"
