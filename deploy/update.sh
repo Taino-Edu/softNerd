@@ -28,6 +28,20 @@ cd "$APP_DIR/deploy"
 docker compose -f docker-compose.prod.yml build --build-arg CACHEBUST="$(date +%s)"
 docker compose -f docker-compose.prod.yml up -d
 
+# Recarrega o nginx — nginx.conf/locations.conf entram por bind mount, então o
+# Compose NÃO recria o container quando só o arquivo muda (a definição do
+# serviço continua igual) e o nginx segue com a config antiga em memória.
+# Valida antes de recarregar: com config quebrada o reload falha e o nginx
+# continua servindo a versão boa, em vez de derrubar o site.
+echo -e "${YELLOW}🔁 Recarregando nginx...${NC}"
+if docker compose -f docker-compose.prod.yml exec -T nginx nginx -t; then
+    docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+    echo -e "${GREEN}   nginx recarregado${NC}"
+else
+    echo -e "${YELLOW}   ⚠️  nginx.conf inválido — reload abortado, config anterior mantida${NC}"
+    exit 1
+fi
+
 # Limpa imagens antigas
 docker image prune -f
 
