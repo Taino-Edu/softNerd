@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.22.0] — 2026-07-27
+
+### Mudado
+- **O site agora é `santuarionerd.com.br`**: o endereço antigo (`santuarionerd.tech`) continua funcionando e leva pro novo automaticamente — link antigo salvo, QR Code impresso, link no Instagram, tudo continua abrindo normal e cai na página certa. Vale trocar o endereço nos materiais aos poucos, sem pressa
+- **Você vai precisar entrar de novo**: por causa da troca de endereço, quem estava logado (admin e clientes) cai na tela de login uma única vez. Depois disso volta ao normal
+- E-mails do sistema (recuperação de senha, aviso de fila de espera) agora levam pro endereço novo
+
 ## [v1.21.0] — 2026-07-08
 
 ### Adicionado

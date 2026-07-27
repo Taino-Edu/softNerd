@@ -2,8 +2,8 @@
 import { useEffect } from 'react'
 
 const LOJA = 'Santuário Nerd'
-const VERSION = 'v1.21.0'
-const DATA = '08/07/2026'
+const VERSION = 'v1.22.0'
+const DATA = '27/07/2026'
 
 const SECOES = [
   {
