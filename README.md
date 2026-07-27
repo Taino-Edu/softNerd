@@ -2,7 +2,7 @@
 
 > Plataforma completa para gerenciamento de lojas de card games (Pokémon, Magic: The Gathering, Yu-Gi-Oh! e outros). Painel administrativo moderno, frente de caixa, comandas por QR Code, crediário, assistente IA e conformidade LGPD.
 
-**Produção:** [santuarionerd.tech](https://santuarionerd.tech)
+**Produção:** [santuarionerd.com.br](https://santuarionerd.com.br) — o antigo `santuarionerd.tech` redireciona (301) para cá.
 
 ---
 

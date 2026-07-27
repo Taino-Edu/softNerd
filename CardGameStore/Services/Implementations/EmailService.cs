@@ -32,7 +32,7 @@ public class EmailService : IEmailService
 
     public async Task SendPasswordResetAsync(string toEmail, string toName, string resetToken)
     {
-        var appUrl = _config["SmtpSettings:AppUrl"] ?? _config["EmailSettings:AppUrl"] ?? "https://santuarionerd.tech";
+        var appUrl = _config["SmtpSettings:AppUrl"] ?? _config["EmailSettings:AppUrl"] ?? "https://santuarionerd.com.br";
         var link   = $"{appUrl}/reset-password?token={Uri.EscapeDataString(resetToken)}";
 
         var body = $"""
@@ -174,7 +174,7 @@ public class EmailService : IEmailService
     public async Task<int> SendAnuncioAsync(IEnumerable<(string email, string name)> destinatarios, string titulo, string corpo,
                                             string? imageUrl = null, string? link = null)
     {
-        var appUrl = (_config["SmtpSettings:AppUrl"] ?? _config["EmailSettings:AppUrl"] ?? "https://santuarionerd.tech").TrimEnd('/');
+        var appUrl = (_config["SmtpSettings:AppUrl"] ?? _config["EmailSettings:AppUrl"] ?? "https://santuarionerd.com.br").TrimEnd('/');
 
         // Conteúdo vem de campos de texto livre do admin: escapa HTML e preserva quebras de linha.
         var tituloHtml = WebUtility.HtmlEncode(titulo);

@@ -9,7 +9,8 @@
 # Atualizar código:
 #   git pull && docker compose -f docker-compose.prod.yml build && docker compose -f docker-compose.prod.yml up -d
 #
-# Acesso público: https://santuarionerd.tech  (Cloudflare → porta 80)
+# Acesso público: https://santuarionerd.com.br  (Cloudflare → porta 80)
+# santuarionerd.tech continua registrado, redirecionando 301 para o .com.br
 # =============================================================================
 
 services:
@@ -55,7 +56,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
       args:
-        API_URL: https://santuarionerd.tech
+        API_URL: https://santuarionerd.com.br
     image: santuarionerd_frontend:latest
     container_name: santuarionerd_frontend
     networks:
@@ -90,6 +91,9 @@ services:
       MongoDbSettings__DatabaseName: "cardgamestore_cache"
       # JWT
       JwtSettings__SecretKey: "${JWT_SECRET}"
+      # NÃO trocar para o .com.br: ValidateIssuer=true (Program.cs), mudar esta
+      # string invalida todos os tokens já emitidos e desloga todo mundo.
+      # É só um identificador, não precisa bater com o domínio real.
       JwtSettings__Issuer: "https://santuarionerd.tech"
       JwtSettings__Audience: "CardGameStore-Frontend"
       JwtSettings__AccessTokenExpirationMinutes: "60"
@@ -99,9 +103,12 @@ services:
       SmtpSettings__Port: "${SMTP_PORT:-587}"
       SmtpSettings__Username: "${SMTP_USERNAME:-resend}"
       SmtpSettings__Password: "${SMTP_PASSWORD}"
+      # Remetente segue no .tech de propósito: trocar para @santuarionerd.com.br
+      # só DEPOIS de verificar o domínio novo no Resend (SPF/DKIM), senão todo
+      # e-mail transacional para de sair.
       SmtpSettings__FromEmail: "${SMTP_FROM_EMAIL:-noreply@santuarionerd.tech}"
       SmtpSettings__FromName: "${SMTP_FROM_NAME:-Santuário Nerd}"
-      SmtpSettings__AppUrl: "${APP_URL:-https://santuarionerd.tech}"
+      SmtpSettings__AppUrl: "${APP_URL:-https://santuarionerd.com.br}"
       # Integrações
       GeminiSettings__ApiKey: "${GEMINI_API_KEY}"
       TcgSettings__PokemonApiKey: "${POKEMON_API_KEY:-}"
@@ -110,7 +117,7 @@ services:
       Inter__KeyPath: "/app/certs/inter/inter.key"
       # Segurança — HTTPS via Cloudflare, cookies Secure=true
       COOKIE_SECURE: "true"
-      CorsSettings__AllowedOrigins: "https://santuarionerd.tech,https://www.santuarionerd.tech"
+      CorsSettings__AllowedOrigins: "https://santuarionerd.com.br,https://www.santuarionerd.com.br,https://santuarionerd.tech,https://www.santuarionerd.tech"
       Security__IpHashSalt: "${IP_HASH_SALT}"
       Encryption__Key: "${ENCRYPTION_KEY}"
     volumes:

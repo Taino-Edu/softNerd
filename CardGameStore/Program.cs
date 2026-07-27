@@ -36,7 +36,7 @@ if (args.Contains("gen-vapid"))
     Console.WriteLine("# Adicione ao .env do VPS:");
     Console.WriteLine($"VAPID__PublicKey={keys.PublicKey}");
     Console.WriteLine($"VAPID__PrivateKey={keys.PrivateKey}");
-    Console.WriteLine("VAPID__Subject=mailto:contato@santuarionerd.tech");
+    Console.WriteLine("VAPID__Subject=mailto:contato@santuarionerd.com.br");
     return;
 }
 

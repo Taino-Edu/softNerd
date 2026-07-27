@@ -23,7 +23,7 @@ public class PushService : IPushService
     {
         var publicKey  = _config["Vapid:PublicKey"];
         var privateKey = _config["Vapid:PrivateKey"];
-        var subject    = _config["Vapid:Subject"] ?? "mailto:contato@santuarionerd.tech";
+        var subject    = _config["Vapid:Subject"] ?? "mailto:contato@santuarionerd.com.br";
 
         if (string.IsNullOrWhiteSpace(publicKey) || string.IsNullOrWhiteSpace(privateKey))
         {

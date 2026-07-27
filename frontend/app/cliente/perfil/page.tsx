@@ -283,7 +283,7 @@ export default function PerfilPage() {
             ) : profile?.profileImageUrl ? (
               <>
                 <img
-                  src={`${process.env.NEXT_PUBLIC_API_URL || 'https://santuarionerd.tech'}${profile.profileImageUrl}`}
+                  src={`${process.env.NEXT_PUBLIC_API_URL || 'https://santuarionerd.com.br'}${profile.profileImageUrl}`}
                   alt="Avatar"
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
