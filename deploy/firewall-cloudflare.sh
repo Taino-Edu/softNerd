@@ -40,6 +40,27 @@ V6_URL="https://www.cloudflare.com/ips-v6"
 [ "$(id -u)" -eq 0 ] || { echo -e "${RED}Rode com sudo.${NC}"; exit 1; }
 
 # -----------------------------------------------------------------------------
+# Interface externa — OBRIGATÓRIA nas regras.
+#
+# A DOCKER-USER é consultada pela chain FORWARD, que vê o tráfego nos DOIS
+# sentidos: internet→container E container→internet. Sem prender a regra à
+# interface de entrada, um `--dports 80,443 -j DROP` derruba também a saída dos
+# containers, porque o pacote que sai pra qualquer site na 80/443 casa a regra e
+# não vem de IP da Cloudflare. O RELATED,ESTABLISHED não cobre isso: o primeiro
+# SYN de uma conexão nova é NEW.
+#
+# Sintomas de quando faltava: `apt-get update` no build do Docker dando
+# "connection timed out" pra deb.debian.org, emissão de NFC-e sem resposta da
+# SEFAZ, e integração do Inter/Pix falhando — tudo saída HTTPS de container.
+# -----------------------------------------------------------------------------
+EXT_IF="${EXT_IF:-$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}')}"
+[ -n "$EXT_IF" ] || {
+    echo -e "${RED}Não consegui detectar a interface externa.${NC}"
+    echo "Rode informando na mão, ex: sudo EXT_IF=eth0 bash $0"
+    exit 1
+}
+
+# -----------------------------------------------------------------------------
 # --status — só mostra o que está valendo agora
 # -----------------------------------------------------------------------------
 if [ "$1" = "--status" ]; then
@@ -76,22 +97,24 @@ echo "   $N4 ranges IPv4, $N6 ranges IPv6"
 # Reconstrói a chain do zero (idempotente — rodar duas vezes não duplica regra).
 # Ordem importa: conexões já abertas, depois Cloudflare, depois o DROP.
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}🔒 Aplicando regras...${NC}"
+echo -e "${YELLOW}🔒 Aplicando regras (interface externa: $EXT_IF)...${NC}"
 
+# Todo `-i "$EXT_IF"` abaixo é o que mantém a SAÍDA dos containers livre — ver o
+# comentário lá em cima. Não remova achando que é redundante.
 iptables -F "$CHAIN"
 iptables -A "$CHAIN" -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
 for ip in $V4; do
-    iptables -A "$CHAIN" -s "$ip" -p tcp -m multiport --dports "$PORTS" -j RETURN
+    iptables -A "$CHAIN" -i "$EXT_IF" -s "$ip" -p tcp -m multiport --dports "$PORTS" -j RETURN
 done
-iptables -A "$CHAIN" -p tcp -m multiport --dports "$PORTS" -j DROP
+iptables -A "$CHAIN" -i "$EXT_IF" -p tcp -m multiport --dports "$PORTS" -j DROP
 iptables -A "$CHAIN" -j RETURN
 
 ip6tables -F "$CHAIN"
 ip6tables -A "$CHAIN" -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
 for ip in $V6; do
-    ip6tables -A "$CHAIN" -s "$ip" -p tcp -m multiport --dports "$PORTS" -j RETURN
+    ip6tables -A "$CHAIN" -i "$EXT_IF" -s "$ip" -p tcp -m multiport --dports "$PORTS" -j RETURN
 done
-ip6tables -A "$CHAIN" -p tcp -m multiport --dports "$PORTS" -j DROP
+ip6tables -A "$CHAIN" -i "$EXT_IF" -p tcp -m multiport --dports "$PORTS" -j DROP
 ip6tables -A "$CHAIN" -j RETURN
 
 echo -e "${GREEN}✅ Pronto. 80/443 só aceitam tráfego vindo da Cloudflare.${NC}"
@@ -102,5 +125,10 @@ echo "      'curl http://IP' aqui dentro responde normal mesmo com o firewall at
 echo "      Teste de OUTRA máquina (seu notebook):"
 echo "        curl -m 10 http://2.24.121.247/          → tem que dar timeout"
 echo "        curl -sI https://santuarionerd.com.br    → tem que dar 200"
+echo
+echo -e "   ${YELLOW}Confira também que a SAÍDA dos containers continua livre:${NC}"
+echo "        docker run --rm curlimages/curl -sI https://deb.debian.org  → tem que dar resposta"
+echo "      (se der timeout, as regras pegaram o sentido errado — veja o comentário"
+echo "       sobre EXT_IF no topo deste arquivo)"
 echo
 echo "   Desfazer:  sudo bash $0 --undo"
