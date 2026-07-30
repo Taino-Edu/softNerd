@@ -856,7 +856,14 @@ public class NfceEmissionService : INfceEmissionService
                 // O grupo transp é obrigatório no leiaute 4.00 mesmo na NFC-e presencial.
                 // Para NFC-e, a modalidade correta é 9 (sem ocorrência de transporte).
                 transp = new transp { modFrete = ModalidadeFrete.mfSemFrete },
-                pag = new List<pag> { new pag { detPag = MontarDetPag(dados, valorTotal) } },
+                // vTroco explícito em 0: o sistema sempre cobra o valor exato (não há
+                // caixa com gaveta calculando troco). Sem o elemento, o XSLT do portal da
+                // SEFAZ mostra "Troco NaN" no cupom que o cliente consulta pelo QR Code —
+                // observado em homologação na nota 37, em 30/07/2026.
+                pag = new List<pag>
+                {
+                    new pag { detPag = MontarDetPag(dados, valorTotal), vTroco = 0 },
+                },
             },
         };
 
