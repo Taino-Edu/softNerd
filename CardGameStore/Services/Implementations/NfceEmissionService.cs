@@ -399,6 +399,19 @@ public class NfceEmissionService : INfceEmissionService
             _logger.LogInformation(
                 "NFC-e {NotaId} anulada automaticamente — comanda de origem foi cancelada antes da transmissão.", nota.Id);
         }
+        catch (NadaAFaturarException ex)
+        {
+            // Terminal: sem itens ou valor zero, nenhuma nova tentativa vai mudar nada.
+            // Marcar Rejeitada tira a nota da fila do FiscalRetryBackgroundService, que só
+            // pega PendenteEmissao — senão ela ficaria sendo retentada indefinidamente.
+            nota.Status         = NotaFiscalStatus.Rejeitada;
+            nota.MotivoRejeicao = ex.Message;
+            await _db.SaveChangesAsync();
+
+            _logger.LogWarning(
+                "NFC-e {NotaId} ({Origem}) não emitida — {Motivo} Nenhum número fiscal foi consumido.",
+                nota.Id, nota.Origem, ex.Message);
+        }
         catch (FiscalNaoConfiguradoException ex)
         {
             // Estado esperado enquanto o admin não termina de configurar — não é uma falha real.
@@ -494,10 +507,33 @@ public class NfceEmissionService : INfceEmissionService
             Cest:                 item.Product?.Cest
         )).ToList();
 
+        ValidarTemOQueFaturar(itens.Count, comanda.TotalInCents, $"Comanda {comanda.Id}");
+
         return new DadosEmissao(
             itens, comanda.PaymentMethod ?? "Dinheiro", comanda.User?.Cpf,
             comanda.SecondPaymentMethod, comanda.SecondPaymentAmountInCents,
             comanda.TotalInCents); // já líquido de PointsApplied/DiscountInCents (ver ComandaService)
+    }
+
+    /// <summary>
+    /// Barra nota sem item ou com valor zero ANTES de reservar número na sequência fiscal.
+    /// Sem isto, fechar uma comanda vazia com "emitir nota" marcado gerava um XML sem
+    /// nenhum &lt;det&gt; — que o layout da NF-e exige (mínimo 1) — e a SEFAZ devolvia
+    /// cStat 225 "Falha no Schema XML". O estrago não era só a rejeição: o número fiscal
+    /// já tinha sido consumido e ficava um furo na sequência, que depois precisa de
+    /// inutilização. Observado em produção em 30/07/2026 (nota nº 31, tudo 0.00).
+    /// </summary>
+    private static void ValidarTemOQueFaturar(int quantidadeItens, int totalCentavos, string origem)
+    {
+        if (quantidadeItens == 0)
+            throw new NadaAFaturarException(
+                $"{origem} não tem itens — não é possível emitir NFC-e de uma venda vazia. " +
+                "A nota fiscal precisa de pelo menos um produto.");
+
+        if (totalCentavos <= 0)
+            throw new NadaAFaturarException(
+                $"{origem} tem valor total de R$ {totalCentavos / 100m:N2} — não é possível emitir " +
+                "NFC-e de valor zero. Confira se o desconto não zerou a venda inteira.");
     }
 
     private async Task<DadosEmissao> CarregarDadosVendaAvulsaAsync(string vendaAvulsaId)
@@ -553,6 +589,8 @@ public class NfceEmissionService : INfceEmissionService
         string? cpf = null;
         if (venda.UserId.HasValue)
             cpf = (await _db.Users.FindAsync(venda.UserId.Value))?.Cpf;
+
+        ValidarTemOQueFaturar(itens.Count, venda.TotalInCents, $"Venda avulsa {venda.Id}");
 
         return new DadosEmissao(
             itens, venda.PaymentMethod, cpf,
@@ -1386,6 +1424,16 @@ public class NfceEmissionService : INfceEmissionService
 public class FiscalNaoConfiguradoException : Exception
 {
     public FiscalNaoConfiguradoException(string message) : base(message) { }
+}
+
+/// <summary>
+/// A venda de origem não tem o que faturar (sem itens, ou valor total zerado). Diferente
+/// de <see cref="FiscalNaoConfiguradoException"/>: não adianta tentar de novo, porque nada
+/// vai mudar sozinho — a nota vira Rejeitada em vez de ficar na fila do retry pra sempre.
+/// </summary>
+public class NadaAFaturarException : Exception
+{
+    public NadaAFaturarException(string message) : base(message) { }
 }
 
 /// <summary>Interrompe qualquer operação do motor quando a trava geral está desligada.</summary>
