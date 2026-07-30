@@ -1,5 +1,27 @@
 # Changelog — Santuário Nerd
 
+## [v1.24.0] — 2026-07-30
+
+### Corrigido — Nota fiscal
+- **Nota com desconto era sempre recusada pela SEFAZ**: o desconto ia só no total da nota, sem aparecer em cada produto — e a Receita exige que os dois batam. Venda sem desconto passava, o que escondeu o problema. Agora o desconto é rateado entre os itens, com o acerto dos centavos que sobram da divisão
+- **Venda vazia gastava um número fiscal**: fechar uma comanda sem produto com "emitir nota" marcado mandava uma nota em branco pra SEFAZ, que recusava — e o número da sequência já tinha sido consumido, virando um furo que depois precisa ser inutilizado. Agora o sistema avisa antes ("a nota fiscal precisa de pelo menos um produto") e não gasta número
+- **Pix era sempre declarado como "dinâmico"**, mesmo quando o cliente pagava na chave fixa. Agora o sistema identifica sozinho: se a cobrança foi gerada pelo sistema, declara dinâmico; se foi na chave, declara estático
+- **"Troco NaN" no cupom**: quem consultava a nota pelo QR Code via essa palavra no lugar do troco. Faltava informar o valor (sempre zero, já que o sistema cobra o valor exato)
+- **Notas de fornecedor nunca eram baixadas**: a busca automática de NF-e emitidas contra o CNPJ da loja (que vira conta a pagar sozinha) falhava em toda tentativa, a cada 2 horas, por uma configuração faltando
+
+### Corrigido — Dinheiro e números
+- **Cotação do dólar estava travada em R$ 5,80 há semanas** — 13% acima da real. Toda carta do TCGPlayer saía mais cara do que devia. O sistema agora usa o **Banco Central** como fonte principal (oficial e sem limite de consulta) e avisa na tela, em amarelo, quando a cotação não é a atual — antes ele mostrava um valor antigo com cara de novo
+- **Gráfico de crediário no Financeiro nunca funcionou**: mostrava "Sem dados" mesmo com dezenas de pagamentos listados logo abaixo. Agora mostra os recebimentos dia a dia, e ganhou **"Concedido × Recebido no período"** com a lista de crediários abertos — antes só existia o saldo acumulado, que ignorava o filtro de datas
+- **Financeiro inflava o valor ao filtrar por forma de pagamento**: numa venda dividida (R$ 80 no cartão + R$ 20 em Pix), filtrar por Pix mostrava os R$ 100 inteiros, e por cartão mostrava os mesmos R$ 100 de novo. Agora cada filtro mostra só a parte paga naquela forma, e as partes somam o total exato
+
+### Adicionado
+- **Inscrição de campeonato direto pelo site**: quem clica em "Inscrever" na página inicial agora se inscreve de verdade, com a vaga reservada no nome dele, e o sistema pergunta **"deseja já pagar a taxa agora?"** oferecendo Pix na hora. Antes só dava pra mandar mensagem no WhatsApp e pagar na chegada. É preciso ter conta — é o que permite reservar a vaga e guardar o histórico de torneios do cliente
+- A vaga é garantida **antes** do pagamento: se o campeonato lotar, ninguém paga por um lugar que não existe
+
+### Corrigido — Telas
+- **Top Clientes ficava ilegível no Painel Geral**: em tela de notebook menor os nomes sumiam ("Pa...", "Ar...") e o texto quebrava no meio da palavra por cima do valor. Agora as informações ficam empilhadas e legíveis em qualquer largura
+- Os botões de forma de pagamento do filtro deixaram de ficar escondidos quando não cabiam na largura
+
 ## [v1.23.0] — 2026-07-30
 
 ### Corrigido
