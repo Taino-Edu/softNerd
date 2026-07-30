@@ -330,6 +330,36 @@ public class AnalyticsController : ControllerBase
         public long GastoCents { get; set; }
     }
 
+    /// <summary>
+    /// Fração do valor de uma transação que corresponde à forma de pagamento filtrada.
+    /// Sem filtro é 1 (a transação inteira).
+    ///
+    /// Numa venda dividida — ex: R$ 80 no cartão + R$ 20 em Pix — filtrar por Pix devolve
+    /// 0,2. Sem isso a mesma venda entrava INTEIRA nos dois filtros: o predicado aceita a
+    /// transação quando a forma bate na primeira OU na segunda, mas a soma pegava o total.
+    /// O card "Formas de pagamento" desta mesma tela sempre fez essa conta certa (ele emite
+    /// uma linha por forma, com `primaryAmt = total - secondAmt`) — eram os totais que não
+    /// faziam, então a tela se contradizia sozinha.
+    ///
+    /// A mesma fração é aplicada ao CUSTO, e não só à receita: alocar receita proporcional
+    /// contra custo cheio faria uma venda lucrativa aparecer como prejuízo no filtro.
+    /// </summary>
+    internal static decimal FracaoNaForma(
+        string? forma, string? segundaForma, int totalCents, int segundoValorCents, string? filtro)
+    {
+        if (string.IsNullOrWhiteSpace(filtro)) return 1m;
+        if (totalCents <= 0) return 0m;
+
+        var temSegundo = !string.IsNullOrEmpty(segundaForma) && segundoValorCents > 0;
+        var segundo    = temSegundo ? segundoValorCents : 0;
+
+        long valor = 0;
+        if (forma == filtro)                      valor += totalCents - segundo;
+        if (temSegundo && segundaForma == filtro) valor += segundo;
+
+        return Math.Clamp((decimal)valor / totalCents, 0m, 1m);
+    }
+
     // -------------------------------------------------------------------------
     // GET /api/analytics/financeiro?inicio=2025-01-01&fim=2025-01-31
     // Controle financeiro: receita, custo e margem no período filtrado
@@ -359,8 +389,30 @@ public class AnalyticsController : ControllerBase
                 c.SecondPaymentMethod == filterPaymentMethod);
 
         // ── Receita de comandas ───────────────────────────────────────────────
-        var receitaComandas = await comandasBaseQ
-            .SumAsync(c => (decimal)c.TotalInCents) / 100m;
+        // Materializa em vez de somar no banco: com filtro de forma, cada comanda entra
+        // pela fração paga naquela forma (ver FracaoNaForma), não pelo total.
+        var comandasBase = await comandasBaseQ
+            .Select(c => new
+            {
+                c.ClosedAt,
+                c.TotalInCents,
+                c.PaymentMethod,
+                c.SecondPaymentMethod,
+                c.SecondPaymentAmountInCents,
+            })
+            .ToListAsync();
+
+        var comandasComFracao = comandasBase
+            .Select(c => new
+            {
+                c.ClosedAt,
+                c.TotalInCents,
+                Fracao = FracaoNaForma(c.PaymentMethod, c.SecondPaymentMethod,
+                                       c.TotalInCents, c.SecondPaymentAmountInCents, filterPaymentMethod),
+            })
+            .ToList();
+
+        var receitaComandas = comandasComFracao.Sum(c => c.TotalInCents * c.Fracao) / 100m;
 
         // ── Vendas avulsas (MongoDB) ──────────────────────────────────────────
         var todasVendas = (await _vendas.GetRecentAsync(2000, ini)).ToList();
@@ -374,15 +426,21 @@ public class AnalyticsController : ControllerBase
 
         var avulsasList = avulsasPeriodo.ToList();
 
+        // Fração de cada venda avulsa atribuível à forma filtrada — mesma regra das comandas.
+        var fracaoVenda = avulsasList.ToDictionary(
+            v => v.Id,
+            v => FracaoNaForma(v.PaymentMethod, v.SecondPaymentMethod,
+                               v.TotalInCents, v.SecondPaymentAmountInCents, filterPaymentMethod));
+
         // ── Separa venda homologada do site (Origem == "Reserva") de venda de balcão comum,
         // e dentro do site ainda separa "Site" × "Pré-venda" pela tag do produto (mesma
         // divisão das colunas Vendas × Pré-vendas no kanban de Pedidos).
         var avulsasPdv      = avulsasList.Where(v => v.Origem != "Reserva").ToList();
         var avulsasSite     = avulsasList.Where(v => v.Origem == "Reserva" && !v.ProductIsPreVenda).ToList();
         var avulsasPreVenda = avulsasList.Where(v => v.Origem == "Reserva" && v.ProductIsPreVenda).ToList();
-        var receitaAvulsa   = avulsasPdv.Sum(v => (decimal)v.TotalInCents) / 100m;
-        var receitaSite     = avulsasSite.Sum(v => (decimal)v.TotalInCents) / 100m;
-        var receitaPreVenda = avulsasPreVenda.Sum(v => (decimal)v.TotalInCents) / 100m;
+        var receitaAvulsa   = avulsasPdv.Sum(v => v.TotalInCents * fracaoVenda[v.Id]) / 100m;
+        var receitaSite     = avulsasSite.Sum(v => v.TotalInCents * fracaoVenda[v.Id]) / 100m;
+        var receitaPreVenda = avulsasPreVenda.Sum(v => v.TotalInCents * fracaoVenda[v.Id]) / 100m;
 
         var receita = receitaComandas + receitaAvulsa + receitaSite + receitaPreVenda;
 
@@ -401,30 +459,42 @@ public class AnalyticsController : ControllerBase
                 ComandaClosedAt          = i.Comanda!.ClosedAt,
                 ComandaPaymentMethod     = i.Comanda.PaymentMethod,
                 ComandaSecondPayment     = i.Comanda.SecondPaymentMethod,
+                ComandaTotal             = i.Comanda.TotalInCents,
+                ComandaSegundoValor      = i.Comanda.SecondPaymentAmountInCents,
                 Categoria                = i.Product!.Category,
             })
             .ToListAsync();
 
-        var itens = hasPmFilter
-            ? itensRaw.Where(i =>
-                i.ComandaPaymentMethod == filterPaymentMethod ||
-                i.ComandaSecondPayment == filterPaymentMethod).ToList()
-            : itensRaw;
+        // Cada item carrega a fração da comanda-pai: com filtro de forma, o custo entra
+        // proporcional à receita atribuída, senão a margem do filtro viraria prejuízo.
+        var itens = itensRaw
+            .Where(i => !hasPmFilter
+                     || i.ComandaPaymentMethod == filterPaymentMethod
+                     || i.ComandaSecondPayment == filterPaymentMethod)
+            .Select(i => new
+            {
+                i.ItemNameSnapshot,
+                i.UnitPriceInCents,
+                i.Quantity,
+                i.CostPriceSnapshotInCents,
+                i.ComandaClosedAt,
+                i.Categoria,
+                Fracao = FracaoNaForma(i.ComandaPaymentMethod, i.ComandaSecondPayment,
+                                       i.ComandaTotal, i.ComandaSegundoValor, filterPaymentMethod),
+            })
+            .ToList();
 
         var custoComandas = itens
-            .Sum(i => (decimal)i.CostPriceSnapshotInCents * i.Quantity) / 100m;
+            .Sum(i => (decimal)i.CostPriceSnapshotInCents * i.Quantity * i.Fracao) / 100m;
 
         var custoAvulsa = avulsasPdv
-            .SelectMany(v => v.Items)
-            .Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m;
+            .Sum(v => v.Items.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) * fracaoVenda[v.Id]) / 100m;
 
         var custoSite = avulsasSite
-            .SelectMany(v => v.Items)
-            .Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m;
+            .Sum(v => v.Items.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) * fracaoVenda[v.Id]) / 100m;
 
         var custoPreVenda = avulsasPreVenda
-            .SelectMany(v => v.Items)
-            .Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m;
+            .Sum(v => v.Items.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) * fracaoVenda[v.Id]) / 100m;
 
         var custo = custoComandas + custoAvulsa + custoSite + custoPreVenda;
         var margem        = receita - custo;
@@ -436,9 +506,9 @@ public class AnalyticsController : ControllerBase
             .SumAsync(c => (decimal)(c.ValorEmCentavos - c.ValorPagoEmCentavos)) / 100m;
 
         // ── Breakdown dia a dia ───────────────────────────────────────────────
-        var comandasDoPeriodo = await comandasBaseQ
-            .Select(c => new { c.ClosedAt, c.TotalInCents })
-            .ToListAsync();
+        // Reaproveita a lista já materializada acima (com a fração por comanda) — o dia a dia
+        // precisa fechar com o total, então tem que usar exatamente o mesmo critério.
+        var comandasDoPeriodo = comandasComFracao;
 
         var totalDias = (int)(dataBrFim - dataBrIni).TotalDays + 1;
         var diaDia    = new List<DiaFinanceiroDto>();
@@ -451,20 +521,19 @@ public class AnalyticsController : ControllerBase
 
             var rComanda = comandasDoPeriodo
                 .Where(c => c.ClosedAt >= dIni && c.ClosedAt < dFim)
-                .Sum(c => (decimal)c.TotalInCents) / 100m;
+                .Sum(c => c.TotalInCents * c.Fracao) / 100m;
 
             var rAvulsa = avulsasList
                 .Where(v => v.SoldAt >= dIni && v.SoldAt < dFim)
-                .Sum(v => (decimal)v.TotalInCents) / 100m;
+                .Sum(v => v.TotalInCents * fracaoVenda[v.Id]) / 100m;
 
             var cComandaDia = itens
                 .Where(i => i.ComandaClosedAt >= dIni && i.ComandaClosedAt < dFim)
-                .Sum(i => (decimal)i.CostPriceSnapshotInCents * i.Quantity) / 100m;
+                .Sum(i => (decimal)i.CostPriceSnapshotInCents * i.Quantity * i.Fracao) / 100m;
 
             var cAvulsaDia = avulsasList
                 .Where(v => v.SoldAt >= dIni && v.SoldAt < dFim)
-                .SelectMany(v => v.Items)
-                .Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m;
+                .Sum(v => v.Items.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) * fracaoVenda[v.Id]) / 100m;
 
             diaDia.Add(new DiaFinanceiroDto
             {
@@ -561,47 +630,50 @@ public class AnalyticsController : ControllerBase
             .ToList();
 
         // ── Top produtos: comandas + PDV com breakdown por origem ─────────────
+        // Receita e custo entram pela fração da forma filtrada, igual aos totais — assim a
+        // soma dos produtos fecha com o KPI de receita. A QUANTIDADE não é fracionada: o
+        // produto saiu do estoque inteiro, independente de como a venda foi paga.
         var topDeComandas = itens
             .GroupBy(i => i.ItemNameSnapshot)
             .ToDictionary(g => g.Key, g => new
             {
                 Categoria   = g.First().Categoria,
                 Qtd         = g.Sum(i => i.Quantity),
-                Receita     = Math.Round(g.Sum(i => (decimal)i.UnitPriceInCents * i.Quantity) / 100m, 2),
-                Custo       = Math.Round(g.Sum(i => (decimal)i.CostPriceSnapshotInCents * i.Quantity) / 100m, 2),
+                Receita     = Math.Round(g.Sum(i => (decimal)i.UnitPriceInCents * i.Quantity * i.Fracao) / 100m, 2),
+                Custo       = Math.Round(g.Sum(i => (decimal)i.CostPriceSnapshotInCents * i.Quantity * i.Fracao) / 100m, 2),
             });
 
         var topDePdv = avulsasPdv
-            .SelectMany(v => v.Items)
-            .GroupBy(i => i.ProductName)
+            .SelectMany(v => v.Items.Select(i => new { Item = i, Fracao = fracaoVenda[v.Id] }))
+            .GroupBy(x => x.Item.ProductName)
             .ToDictionary(g => g.Key, g => new
             {
-                Categoria = g.First().ProductCategory ?? "Outros",
-                Qtd       = g.Sum(i => i.Quantity),
-                Receita   = Math.Round(g.Sum(i => i.UnitPriceInReais * i.Quantity), 2),
-                Custo     = Math.Round(g.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m, 2),
+                Categoria = g.First().Item.ProductCategory ?? "Outros",
+                Qtd       = g.Sum(x => x.Item.Quantity),
+                Receita   = Math.Round(g.Sum(x => x.Item.UnitPriceInReais * x.Item.Quantity * x.Fracao), 2),
+                Custo     = Math.Round(g.Sum(x => (decimal)x.Item.UnitCostInCents * x.Item.Quantity * x.Fracao) / 100m, 2),
             });
 
         var topDeSite = avulsasSite
-            .SelectMany(v => v.Items)
-            .GroupBy(i => i.ProductName)
+            .SelectMany(v => v.Items.Select(i => new { Item = i, Fracao = fracaoVenda[v.Id] }))
+            .GroupBy(x => x.Item.ProductName)
             .ToDictionary(g => g.Key, g => new
             {
-                Categoria = g.First().ProductCategory ?? "Outros",
-                Qtd       = g.Sum(i => i.Quantity),
-                Receita   = Math.Round(g.Sum(i => i.UnitPriceInReais * i.Quantity), 2),
-                Custo     = Math.Round(g.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m, 2),
+                Categoria = g.First().Item.ProductCategory ?? "Outros",
+                Qtd       = g.Sum(x => x.Item.Quantity),
+                Receita   = Math.Round(g.Sum(x => x.Item.UnitPriceInReais * x.Item.Quantity * x.Fracao), 2),
+                Custo     = Math.Round(g.Sum(x => (decimal)x.Item.UnitCostInCents * x.Item.Quantity * x.Fracao) / 100m, 2),
             });
 
         var topDePreVenda = avulsasPreVenda
-            .SelectMany(v => v.Items)
-            .GroupBy(i => i.ProductName)
+            .SelectMany(v => v.Items.Select(i => new { Item = i, Fracao = fracaoVenda[v.Id] }))
+            .GroupBy(x => x.Item.ProductName)
             .ToDictionary(g => g.Key, g => new
             {
-                Categoria = g.First().ProductCategory ?? "Outros",
-                Qtd       = g.Sum(i => i.Quantity),
-                Receita   = Math.Round(g.Sum(i => i.UnitPriceInReais * i.Quantity), 2),
-                Custo     = Math.Round(g.Sum(i => (decimal)i.UnitCostInCents * i.Quantity) / 100m, 2),
+                Categoria = g.First().Item.ProductCategory ?? "Outros",
+                Qtd       = g.Sum(x => x.Item.Quantity),
+                Receita   = Math.Round(g.Sum(x => x.Item.UnitPriceInReais * x.Item.Quantity * x.Fracao), 2),
+                Custo     = Math.Round(g.Sum(x => (decimal)x.Item.UnitCostInCents * x.Item.Quantity * x.Fracao) / 100m, 2),
             });
 
         var todosNomes = topDeComandas.Keys.Union(topDePdv.Keys).Union(topDeSite.Keys).Union(topDePreVenda.Keys);
