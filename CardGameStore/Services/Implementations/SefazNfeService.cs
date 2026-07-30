@@ -17,10 +17,12 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml.Linq;
+using CardGameStore.Common;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using DFe.Classes.Entidades;
 using DFe.Classes.Flags;
+using NFe.Classes.Informacoes.Identificacao.Tipos;
 using Microsoft.EntityFrameworkCore;
 using NFe.Classes.Servicos.DistribuicaoDFe;
 using NFe.Classes.Servicos.Tipos;
@@ -68,7 +70,9 @@ public class SefazNfeService
         if (string.IsNullOrWhiteSpace(cfg.Cnpj) || string.IsNullOrWhiteSpace(cfg.Uf))
             return SefazSyncResult.NaoExecutado("CNPJ/UF da empresa não configurados em Admin > Fiscal.");
 
-        var cnpj = new string(cfg.Cnpj.Where(char.IsDigit).ToArray());
+        // Cnpj.Normalizar preserva letras — filtrar só dígitos mutilaria o CNPJ
+        // alfanumérico (IN RFB 2.229/2024), mesmo motivo do resto do módulo fiscal.
+        var cnpj = Cnpj.Normalizar(cfg.Cnpj);
 
         var pfxBytes    = Convert.FromBase64String(_enc.Decrypt(cfg.CertificadoPfxEncrypted!));
         var senha       = _enc.Decrypt(cfg.CertificadoSenhaEncrypted!);
@@ -80,6 +84,13 @@ public class SefazNfeService
             tpAmb           = cfg.Ambiente == AmbienteFiscal.Producao ? TipoAmbiente.Producao : TipoAmbiente.Homologacao,
             ModeloDocumento = ModeloDocumento.NFe, // distribuição/manifestação são serviços da NF-e (55), não da NFC-e
             VersaoLayout    = VersaoServico.Versao400,
+            // Mesmo bug que já tinha sido corrigido no NfceEmissionService (commit d2aaad0)
+            // e que passou batido aqui: sem tpEmis o campo fica 0 (valor de enum inválido),
+            // a lib não acha a URL do webservice na tabela interna (UF+ambiente+serviço+
+            // versão+tipoEmissao) e lança "Serviço NFeDistribuicaoDFe, versão , não
+            // disponível para a UF SP..." — com "versão" e "tipo" em branco, que é a
+            // assinatura desse defeito. Distribuição/manifestação é sempre online.
+            tpEmis          = TipoEmissao.teNormal,
             TimeOut         = 30000,
             ValidarSchemas  = false,
         };
