@@ -288,3 +288,105 @@ Como esse repo é fork do softNerd, cada achado foi checado direto contra o cód
 5. **IBS/CBS (Reforma Tributária)** — confirmar se já foi implementado lá (ver seção
    "Sessão de teste real" acima); sem isso, Homologação trava mesmo com tudo o resto
    corrigido.
+
+---
+
+# Port reverso: Tenant-ERP_Model → softNerd, 2026-07-29
+
+O documento acima nasceu de correções que iam do softNerd **para** o multi-tenant. Depois
+disso o `Tenant-ERP_Model` avançou sozinho e passou a ter correções fiscais que **não**
+existiam aqui. Esta seção registra o caminho de volta.
+
+Os dois repos divergiram — não é copiar arquivo. Aqui `FormaPagamento` é `string` e existe
+split em dois `detPag`; lá não. O port foi adaptado, não colado.
+
+## A. Grupo `card` no Pix/cartão + `xPag` no tPag=99 (o mais grave)
+
+**Origem:** `c08afb0` no Tenant.
+**Arquivo:** `NfceEmissionService.MontarDetPag` → agora delega pra `MontarDetPagUnico`.
+
+`MontarDetPag` daqui montava `new detPag { tPag, vPag }` e mais nada. Consequências, as duas
+confirmadas em homologação real no Tenant:
+
+- Cartão de crédito/débito **e Pix** ⇒ rejeição *"Não informados os dados do cartão de
+  crédito/débito"*. A SEFAZ trata todo pagamento eletrônico igual, não só tPag 03/04.
+- Crediário/Pontos/Cashback caem em tPag=99 ⇒ rejeição *"Descrição do pagamento obrigatória
+  para meio de pagamento 99-outros"*, porque `xPag` ia vazio.
+
+Ou seja: **nenhuma forma de pagamento da loja emitia NFC-e real, exceto Dinheiro.**
+
+## B. CEST
+
+**Origem:** `51a62c3` no Tenant. Novo campo `Product.Cest`.
+
+- `Product.Ncm` **perdeu o `[MaxLength(8)]`** e `Cest` nasceu sem `[MaxLength(7)]`: a
+  DataAnnotation dispara a validação do `ApiController` no model binding, **antes** do
+  `ProductService` tirar a pontuação — um NCM colado como "1905.90.90" voltava com a
+  mensagem genérica do .NET. A largura das colunas foi pro `AppDbContext` via Fluent API.
+- `MontarItem` passa a mandar `CEST`, obrigatório nos CSOSN de ST (201/202/203/500).
+- Tela de estoque: campo CEST ao lado do NCM, ambos **sem `maxLength`** no input — o browser
+  corta o texto colado ANTES do `onChange`, então colar "1905.90.90" virava "1905.90." e
+  sobravam 6 dígitos (o campo parecia travado). Quem limita é o `slice` sobre os dígitos.
+
+⚠️ **Exige SQL manual no VPS** — o banco usa `EnsureCreated`, não migrations:
+
+```sql
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cest VARCHAR(7);
+```
+
+## C. CNPJ alfanumérico
+
+**Origem:** `8ad1d9b` no Tenant. Novo `CardGameStore/Common/Cnpj.cs` (copiado sem alteração).
+
+A partir de 31/07/2026 a Receita emite CNPJ alfanumérico (IN RFB 2.229/2024); o ambiente
+nacional de NF-e/NFC-e recebe esse formato desde 01/07/2026 (NT 2026.004). O módulo 11 e os
+pesos são os mesmos — muda o valor de cada caractere (ASCII − 48), então **CNPJ numérico
+existente valida exatamente como antes**.
+
+- `FiscalController` normaliza com `Cnpj.Normalizar` em vez de tirar só a máscara — filtrar
+  dígitos mutilaria o CNPJ novo.
+- Novo `NfceEmissionService.NormalizarCnpjParaSefaz`, aplicado na chave de acesso, no `emit`,
+  no cancelamento e na inutilização.
+
+**Mudança de comportamento:** a fronteira passou a conferir o **dígito verificador**, que
+antes não era checado. CNPJ com DV errado agora falha com mensagem própria em vez de virar
+rejeição da SEFAZ. Conferido que o CNPJ real da loja (42.989.093/0001-79) valida.
+
+`CancelarNota` ganhou `catch (FiscalNaoConfiguradoException)`: ela herda de `Exception`, não
+de `InvalidOperationException`, então escapava pro handler global e virava 500 "Erro interno"
+quando o problema era configuração do lojista.
+
+## D. Validações de QA
+
+**Origem:** `1da93d0` no Tenant (achados de QA exploratória contra a API rodando).
+
+1. **Produto aceitava preço/custo/estoque/promocional negativo.** Consequência confirmada lá:
+   venda avulsa com produto de −R$ 999 gravou `totalInCents = -99900` no caixa. O frontend
+   avisava; quem chama a API direto passava reto. `ProductService` valida na criação e edição.
+2. **`PATCH /api/product/{id}/stock` estourava o `integer` do Postgres** com delta perto de
+   `int.MaxValue` ("22003: integer out of range" ⇒ 500 genérico). Teto de 1.000.000 por
+   chamada e de 100.000.000 no cadastro. O `WHERE` compara contra um limite calculado em C#
+   em vez de somar dentro do SQL — a soma que estourava saiu do predicado.
+3. **`POST /api/crediarios/{id}/pagamento` aceitava qualquer string como forma de pagamento**
+   — "Bitcoin" gravava e virava linha fantasma no relatório agrupado por forma. Agora valida
+   contra `PaymentMethod.All`, inclusive na segunda forma do split.
+4. **Titularidade do certificado A1.** O upload lia o Subject e jogava fora. A loja podia
+   assinar NFC-e com certificado de outra empresa — ou a SEFAZ rejeita, ou, se o CNPJ da loja
+   estiver preenchido com o do dono do certificado, **emite nota fiscal real em nome de
+   terceiro**. Agora o CNPJ do Subject é comparado com o da loja no upload e revalidado
+   sempre que o PUT resulta em Produção com CNPJ ou ambiente na requisição (checar só a
+   transição deixava o furo de trocar só o CNPJ com Produção já ligada).
+   Em **Produção falha fechada**: não identificar o titular é recusa, porque provar
+   titularidade é a única razão da checagem existir. Em Homologação segue permissivo.
+
+`ProductController` passa a devolver **400 com a mensagem real** em `ArgumentException`
+(Create/Update/AdjustStock) e 404 em `KeyNotFoundException`, em vez de deixar subir pro
+handler global como 500.
+
+## Não portado
+
+- **IBPT / transparência tributária** (`PercentualTributos*`, `FonteTributos`, `IbptTaxService`)
+  — não existe neste repo, é feature do multi-tenant.
+- **`dhEmi`**: aqui usa o momento da tentativa em emissão normal (a SEFAZ rejeita NFC-e online
+  com horário antigo) e preserva o original só em contingência. O Tenant usa `nota.CreatedAt`.
+  **Este repo está certo — não portar a versão de lá.**

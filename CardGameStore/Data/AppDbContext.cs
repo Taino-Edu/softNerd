@@ -123,6 +123,13 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
+            // Largura de coluna fixada aqui (Fluent API) em vez de [MaxLength] no
+            // Product.cs — ver comentário lá: a DataAnnotation dispara a validação
+            // automática do ApiController antes do ProductService sanitizar a
+            // pontuação colada no NCM/CEST.
+            entity.Property(p => p.Ncm).HasMaxLength(8);
+            entity.Property(p => p.Cest).HasMaxLength(7);
+
             entity.HasIndex(p => p.Category)
                   .HasDatabaseName("ix_products_category");
 

@@ -132,6 +132,8 @@ export interface Product {
   preVendaReleaseDate: string | null
   /** NCM (Nomenclatura Comum do Mercosul) — obrigatório para emitir NFC-e deste produto. */
   ncm: string | null
+  /** CEST (7 dígitos) — obrigatório só nos CSOSNs de substituição tributária (201/202/203/500). */
+  cest: string | null
   /** Natureza de operação (CFOP/CSOSN) usada na emissão fiscal. Null = usa a marcada como padrão. */
   naturezaOperacaoId: string | null
   updatedAt: string; createdAt: string
@@ -991,10 +993,39 @@ export interface FinanceiroDto {
   pagamentosCrediarioPeriodo: PagamentoCrediarioPeriodoDto[]
 }
 
+/** Filtros do Top Clientes. Todos opcionais — omitir tudo devolve o histórico
+ *  completo (só comandas, sem limite), que é o comportamento antigo do endpoint. */
+export interface ClientesFiltro {
+  /** Data de início (YYYY-MM-DD, fuso de Brasília). */
+  inicio?: string
+  /** Data de fim, inclusiva (YYYY-MM-DD, fuso de Brasília). */
+  fim?: string
+  /** Soma também as vendas de PDV identificadas com o cliente. */
+  incluirPdv?: boolean
+  /** Filtra por forma de pagamento (1ª ou 2ª). */
+  filterPaymentMethod?: string
+  /** Corta em N clientes depois de ordenar por gasto. */
+  limite?: number
+  apenasInativos?: boolean
+}
+
 export const analyticsApi = {
   dashboard: () => api.get('/api/analytics/dashboard'),
-  clientes:  (apenasInativos = false) =>
-    api.get<ClienteInsightDto[]>('/api/analytics/clientes', { params: { apenasInativos } }),
+  clientes:  (filtro: ClientesFiltro | boolean = false) => {
+    // Aceita o booleano antigo (`clientes(true)` = só inativos) pra não quebrar
+    // as chamadas que já existiam antes dos filtros.
+    const f: ClientesFiltro = typeof filtro === 'boolean' ? { apenasInativos: filtro } : filtro
+    return api.get<ClienteInsightDto[]>('/api/analytics/clientes', {
+      params: {
+        apenasInativos:      f.apenasInativos ?? false,
+        inicio:              f.inicio || undefined,
+        fim:                 f.fim || undefined,
+        incluirPdv:          f.incluirPdv ?? undefined,
+        filterPaymentMethod: f.filterPaymentMethod || undefined,
+        limite:              f.limite || undefined,
+      },
+    })
+  },
   financeiro: (inicio?: string, fim?: string, filterPaymentMethod?: string) =>
     api.get<FinanceiroDto>('/api/analytics/financeiro', {
       params: { inicio, fim, filterPaymentMethod: filterPaymentMethod || undefined },

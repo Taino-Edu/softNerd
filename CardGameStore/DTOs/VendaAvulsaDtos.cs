@@ -73,6 +73,11 @@ public class VendaAvulsaDto
 {
     public string              Id                         { get; set; } = string.Empty;
     public string?             ClientName                 { get; set; }
+
+    /// <summary>Cliente cadastrado vinculado à venda, quando houve identificação no PDV.
+    /// Null em venda de balcão anônima. Usado pelo Top Clientes pra somar o gasto do PDV
+    /// ao das comandas — sem isso a venda avulsa não é atribuível a ninguém.</summary>
+    public Guid?               UserId                     { get; set; }
     public string              PaymentMethod              { get; set; } = string.Empty;
     public string?             SecondPaymentMethod        { get; set; }
     public int                 SecondPaymentAmountInCents { get; set; }

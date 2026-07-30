@@ -560,6 +560,7 @@ public class VendaAvulsaService : IVendaAvulsaService
     {
         Id                         = v.Id,
         ClientName                 = v.ClientName,
+        UserId                     = v.UserId,
         PaymentMethod              = v.PaymentMethod,
         SecondPaymentMethod        = v.SecondPaymentMethod,
         SecondPaymentAmountInCents = v.SecondPaymentAmountInCents,

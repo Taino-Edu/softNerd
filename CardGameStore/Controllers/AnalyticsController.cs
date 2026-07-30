@@ -183,36 +183,101 @@ public class AnalyticsController : ControllerBase
 
     // -------------------------------------------------------------------------
     // GET /api/analytics/clientes
-    // Insights por cliente: gasto, ticket médio, inatividade
+    // Insights por cliente: gasto, ticket médio, inatividade.
+    //
+    // Filtros (todos opcionais — sem nenhum, o comportamento é o histórico:
+    // tudo desde sempre, só comandas, lista inteira):
+    //   inicio/fim           — recorta gasto/visitas ao período (datas de Brasília)
+    //   incluirPdv           — soma também as vendas avulsas identificadas com o cliente
+    //   filterPaymentMethod  — só o que foi pago naquela forma (1ª ou 2ª)
+    //   limite               — corta em N clientes DEPOIS de ordenar por gasto
+    //
+    // `Inativo30` continua ancorado em "hoje", não no fim do período: ele responde
+    // "sumiu?", que é sobre o presente, não sobre a janela que o admin escolheu olhar.
     // -------------------------------------------------------------------------
     [HttpGet("clientes")]
     public async Task<ActionResult<List<ClienteInsightDto>>> GetClienteInsights(
-        [FromQuery] bool apenasInativos = false)
+        [FromQuery] bool      apenasInativos      = false,
+        [FromQuery] DateTime? inicio              = null,
+        [FromQuery] DateTime? fim                 = null,
+        [FromQuery] bool      incluirPdv          = false,
+        [FromQuery] string?   filterPaymentMethod = null,
+        [FromQuery] int?      limite              = null)
     {
-        var ha30Dias = DateTime.UtcNow.AddDays(-30);
+        var ha30Dias    = DateTime.UtcNow.AddDays(-30);
+        var hasPmFilter = !string.IsNullOrWhiteSpace(filterPaymentMethod);
+
+        // Período: mesma convenção da tela financeira — data de Brasília convertida
+        // pro início do dia em UTC, `fim` inclusivo (soma 1 dia e usa `<`).
+        DateTime? ini = inicio.HasValue ? BrDateToUtcStart(inicio.Value.Date)            : null;
+        DateTime? end = fim.HasValue    ? BrDateToUtcStart(fim.Value.Date.AddDays(1))    : null;
 
         var usuarios = await _db.Users
             .Where(u => u.IsActive && u.Role == UserRole.Customer)
             .Select(u => new { u.Id, u.Name, u.Email, u.WhatsApp, u.PointsBalance, u.PointsExpiresAt })
             .ToListAsync();
 
-        var estatisticas = await _db.Comandas
-            .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null)
+        // ── Comandas ──────────────────────────────────────────────────────────
+        IQueryable<Comanda> comandasQ = _db.Comandas
+            .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null);
+
+        if (ini.HasValue) comandasQ = comandasQ.Where(c => c.ClosedAt >= ini.Value);
+        if (end.HasValue) comandasQ = comandasQ.Where(c => c.ClosedAt <  end.Value);
+        if (hasPmFilter)
+            comandasQ = comandasQ.Where(c =>
+                c.PaymentMethod == filterPaymentMethod ||
+                c.SecondPaymentMethod == filterPaymentMethod);
+
+        var estatisticas = await comandasQ
             .GroupBy(c => c.UserId)
             .Select(g => new
             {
                 UserId       = g.Key,
                 NumVisitas   = g.Count(),
-                GastoTotal   = g.Sum(c => c.TotalInCents) / 100m,
+                GastoCents   = g.Sum(c => (long)c.TotalInCents),
                 UltimaVisita = (DateTime?)g.Max(c => c.ClosedAt),
             })
             .ToListAsync();
 
-        var statsDict = estatisticas.ToDictionary(e => e.UserId);
+        var acumulado = estatisticas.ToDictionary(
+            e => e.UserId,
+            e => (Visitas: e.NumVisitas, GastoCents: e.GastoCents, Ultima: e.UltimaVisita));
+
+        // ── Vendas avulsas (PDV / MongoDB) ────────────────────────────────────
+        // Só entram as identificadas com cliente cadastrado (UserId != null) — venda
+        // de balcão anônima não é atribuível a ninguém e ficaria de fora de qualquer jeito.
+        if (incluirPdv)
+        {
+            var vendas = (await _vendas.GetRecentAsync(5000, ini)).Where(v => v.UserId.HasValue);
+
+            if (end.HasValue)  vendas = vendas.Where(v => v.SoldAt < end.Value);
+            if (ini.HasValue)  vendas = vendas.Where(v => v.SoldAt >= ini.Value);
+            if (hasPmFilter)
+                vendas = vendas.Where(v =>
+                    v.PaymentMethod == filterPaymentMethod ||
+                    v.SecondPaymentMethod == filterPaymentMethod);
+
+            foreach (var grupo in vendas.GroupBy(v => v.UserId!.Value))
+            {
+                var visitas = grupo.Count();
+                var cents   = grupo.Sum(v => (long)v.TotalInCents);
+                var ultima  = grupo.Max(v => v.SoldAt);
+
+                if (acumulado.TryGetValue(grupo.Key, out var atual))
+                    acumulado[grupo.Key] = (
+                        atual.Visitas + visitas,
+                        atual.GastoCents + cents,
+                        atual.Ultima > ultima ? atual.Ultima : ultima);
+                else
+                    acumulado[grupo.Key] = (visitas, cents, ultima);
+            }
+        }
+
         var insights = usuarios.Select(u =>
         {
-            statsDict.TryGetValue(u.Id, out var stats);
-            var ultima = stats?.UltimaVisita;
+            acumulado.TryGetValue(u.Id, out var stats);
+            var ultima = stats.Ultima;
+            var gasto  = stats.GastoCents / 100m;
             int? pontosVencemEm = u.PointsExpiresAt.HasValue
                 ? (int)Math.Round((u.PointsExpiresAt.Value - DateTime.UtcNow).TotalDays)
                 : null;
@@ -222,10 +287,9 @@ public class AnalyticsController : ControllerBase
                 Nome          = u.Name,
                 Email         = u.Email,
                 WhatsApp      = u.WhatsApp,
-                GastoTotal    = stats?.GastoTotal ?? 0,
-                TicketMedio   = stats is { NumVisitas: > 0 }
-                    ? Math.Round(stats.GastoTotal / stats.NumVisitas, 2) : 0,
-                NumVisitas    = stats?.NumVisitas ?? 0,
+                GastoTotal    = gasto,
+                TicketMedio   = stats.Visitas > 0 ? Math.Round(gasto / stats.Visitas, 2) : 0,
+                NumVisitas    = stats.Visitas,
                 UltimaVisita  = ultima,
                 Inativo30     = ultima == null || ultima < ha30Dias,
                 Pontos        = u.PointsBalance,
@@ -235,6 +299,11 @@ public class AnalyticsController : ControllerBase
         .Where(i => !apenasInativos || i.Inativo30)
         .OrderByDescending(i => i.GastoTotal)
         .ToList();
+
+        // O limite é aplicado depois da ordenação: "Top N por gasto", não "N primeiros
+        // que apareceram". Sem limite, devolve tudo (compatível com quem já chamava).
+        if (limite is > 0)
+            insights = insights.Take(limite.Value).ToList();
 
         return Ok(insights);
     }

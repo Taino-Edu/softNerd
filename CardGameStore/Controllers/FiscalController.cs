@@ -3,6 +3,7 @@
 // operação e exportação de XMLs de NFC-e pro contador.
 // =============================================================================
 
+using CardGameStore.Common;
 using CardGameStore.Data;
 using CardGameStore.Models.MongoDB;
 using CardGameStore.Models.PostgreSQL;
@@ -52,8 +53,11 @@ public class FiscalController : ControllerBase
     {
         var cfg = await GetOrCreateConfigAsync();
 
+        // Cnpj.Normalizar em vez de tirar só a máscara: preserva letras (o CNPJ
+        // alfanumérico da IN RFB 2.229/2024) e normaliza pra maiúsculas, então a
+        // comparação com o titular do certificado bate independente de como foi digitado.
         if (req.Cnpj is not null)
-            cfg.Cnpj = req.Cnpj.Replace(".", "").Replace("/", "").Replace("-", "");
+            cfg.Cnpj = Cnpj.Normalizar(req.Cnpj);
         if (req.RazaoSocial       is not null) cfg.RazaoSocial       = req.RazaoSocial;
         if (req.InscricaoEstadual is not null) cfg.InscricaoEstadual = req.InscricaoEstadual;
         if (req.EmailContador     is not null) cfg.EmailContador     = req.EmailContador;
@@ -78,6 +82,30 @@ public class FiscalController : ControllerBase
             Enum.TryParse<AmbienteFiscal>(req.Ambiente, out var ambiente))
             cfg.Ambiente = ambiente;
 
+        // Revalida a titularidade sempre que o resultado do PUT é Produção e algo que
+        // afeta a comparação mudou (o ambiente ou o CNPJ). Checar só a transição pra
+        // Produção deixava um furo: com Produção já ligada, um PUT trocando só o CNPJ
+        // passava direto e a loja voltava a emitir com certificado de outro titular.
+        if (cfg.Ambiente == AmbienteFiscal.Producao &&
+            (req.Cnpj is not null || req.Ambiente is not null) &&
+            cfg.CertificadoPfxEncrypted is not null)
+        {
+            CertificadoInfo infoCert;
+            try
+            {
+                infoCert = _certificado.Validar(
+                    Convert.FromBase64String(_enc.Decrypt(cfg.CertificadoPfxEncrypted)),
+                    _enc.Decrypt(cfg.CertificadoSenhaEncrypted!));
+            }
+            catch (CertificadoInvalidoException ex)
+            {
+                return BadRequest(new { Message = $"Certificado inválido para Produção: {ex.Message}" });
+            }
+
+            if (VerificarTitularidadeCertificado(infoCert, cfg.Cnpj, AmbienteFiscal.Producao) is { } recusa)
+                return BadRequest(new { Message = recusa });
+        }
+
         if (req.ModoSimulacao.HasValue)
             cfg.ModoSimulacao = req.ModoSimulacao.Value;
 
@@ -97,6 +125,48 @@ public class FiscalController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(ToDto(cfg));
+    }
+
+    /// <summary>
+    /// Confere se o certificado pertence à própria loja. Devolve a mensagem de recusa,
+    /// ou null quando está tudo certo.
+    ///
+    /// Em <b>Produção</b> falha fechada: a única razão da checagem existir é provar
+    /// titularidade, então não conseguir identificar o titular (e-CPF, Subject fora do
+    /// padrão) é recusa, não liberação. Em <b>Homologação</b> segue permissivo — lá a
+    /// nota não tem valor fiscal, e travar quem ainda não preencheu o CNPJ só atrapalha.
+    /// </summary>
+    private static string? VerificarTitularidadeCertificado(
+        CertificadoInfo info, string? cnpjLojaBruto, AmbienteFiscal ambiente)
+    {
+        var cnpjLoja   = Cnpj.Normalizar(cnpjLojaBruto);
+        var emProducao = ambiente == AmbienteFiscal.Producao;
+
+        if (emProducao)
+        {
+            if (cnpjLoja.Length != Cnpj.Tamanho)
+                return "Configure o CNPJ da loja antes de usar o ambiente de Produção.";
+
+            if (info.Cnpj is null)
+                return "Não foi possível identificar o CNPJ do titular no certificado. " +
+                       "Em Produção a nota tem valor fiscal — envie um e-CNPJ A1 da própria loja.";
+
+            if (info.Cnpj != cnpjLoja)
+                return $"O certificado é do CNPJ {Cnpj.Formatar(info.Cnpj)} e a loja emite como " +
+                       $"{Cnpj.Formatar(cnpjLoja)}. Em Produção, emitir com certificado de outra " +
+                       "empresa é uso indevido. Instale o certificado do emitente.";
+
+            return null;
+        }
+
+        // Homologação: só recusa quando dá pra afirmar que são CNPJs diferentes.
+        if (info.Cnpj is not null && cnpjLoja.Length == Cnpj.Tamanho && info.Cnpj != cnpjLoja)
+            return $"O certificado pertence ao CNPJ {Cnpj.Formatar(info.Cnpj)}, mas a loja está " +
+                   $"configurada como {Cnpj.Formatar(cnpjLoja)}. Envie o certificado do próprio " +
+                   "emitente — assinar NFC-e com certificado de outra empresa é uso indevido e a " +
+                   "SEFAZ rejeita a nota.";
+
+        return null;
     }
 
     // ── POST /api/fiscal/certificado — upload do .pfx + senha ────────────────
@@ -124,6 +194,13 @@ public class FiscalController : ControllerBase
         }
 
         var cfg = await GetOrCreateConfigAsync();
+
+        // Titularidade: o certificado assina a NFC-e em nome de quem o emitiu. Se o
+        // titular não for a loja, ou a SEFAZ rejeita, ou — se o CNPJ da loja tiver sido
+        // preenchido com o do dono do certificado — a loja emite nota fiscal real em nome
+        // de terceiro. Barra antes de guardar o .pfx.
+        if (VerificarTitularidadeCertificado(info, cfg.Cnpj, cfg.Ambiente) is { } recusa)
+            return BadRequest(new { Message = recusa });
 
         cfg.CertificadoPfxEncrypted        = _enc.Encrypt(Convert.ToBase64String(pfxBytes));
         cfg.CertificadoSenhaEncrypted      = _enc.Encrypt(senha);
@@ -375,6 +452,13 @@ public class FiscalController : ControllerBase
         {
             var nota = await _emissao.CancelarAsync(id, req.Justificativa);
             return Ok(new { nota.Id, Status = nota.Status.ToString() });
+        }
+        // FiscalNaoConfiguradoException herda de Exception, não de InvalidOperationException
+        // — sem este catch, loja mal configurada (CNPJ inválido, por exemplo) recebia 500
+        // "Erro interno" em vez de saber o que corrigir.
+        catch (FiscalNaoConfiguradoException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {

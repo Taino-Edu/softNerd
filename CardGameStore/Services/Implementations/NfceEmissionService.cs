@@ -41,9 +41,14 @@
 // =============================================================================
 
 using System.Security.Cryptography.X509Certificates;
+using CardGameStore.Common;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
+// Alias em vez de `using CardGameStore.Models.MongoDB` inteiro: esse namespace tem tipos
+// com nome colidindo com os da lib de NF-e (ex.: FormaPagamento), e aqui só interessam
+// as constantes de forma de pagamento.
+using PaymentMethod = CardGameStore.Models.MongoDB.PaymentMethod;
 using DFe.Classes.Entidades;
 using DFe.Classes.Flags;
 using DFe.Utils;
@@ -244,7 +249,7 @@ public class NfceEmissionService : INfceEmissionService
         var retorno = servico.RecepcaoEventoCancelamento(
             idlote: 1, sequenciaEvento: 1,
             protocoloAutorizacao: nota.Protocolo!, chaveNFe: nota.ChaveAcesso!,
-            justificativa: justificativa.Trim(), cpfcnpj: cfg.Cnpj, dhEvento: AgoraBrasil());
+            justificativa: justificativa.Trim(), cpfcnpj: NormalizarCnpjParaSefaz(cfg.Cnpj), dhEvento: AgoraBrasil());
 
         var infEvento = retorno.Retorno?.retEvento?.FirstOrDefault()?.infEvento;
         // 135/136 = evento registrado | 573 = duplicidade de evento (o cancelamento já
@@ -432,7 +437,8 @@ public class NfceEmissionService : INfceEmissionService
 
     internal record ItemFiscal(
         string Nome, string Ncm, string Cfop, string? Csosn, decimal? PercentualCreditoSn,
-        int Quantidade, int PrecoUnitarioCentavos, int SubtotalCentavos);
+        int Quantidade, int PrecoUnitarioCentavos, int SubtotalCentavos,
+        string? Cest = null);
 
     private record DadosEmissao(
         List<ItemFiscal> Itens, string FormaPagamento, string? ClienteCpf,
@@ -484,7 +490,8 @@ public class NfceEmissionService : INfceEmissionService
             PercentualCreditoSn:  item.Product?.NaturezaOperacao?.PercentualCreditoIcmsSn ?? padrao?.PercentualCreditoIcmsSn,
             Quantidade:           item.Quantity,
             PrecoUnitarioCentavos: item.UnitPriceInCents,
-            SubtotalCentavos:     item.SubtotalInCents
+            SubtotalCentavos:     item.SubtotalInCents,
+            Cest:                 item.Product?.Cest
         )).ToList();
 
         return new DadosEmissao(
@@ -538,7 +545,8 @@ public class NfceEmissionService : INfceEmissionService
                 PercentualCreditoSn:  product?.NaturezaOperacao?.PercentualCreditoIcmsSn ?? padrao?.PercentualCreditoIcmsSn,
                 Quantidade:           item.Quantity,
                 PrecoUnitarioCentavos: item.UnitPriceInCents,
-                SubtotalCentavos:     item.SubtotalInCents
+                SubtotalCentavos:     item.SubtotalInCents,
+                Cest:                 product?.Cest
             );
         }).ToList();
 
@@ -708,7 +716,8 @@ public class NfceEmissionService : INfceEmissionService
         // trocar pra teOffLine aqui quando a retransmissão é de uma nota que já entrou
         // em contingência (senão o lookup de URL do webservice usa o tipo errado).
         cfgServico.tpEmis = tpEmis;
-        var chave  = ChaveFiscal.ObterChave(estado, dhEmi, cfg.Cnpj, ModeloDocumento.NFCe, cfg.SerieNfce, numero, (int)tpEmis, cNf);
+        var cnpjEmitente = NormalizarCnpjParaSefaz(cfg.Cnpj);
+        var chave  = ChaveFiscal.ObterChave(estado, dhEmi, cnpjEmitente, ModeloDocumento.NFCe, cfg.SerieNfce, numero, (int)tpEmis, cNf);
 
         var municipioIbge = long.Parse(cfg.CodigoMunicipioIbge!);
         // vProd = valor BRUTO dos itens (soma dos subtotais, sem desconto/pontos) — é o
@@ -750,7 +759,7 @@ public class NfceEmissionService : INfceEmissionService
                 },
                 emit = new emit
                 {
-                    CNPJ  = cfg.Cnpj,
+                    CNPJ  = cnpjEmitente,
                     xNome = cfg.RazaoSocial,
                     // A IE usa o tipo TIE no XSD: somente dígitos. O formato
                     // comum da tela, "405.112.760.115", fazia o lote inteiro cair no cStat 225.
@@ -1054,7 +1063,9 @@ public class NfceEmissionService : INfceEmissionService
         var dhEmi  = ParaBrasil(nota.CreatedAt);
         var cNf    = jaEmContingencia ? nota.CnfContingencia!.Value : Random.Shared.Next(10_000_000, 99_999_999);
         var estado = Enum.Parse<Estado>(cfg.Uf);
-        var chave  = ChaveFiscal.ObterChave(estado, dhEmi, cfg.Cnpj, ModeloDocumento.NFCe, cfg.SerieNfce, numero, (int)TipoEmissao.teNormal, cNf);
+        // Mesma fronteira da emissão real: a simulação tem que reprovar o CNPJ inválido
+        // aqui, senão o lojista só descobre o problema no primeiro contato com a SEFAZ.
+        var chave  = ChaveFiscal.ObterChave(estado, dhEmi, NormalizarCnpjParaSefaz(cfg.Cnpj), ModeloDocumento.NFCe, cfg.SerieNfce, numero, (int)TipoEmissao.teNormal, cNf);
 
         nota.Serie          = cfg.SerieNfce;
         nota.Numero         = numero;
@@ -1081,7 +1092,7 @@ public class NfceEmissionService : INfceEmissionService
         var justificativa = $"Numero da NFCe {nota.Id} rejeitado pela SEFAZ, inutilizado automaticamente.";
         // O ano precisa ser o mesmo usado no dhEmi/chave desta tentativa. Isso importa
         // quando uma venda pendente de dezembro é reprocessada online em janeiro.
-        var retorno = servico.NfeInutilizacao(cfg.Cnpj, anoEmissao, ModeloDocumento.NFCe, cfg.SerieNfce, numero, numero, justificativa);
+        var retorno = servico.NfeInutilizacao(NormalizarCnpjParaSefaz(cfg.Cnpj), anoEmissao, ModeloDocumento.NFCe, cfg.SerieNfce, numero, numero, justificativa);
 
         var infInut = retorno.Retorno?.infInut;
         if (infInut is not null && infInut.cStat == 102)
@@ -1106,16 +1117,49 @@ public class NfceEmissionService : INfceEmissionService
     private static List<detPag> MontarDetPag(DadosEmissao dados, decimal valorTotal)
     {
         if (string.IsNullOrWhiteSpace(dados.SegundaFormaPagamento) || dados.SegundoValorCentavos <= 0)
-            return new List<detPag> { new detPag { tPag = MapFormaPagamento(dados.FormaPagamento), vPag = valorTotal } };
+            return new List<detPag> { MontarDetPagUnico(dados.FormaPagamento, valorTotal) };
 
         var valorSegundo  = dados.SegundoValorCentavos / 100m;
         var valorPrimeiro = valorTotal - valorSegundo;
         return new List<detPag>
         {
-            new detPag { tPag = MapFormaPagamento(dados.FormaPagamento), vPag = valorPrimeiro },
-            new detPag { tPag = MapFormaPagamento(dados.SegundaFormaPagamento), vPag = valorSegundo },
+            MontarDetPagUnico(dados.FormaPagamento,        valorPrimeiro),
+            MontarDetPagUnico(dados.SegundaFormaPagamento, valorSegundo),
         };
     }
+
+    /// <summary>
+    /// Monta um detPag. Para cartão de crédito/débito E Pix, a SEFAZ exige o grupo `card`
+    /// (rejeição observada em homologação: "Não informados os dados do cartão de
+    /// crédito/débito" — a mesma rejeição aparece pra Pix, não só cartão; a validação
+    /// da SEFAZ trata todo pagamento eletrônico igual, não só tPag 03/04). O sistema
+    /// não integra com maquininha/TEF nem gateway de Pix — não há CNPJ da credenciadora,
+    /// bandeira nem autorização pra informar — então o grupo é enviado só com
+    /// `tpIntegra = Não integrado`, que é o mínimo aceito pela SEFAZ nesse caso.
+    ///
+    /// Crediário, Pontos e Cashback não têm código próprio no layout da NFC-e — caem
+    /// em tPag=99 ("Outros"), e a SEFAZ rejeita esse código sem uma descrição em xPag
+    /// (rejeição observada em produção: "Descrição do pagamento obrigatória para meio
+    /// de pagamento 99-outros").
+    /// </summary>
+    private static detPag MontarDetPagUnico(string formaPagamento, decimal valor)
+    {
+        var tPag = MapFormaPagamento(formaPagamento);
+        var pag  = new detPag { tPag = tPag, vPag = valor };
+        if (formaPagamento is PaymentMethod.CartaoCredito or PaymentMethod.CartaoDebito or PaymentMethod.Pix)
+            pag.card = new card { tpIntegra = TipoIntegracaoPagamento.TipNaoIntegrado };
+        if (tPag == FormaPagamento.fpOutro)
+            pag.xPag = DescricaoFormaPagamentoOutro(formaPagamento);
+        return pag;
+    }
+
+    private static string DescricaoFormaPagamentoOutro(string formaPagamento) => formaPagamento switch
+    {
+        PaymentMethod.Crediario => "Crediário próprio da loja",
+        PaymentMethod.Pontos    => "Resgate de pontos de fidelidade",
+        PaymentMethod.Cashback  => "Cashback (saldo da loja)",
+        _                       => formaPagamento,
+    };
 
     internal static det MontarItem(ItemFiscal item, int numero, bool incluirIbsCbs = false) => new()
     {
@@ -1127,6 +1171,7 @@ public class NfceEmissionService : INfceEmissionService
             cEANTrib   = "SEM GTIN",
             xProd      = item.Nome,
             NCM        = item.Ncm,
+            CEST       = SanitizarCest(item.Cest, CsosnExigeCest(item.Csosn)),
             CFOP       = ParseCfop(item.Cfop),
             uCom       = "UN",
             qCom       = item.Quantidade,
@@ -1279,6 +1324,48 @@ public class NfceEmissionService : INfceEmissionService
                 "Corrija em Admin > Fiscal > Naturezas de Operação.");
         return valor;
     }
+
+    /// <summary>
+    /// Adaptador de fronteira para o identificador do estabelecimento. Toda dependência
+    /// do formato exigido pela SEFAZ fica concentrada aqui.
+    ///
+    /// Aceita os dois modelos de CNPJ: o numérico de sempre e o alfanumérico que a
+    /// Receita passou a emitir (IN RFB 2.229/2024), com o ambiente nacional de NF-e/NFC-e
+    /// recebendo documentos nesse formato desde 01/07/2026 (NT 2026.004). Confere também
+    /// o dígito verificador — antes qualquer sequência de 14 dígitos seguia pra SEFAZ e
+    /// só voltava como rejeição, sem dizer ao lojista o que corrigir.
+    /// </summary>
+    internal static string NormalizarCnpjParaSefaz(string? identificadorAtual)
+    {
+        var cnpj = Cnpj.Normalizar(identificadorAtual);
+        if (!Cnpj.EhValido(cnpj))
+            throw new FiscalNaoConfiguradoException(
+                "O CNPJ da loja não é válido para a SEFAZ. Informe as 14 posições do CNPJ " +
+                "(numérico ou alfanumérico) em Admin > Fiscal.");
+        return cnpj;
+    }
+
+    /// <summary>
+    /// Sanitiza o CEST do cadastro: tira pontuação ("28.064.00" → "2806400") e valida
+    /// os 7 dígitos. Campo opcional na maioria das operações, mas obrigatório quando o
+    /// CSOSN indica substituição tributária — nesse caso a SEFAZ rejeita a nota sem ele.
+    /// </summary>
+    internal static string? SanitizarCest(string? cest, bool obrigatorio)
+    {
+        var digitos = new string((cest ?? string.Empty).Where(char.IsDigit).ToArray());
+        if (digitos.Length == 0 && !obrigatorio) return null;
+        if (digitos.Length != 7)
+            throw new FiscalNaoConfiguradoException(
+                obrigatorio
+                    ? "CEST obrigatório para produto sujeito a ICMS-ST. Informe exatamente 7 dígitos " +
+                      "no cadastro do produto (Admin > Estoque)."
+                    : $"CEST \"{cest}\" inválido. Informe exatamente 7 dígitos ou deixe o campo vazio.");
+        return digitos;
+    }
+
+    /// <summary>CSOSNs de substituição tributária — nesses a SEFAZ exige CEST no item.</summary>
+    private static bool CsosnExigeCest(string? csosn) =>
+        csosn is "201" or "202" or "203" or "500";
 
     /// <summary>
     /// Pontos/Cashback/Crediário não são formas de pagamento reconhecidas pela SEFAZ —
