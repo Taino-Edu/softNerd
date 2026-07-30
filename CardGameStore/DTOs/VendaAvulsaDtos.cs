@@ -73,6 +73,11 @@ public class VendaAvulsaDto
 {
     public string              Id                         { get; set; } = string.Empty;
     public string?             ClientName                 { get; set; }
+
+    /// <summary>Cliente cadastrado vinculado à venda, quando houve identificação no PDV.
+    /// Null em venda de balcão anônima. Usado pelo Top Clientes pra somar o gasto do PDV
+    /// ao das comandas — sem isso a venda avulsa não é atribuível a ninguém.</summary>
+    public Guid?               UserId                     { get; set; }
     public string              PaymentMethod              { get; set; } = string.Empty;
     public string?             SecondPaymentMethod        { get; set; }
     public int                 SecondPaymentAmountInCents { get; set; }
@@ -91,6 +96,17 @@ public class VendaAvulsaDto
     public Guid?   NotaFiscalId             { get; set; }
     public string? NotaFiscalStatus         { get; set; }
     public string? NotaFiscalMotivoRejeicao { get; set; }
+}
+
+/// <summary>Totais de PDV de um cliente dentro do recorte pedido (período + forma).</summary>
+public class VendaAvulsaClienteAgregadoDto
+{
+    public Guid     UserId       { get; set; }
+    public int      Compras      { get; set; }
+    /// <summary>Já com o split alocado: numa venda filtrada por forma, entra só a parte
+    /// paga naquela forma, não o total da venda.</summary>
+    public long     GastoCents   { get; set; }
+    public DateTime UltimaCompra { get; set; }
 }
 
 public class EditarPagamentoVendaAvulsaRequest

@@ -183,36 +183,114 @@ public class AnalyticsController : ControllerBase
 
     // -------------------------------------------------------------------------
     // GET /api/analytics/clientes
-    // Insights por cliente: gasto, ticket médio, inatividade
+    // Insights por cliente: gasto, ticket médio, inatividade.
+    //
+    // Filtros (todos opcionais — sem nenhum, o comportamento é o histórico:
+    // tudo desde sempre, só comandas, lista inteira):
+    //   inicio/fim           — recorta gasto/visitas ao período (datas de Brasília)
+    //   incluirPdv           — soma também as vendas avulsas identificadas com o cliente
+    //   filterPaymentMethod  — só o que foi pago naquela forma (1ª ou 2ª)
+    //   limite               — corta em N clientes DEPOIS de ordenar por gasto
+    //
+    // `Inativo30` continua ancorado em "hoje", não no fim do período: ele responde
+    // "sumiu?", que é sobre o presente, não sobre a janela que o admin escolheu olhar.
     // -------------------------------------------------------------------------
     [HttpGet("clientes")]
     public async Task<ActionResult<List<ClienteInsightDto>>> GetClienteInsights(
-        [FromQuery] bool apenasInativos = false)
+        [FromQuery] bool      apenasInativos      = false,
+        [FromQuery] DateTime? inicio              = null,
+        [FromQuery] DateTime? fim                 = null,
+        [FromQuery] bool      incluirPdv          = false,
+        [FromQuery] string?   filterPaymentMethod = null,
+        [FromQuery] int?      limite              = null)
     {
-        var ha30Dias = DateTime.UtcNow.AddDays(-30);
+        var ha30Dias    = DateTime.UtcNow.AddDays(-30);
+        var hasPmFilter = !string.IsNullOrWhiteSpace(filterPaymentMethod);
+
+        // Período: mesma convenção da tela financeira — data de Brasília convertida
+        // pro início do dia em UTC, `fim` inclusivo (soma 1 dia e usa `<`).
+        DateTime? ini = inicio.HasValue ? BrDateToUtcStart(inicio.Value.Date)            : null;
+        DateTime? end = fim.HasValue    ? BrDateToUtcStart(fim.Value.Date.AddDays(1))    : null;
 
         var usuarios = await _db.Users
             .Where(u => u.IsActive && u.Role == UserRole.Customer)
             .Select(u => new { u.Id, u.Name, u.Email, u.WhatsApp, u.PointsBalance, u.PointsExpiresAt })
             .ToListAsync();
 
-        var estatisticas = await _db.Comandas
-            .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null)
-            .GroupBy(c => c.UserId)
-            .Select(g => new
-            {
-                UserId       = g.Key,
-                NumVisitas   = g.Count(),
-                GastoTotal   = g.Sum(c => c.TotalInCents) / 100m,
-                UltimaVisita = (DateTime?)g.Max(c => c.ClosedAt),
-            })
-            .ToListAsync();
+        // ── Comandas do período ───────────────────────────────────────────────
+        IQueryable<Comanda> comandasQ = _db.Comandas
+            .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null);
 
-        var statsDict = estatisticas.ToDictionary(e => e.UserId);
+        if (ini.HasValue) comandasQ = comandasQ.Where(c => c.ClosedAt >= ini.Value);
+        if (end.HasValue) comandasQ = comandasQ.Where(c => c.ClosedAt <  end.Value);
+        if (hasPmFilter)
+            comandasQ = comandasQ.Where(c =>
+                c.PaymentMethod == filterPaymentMethod ||
+                c.SecondPaymentMethod == filterPaymentMethod);
+
+        // Com filtro de forma, uma comanda dividida (ex: R$ 80 cartão + R$ 20 Pix) entra
+        // pelos dois lados do OR acima — somar o total inteiro faria ela aparecer cheia
+        // nos dois rankings. Aqui entra só a parte paga na forma filtrada.
+        var estatisticas = hasPmFilter
+            ? await comandasQ
+                .GroupBy(c => c.UserId)
+                .Select(g => new AgregadoCliente
+                {
+                    UserId     = g.Key,
+                    Visitas    = g.Count(),
+                    GastoCents = g.Sum(c =>
+                        (c.PaymentMethod == filterPaymentMethod
+                            ? (long)c.TotalInCents - c.SecondPaymentAmountInCents : 0L) +
+                        (c.SecondPaymentMethod == filterPaymentMethod
+                            ? (long)c.SecondPaymentAmountInCents : 0L)),
+                })
+                .ToListAsync()
+            : await comandasQ
+                .GroupBy(c => c.UserId)
+                .Select(g => new AgregadoCliente
+                {
+                    UserId     = g.Key,
+                    Visitas    = g.Count(),
+                    GastoCents = g.Sum(c => (long)c.TotalInCents),
+                })
+                .ToListAsync();
+
+        var acumulado = estatisticas.ToDictionary(
+            e => e.UserId,
+            e => (Visitas: e.Visitas, GastoCents: e.GastoCents));
+
+        // ── Vendas avulsas do período (PDV / MongoDB) ─────────────────────────
+        if (incluirPdv)
+        {
+            foreach (var pdv in await _vendas.AgregarPorClienteAsync(ini, end, filterPaymentMethod))
+            {
+                acumulado.TryGetValue(pdv.UserId, out var atual);
+                acumulado[pdv.UserId] = (atual.Visitas + pdv.Compras, atual.GastoCents + pdv.GastoCents);
+            }
+        }
+
+        // ── Última compra, SEM recorte de período ─────────────────────────────
+        // "Inativo" responde "sumiu?", que é sobre hoje — não sobre a janela que o admin
+        // escolheu olhar. Derivar isso das comandas já filtradas marcaria como inativo
+        // todo mundo que aparece ao consultar, por exemplo, janeiro. Também ignora o
+        // filtro de forma e o toggle de PDV: quem comprou no balcão ontem não sumiu,
+        // independente de como o ranking está recortado.
+        var ultimaVisita = (await _db.Comandas
+                .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null)
+                .GroupBy(c => c.UserId)
+                .Select(g => new { UserId = g.Key, Ultima = g.Max(c => c.ClosedAt)!.Value })
+                .ToListAsync())
+            .ToDictionary(x => x.UserId, x => x.Ultima);
+
+        foreach (var (userId, ultimaPdv) in await _vendas.UltimaVendaPorClienteAsync())
+            if (!ultimaVisita.TryGetValue(userId, out var atual) || ultimaPdv > atual)
+                ultimaVisita[userId] = ultimaPdv;
+
         var insights = usuarios.Select(u =>
         {
-            statsDict.TryGetValue(u.Id, out var stats);
-            var ultima = stats?.UltimaVisita;
+            acumulado.TryGetValue(u.Id, out var stats);
+            DateTime? ultima = ultimaVisita.TryGetValue(u.Id, out var dt) ? dt : null;
+            var gasto = stats.GastoCents / 100m;
             int? pontosVencemEm = u.PointsExpiresAt.HasValue
                 ? (int)Math.Round((u.PointsExpiresAt.Value - DateTime.UtcNow).TotalDays)
                 : null;
@@ -222,10 +300,9 @@ public class AnalyticsController : ControllerBase
                 Nome          = u.Name,
                 Email         = u.Email,
                 WhatsApp      = u.WhatsApp,
-                GastoTotal    = stats?.GastoTotal ?? 0,
-                TicketMedio   = stats is { NumVisitas: > 0 }
-                    ? Math.Round(stats.GastoTotal / stats.NumVisitas, 2) : 0,
-                NumVisitas    = stats?.NumVisitas ?? 0,
+                GastoTotal    = gasto,
+                TicketMedio   = stats.Visitas > 0 ? Math.Round(gasto / stats.Visitas, 2) : 0,
+                NumVisitas    = stats.Visitas,
                 UltimaVisita  = ultima,
                 Inativo30     = ultima == null || ultima < ha30Dias,
                 Pontos        = u.PointsBalance,
@@ -236,7 +313,21 @@ public class AnalyticsController : ControllerBase
         .OrderByDescending(i => i.GastoTotal)
         .ToList();
 
+        // O limite é aplicado depois da ordenação: "Top N por gasto", não "N primeiros
+        // que apareceram". Sem limite, devolve tudo (compatível com quem já chamava).
+        if (limite is > 0)
+            insights = insights.Take(limite.Value).ToList();
+
         return Ok(insights);
+    }
+
+    /// <summary>Tipo nomeado (e não anônimo) porque as duas variantes da query de comandas
+    /// — com e sem filtro de forma de pagamento — precisam ter o mesmo tipo de retorno.</summary>
+    private sealed class AgregadoCliente
+    {
+        public Guid UserId     { get; set; }
+        public int  Visitas    { get; set; }
+        public long GastoCents { get; set; }
     }
 
     // -------------------------------------------------------------------------

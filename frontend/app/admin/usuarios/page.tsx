@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { userApi, crediarioApi, analyticsApi, perfisApi, CrediariosDto, UserSummary, PerfilDto, ClienteInsightDto, ClienteHistoricoDto, PAYMENT_METHODS } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wallet, Minus, UserPlus, KeyRound, X, UserX, History, ShoppingBag, ShoppingCart, Trophy, ChevronDown, ChevronUp, ChevronLeft, TrendingUp, UserCog, Shield, Pencil } from 'lucide-react'
+import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wallet, Minus, UserPlus, KeyRound, X, UserX, History, ShoppingBag, ShoppingCart, Trophy, ChevronDown, ChevronUp, ChevronLeft, TrendingUp, UserCog, Shield, Pencil, BarChart2 } from 'lucide-react'
 import Link from 'next/link'
 import { Badge, BadgeTone } from '@/components/ui/Badge'
 
@@ -898,9 +898,14 @@ export default function UsuariosPage() {
         </div>
         <div className="flex gap-2">
           {tabSection === 'clientes' && (
-            <button onClick={() => setShowNovoCliente(true)} className="btn-primary whitespace-nowrap">
-              <UserPlus className="w-4 h-4" /> Novo Cliente
-            </button>
+            <>
+              <Link href="/admin/clientes/analises" className="btn-secondary whitespace-nowrap">
+                <BarChart2 className="w-4 h-4" /> Análises
+              </Link>
+              <button onClick={() => setShowNovoCliente(true)} className="btn-primary whitespace-nowrap">
+                <UserPlus className="w-4 h-4" /> Novo Cliente
+              </button>
+            </>
           )}
           {tabSection === 'operadores' && (
             <button onClick={() => setShowNovoOperador(true)} className="btn-primary whitespace-nowrap">
@@ -980,7 +985,10 @@ export default function UsuariosPage() {
       {tabSection === 'clientes' && <div className="flex flex-col md:flex-row gap-4 sm:gap-6 md:h-[calc(100vh-280px)]">
 
         {/* ── Lista de clientes ──────────────────────────────────────────────── */}
-        <div className={`flex-1 flex flex-col min-w-0 ${showMobileDetail ? 'hidden md:flex' : ''}`}>
+        {/* No mobile a lista some pra dar lugar ao detalhe — mas só quando existe
+            detalhe pra mostrar. Ancorar em `selected` (e não só em showMobileDetail)
+            evita a tela branca quando a seleção é limpa de fora, ex.: anonimização LGPD. */}
+        <div className={`flex-1 flex flex-col min-w-0 ${showMobileDetail && selected ? 'hidden md:flex' : ''}`}>
 
           {/* Tabs + Busca */}
           <div className="flex items-center gap-3 mb-4">
@@ -1103,7 +1111,12 @@ export default function UsuariosPage() {
           )}
         </div>
 
-        {/* ── Painel de pontos ──────────────────────────────────────────────── */}
+        {/* ── Painel de pontos ──────────────────────────────────────────────────
+            Só é montado quando há cliente selecionado. Antes ele renderizava sempre,
+            com um placeholder "Selecione um cliente" ocupando os 320px fixos — em
+            tablet isso espremia a lista e as linhas saíam do padrão. Sem seleção,
+            a lista agora usa a largura toda. */}
+        {selected && (
         <div className={`${showMobileDetail ? '' : 'hidden md:block'} w-full md:w-80 md:shrink-0`}>
           <div className="md:hidden mb-3">
             <button
@@ -1113,13 +1126,7 @@ export default function UsuariosPage() {
               <ChevronLeft className="w-4 h-4" /> Voltar para lista
             </button>
           </div>
-          {!selected ? (
-            <div className="card h-full flex flex-col items-center justify-center text-gray-400 gap-3">
-              <Star className="w-10 h-10" />
-              <p className="text-sm text-center">Selecione um cliente<br />para gerenciar pontos Maikon e cashback</p>
-            </div>
-          ) : (
-            <div className="card space-y-5">
+          <div className="card space-y-5">
               {/* Dados do cliente */}
               <div>
                 <div className="flex items-center gap-3 mb-3">
@@ -1285,9 +1292,9 @@ export default function UsuariosPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
         </div>
+        )}
       </div>}
     </div>
   )

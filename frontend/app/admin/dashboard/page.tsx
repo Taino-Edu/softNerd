@@ -1,18 +1,22 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, fiscalApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, ClienteInsightDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
+import { comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, fiscalApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
 import { usePreferences } from '@/hooks/usePreferences'
 import { startHub, stopHub, ComandaUpdatedEvent } from '@/lib/signalr'
 import { playGoalSound } from '@/lib/sounds'
 import { tocarSom, notificarBrowser, pedirPermissaoNotificacao, incrementBadge, clearBadge } from '@/lib/notificacoes'
 import CameraScanner from '@/components/CameraScanner'
 import { CobrancaPixModal } from '@/components/admin/CobrancaPixModal'
+import {
+  useTopClientes, TopClientesFilterBar, TopClientesList,
+  DEFAULT_TOP_CLIENTES, TopClientesState,
+} from '@/components/admin/TopClientes'
 import toast from 'react-hot-toast'
 import {
   Wifi, WifiOff, RefreshCw, Users, TrendingUp,
   Clock, CheckCircle, XCircle, Plus, ChevronDown, ChevronUp,
   History, Search, Loader2, TableProperties, Trash2, CreditCard, ScanBarcode, Camera,
-  AlertTriangle, DollarSign, BarChart2, Trophy, Medal, Star, FolderOpen, Package, Shield, MessageCircle,
+  AlertTriangle, DollarSign, BarChart2, Trophy, Star, FolderOpen, Package, Shield, MessageCircle,
   Pencil, X, UserSearch, QrCode, Receipt,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -1613,7 +1617,10 @@ export default function DashboardPage() {
   const [lowStock, setLowStock]   = useState(0)
   const [unreadNotif, setUnreadNotif] = useState(0)
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [ranking, setRanking]     = useState<ClienteInsightDto[]>([])
+  // Top Clientes: filtro próprio do painel (período/forma/PDV), com limite fixo em 5 —
+  // o card é um resumo; a lista completa e o seletor de Top N ficam em /admin/clientes/analises.
+  const [filtroClientes, setFiltroClientes] = useState<TopClientesState>({ ...DEFAULT_TOP_CLIENTES, limite: 5 })
+  const ranking = useTopClientes(filtroClientes)
   const [allUsers, setAllUsers]   = useState<UserSummary[]>([])
   const [openModal, setOpenModal] = useState(false)
   const [finOpen, setFinOpen] = useState(false)
@@ -1695,7 +1702,6 @@ export default function DashboardPage() {
       setLowStock(prods.filter(p => p.isLowStock).length)
       setAllProducts(prods)
     }).catch(() => {})
-    analyticsApi.clientes().then(r => setRanking(r.data.filter(c => c.gastoTotal > 0).slice(0, 5))).catch(() => {})
     championshipApi.list().then(r => {
       const total = r.data.reduce((s, c) => s + (c.preInscricaoCount ?? 0), 0)
       setPendingPI(total)
@@ -2501,52 +2507,19 @@ export default function DashboardPage() {
                     </h3>
                     {panelClientes ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                   </button>
-                  <a href="/admin/usuarios" className="text-xs text-brand-400 hover:text-brand-300 transition-colors ml-3">Ver todos →</a>
+                  <a href="/admin/clientes/analises" className="text-xs text-brand-400 hover:text-brand-300 transition-colors ml-3">Ver todos →</a>
                 </div>
-                {panelClientes && (ranking.length === 0 ? (
-                  <p className="text-xs text-gray-500 py-4 text-center">Nenhuma compra registrada ainda</p>
-                ) : (
-                  <div className="space-y-2 mt-3">
-                    {ranking.map((c, i) => {
-                      const medalColor = i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-gray-400'
-                      const MedalIcon  = i === 0 ? Star : i <= 2 ? Medal : Trophy
-                      return (
-                        <div key={c.userId} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-surface-800 hover:bg-surface-700 transition-colors">
-                          <MedalIcon className={clsx('w-4 h-4 shrink-0', medalColor)} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{c.nome}</p>
-                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                              <span className="text-xs text-gray-500">{c.numVisitas} visita{c.numVisitas !== 1 ? 's' : ''} · {fmt(c.ticketMedio)}/visita</span>
-                              {c.inativo30 && (
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">inativo</span>
-                              )}
-                              {c.pontosVencemEm !== null && c.pontos > 0 && c.pontosVencemEm <= 14 && (
-                                <span className={clsx('text-[10px] font-medium px-1.5 py-0.5 rounded-full border',
-                                  c.pontosVencemEm < 0 ? 'bg-red-500/15 text-red-400 border-red-500/20' : 'bg-orange-500/15 text-orange-400 border-orange-500/20'
-                                )}>
-                                  {c.pontosVencemEm < 0 ? `${c.pontos}pts vencidos` : `${c.pontos}pts vencem em ${c.pontosVencemEm}d`}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <p className="text-sm font-bold text-accent-gold font-mono">{fmt(c.gastoTotal)}</p>
-                            {c.whatsApp && (
-                              <a href={`https://wa.me/${c.whatsApp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                                onClick={e => e.stopPropagation()}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors"
-                                title={`WhatsApp: ${c.whatsApp}`}>
-                                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
-                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                                </svg>
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+                {panelClientes && (
+                  <div className="mt-3 space-y-3">
+                    <TopClientesFilterBar state={filtroClientes} onChange={setFiltroClientes} compact />
+                    <TopClientesList
+                      data={ranking.data}
+                      loading={ranking.loading}
+                      erro={ranking.erro}
+                      incluiPdv={filtroClientes.incluirPdv}
+                    />
                   </div>
-                ))}
+                )}
               </div>
             )}
 

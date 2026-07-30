@@ -20,6 +20,22 @@ public interface IVendaAvulsaService
     Task<IEnumerable<VendaAvulsaDto>> GetByUserAsync(Guid userId);
 
     /// <summary>
+    /// Agrega, por cliente identificado, as vendas do período/forma de pagamento pedidos.
+    /// Todos os predicados vão pro MongoDB — não usar <see cref="GetRecentAsync"/> pra isso:
+    /// ele corta nas N mais recentes ANTES de filtrar, o que faz o ranking perder histórico
+    /// silenciosamente assim que a coleção passa do limite.
+    /// Vendas de balcão anônimas (UserId nulo) ficam de fora.
+    /// </summary>
+    Task<IReadOnlyList<VendaAvulsaClienteAgregadoDto>> AgregarPorClienteAsync(
+        DateTime? inicio, DateTime? fim, string? formaPagamento);
+
+    /// <summary>
+    /// Data da última venda de cada cliente identificado, sem recorte de período —
+    /// usado pra decidir inatividade, que é sempre relativa a hoje.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, DateTime>> UltimaVendaPorClienteAsync();
+
+    /// <summary>
     /// Preenche UnitCostInCents=0 em itens de vendas avulsas usando o custo atual do produto no PostgreSQL.
     /// Retorna quantos itens foram atualizados.
     /// </summary>

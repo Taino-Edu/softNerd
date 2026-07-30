@@ -28,6 +28,7 @@ const sections = [
     label: 'Gestão & Loja',
     items: [
       { href: '/admin/usuarios',    label: 'Clientes',     icon: Users,       perm: 'usuarios' },
+      { href: '/admin/clientes/analises', label: 'Análises de Clientes', icon: BarChart2, perm: 'usuarios' },
       { href: '/admin/crediario',   label: 'Crediário',    icon: CreditCard,  perm: 'crediario' },
       { href: '/admin/estoque',     label: 'Estoque',      icon: Package,     perm: 'estoque' },
       { href: '/admin/financeiro',      label: 'Financeiro',        icon: TrendingUp,    perm: 'financeiro' },

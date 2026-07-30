@@ -472,6 +472,84 @@ public class VendaAvulsaService : IVendaAvulsaService
         return vendas.Select(MapToDto);
     }
 
+    public async Task<IReadOnlyList<VendaAvulsaClienteAgregadoDto>> AgregarPorClienteAsync(
+        DateTime? inicio, DateTime? fim, string? formaPagamento)
+    {
+        var f = Builders<VendaAvulsa>.Filter;
+        var condicoes = new List<FilterDefinition<VendaAvulsa>>
+        {
+            f.Ne(v => v.UserId, null),
+        };
+
+        if (inicio.HasValue) condicoes.Add(f.Gte(v => v.SoldAt, inicio.Value));
+        if (fim.HasValue)    condicoes.Add(f.Lt (v => v.SoldAt, fim.Value));
+
+        var temFiltroForma = !string.IsNullOrWhiteSpace(formaPagamento);
+        if (temFiltroForma)
+            condicoes.Add(f.Or(
+                f.Eq(v => v.PaymentMethod,       formaPagamento),
+                f.Eq(v => v.SecondPaymentMethod, formaPagamento)));
+
+        // Sem Limit: o recorte todo já está no filtro, então o que volta é só o que
+        // realmente entra na conta. A projeção mantém o tráfego baixo — os itens da
+        // venda, que são a parte pesada do documento, ficam de fora.
+        var vendas = await _collection
+            .Find(f.And(condicoes))
+            .Project(v => new
+            {
+                v.UserId,
+                v.SoldAt,
+                v.TotalInCents,
+                v.PaymentMethod,
+                v.SecondPaymentMethod,
+                v.SecondPaymentAmountInCents,
+            })
+            .ToListAsync();
+
+        return vendas
+            .GroupBy(v => v.UserId!.Value)
+            .Select(g => new VendaAvulsaClienteAgregadoDto
+            {
+                UserId       = g.Key,
+                Compras      = g.Count(),
+                GastoCents   = g.Sum(v => ValorNaForma(
+                    v.PaymentMethod, v.SecondPaymentMethod,
+                    v.TotalInCents, v.SecondPaymentAmountInCents,
+                    temFiltroForma ? formaPagamento : null)),
+                UltimaCompra = g.Max(v => v.SoldAt),
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Quanto de uma venda foi pago na forma filtrada. Sem filtro, é o total.
+    /// Numa venda dividida (R$ 80 cartão + R$ 20 Pix), filtrar por Pix tem que somar
+    /// R$ 20 — atribuir o total inteiro faria a mesma venda aparecer cheia nos dois
+    /// filtros e inflar o ranking.
+    /// </summary>
+    internal static long ValorNaForma(
+        string? forma, string? segundaForma, int totalCents, int segundoValorCents, string? filtro)
+    {
+        if (string.IsNullOrWhiteSpace(filtro)) return totalCents;
+
+        long valor = 0;
+        if (forma == filtro)        valor += totalCents - segundoValorCents;
+        if (segundaForma == filtro) valor += segundoValorCents;
+        return valor;
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, DateTime>> UltimaVendaPorClienteAsync()
+    {
+        var vendas = await _collection
+            .Find(Builders<VendaAvulsa>.Filter.Ne(v => v.UserId, null))
+            .Project(v => new { v.UserId, v.SoldAt })
+            .ToListAsync();
+
+        return vendas
+            .GroupBy(v => v.UserId!.Value)
+            .ToDictionary(g => g.Key, g => g.Max(v => v.SoldAt));
+    }
+
     public async Task<int> BackfillCostsAsync()
     {
         // Carrega todos os produtos com custo > 0 de uma vez para evitar N queries
@@ -560,6 +638,7 @@ public class VendaAvulsaService : IVendaAvulsaService
     {
         Id                         = v.Id,
         ClientName                 = v.ClientName,
+        UserId                     = v.UserId,
         PaymentMethod              = v.PaymentMethod,
         SecondPaymentMethod        = v.SecondPaymentMethod,
         SecondPaymentAmountInCents = v.SecondPaymentAmountInCents,

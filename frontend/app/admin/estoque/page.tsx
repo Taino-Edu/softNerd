@@ -486,8 +486,32 @@ function ProductModal({
     }
   }
 
+  // A natureza escolhida (ou a padrão) decide se o CEST é obrigatório: nos CSOSNs de
+  // substituição tributária a SEFAZ rejeita a NFC-e sem ele.
+  const naturezaSelecionada = form.naturezaOperacaoId
+    ? naturezas.find(n => n.id === form.naturezaOperacaoId)
+    : naturezas.find(n => n.isPadrao)
+  const cestObrigatorio = ['201', '202', '203', '500'].includes(naturezaSelecionada?.csosn ?? '')
+  const ncmIncompleto   = (form.ncm?.length  ?? 0) > 0 && form.ncm!.length  < 8
+  const cestIncompleto  = (form.cest?.length ?? 0) > 0 && form.cest!.length < 7
+
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setSaving(true)
+    e.preventDefault()
+    // Validação em JS em vez de `required` no input: barra aqui com uma mensagem
+    // clara em vez de mandar pro backend e voltar com 400.
+    if (ncmIncompleto) {
+      toast.error(`NCM precisa de 8 dígitos — você digitou ${form.ncm!.length}. Ex.: 1905.90.90 é 19059090.`)
+      return
+    }
+    if (cestObrigatorio && !form.cest) {
+      toast.error(`CEST é obrigatório para o CSOSN ${naturezaSelecionada?.csosn} (substituição tributária).`)
+      return
+    }
+    if (cestIncompleto) {
+      toast.error(`CEST precisa de 7 dígitos — você digitou ${form.cest!.length}.`)
+      return
+    }
+    setSaving(true)
     try { await onSave(form) } finally { setSaving(false) }
   }
 
@@ -562,11 +586,40 @@ function ProductModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">NCM</label>
-              <input className="input" value={form.ncm ?? ''}
+              {/* Sem maxLength de propósito: o browser corta o texto colado ANTES do
+                  onChange, então colar "1905.90.90" (10 caracteres) virava "1905.90." e
+                  sobravam 6 dígitos — o campo parecia travado. Quem limita a 8 é o slice
+                  sobre os dígitos, que roda depois de tirar a pontuação. */}
+              <input className={`input ${ncmIncompleto ? 'border-amber-500' : ''}`}
+                     value={form.ncm ?? ''}
                      onChange={e => set('ncm', e.target.value.replace(/\D/g, '').slice(0, 8) || null)}
-                     placeholder="84743100 (8 dígitos, sem ponto)" maxLength={8} inputMode="numeric" />
-              <p className="text-xs text-gray-400 mt-1">Obrigatório pra emitir NFC-e deste produto — só números, sem ponto.</p>
+                     placeholder="84743100 (8 dígitos, sem ponto)" inputMode="numeric" />
+              <p className={`text-xs mt-1 ${ncmIncompleto ? 'text-amber-400' : 'text-gray-400'}`}>
+                {ncmIncompleto
+                  ? `Faltam ${8 - form.ncm!.length} dígito(s) — o NCM tem 8.`
+                  : 'Obrigatório pra emitir NFC-e deste produto — só números, sem ponto.'}
+              </p>
             </div>
+            <div>
+              <label className="label">
+                CEST {cestObrigatorio && <span className="text-amber-400">*</span>}
+              </label>
+              {/* Mesmo motivo do NCM pra não ter maxLength. */}
+              <input className={`input ${cestIncompleto ? 'border-amber-500' : ''}`}
+                     value={form.cest ?? ''}
+                     onChange={e => set('cest', e.target.value.replace(/\D/g, '').slice(0, 7) || null)}
+                     placeholder="2806400 (7 dígitos, sem ponto)" inputMode="numeric" />
+              <p className={`text-xs mt-1 ${cestIncompleto ? 'text-amber-400' : 'text-gray-400'}`}>
+                {cestIncompleto
+                  ? `Faltam ${7 - form.cest!.length} dígito(s) — o CEST tem 7.`
+                  : cestObrigatorio
+                    ? `Obrigatório: o CSOSN ${naturezaSelecionada?.csosn} é de substituição tributária.`
+                    : 'Só é exigido em produto sujeito a ICMS-ST. Vem da nota de compra.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Natureza de Operação</label>
               <select className="input" value={form.naturezaOperacaoId ?? ''}
