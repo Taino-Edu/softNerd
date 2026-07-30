@@ -460,7 +460,11 @@ public class NfceEmissionService : INfceEmissionService
         // diferente de Itens.Sum(SubtotalCentavos), que é o valor BRUTO dos itens. Usado
         // pra declarar vNF/vDesc corretos na nota — sem isso a NFC-e saía pelo valor cheio
         // mesmo quando o cliente pagou menos (desconto/pontos nunca chegavam na nota).
-        int TotalCentavos);
+        int TotalCentavos,
+        // Distingue Pix Dinâmico (tPag 17) de Estático (tPag 20) na nota. True quando a
+        // venda teve cobrança Pix gerada pela integração do Inter (QR por transação);
+        // false quando o cliente pagou na chave/QR fixo do balcão.
+        bool PixDinamico = false);
 
     private async Task<DadosEmissao> CarregarDadosComandaAsync(Guid comandaId)
     {
@@ -509,10 +513,14 @@ public class NfceEmissionService : INfceEmissionService
 
         ValidarTemOQueFaturar(itens.Count, comanda.TotalInCents, $"Comanda {comanda.Id}");
 
+        // Existir cobrança Pix vinculada = o QR foi gerado por esta venda (dinâmico).
+        var teveCobrancaPix = await _db.PixCobrancas.AnyAsync(p => p.ComandaId == comandaId);
+
         return new DadosEmissao(
             itens, comanda.PaymentMethod ?? "Dinheiro", comanda.User?.Cpf,
             comanda.SecondPaymentMethod, comanda.SecondPaymentAmountInCents,
-            comanda.TotalInCents); // já líquido de PointsApplied/DiscountInCents (ver ComandaService)
+            comanda.TotalInCents, // já líquido de PointsApplied/DiscountInCents (ver ComandaService)
+            teveCobrancaPix);
     }
 
     /// <summary>
@@ -592,10 +600,13 @@ public class NfceEmissionService : INfceEmissionService
 
         ValidarTemOQueFaturar(itens.Count, venda.TotalInCents, $"Venda avulsa {venda.Id}");
 
+        var teveCobrancaPix = await _db.PixCobrancas.AnyAsync(p => p.VendaAvulsaId == vendaAvulsaId);
+
         return new DadosEmissao(
             itens, venda.PaymentMethod, cpf,
             venda.SecondPaymentMethod, venda.SecondPaymentAmountInCents,
-            venda.TotalInCents); // já líquido de DiscountInCents (ver VendaAvulsaService)
+            venda.TotalInCents, // já líquido de DiscountInCents (ver VendaAvulsaService)
+            teveCobrancaPix);
     }
 
     // ── Montagem, assinatura e transmissão ─────────────────────────────────────
@@ -1170,14 +1181,14 @@ public class NfceEmissionService : INfceEmissionService
     private static List<detPag> MontarDetPag(DadosEmissao dados, decimal valorTotal)
     {
         if (string.IsNullOrWhiteSpace(dados.SegundaFormaPagamento) || dados.SegundoValorCentavos <= 0)
-            return new List<detPag> { MontarDetPagUnico(dados.FormaPagamento, valorTotal) };
+            return new List<detPag> { MontarDetPagUnico(dados.FormaPagamento, valorTotal, dados.PixDinamico) };
 
         var valorSegundo  = dados.SegundoValorCentavos / 100m;
         var valorPrimeiro = valorTotal - valorSegundo;
         return new List<detPag>
         {
-            MontarDetPagUnico(dados.FormaPagamento,        valorPrimeiro),
-            MontarDetPagUnico(dados.SegundaFormaPagamento, valorSegundo),
+            MontarDetPagUnico(dados.FormaPagamento,        valorPrimeiro, dados.PixDinamico),
+            MontarDetPagUnico(dados.SegundaFormaPagamento, valorSegundo,  dados.PixDinamico),
         };
     }
 
@@ -1195,9 +1206,9 @@ public class NfceEmissionService : INfceEmissionService
     /// (rejeição observada em produção: "Descrição do pagamento obrigatória para meio
     /// de pagamento 99-outros").
     /// </summary>
-    private static detPag MontarDetPagUnico(string formaPagamento, decimal valor)
+    private static detPag MontarDetPagUnico(string formaPagamento, decimal valor, bool pixDinamico = false)
     {
-        var tPag = MapFormaPagamento(formaPagamento);
+        var tPag = MapFormaPagamento(formaPagamento, pixDinamico);
         var pag  = new detPag { tPag = tPag, vPag = valor };
         if (formaPagamento is PaymentMethod.CartaoCredito or PaymentMethod.CartaoDebito or PaymentMethod.Pix)
             pag.card = new card { tpIntegra = TipoIntegracaoPagamento.TipNaoIntegrado };
@@ -1487,10 +1498,16 @@ public class NfceEmissionService : INfceEmissionService
     /// Pontos/Cashback/Crediário não são formas de pagamento reconhecidas pela SEFAZ —
     /// são mecanismos internos da loja, então caem em "Outros" (99).
     /// </summary>
-    private static FormaPagamento MapFormaPagamento(string formaPagamento) => formaPagamento switch
+    /// <param name="pixDinamico">True quando a venda gerou cobrança Pix pela integração
+    /// (QR por transação) — o layout separa Pix Dinâmico (17) de Estático (20), e a loja
+    /// usa os dois: cobrança do Inter no atendimento e chave/QR fixo no balcão. Declarar
+    /// sempre 17 diria que toda venda em Pix passou por gateway, o que não é verdade.</param>
+    private static FormaPagamento MapFormaPagamento(string formaPagamento, bool pixDinamico = false) => formaPagamento switch
     {
         "Dinheiro"      => FormaPagamento.fpDinheiro,
-        "Pix"           => FormaPagamento.fpPagamentoInstantaneoPIXDinamico,
+        "Pix"           => pixDinamico
+            ? FormaPagamento.fpPagamentoInstantaneoPIXDinamico
+            : FormaPagamento.fpPagamentoInstantaneoPIXEstatico,
         "CartaoCredito" => FormaPagamento.fpCartaoCredito,
         "CartaoDebito"  => FormaPagamento.fpCartaoDebito,
         _               => FormaPagamento.fpOutro,
