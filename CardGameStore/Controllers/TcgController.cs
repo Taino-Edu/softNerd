@@ -138,6 +138,7 @@ public class TcgController : ControllerBase
             UpdatedAt = c.ObtidaEm,
             Degradada = c.Degradada,
             Aviso     = c.Aviso,
+            Fonte     = c.Fonte,
         });
     }
 

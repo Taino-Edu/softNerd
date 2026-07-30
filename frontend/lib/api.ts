@@ -765,6 +765,8 @@ export const tcgApi = {
     updatedAt: string | null
     degradada: boolean
     aviso: string | null
+    /** "Banco Central (PTAX)" ou "AwesomeAPI". Null quando nenhuma fonte respondeu. */
+    fonte: string | null
   }>('/api/tcg/brl-rate'),
 }
 

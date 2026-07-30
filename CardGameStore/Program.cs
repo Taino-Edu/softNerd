@@ -266,7 +266,18 @@ builder.Services.AddHttpClient("YugiohApi", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// AwesomeAPI — Cotação USD/BRL em tempo real (gratuita, sem autenticação)
+// Banco Central (PTAX) — fonte PRIMÁRIA da cotação USD/BRL.
+// Oficial, pública, sem chave e sem limite prático de requisição. Virou primária depois
+// que a AwesomeAPI passou a devolver HTTP 429 pro IP do VPS (confirmado em 30/07/2026):
+// o código antigo batia nela a cada requisição sem cachear falha, e o IP foi bloqueado.
+builder.Services.AddHttpClient("BcbPtax", client =>
+{
+    client.BaseAddress = new Uri("https://olinda.bcb.gov.br/");
+    client.Timeout     = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+// AwesomeAPI — reserva. Cotação de mercado em tempo real (gratuita, sem autenticação).
 builder.Services.AddHttpClient("AwesomeApi", client =>
 {
     client.BaseAddress = new Uri("https://economia.awesomeapi.com.br/");

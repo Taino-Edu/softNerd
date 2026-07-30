@@ -541,6 +541,7 @@ export default function CartasPage() {
   const [brlUpdated, setBrlUpdated] = useState<Date | null>(null)
   const [brlDegradada, setBrlDegradada] = useState(false)
   const [brlAviso,     setBrlAviso]     = useState<string | null>(null)
+  const [brlFonte,     setBrlFonte]     = useState<string | null>(null)
   const [refreshingBrl, setRefreshingBrl] = useState(false)
   const [noApi,      setNoApi]      = useState(false)
   // Filtros Pokémon avançados
@@ -568,6 +569,7 @@ export default function CartasPage() {
       setBrlRate(data.usdToBrl)
       setBrlDegradada(data.degradada)
       setBrlAviso(data.aviso)
+      setBrlFonte(data.fonte)
       // updatedAt é quando a cotação foi lida de verdade — não a hora desta chamada.
       // Usar `new Date()` aqui era o que fazia o "Xmin" mostrar sempre 0min mesmo com
       // a cotação parada há dias.
@@ -703,7 +705,7 @@ export default function CartasPage() {
                 ? 'bg-amber-500/10 border-amber-500/40'
                 : 'bg-surface-800 border-surface-500',
             )}
-            title={brlAviso ?? undefined}
+            title={brlAviso ?? (brlFonte ? `Fonte: ${brlFonte}` : undefined)}
           >
             {brlDegradada && <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             <span className="text-gray-400">USD/BRL</span>
@@ -720,10 +722,16 @@ export default function CartasPage() {
             </button>
             {brlUpdated && (
               <span className="text-[10px] text-gray-600">
-                {Math.round((Date.now() - brlUpdated.getTime()) / 60000)}min
+                {(() => {
+                  const min = Math.round((Date.now() - brlUpdated.getTime()) / 60000)
+                  return min < 60 ? `${min}min` : `${Math.round(min / 60)}h`
+                })()}
               </span>
             )}
           </div>
+          {!brlDegradada && brlFonte && (
+            <span className="text-[10px] text-gray-600 self-center">{brlFonte}</span>
+          )}
           {brlDegradada && brlAviso && (
             <p className="w-full text-xs text-amber-400 flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {brlAviso}
