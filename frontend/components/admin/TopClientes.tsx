@@ -155,8 +155,10 @@ export function TopClientesFilterBar({
         </div>
       )}
 
-      {/* Forma de pagamento */}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+      {/* Forma de pagamento — quebra linha em vez de rolar na horizontal: com
+          `overflow-x-auto scrollbar-none` as últimas formas ficavam cortadas no painel
+          estreito do dashboard, sem nenhuma pista de que dava pra rolar. */}
+      <div className="flex gap-1.5 flex-wrap">
         {FORMAS.map(pm => (
           <button
             key={pm || 'all'}
@@ -234,36 +236,25 @@ export function TopClientesList({
       {data.map((c, i) => {
         const medalColor = i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-gray-400'
         const MedalIcon  = i === 0 ? Star : i <= 2 ? Medal : Trophy
+        const badgeInativo = c.inativo30
+        const badgePontos  = c.pontosVencemEm !== null && c.pontos > 0 && c.pontosVencemEm <= 14
+
+        // Empilhado em vez de nome/texto/valor competindo na mesma linha. No painel do
+        // dashboard (~220px) a versão lado a lado espremia o nome até 0px de largura e
+        // quebrava o texto no meio da palavra, com a linha indo a 143px de altura.
         return (
-          <div key={c.userId} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-surface-800 hover:bg-surface-700 transition-colors">
-            <MedalIcon className={clsx('w-4 h-4 shrink-0', medalColor)} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{c.nome}</p>
-              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                <span className="text-xs text-gray-500">
-                  {c.numVisitas} {unidade}{c.numVisitas !== 1 ? 's' : ''} · {fmt(c.ticketMedio)}/{unidade}
-                </span>
-                {c.inativo30 && (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">inativo</span>
-                )}
-                {c.pontosVencemEm !== null && c.pontos > 0 && c.pontosVencemEm <= 14 && (
-                  <span className={clsx('text-[10px] font-medium px-1.5 py-0.5 rounded-full border',
-                    c.pontosVencemEm < 0 ? 'bg-red-500/15 text-red-400 border-red-500/20' : 'bg-orange-500/15 text-orange-400 border-orange-500/20',
-                  )}>
-                    {c.pontosVencemEm < 0 ? `${c.pontos}pts vencidos` : `${c.pontos}pts vencem em ${c.pontosVencemEm}d`}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <p className="text-sm font-bold text-accent-gold font-mono">{fmt(c.gastoTotal)}</p>
+          <div key={c.userId} className="py-2 px-3 rounded-lg bg-surface-800 hover:bg-surface-700 transition-colors">
+            {/* Nome + atalho de WhatsApp */}
+            <div className="flex items-center gap-2">
+              <MedalIcon className={clsx('w-4 h-4 shrink-0', medalColor)} />
+              <p className="text-sm font-medium text-white truncate flex-1 min-w-0">{c.nome}</p>
               {c.whatsApp && (
                 <a
                   href={`https://wa.me/${c.whatsApp.replace(/\D/g, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors"
+                  className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors"
                   title={`WhatsApp: ${c.whatsApp}`}
                 >
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
@@ -272,6 +263,30 @@ export function TopClientesList({
                 </a>
               )}
             </div>
+
+            {/* Métrica à esquerda, valor à direita — `truncate` no texto pra ele nunca
+                quebrar no meio da palavra quando o espaço aperta. */}
+            <div className="flex items-center gap-2 mt-0.5 pl-6">
+              <span className="text-xs text-gray-500 truncate flex-1 min-w-0">
+                {c.numVisitas} {unidade}{c.numVisitas !== 1 ? 's' : ''} · {fmt(c.ticketMedio)}/{unidade}
+              </span>
+              <span className="text-sm font-bold text-accent-gold font-mono shrink-0">{fmt(c.gastoTotal)}</span>
+            </div>
+
+            {(badgeInativo || badgePontos) && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-1 pl-6">
+                {badgeInativo && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">inativo</span>
+                )}
+                {badgePontos && (
+                  <span className={clsx('text-[10px] font-medium px-1.5 py-0.5 rounded-full border',
+                    c.pontosVencemEm! < 0 ? 'bg-red-500/15 text-red-400 border-red-500/20' : 'bg-orange-500/15 text-orange-400 border-orange-500/20',
+                  )}>
+                    {c.pontosVencemEm! < 0 ? `${c.pontos}pts vencidos` : `${c.pontos}pts vencem em ${c.pontosVencemEm}d`}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )
       })}
