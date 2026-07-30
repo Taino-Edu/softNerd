@@ -706,6 +706,9 @@ using (var scope = app.Services.CreateScope())
 
                 -- Fiscal: NCM e natureza de operação por produto
                 ALTER TABLE products ADD COLUMN IF NOT EXISTS ncm VARCHAR(8) NULL;
+                -- CEST: obrigatório na NFC-e só nos CSOSN de substituição tributária
+                -- (201/202/203/500), opcional no resto — por isso NULL.
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS cest VARCHAR(7) NULL;
                 ALTER TABLE products ADD COLUMN IF NOT EXISTS natureza_operacao_id UUID NULL REFERENCES naturezas_operacao(id) ON DELETE SET NULL;
                 CREATE INDEX IF NOT EXISTS ix_products_natureza_operacao ON products (natureza_operacao_id);
 

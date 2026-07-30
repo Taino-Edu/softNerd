@@ -1,5 +1,22 @@
 # Changelog — Santuário Nerd
 
+## [v1.23.0] — 2026-07-30
+
+### Corrigido
+- **Nota fiscal só saía quando o pagamento era em dinheiro**: cartão, Pix, crediário, pontos e cashback eram recusados pela SEFAZ na hora de emitir. Faltava um dado obrigatório que a Receita exige pra pagamento eletrônico, e uma descrição obrigatória no caso de crediário/pontos/cashback. Agora todas as formas emitem normalmente — vale testar em Homologação antes de confiar no dia a dia
+- **Campo NCM travava ao colar com pontos**: colar "1905.90.90" deixava o campo em "190590" e não passava. Agora aceita colado com ou sem pontuação, e avisa quantos dígitos faltam enquanto você digita
+- **Certificado de outra empresa era aceito**: dava pra subir um certificado digital que não é da loja e emitir nota em nome de terceiro. Agora o sistema confere o CNPJ do certificado contra o da loja
+- **Pagamento de crediário aceitava qualquer forma de pagamento**: dava pra gravar uma forma que não existe, e ela virava uma linha fantasma no relatório financeiro
+- Produto não pode mais ser salvo com preço, custo ou estoque negativo — isso chegava a gravar venda com valor negativo no caixa
+
+### Adicionado
+- **Análises de Clientes** (Clientes → Análises): ranking dos clientes que mais gastaram, com filtro de **período** (hoje, 7 dias, este mês, tudo ou datas escolhidas), **quantidade** (Top 10/20/50/todos), **forma de pagamento** e opção de **incluir as vendas do caixa**. Antes o Top Clientes somava tudo desde sempre e não dava pra recortar nada
+- O mesmo filtro aparece no painel Top Clientes do Painel Geral
+- **Campo CEST no cadastro de produto**, ao lado do NCM — obrigatório em produtos com substituição tributária, que sem ele têm a nota recusada
+
+### Mudado
+- **Tela de Clientes deixou de quebrar em tablet**: o painel de pontos/cashback da direita agora só aparece depois de escolher um cliente. Antes ele ficava sempre lá ocupando espaço, e em telas médias espremia a lista e desalinhava as linhas
+
 ## [v1.22.0] — 2026-07-27
 
 ### Mudado

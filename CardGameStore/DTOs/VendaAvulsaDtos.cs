@@ -98,6 +98,17 @@ public class VendaAvulsaDto
     public string? NotaFiscalMotivoRejeicao { get; set; }
 }
 
+/// <summary>Totais de PDV de um cliente dentro do recorte pedido (período + forma).</summary>
+public class VendaAvulsaClienteAgregadoDto
+{
+    public Guid     UserId       { get; set; }
+    public int      Compras      { get; set; }
+    /// <summary>Já com o split alocado: numa venda filtrada por forma, entra só a parte
+    /// paga naquela forma, não o total da venda.</summary>
+    public long     GastoCents   { get; set; }
+    public DateTime UltimaCompra { get; set; }
+}
+
 public class EditarPagamentoVendaAvulsaRequest
 {
     [Required]

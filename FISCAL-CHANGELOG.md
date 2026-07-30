@@ -328,10 +328,12 @@ Ou seja: **nenhuma forma de pagamento da loja emitia NFC-e real, exceto Dinheiro
   corta o texto colado ANTES do `onChange`, então colar "1905.90.90" virava "1905.90." e
   sobravam 6 dígitos (o campo parecia travado). Quem limita é o `slice` sobre os dígitos.
 
-⚠️ **Exige SQL manual no VPS** — o banco usa `EnsureCreated`, não migrations:
+A coluna entra pelo bloco de `ALTER TABLE ... IF NOT EXISTS` do `Program.cs`, ao lado do
+`ncm` — que é como este repo contorna o `EnsureCreated` (sem migrations). **Não precisa de
+SQL manual no VPS**; o próprio boot aplica.
 
 ```sql
-ALTER TABLE products ADD COLUMN IF NOT EXISTS cest VARCHAR(7);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cest VARCHAR(7) NULL;
 ```
 
 ## C. CNPJ alfanumérico
