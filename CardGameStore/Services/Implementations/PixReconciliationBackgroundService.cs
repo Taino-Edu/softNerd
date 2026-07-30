@@ -6,6 +6,7 @@
 // uma a uma — erro em uma loga e segue pras demais.
 // =============================================================================
 
+using System.Net;
 using CardGameStore.Data;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -79,10 +80,27 @@ public class PixReconciliationBackgroundService : BackgroundService
                 if (result.BaixaEfetuada)
                     _logger.LogInformation("Pix {TxId} ({Origem}) confirmado pelo robô — baixa efetuada.", pix.TxId, pix.Origem);
             }
+            // 429 = o Inter cortou por excesso de requisição. Insistir nas cobranças
+            // restantes só prolonga o bloqueio (a mesma lição do 429 da AwesomeAPI em
+            // 30/07/2026): aborta o ciclo e tenta tudo de novo daqui a 5 minutos.
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                _logger.LogWarning(
+                    "Inter respondeu 429 (excesso de requisições) ao reconciliar Pix {Id}. " +
+                    "Ciclo interrompido com {Restantes} cobrança(s) na fila — retomando no próximo ciclo.",
+                    id, pendentes.Count - pendentes.IndexOf(id) - 1);
+                return;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Falha ao reconciliar cobrança Pix {Id} — seguindo para as demais", id);
             }
+
+            // Espaçamento entre chamadas: o lote pode ter até 100 cobranças e antes disso
+            // elas saíam em rajada, sem intervalo nenhum — foi o que derrubou o Inter em
+            // 429 durante os testes de 30/07/2026. 250ms distribui o lote cheio em ~25s,
+            // bem dentro da janela de 5 min do ciclo.
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
         }
     }
 }
