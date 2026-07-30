@@ -1210,7 +1210,14 @@ public class NfceEmissionService : INfceEmissionService
     {
         var tPag = MapFormaPagamento(formaPagamento, pixDinamico);
         var pag  = new detPag { tPag = tPag, vPag = valor };
-        if (formaPagamento is PaymentMethod.CartaoCredito or PaymentMethod.CartaoDebito or PaymentMethod.Pix)
+
+        // A condição olha o tPag que vai no XML, não o nome interno da forma de pagamento:
+        // "Pix" vira 17 ou 20 conforme o caso, e só o 17 aceita o grupo card. Amarrar no
+        // nome fazia o Pix Estático levar card e ser rejeitado com "Tipo de pagamento não
+        // aceita o grupo de cartões ou boletos" (observado em homologação, 30/07/2026).
+        if (tPag is FormaPagamento.fpCartaoCredito
+                 or FormaPagamento.fpCartaoDebito
+                 or FormaPagamento.fpPagamentoInstantaneoPIXDinamico)
             pag.card = new card { tpIntegra = TipoIntegracaoPagamento.TipNaoIntegrado };
         if (tPag == FormaPagamento.fpOutro)
             pag.xPag = DescricaoFormaPagamentoOutro(formaPagamento);
