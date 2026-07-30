@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getRole } from '@/lib/auth'
-import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto } from '@/lib/api'
+import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto, PixCobrancaDto } from '@/lib/api'
 import { mixHex } from '@/lib/colors'
 import Link from 'next/link'
 import {
@@ -1252,44 +1252,73 @@ function ProductModal({ product: p, onClose, C }: { product: Product; onClose: (
 }
 
 function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }: { championship: Championship; onClose: () => void; C: Theme; whatsapp: string; contactPersonName: string }) {
-  const [name,       setName]       = useState('')
-  const [phone,      setPhone]      = useState('')
-  const [done,       setDone]       = useState(false)
-  const [loading,    setLoading]    = useState(false)
-  const [decks,      setDecks]      = useState<DeckListDto[]>([])
+  const [decks,        setDecks]        = useState<DeckListDto[]>([])
   const [selectedDeck, setSelectedDeck] = useState<string>('')
+  const [loading,      setLoading]      = useState(false)
+  const [erro,         setErro]         = useState<string | null>(null)
+  // 'form' → escolhe deck | 'pagar' → já inscrito, oferece Pix | 'pix' → QR na tela
+  const [etapa,        setEtapa]        = useState<'form' | 'pagar' | 'pix'>('form')
+  const [pix,          setPix]          = useState<PixCobrancaDto | null>(null)
+  const [copiado,      setCopiado]      = useState(false)
 
   const isLoggedIn = getRole() === 'Customer' || getRole() === 'Admin'
+  const temTaxa    = championship.entryFeeInCents > 0
+  const taxaFmt    = `R$ ${(championship.entryFeeInCents / 100).toFixed(2).replace('.', ',')}`
 
   useEffect(() => {
     if (!isLoggedIn || !championship.game) return
     deckApi.list(championship.game).then(r => setDecks(r.data)).catch(() => {})
   }, [isLoggedIn, championship.game])
 
-  async function handleSubmit(e: React.FormEvent) {
+  // A vaga é garantida AQUI — o backend valida prazo, status e lotação. O pagamento vem
+  // depois e é opcional. Nunca o contrário: pagar primeiro permitiria o campeonato lotar
+  // no meio do caminho, e aí a loja teria que estornar na mão.
+  async function handleInscrever(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !phone.trim()) return
     setLoading(true)
+    setErro(null)
     const deck = decks.find(d => d.id === selectedDeck)
     try {
-      await championshipApi.addPreInscricao(championship.id, name.trim(), phone.trim(), deck?.id, deck?.name)
-    } catch { /* silently continue — WhatsApp still opens */ }
-    finally { setLoading(false) }
-    const msg = encodeURIComponent(
-      `Olá! Quero me inscrever no *${championship.name}*.\n` +
-      `Nome: ${name.trim()}\nWhatsApp: ${phone.trim()}\n` +
-      (deck ? `Deck: ${deck.name}\n` : '') +
-      `Confirmo o pagamento de R$ ${(championship.entryFeeInCents / 100).toFixed(2).replace('.', ',')} na chegada.`
-    )
-    window.open(`https://wa.me/${whatsapp}?text=${msg}`, '_blank')
-    setDone(true)
+      await championshipApi.selfRegister(championship.id, deck?.name, deck?.id)
+      setEtapa('pagar')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setErro(msg ?? 'Não foi possível concluir a inscrição. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
+
+  async function handlePagarAgora() {
+    setLoading(true)
+    setErro(null)
+    try {
+      const { data } = await championshipApi.pixInscricao(championship.id)
+      setPix(data)
+      setEtapa('pix')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setErro(msg ?? 'Não foi possível gerar o Pix agora. Sua vaga continua garantida — dá pra pagar na chegada ou pela sua área de cliente.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function copiar() {
+    if (!pix?.pixCopiaCola) return
+    try {
+      await navigator.clipboard.writeText(pix.pixCopiaCola)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch { /* clipboard bloqueado — o usuário ainda consegue selecionar o texto */ }
+  }
+
+  const btn = { backgroundColor: C.blue, color: '#fff' }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-b-0 sm:border-b p-6 pb-8 sm:pb-6"
+      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-b-0 sm:border-b p-6 pb-8 sm:pb-6 max-h-[92vh] overflow-y-auto"
         style={{ backgroundColor: C.card, borderColor: C.border }}>
-        {/* Handle visual — mobile only */}
         <div className="flex justify-center -mt-3 mb-4 sm:hidden">
           <div className="w-10 h-1 rounded-full opacity-30" style={{ backgroundColor: C.navy }} />
         </div>
@@ -1303,46 +1332,45 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
           </button>
         </div>
 
-        {done ? (
-          <div className="text-center py-6">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}>
-              <CheckCircle className="w-7 h-7 text-green-500" />
-            </div>
-            <p className="font-black mb-1" style={{ color: C.navy }}>Solicitação enviada!</p>
-            <p className="text-sm leading-relaxed" style={{ color: C.text }}>
-              {contactPersonName} vai confirmar sua vaga pelo WhatsApp. Pague na chegada.
-            </p>
-            <button onClick={onClose}
-              className="mt-5 w-full py-2.5 text-sm rounded-xl border transition-colors"
-              style={{ color: C.text, borderColor: C.border }}>
-              Fechar
-            </button>
+        {erro && (
+          <div className="text-sm px-4 py-3 rounded-xl border mb-4"
+            style={{ color: '#b91c1c', borderColor: 'rgba(185,28,28,0.25)', backgroundColor: 'rgba(185,28,28,0.06)' }}>
+            {erro}
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="text-sm px-4 py-3 rounded-xl border"
+        )}
+
+        {!isLoggedIn ? (
+          <div className="space-y-4">
+            <div className="text-sm px-4 py-3 rounded-xl border leading-relaxed"
               style={{ color: C.blue, borderColor: `${C.blue}30`, backgroundColor: `${C.blue}08` }}>
-              Taxa: <strong>R$ {(championship.entryFeeInCents / 100).toFixed(2).replace('.', ',')}</strong> — pague na chegada
+              Para garantir sua vaga é preciso ter conta — é assim que o lugar fica reservado
+              no seu nome e seu histórico de torneios fica salvo.
+              {temTaxa ? <> A taxa é de <strong>{taxaFmt}</strong>.</> : null}
             </div>
-            <div>
-              <label className="block text-xs font-bold mb-1.5" style={{ color: C.navy }}>Seu nome</label>
-              <input
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none border transition-all"
-                style={{ backgroundColor: C.cardAlt, border: `1px solid ${C.border}`, color: C.navy }}
-                placeholder="Nome completo"
-                value={name} onChange={e => setName(e.target.value)} required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold mb-1.5" style={{ color: C.navy }}>Seu WhatsApp</label>
-              <input
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none border transition-all"
-                style={{ backgroundColor: C.cardAlt, border: `1px solid ${C.border}`, color: C.navy }}
-                placeholder="(17) 99999-9999"
-                value={phone} onChange={e => setPhone(e.target.value)} required
-              />
-            </div>
+            <a href="/entrar"
+              className="w-full flex items-center justify-center gap-2 font-black py-3.5 rounded-xl transition-all active:scale-95"
+              style={btn}>
+              Entrar e me inscrever
+            </a>
+            <a href="/cadastro"
+              className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl border transition-all active:scale-95"
+              style={{ color: C.navy, borderColor: C.border }}>
+              Criar conta
+            </a>
+            <p className="text-xs text-center leading-relaxed" style={{ color: C.text }}>
+              Prefere falar direto? Chame {contactPersonName} no{' '}
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer"
+                className="underline font-bold">WhatsApp</a>.
+            </p>
+          </div>
+        ) : etapa === 'form' ? (
+          <form onSubmit={handleInscrever} className="space-y-4">
+            {temTaxa && (
+              <div className="text-sm px-4 py-3 rounded-xl border"
+                style={{ color: C.blue, borderColor: `${C.blue}30`, backgroundColor: `${C.blue}08` }}>
+                Taxa de inscrição: <strong>{taxaFmt}</strong>
+              </div>
+            )}
             {decks.length > 0 && (
               <div>
                 <label className="block text-xs font-bold mb-1.5" style={{ color: C.navy }}>Deck (opcional)</label>
@@ -1359,17 +1387,84 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
             )}
             <button type="submit" disabled={loading}
               className="w-full flex items-center justify-center gap-2 font-black py-3.5 rounded-xl transition-all active:scale-95 disabled:opacity-60"
-              style={{ backgroundColor: C.blue, color: '#fff' }}>
+              style={btn}>
               {loading
                 ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 62.8" /></svg>
-                : <MessageCircle className="w-4 h-4" />
+                : <CheckCircle className="w-4 h-4" />
               }
-              {loading ? 'Registrando...' : 'Confirmar pelo WhatsApp'}
+              {loading ? 'Garantindo sua vaga...' : 'Confirmar inscrição'}
             </button>
-            <p className="text-xs text-center" style={{ color: C.text }}>
-              Você será redirecionado para o WhatsApp.
-            </p>
           </form>
+        ) : etapa === 'pagar' ? (
+          <div className="space-y-4">
+            <div className="text-center py-2">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                style={{ backgroundColor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                <CheckCircle className="w-7 h-7 text-green-500" />
+              </div>
+              <p className="font-black mb-1" style={{ color: C.navy }}>Vaga garantida!</p>
+              <p className="text-sm leading-relaxed" style={{ color: C.text }}>
+                Você já está inscrito em <strong>{championship.name}</strong>.
+              </p>
+            </div>
+
+            {temTaxa ? (
+              <>
+                <div className="text-sm px-4 py-3 rounded-xl border text-center"
+                  style={{ color: C.blue, borderColor: `${C.blue}30`, backgroundColor: `${C.blue}08` }}>
+                  Deseja já pagar a taxa de <strong>{taxaFmt}</strong> agora?
+                </div>
+                <button onClick={handlePagarAgora} disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 font-black py-3.5 rounded-xl transition-all active:scale-95 disabled:opacity-60"
+                  style={btn}>
+                  {loading
+                    ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 62.8" /></svg>
+                    : null}
+                  {loading ? 'Gerando Pix...' : 'Pagar agora com Pix'}
+                </button>
+                <button onClick={onClose}
+                  className="w-full py-2.5 text-sm rounded-xl border transition-colors"
+                  style={{ color: C.text, borderColor: C.border }}>
+                  Pagar na chegada
+                </button>
+              </>
+            ) : (
+              <button onClick={onClose}
+                className="w-full font-black py-3.5 rounded-xl transition-all active:scale-95"
+                style={btn}>
+                Fechar
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-center font-black text-lg" style={{ color: C.navy }}>{taxaFmt}</p>
+            {pix?.imagemQrCode && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={pix.imagemQrCode} alt="QR Code do Pix" className="w-52 h-52 mx-auto rounded-xl" />
+            )}
+            {pix?.pixCopiaCola && (
+              <>
+                <p className="text-xs font-bold" style={{ color: C.navy }}>Pix Copia e Cola</p>
+                <textarea readOnly value={pix.pixCopiaCola} rows={3}
+                  className="w-full rounded-xl px-3 py-2 text-[10px] font-mono outline-none border resize-none"
+                  style={{ backgroundColor: C.cardAlt, border: `1px solid ${C.border}`, color: C.navy }} />
+                <button onClick={copiar}
+                  className="w-full font-black py-3 rounded-xl transition-all active:scale-95"
+                  style={btn}>
+                  {copiado ? 'Código copiado!' : 'Copiar código'}
+                </button>
+              </>
+            )}
+            <p className="text-xs text-center leading-relaxed" style={{ color: C.text }}>
+              A confirmação é automática. Sua vaga já está garantida mesmo antes de o pagamento cair.
+            </p>
+            <button onClick={onClose}
+              className="w-full py-2.5 text-sm rounded-xl border transition-colors"
+              style={{ color: C.text, borderColor: C.border }}>
+              Fechar
+            </button>
+          </div>
         )}
       </div>
     </div>

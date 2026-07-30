@@ -799,6 +799,13 @@ export const championshipApi = {
   delete:           (id: string) => api.delete(`/api/championship/${id}`),
   register:         (id: string, userId: string, deckName?: string) =>
     api.post(`/api/championship/${id}/register`, { userId, deckName }),
+  /** Inscreve o PRÓPRIO usuário logado (o backend usa o token, não confia em userId do corpo).
+   *  Valida vaga, prazo e status das inscrições — a vaga é garantida antes de qualquer pagamento. */
+  selfRegister:     (id: string, deckName?: string, deckId?: string) =>
+    api.post(`/api/championship/${id}/register`, { deckName, deckId }),
+  /** Gera a cobrança Pix da taxa de inscrição do próprio usuário. Só funciona depois de inscrito. */
+  pixInscricao:     (id: string) =>
+    api.post<PixCobrancaDto>(`/api/championship/${id}/my-inscription/pix`),
   adminRegister:    (id: string, userId: string, deckName?: string, deckId?: string) =>
     api.post<ChampionshipParticipant>(`/api/championship/${id}/admin-register`, { userId, deckName, deckId }),
   participants:     (id: string) =>
