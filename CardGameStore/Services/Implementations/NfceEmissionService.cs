@@ -1237,13 +1237,18 @@ public class NfceEmissionService : INfceEmissionService
         },
         imposto = new imposto
         {
-            ICMS   = new ICMS   { TipoICMS   = MontarIcmsSimplesNacional(item) },
+            ICMS   = new ICMS   { TipoICMS   = MontarIcmsSimplesNacional(item, descontoCentavos) },
             // CST 99 "Outras Operações" é o padrão de fato usado por optantes do Simples
             // Nacional (o DAS já unifica PIS/COFINS — não há CST federal específico pra
             // esse regime na NFC-e). Confirmado contra prática de mercado, não é chute.
             PIS    = new PIS    { TipoPIS    = new PISOutr    { CST = CSTPIS.pis99,    vBC = 0, pPIS    = 0, vPIS    = 0 } },
             COFINS = new COFINS { TipoCOFINS = new COFINSOutr { CST = CSTCOFINS.cofins99, vBC = 0, pCOFINS = 0, vCOFINS = 0 } },
-            IBSCBS = incluirIbsCbs ? MontarIbsCbs2026(item) : null,
+            // Base LÍQUIDA de desconto: regra UB16-10 da NT 2025.002 — a base do IBS/CBS
+            // subtrai o desconto incondicional informado no item. Com a base bruta, ela
+            // ficaria inconsistente com (vProd - vDesc) e a nota seria rejeitada.
+            IBSCBS = incluirIbsCbs
+                ? MontarIbsCbs2026(item, Math.Max(0, (item.SubtotalCentavos - descontoCentavos) / 100m))
+                : null,
         },
     };
 
@@ -1253,9 +1258,11 @@ public class NfceEmissionService : INfceEmissionService
     /// as alíquotas oficiais de 2026 são IBS-UF 0,1%, IBS-Mun 0% e CBS 0,9%.
     /// Os valores não compõem o total da operação em 2026.
     /// </summary>
-    internal static IbsCbsItem MontarIbsCbs2026(ItemFiscal item)
+    /// <param name="baseCalculoInformada">Base já líquida de desconto. Quando null, usa o
+    /// subtotal bruto do item (nota sem desconto, onde os dois são iguais).</param>
+    internal static IbsCbsItem MontarIbsCbs2026(ItemFiscal item, decimal? baseCalculoInformada = null)
     {
-        var baseCalculo = item.SubtotalCentavos / 100m;
+        var baseCalculo = baseCalculoInformada ?? item.SubtotalCentavos / 100m;
         var valorIbsUf  = ArredondarTributo(baseCalculo * 0.001m);
         var valorCbs    = ArredondarTributo(baseCalculo * 0.009m);
 
@@ -1316,14 +1323,17 @@ public class NfceEmissionService : INfceEmissionService
     /// propósito: exigem MVA/base de cálculo de ICMS-ST que este sistema não calcula sozinho —
     /// inventar esses valores seria pior do que não emitir. Ajustar aqui só com o contador.
     /// </summary>
-    internal static ICMSBasico MontarIcmsSimplesNacional(ItemFiscal item) => item.Csosn switch
+    /// <param name="descontoCentavos">Parte do desconto que cabe a este item — o crédito do
+    /// CSOSN 101 incide sobre o valor LÍQUIDO, não sobre o subtotal bruto.</param>
+    internal static ICMSBasico MontarIcmsSimplesNacional(ItemFiscal item, int descontoCentavos = 0) => item.Csosn switch
     {
         "101" => new ICMSSN101
         {
             orig        = OrigemMercadoria.OmNacional,
             CSOSN       = Csosnicms.Csosn101,
             pCredSN     = item.PercentualCreditoSn ?? 0,
-            vCredICMSSN = Math.Round(item.SubtotalCentavos / 100m * (item.PercentualCreditoSn ?? 0) / 100m, 2),
+            vCredICMSSN = Math.Round(Math.Max(0, (item.SubtotalCentavos - descontoCentavos) / 100m)
+                                     * (item.PercentualCreditoSn ?? 0) / 100m, 2),
         },
         "102" or null or "" => new ICMSSN102 { orig = OrigemMercadoria.OmNacional, CSOSN = Csosnicms.Csosn102 },
         "103"  => new ICMSSN102 { orig = OrigemMercadoria.OmNacional, CSOSN = Csosnicms.Csosn103 },
