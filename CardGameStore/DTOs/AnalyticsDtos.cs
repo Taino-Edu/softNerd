@@ -82,6 +82,10 @@ public class FinanceiroDto
     public List<TopProductFinDto>               TopProdutos                { get; set; } = new();
     public List<FormaPagamentoTotalDto>         PagamentosPorForma         { get; set; } = new();
     public List<PagamentoCrediarioPeriodoDto>   PagamentosCrediarioPeriodo { get; set; } = new();
+    public List<AberturaCrediarioPeriodoDto>    AberturasCrediarioPeriodo  { get; set; } = new();
+    /// <summary>Total de crediário CONCEDIDO no período (soma das aberturas) — contraparte
+    /// do RecebidoCrediario, que é o que entrou.</summary>
+    public decimal AbertoCrediario { get; set; }
 }
 
 public class PagamentoCrediarioPeriodoDto
@@ -92,6 +96,19 @@ public class PagamentoCrediarioPeriodoDto
     public string   FormaPagamento  { get; set; } = string.Empty;
     public string?  Observacao      { get; set; }
     public DateTime CreatedAt       { get; set; }
+}
+
+/// <summary>Crediário ABERTO dentro do período — o outro lado da conta, que só existia
+/// como saldo total acumulado e não dava pra ver por dia.</summary>
+public class AberturaCrediarioPeriodoDto
+{
+    public string   ClienteNome     { get; set; } = string.Empty;
+    public string?  ClienteWhatsApp { get; set; }
+    public decimal  ValorEmReais    { get; set; }
+    public decimal  SaldoRestante   { get; set; }
+    public string   Status          { get; set; } = string.Empty;
+    public bool     Vencido         { get; set; }
+    public DateTime DataAbertura    { get; set; }
 }
 
 public class DiaFinanceiroDto

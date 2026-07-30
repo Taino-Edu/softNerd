@@ -128,8 +128,17 @@ public class TcgController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetBrlRate()
     {
-        var rate = await _currency.GetUsdToBrlAsync();
-        return Ok(new { UsdToBrl = rate, UpdatedAt = DateTime.UtcNow });
+        var c = await _currency.GetCotacaoAsync();
+        // UpdatedAt era DateTime.UtcNow — ou seja, a hora da REQUISIÇÃO, não a hora em
+        // que a cotação foi lida. Sempre parecia recém-atualizada, mesmo travada no
+        // fallback. Agora vem a hora real da leitura (null = nunca conseguiu ler).
+        return Ok(new
+        {
+            UsdToBrl  = c.Valor,
+            UpdatedAt = c.ObtidaEm,
+            Degradada = c.Degradada,
+            Aviso     = c.Aviso,
+        });
     }
 
     /// <summary>Lista os sets disponíveis para um jogo.</summary>

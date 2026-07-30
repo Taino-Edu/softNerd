@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { analyticsApi, vendaAvulsaApi, FinanceiroDto, FormaPagamentoTotalDto, PagamentoCrediarioPeriodoDto } from '@/lib/api'
+import { analyticsApi, vendaAvulsaApi, FinanceiroDto, FormaPagamentoTotalDto, PagamentoCrediarioPeriodoDto, AberturaCrediarioPeriodoDto } from '@/lib/api'
 import { gerarRelatorioPDF } from '@/lib/relatorio'
 import toast from 'react-hot-toast'
 import {
@@ -1426,6 +1426,20 @@ export default function FinanceiroPage() {
     })
   }, [d, topOrigemFilter, topCatFilter])
 
+  // Recebimentos de crediário agrupados por dia, alinhados com os mesmos dias do
+  // `diaDia` pra o eixo X bater com os outros gráficos (dia sem pagamento entra zerado).
+  // O gráfico do modal de crediário recebia `points: []` fixo desde que foi escrito —
+  // por isso mostrava "Sem dados" mesmo com dezenas de pagamentos listados logo abaixo.
+  const crediarioPorDia = useMemo<ChartPoint[]>(() => {
+    if (!d) return []
+    const porDia = new Map<string, number>()
+    for (const p of d.pagamentosCrediarioPeriodo) {
+      const k = toDateInput(new Date(p.createdAt))
+      porDia.set(k, (porDia.get(k) ?? 0) + p.valorEmReais)
+    }
+    return d.diaDia.map(x => ({ label: x.dia, value: porDia.get(x.dia) ?? 0 }))
+  }, [d])
+
   const kpiModais: Record<string, {
     title: string; color: string; totalLabel: string
     points: ChartPoint[]; extra?: React.ReactNode
@@ -1486,14 +1500,61 @@ export default function FinanceiroPage() {
       title: 'Crediário — Recebimentos no Período',
       color: 'yellow',
       totalLabel: d.recebidoCrediario > 0 ? fmt(d.recebidoCrediario) : 'R$ 0,00',
-      points: [],
+      points: crediarioPorDia,
       extra: (
         <div className="space-y-3">
+          {/* Concedido × recebido no período — os dois lados da conta. O saldo em aberto
+              é acumulado (ignora o filtro de período), por isso fica separado. */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-surface-900 rounded-xl p-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Concedido no período</p>
+              <p className="text-sm font-bold font-mono text-red-400">{fmt(d.abertoCrediario)}</p>
+              <p className="text-[10px] text-gray-600">
+                {d.aberturasCrediarioPeriodo.length} abertura{d.aberturasCrediarioPeriodo.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <div className="bg-surface-900 rounded-xl p-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Recebido no período</p>
+              <p className="text-sm font-bold font-mono text-emerald-400">{fmt(d.recebidoCrediario)}</p>
+              <p className="text-[10px] text-gray-600">
+                {d.pagamentosCrediarioPeriodo.length} pagamento{d.pagamentosCrediarioPeriodo.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+
           {/* Saldo em aberto */}
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center justify-between">
-            <span className="text-xs text-amber-300">Saldo total em aberto</span>
+            <span className="text-xs text-amber-300">Saldo total em aberto <span className="text-amber-500/70">(acumulado)</span></span>
             <span className="text-sm font-bold font-mono text-amber-400">{fmt(d.crediarios)}</span>
           </div>
+
+          {/* Aberturas no período */}
+          {d.aberturasCrediarioPeriodo.length > 0 && (
+            <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+              <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">
+                Crediários abertos no período
+              </p>
+              {d.aberturasCrediarioPeriodo.map((a: AberturaCrediarioPeriodoDto, i: number) => (
+                <div key={i} className="flex items-center justify-between bg-surface-700 rounded-lg px-3 py-2 text-xs">
+                  <div className="min-w-0">
+                    <p className="text-white font-medium truncate">{a.clienteNome}</p>
+                    <p className="text-gray-500">
+                      {new Date(a.dataAbertura).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      {a.vencido
+                        ? <span className="ml-1 text-red-400">vencido</span>
+                        : a.status === 'Pago' && <span className="ml-1 text-emerald-500">pago</span>}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <p className="font-bold font-mono text-red-400">{fmt(a.valorEmReais)}</p>
+                    {a.saldoRestante > 0 && a.saldoRestante !== a.valorEmReais && (
+                      <p className="text-[10px] text-amber-400">resta {fmt(a.saldoRestante)}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {/* Lista de pagamentos no período */}
           {d.pagamentosCrediarioPeriodo.length === 0 ? (
             <p className="text-xs text-gray-500 text-center py-2">Nenhum pagamento de crediário neste período.</p>

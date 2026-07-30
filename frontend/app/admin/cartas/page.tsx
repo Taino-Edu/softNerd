@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { tcgApi, productApi, CardCache, TcgSet, TcgSearchParams } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { Search, Loader2, Zap, Star, DollarSign, Database, PackagePlus, X, Check, PlusCircle, SlidersHorizontal, RefreshCw, TrendingUp } from 'lucide-react'
+import { Search, Loader2, Zap, Star, DollarSign, Database, PackagePlus, X, Check, PlusCircle, SlidersHorizontal, RefreshCw, TrendingUp, AlertTriangle } from 'lucide-react'
 import Image from 'next/image'
 import clsx from 'clsx'
 
@@ -539,6 +539,8 @@ export default function CartasPage() {
   const [addStockCard, setAddStockCard] = useState<CardCache | null>(null)
   const [brlRate,    setBrlRate]    = useState<number | null>(null)
   const [brlUpdated, setBrlUpdated] = useState<Date | null>(null)
+  const [brlDegradada, setBrlDegradada] = useState(false)
+  const [brlAviso,     setBrlAviso]     = useState<string | null>(null)
   const [refreshingBrl, setRefreshingBrl] = useState(false)
   const [noApi,      setNoApi]      = useState(false)
   // Filtros Pokémon avançados
@@ -562,9 +564,14 @@ export default function CartasPage() {
   const fetchBrl = useCallback(async () => {
     setRefreshingBrl(true)
     try {
-      const r = await tcgApi.brlRate()
-      setBrlRate((r.data as any).usdToBrl)
-      setBrlUpdated(new Date())
+      const { data } = await tcgApi.brlRate()
+      setBrlRate(data.usdToBrl)
+      setBrlDegradada(data.degradada)
+      setBrlAviso(data.aviso)
+      // updatedAt é quando a cotação foi lida de verdade — não a hora desta chamada.
+      // Usar `new Date()` aqui era o que fazia o "Xmin" mostrar sempre 0min mesmo com
+      // a cotação parada há dias.
+      setBrlUpdated(data.updatedAt ? new Date(data.updatedAt) : null)
     } catch {} finally { setRefreshingBrl(false) }
   }, [])
 
@@ -686,11 +693,24 @@ export default function CartasPage() {
           <p className="text-gray-400 text-sm mt-0.5">Clique na carta para ver detalhes e preços · Hover no card para ver ações</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* BRL Rate */}
-          <div className="flex items-center gap-2 bg-surface-800 border border-surface-500 rounded-xl px-3 py-2 text-sm">
+          {/* BRL Rate — em amarelo quando a cotação não é a real do momento, porque
+              todo preço de carta na tela sai desse número. Antes ficava verde do mesmo
+              jeito e ninguém tinha como saber que estava travado no fallback. */}
+          <div
+            className={clsx(
+              'flex items-center gap-2 rounded-xl px-3 py-2 text-sm border',
+              brlDegradada
+                ? 'bg-amber-500/10 border-amber-500/40'
+                : 'bg-surface-800 border-surface-500',
+            )}
+            title={brlAviso ?? undefined}
+          >
+            {brlDegradada && <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             <span className="text-gray-400">USD/BRL</span>
             {brlRate ? (
-              <span className="font-bold text-green-400">R$ {brlRate.toFixed(2)}</span>
+              <span className={clsx('font-bold', brlDegradada ? 'text-amber-400' : 'text-green-400')}>
+                R$ {brlRate.toFixed(2)}
+              </span>
             ) : (
               <span className="text-gray-600">–</span>
             )}
@@ -704,6 +724,11 @@ export default function CartasPage() {
               </span>
             )}
           </div>
+          {brlDegradada && brlAviso && (
+            <p className="w-full text-xs text-amber-400 flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {brlAviso}
+            </p>
+          )}
           <button onClick={() => setOwnModal(true)} className="btn-primary text-sm shrink-0">
             <PlusCircle className="w-4 h-4" /> Adicionar Carta Própria
           </button>

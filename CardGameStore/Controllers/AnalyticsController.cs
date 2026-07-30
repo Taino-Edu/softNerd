@@ -731,6 +731,28 @@ public class AnalyticsController : ControllerBase
             CreatedAt       = p.CreatedAt,
         }).ToList();
 
+        // ── Crediários ABERTOS no período ─────────────────────────────────────
+        // Só existia o saldo acumulado (`crediarios`), que ignora o período filtrado —
+        // não dava pra ver quanto foi concedido em cada dia, só quanto entrou de volta.
+        var aberturasCrediario = await _db.Crediarios
+            .Include(c => c.User)
+            .Where(c => c.DataAbertura >= ini && c.DataAbertura < end)
+            .OrderByDescending(c => c.DataAbertura)
+            .ToListAsync();
+
+        var aberturasCrediarioPeriodo = aberturasCrediario.Select(c => new AberturaCrediarioPeriodoDto
+        {
+            ClienteNome     = c.User?.Name ?? "—",
+            ClienteWhatsApp = c.User?.WhatsApp,
+            ValorEmReais    = c.ValorEmReais,
+            SaldoRestante   = c.SaldoRestanteEmCentavos / 100m,
+            Status          = c.Status.ToString(),
+            Vencido         = c.Vencido,
+            DataAbertura    = c.DataAbertura,
+        }).ToList();
+
+        var abertoCrediario = aberturasCrediario.Sum(c => c.ValorEmReais);
+
         return Ok(new FinanceiroDto
         {
             Receita                    = Math.Round(receita, 2),
@@ -747,6 +769,8 @@ public class AnalyticsController : ControllerBase
             TopProdutos                = topProdutos,
             PagamentosPorForma         = todasFormas,
             PagamentosCrediarioPeriodo = pagamentosCrediarioPeriodo,
+            AberturasCrediarioPeriodo  = aberturasCrediarioPeriodo,
+            AbertoCrediario            = Math.Round(abertoCrediario, 2),
         });
     }
 }

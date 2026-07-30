@@ -758,7 +758,14 @@ export const tcgApi = {
       { params: { set, num, game } }),
   getCard:  (id: string) => api.get<CardCache>(`/api/tcg/cards/${id}`),
   sets:     (game: string) => api.get<TcgSet[]>('/api/tcg/sets', { params: { game } }),
-  brlRate:  () => api.get<{ usdToBrl: number }>('/api/tcg/brl-rate'),
+  /** `degradada` = o valor NÃO é a cotação real do momento (API fora do ar). `updatedAt`
+   *  é quando a cotação foi lida de verdade, não a hora da requisição — null = nunca leu. */
+  brlRate:  () => api.get<{
+    usdToBrl: number
+    updatedAt: string | null
+    degradada: boolean
+    aviso: string | null
+  }>('/api/tcg/brl-rate'),
 }
 
 export const deckApi = {
@@ -969,6 +976,17 @@ export interface PagamentoCrediarioPeriodoDto {
   createdAt: string
 }
 
+/** Crediário aberto (concedido) dentro do período filtrado. */
+export interface AberturaCrediarioPeriodoDto {
+  clienteNome: string
+  clienteWhatsApp: string | null
+  valorEmReais: number
+  saldoRestante: number
+  status: string
+  vencido: boolean
+  dataAbertura: string
+}
+
 export interface FormaPagamentoTotalDto {
   forma: string
   total: number
@@ -991,6 +1009,9 @@ export interface FinanceiroDto {
   topProdutos: TopProductFinDto[]
   pagamentosPorForma: FormaPagamentoTotalDto[]
   pagamentosCrediarioPeriodo: PagamentoCrediarioPeriodoDto[]
+  aberturasCrediarioPeriodo: AberturaCrediarioPeriodoDto[]
+  /** Total concedido em crediário no período (soma das aberturas). */
+  abertoCrediario: number
 }
 
 /** Filtros do Top Clientes. Todos opcionais — omitir tudo devolve o histórico

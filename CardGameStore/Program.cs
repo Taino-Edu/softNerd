@@ -270,7 +270,9 @@ builder.Services.AddHttpClient("YugiohApi", client =>
 builder.Services.AddHttpClient("AwesomeApi", client =>
 {
     client.BaseAddress = new Uri("https://economia.awesomeapi.com.br/");
-    client.Timeout     = TimeSpan.FromSeconds(5);
+    // 10s como os outros clients externos. 5s era apertado pra uma API gratuita e
+    // fazia o timeout cair no fallback com facilidade — e o fallback vira preço errado.
+    client.Timeout     = TimeSpan.FromSeconds(10);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
