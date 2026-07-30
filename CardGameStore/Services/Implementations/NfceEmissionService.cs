@@ -735,7 +735,15 @@ public class NfceEmissionService : INfceEmissionService
             throw new FiscalNaoConfiguradoException(
                 $"As alíquotas de IBS/CBS para {anoIbsCbs} ainda não estão configuradas no sistema. " +
                 "Atualize a configuração fiscal conforme a tabela oficial vigente antes de emitir.");
-        var detItens = dados.Itens.Select((item, idx) => MontarItem(item, idx + 1, incluirIbsCbs)).ToList();
+        // O desconto precisa aparecer TAMBÉM item a item: a SEFAZ confere que ICMSTot.vDesc
+        // é igual ao somatório dos prod.vDesc. Calculado aqui, em centavos, pra soma fechar
+        // exata — dividir o valor em reais item a item deixaria diferença de arredondamento.
+        var descontoCentavos = Math.Max(0, dados.Itens.Sum(i => i.SubtotalCentavos) - dados.TotalCentavos);
+        var rateioDesconto   = RatearDesconto(dados.Itens, descontoCentavos);
+
+        var detItens = dados.Itens
+            .Select((item, idx) => MontarItem(item, idx + 1, incluirIbsCbs, rateioDesconto[idx]))
+            .ToList();
         if (ambiente == TipoAmbiente.Homologacao && detItens.Count > 0)
             detItens[0].prod.xProd = ProdutoHomologacao;
 
@@ -1199,7 +1207,11 @@ public class NfceEmissionService : INfceEmissionService
         _                       => formaPagamento,
     };
 
-    internal static det MontarItem(ItemFiscal item, int numero, bool incluirIbsCbs = false) => new()
+    /// <param name="descontoCentavos">Parte do desconto da venda que cabe A ESTE item.
+    /// A SEFAZ exige que <c>ICMSTot.vDesc</c> seja exatamente a soma dos <c>prod.vDesc</c>
+    /// dos itens — ver <see cref="RatearDesconto"/>.</param>
+    internal static det MontarItem(ItemFiscal item, int numero, bool incluirIbsCbs = false,
+                                   int descontoCentavos = 0) => new()
     {
         nItem = numero,
         prod = new prod
@@ -1215,6 +1227,9 @@ public class NfceEmissionService : INfceEmissionService
             qCom       = item.Quantidade,
             vUnCom     = item.PrecoUnitarioCentavos / 100m,
             vProd      = item.SubtotalCentavos / 100m,
+            // Só sai no XML quando há desconto — mandar vDesc=0.00 em nota sem desconto
+            // é ruído desnecessário, e o campo é opcional no leiaute.
+            vDesc      = descontoCentavos > 0 ? descontoCentavos / 100m : null,
             uTrib      = "UN",
             qTrib      = item.Quantidade,
             vUnTrib    = item.PrecoUnitarioCentavos / 100m,
@@ -1361,6 +1376,52 @@ public class NfceEmissionService : INfceEmissionService
                 $"CFOP \"{cfop}\" inválido (precisa ter 4 dígitos, ex: 5102). " +
                 "Corrija em Admin > Fiscal > Naturezas de Operação.");
         return valor;
+    }
+
+    /// <summary>
+    /// Distribui o desconto da venda entre os itens, em centavos, proporcionalmente ao
+    /// valor de cada um. A soma do resultado é SEMPRE exatamente igual a
+    /// <paramref name="descontoTotalCentavos"/>.
+    ///
+    /// Existe porque a SEFAZ valida que <c>ICMSTot.vDesc</c> seja idêntico ao somatório
+    /// dos <c>prod.vDesc</c> — rejeição observada em homologação em 30/07/2026: "Total do
+    /// Desconto difere do somatório dos itens". O desconto ia só no total, e nenhum item
+    /// carregava a própria parte, então o somatório dava zero. Venda sem desconto passava
+    /// (0 = 0), que foi o que mascarou o defeito.
+    ///
+    /// A sobra da divisão inteira é distribuída de 1 em 1 centavo entre os itens que ainda
+    /// têm folga (desconto do item &lt; valor do item), nunca deixando um item com desconto
+    /// maior que o próprio valor — o que a SEFAZ também rejeita.
+    /// </summary>
+    internal static int[] RatearDesconto(IReadOnlyList<ItemFiscal> itens, int descontoTotalCentavos)
+    {
+        var rateio = new int[itens.Count];
+        if (descontoTotalCentavos <= 0 || itens.Count == 0) return rateio;
+
+        var bruto = itens.Sum(i => (long)i.SubtotalCentavos);
+        if (bruto <= 0) return rateio;
+
+        long distribuido = 0;
+        for (var i = 0; i < itens.Count; i++)
+        {
+            var parte = (int)(descontoTotalCentavos * (long)itens[i].SubtotalCentavos / bruto);
+            rateio[i]    = parte;
+            distribuido += parte;
+        }
+
+        // Sobra dos arredondamentos para baixo: no máximo (itens.Count - 1) centavos.
+        var sobra = descontoTotalCentavos - (int)distribuido;
+        for (var volta = 0; sobra > 0 && volta < itens.Count; volta++)
+        {
+            for (var i = 0; i < itens.Count && sobra > 0; i++)
+            {
+                if (rateio[i] >= itens[i].SubtotalCentavos) continue; // item já sem folga
+                rateio[i]++;
+                sobra--;
+            }
+        }
+
+        return rateio;
     }
 
     /// <summary>
