@@ -3,6 +3,7 @@
 ## [v1.23.0] — 2026-07-30
 
 ### Corrigido
+- **Financeiro inflava o valor ao filtrar por forma de pagamento**: numa venda dividida (ex: R$ 80 no cartão + R$ 20 em Pix), filtrar por Pix mostrava os R$ 100 inteiros — e filtrar por cartão mostrava os mesmos R$ 100 de novo. Agora cada filtro mostra só a parte paga naquela forma, e as partes somam exatamente o total do período. O custo e a margem acompanham a mesma proporção. O card "Formas de pagamento" já fazia a conta certa, então a tela se contradizia sozinha
 - **Nota fiscal só saía quando o pagamento era em dinheiro**: cartão, Pix, crediário, pontos e cashback eram recusados pela SEFAZ na hora de emitir. Faltava um dado obrigatório que a Receita exige pra pagamento eletrônico, e uma descrição obrigatória no caso de crediário/pontos/cashback. Agora todas as formas emitem normalmente — vale testar em Homologação antes de confiar no dia a dia
 - **Campo NCM travava ao colar com pontos**: colar "1905.90.90" deixava o campo em "190590" e não passava. Agora aceita colado com ou sem pontuação, e avisa quantos dígitos faltam enquanto você digita
 - **Certificado de outra empresa era aceito**: dava pra subir um certificado digital que não é da loja e emitir nota em nome de terceiro. Agora o sistema confere o CNPJ do certificado contra o da loja
