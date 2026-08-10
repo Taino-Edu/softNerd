@@ -71,6 +71,27 @@ public class SiteConfigController : ControllerBase
         if (req.ColorBackground      is not null) cfg.ColorBackground      = req.ColorBackground;
         if (req.ColorCard            is not null) cfg.ColorCard            = req.ColorCard;
 
+        // Vitrine (parcelamento/Pix): validados porque vão virar preço na tela do cliente —
+        // um percentual negativo ou acima de 100 anunciaria preço maior que o cheio.
+        if (req.PixDiscountPercent is not null)
+        {
+            if (req.PixDiscountPercent < 0 || req.PixDiscountPercent > 100)
+                return BadRequest(new { Message = "Desconto do Pix deve ficar entre 0 e 100%." });
+            cfg.PixDiscountPercent = req.PixDiscountPercent.Value;
+        }
+        if (req.MaxInstallments is not null)
+        {
+            if (req.MaxInstallments < 1 || req.MaxInstallments > 24)
+                return BadRequest(new { Message = "Parcelamento deve ficar entre 1x e 24x." });
+            cfg.MaxInstallments = req.MaxInstallments.Value;
+        }
+        if (req.MinInstallmentInCents is not null)
+        {
+            if (req.MinInstallmentInCents < 0)
+                return BadRequest(new { Message = "Valor mínimo da parcela não pode ser negativo." });
+            cfg.MinInstallmentInCents = req.MinInstallmentInCents.Value;
+        }
+
         if (req.BorderRadiusStyle is not null)
         {
             if (BorderRadiusStyles.Valid.Contains(req.BorderRadiusStyle))
@@ -150,4 +171,7 @@ public class SaveSiteConfigRequest
     public string? ColorBackground     { get; init; }
     public string? ColorCard           { get; init; }
     public string? BorderRadiusStyle   { get; init; }
+    public decimal? PixDiscountPercent    { get; init; }
+    public int?     MaxInstallments       { get; init; }
+    public int?     MinInstallmentInCents { get; init; }
 }

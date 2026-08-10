@@ -26,7 +26,7 @@ function CategoryModal({
   onSave:  (c: Partial<ProductCategory>) => Promise<void>
 }) {
   const [form, setForm]     = useState<Partial<ProductCategory>>(
-    category ?? { name: '', emoji: '', displayOrder: 0, isActive: true, parentCategoryId: null }
+    category ?? { name: '', emoji: '', displayOrder: 0, isActive: true, parentCategoryId: null, pixDiscountPercent: null }
   )
   const [saving, setSaving] = useState(false)
   const set = (k: keyof ProductCategory, v: unknown) => setForm(f => ({ ...f, [k]: v }))
@@ -112,6 +112,20 @@ function CategoryModal({
                 </p>
               </>
             )}
+          </div>
+
+          <div>
+            <label className="label">Desconto no Pix (%)</label>
+            <input
+              className="input" type="number" min="0" max="100" step="0.5"
+              value={form.pixDiscountPercent ?? ''}
+              onChange={e => set('pixDiscountPercent', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="Vazio = usa o padrão da loja"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Só muda o que a página do produto anuncia. Ex: Pokémon com 3%, enquanto o resto da loja segue o
+              padrão de Personalizar Site. Subcategoria vazia herda da categoria pai.
+            </p>
           </div>
 
           <div>
@@ -238,7 +252,7 @@ export default function CategoriasPage() {
         <Table minWidth="min-w-[460px]">
           <Table.Head>
               <tr className="text-left">
-                {['', 'Categoria', 'Emoji', 'Ordem', 'Status', 'Ações'].map(h => (
+                {['', 'Categoria', 'Emoji', 'Pix', 'Ordem', 'Status', 'Ações'].map(h => (
                   <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -257,6 +271,11 @@ export default function CategoriasPage() {
                   </td>
                   <td className="px-4 py-3 text-2xl">
                     {c.emoji ?? <span className="text-gray-400 text-sm">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 text-sm">
+                    {c.pixDiscountPercent != null
+                      ? <span className="font-semibold text-white">{c.pixDiscountPercent}%</span>
+                      : <span title="Usa o padrão da loja">padrão</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-400">{c.displayOrder}</td>
                   <td className="px-4 py-3">

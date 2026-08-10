@@ -39,6 +39,9 @@ const DEFAULTS: SiteConfigDto = {
   colorBackground: '#EBF7FD',
   colorCard: '#FFFFFF',
   borderRadiusStyle: 'Padrao',
+  pixDiscountPercent: 5,
+  maxInstallments: 12,
+  minInstallmentInCents: 500,
 }
 
 const RADIUS_OPTIONS: { value: SiteConfigDto['borderRadiusStyle']; label: string; previewRadius: string }[] = [
@@ -335,6 +338,40 @@ export default function SiteConfigPage() {
             <input value={cfg.contactEmail} onChange={e => set('contactEmail', e.target.value)} className="input w-full" />
           </Field>
         </div>
+      </div>
+
+      {/* Vitrine: cartão e Pix */}
+      <div className="card p-5 space-y-3">
+        <h3 className="font-bold text-white mb-1">Vitrine — cartão e Pix</h3>
+        <p className="text-[11px] text-gray-500 -mt-1">
+          O que aparece na página do produto, abaixo do preço: em quantas vezes dá pra parcelar e quanto sai no Pix.
+          É só texto de vitrine — o desconto de verdade continua sendo aplicado por você na hora de fechar.
+          Quem manda no parcelamento é <strong className="text-gray-300">cada produto</strong> (campo no cadastro do item);
+          aqui você só define o que já vem preenchido quando cadastrar um produto novo.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="Desconto no Pix (%)" desc="0 = não mostra a linha do Pix">
+            <input type="number" min={0} max={100} step={0.5}
+              value={cfg.pixDiscountPercent}
+              onChange={e => set('pixDiscountPercent', Number(e.target.value))}
+              className="input w-full" />
+          </Field>
+          <Field label="Parcelas — padrão de produto novo" desc="Já vem preenchido no cadastro; dá pra mudar ou limpar item a item">
+            <input type="number" min={1} max={24} step={1}
+              value={cfg.maxInstallments}
+              onChange={e => set('maxInstallments', Number(e.target.value))}
+              className="input w-full" />
+          </Field>
+          <Field label="Parcela mínima (R$)" desc="Vale pra todo mundo: item barato parcela em menos vezes sozinho">
+            <input type="number" min={0} step={1}
+              value={(cfg.minInstallmentInCents / 100).toFixed(0)}
+              onChange={e => set('minInstallmentInCents', Math.max(0, Math.round(Number(e.target.value) * 100)))}
+              className="input w-full" />
+          </Field>
+        </div>
+        <p className="text-[11px] text-gray-500">
+          Categoria com percentual próprio (ex: Pokémon com 3%) manda mais que este padrão — configure em Categorias.
+        </p>
       </div>
 
       {/* Cores */}

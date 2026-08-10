@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { productApi, authApi, userApi, Product, UserProfile } from '@/lib/api'
+import { productApi, authApi, userApi, siteConfigApi, categoryApi, Product, UserProfile, SiteConfigDto, ProductCategory } from '@/lib/api'
 import { saveAuth, isLoggedIn, getUserName } from '@/lib/auth'
 import { useReservationCart } from '@/hooks/useReservationCart'
+import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import Link from 'next/link'
 import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus } from 'lucide-react'
 
@@ -12,6 +13,10 @@ const BLUE = '#3EC2F2'
 const WA_NUM = '5517997633103'
 
 function fmt(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}` }
+/** "3" → "3%" e "2.5" → "2,5%" (sem casa decimal à toa no caso comum). */
+function fmtPct(v: number) {
+  return `${(Math.round(v * 10) / 10).toString().replace('.', ',')}%`
+}
 function fmtData(d: string) {
   // "2026-07-25" → "25/07" (sem timezone — a data de rua é uma data, não um instante)
   const [y, m, day] = d.slice(0, 10).split('-')
@@ -37,6 +42,10 @@ export default function ProductPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [authed,  setAuthed]  = useState(false)
 
+  // Vitrine: parcelamento no cartão + desconto no Pix (config da loja + % da categoria)
+  const [siteCfg,    setSiteCfg]    = useState<SiteConfigDto | null>(null)
+  const [categorias, setCategorias] = useState<ProductCategory[]>([])
+
   const { items: cartItems, addItem, totalItems: cartCount } = useReservationCart()
   const inCart = product ? cartItems.some(i => i.productId === product.id) : false
   const [qty, setQty] = useState(1)
@@ -54,14 +63,16 @@ export default function ProductPage() {
     setQty(1)
   }
 
+  // pix: verde-água do Pix em dois tons — o claro precisa ser mais fechado pra
+  // manter contraste no card branco, o escuro mais aberto pra não sumir no #1A1A1F.
   const C = isDark ? {
     bg: '#121215', card: '#1A1A1F', border: 'rgba(255,255,255,0.07)',
     navy: '#FFFFFF', text: 'rgba(255,255,255,0.65)', muted: 'rgba(255,255,255,0.35)',
-    chip: '#1E1E24',
+    chip: '#1E1E24', pix: '#2DD4BF',
   } : {
     bg: '#F5F8FA', card: '#FFFFFF', border: 'rgba(12,61,90,0.10)',
     navy: NAVY, text: '#4D8FAC', muted: '#9CA3AF',
-    chip: '#EBF7FD',
+    chip: '#EBF7FD', pix: '#00806D',
   }
 
   useEffect(() => {
@@ -84,6 +95,10 @@ export default function ProductPage() {
       })
       .catch(() => router.replace('/produtos'))
       .finally(() => setLoading(false))
+
+    // Parcelamento/Pix são enfeite de vitrine: falhou, a página segue sem as linhas.
+    siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
+    categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [id, router])
 
   async function handleLogin(e: React.FormEvent) {
@@ -134,6 +149,13 @@ export default function ProductPage() {
   const precoUnit  = product.isOnPromo && product.discountPriceInReais != null
     ? product.discountPriceInReais
     : product.priceInReais
+
+  // Vitrine: "em até 12x de R$ X" + "ou R$ Y no Pix" — sempre sobre o preço unitário
+  // já com promoção, que é o que o cliente vê em destaque na caixa de preço.
+  const vitrine = siteCfg
+    ? calcPrecoVitrine(precoUnit, product.maxInstallments, siteCfg,
+                       resolvePixPercent(product.category, categorias, siteCfg.pixDiscountPercent))
+    : null
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
@@ -238,6 +260,20 @@ export default function ProductPage() {
               ) : (
                 <p className="text-4xl font-black" style={{ color: BLUE }}>{fmt(product.priceInReais)}</p>
               )}
+
+              {/* Cartão × Pix — o que o cliente pergunta antes de comprar */}
+              {vitrine && vitrine.parcelas > 1 && (
+                <p className="text-sm mt-2" style={{ color: C.text }}>
+                  em até <strong style={{ color: C.navy }}>{vitrine.parcelas}x de {fmt(vitrine.valorParcela)}</strong> sem juros
+                </p>
+              )}
+              {vitrine && vitrine.pixPercent > 0 && (
+                <p className="text-sm mt-1" style={{ color: C.text }}>
+                  ou <strong className="text-lg" style={{ color: C.pix }}>{fmt(vitrine.precoPix)}</strong>
+                  {' '}com <strong style={{ color: C.pix }}>{fmtPct(vitrine.pixPercent)} OFF</strong> no Pix
+                </p>
+              )}
+
               <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: emEstoque ? '#22C55E' : '#EF4444' }}>
                 <CheckCircle className="w-3.5 h-3.5" />
                 {emEstoque ? `${product.stockQuantity} unidades em estoque` : 'Produto esgotado'}

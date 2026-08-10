@@ -961,6 +961,15 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS color_card VARCHAR(9) NOT NULL DEFAULT '#FFFFFF';
                 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS nav_liga_label VARCHAR(40) NOT NULL DEFAULT 'Liga Mensal';
 
+                -- Vitrine: parcelamento no cartão + desconto no Pix (padrão da loja).
+                -- Categoria com percentual próprio sobrescreve (Pokémon = 3%, por exemplo).
+                ALTER TABLE site_config ADD COLUMN IF NOT EXISTS pix_discount_percent     NUMERIC(5,2) NOT NULL DEFAULT 5;
+                ALTER TABLE site_config ADD COLUMN IF NOT EXISTS max_installments         INTEGER      NOT NULL DEFAULT 12;
+                ALTER TABLE site_config ADD COLUMN IF NOT EXISTS min_installment_in_cents INTEGER      NOT NULL DEFAULT 500;
+                ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS pix_discount_percent NUMERIC(5,2) NULL;
+                -- Parcelamento é por item (decidido no cadastro do produto): null = não anuncia.
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS max_installments INTEGER NULL;
+
                 -- Liga Mensal: lançamentos manuais (jogador + pontos digitados direto pelo admin,
                 -- sem precisar cadastrar Championship — pra migrar histórico anotado à mão).
                 CREATE TABLE IF NOT EXISTS liga_mensal_manual_entries (

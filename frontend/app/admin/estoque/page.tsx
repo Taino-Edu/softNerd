@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { productApi, variantApi, categoryApi, reservationApi, fiscalApi, Product, ProductCategory, ProductVariant, AdminReservation, NaturezaOperacaoDto } from '@/lib/api'
+import { productApi, variantApi, categoryApi, reservationApi, fiscalApi, siteConfigApi, Product, ProductCategory, ProductVariant, AdminReservation, NaturezaOperacaoDto, SiteConfigDto } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Badge } from '@/components/ui/Badge'
 import { Table } from '@/components/ui/Table'
@@ -418,15 +418,19 @@ function VariantsPanel({ productId }: { productId: string }) {
 }
 
 function ProductModal({
-  product, categories, naturezas, onClose, onSave,
+  product, categories, naturezas, parcelamentoPadrao, onClose, onSave,
 }: {
   product:    Partial<Product> | null
   categories: ProductCategory[]
   naturezas:  NaturezaOperacaoDto[]
+  /** Parcelamento padrão da loja (Personalizar Site) — só pré-preenche produto NOVO. */
+  parcelamentoPadrao: number | null
   onClose:    () => void
   onSave:     (p: Partial<Product>) => Promise<void>
 }) {
-  const [form, setForm]         = useState<Partial<Product>>(product ?? { stockQuantity: 0, minimumStock: 5, priceInCents: 0, costPriceInCents: 0 })
+  const [form, setForm]         = useState<Partial<Product>>(
+    product ?? { stockQuantity: 0, minimumStock: 5, priceInCents: 0, costPriceInCents: 0, maxInstallments: parcelamentoPadrao }
+  )
   const [saving, setSaving]     = useState(false)
   const [barcodeScanning, setBarcodeScanning] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
@@ -828,6 +832,21 @@ function ProductModal({
               </div>
             </label>
             <div>
+              <label className="label">💳 Parcelar no cartão em até — opcional</label>
+              <div className="flex items-center gap-2">
+                <input className="input w-24" type="number" min={1} max={24} placeholder="—"
+                  value={form.maxInstallments ?? ''}
+                  onChange={e => set('maxInstallments', e.target.value === '' ? null : Number(e.target.value))}
+                />
+                <span className="text-sm text-[var(--text-muted)]">vezes sem juros</span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                Aparece na página do produto ("em até 12x de R$ 16,25 sem juros"). Deixando vazio, a linha
+                não aparece neste item. Item barato parcela em menos vezes sozinho, pra respeitar a parcela
+                mínima definida em Personalizar Site.
+              </p>
+            </div>
+            <div>
               <label className="label">📅 Data de lançamento (data de rua) — opcional</label>
               <input className="input" type="date"
                 value={form.preVendaReleaseDate ? form.preVendaReleaseDate.slice(0, 10) : ''}
@@ -857,6 +876,7 @@ export default function EstoquePage() {
   const [products, setProducts]       = useState<Product[]>([])
   const [categories, setCategories]   = useState<ProductCategory[]>([])
   const [naturezas, setNaturezas]     = useState<NaturezaOperacaoDto[]>([])
+  const [siteCfg, setSiteCfg]         = useState<SiteConfigDto | null>(null)
   const [loading, setLoading]         = useState(true)
   const [search, setSearch]           = useState('')
   const [modal, setModal]             = useState<Partial<Product> | null | undefined>(undefined)
@@ -871,6 +891,8 @@ export default function EstoquePage() {
       setProducts(prodRes.data)
       setCategories(catRes.data)
       setNaturezas(natRes.data)
+      // Só serve pra pré-preencher o parcelamento de produto novo — falhou, o campo vem vazio.
+      siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
     } catch { if (!quiet) toast.error('Erro ao carregar produtos') }
     finally { if (!quiet) setLoading(false) }
   }
@@ -965,7 +987,9 @@ export default function EstoquePage() {
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {modal !== undefined && (
-        <ProductModal product={modal} categories={categories} naturezas={naturezas} onClose={() => setModal(undefined)} onSave={handleSave} />
+        <ProductModal product={modal} categories={categories} naturezas={naturezas}
+          parcelamentoPadrao={siteCfg?.maxInstallments ?? null}
+          onClose={() => setModal(undefined)} onSave={handleSave} />
       )}
       {drawer && (
         <ProductDrawer

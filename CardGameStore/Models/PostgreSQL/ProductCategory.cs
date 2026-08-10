@@ -20,6 +20,15 @@ public class ProductCategory
     [Column("emoji")]
     public string? Emoji { get; set; }
 
+    /// <summary>
+    /// Desconto do Pix desta categoria, em % (ex: 3 pra Pokémon, que tem margem menor).
+    /// Null = herda: primeiro da categoria pai, depois do padrão da loja
+    /// (SiteConfig.PixDiscountPercent). Só afeta o que a vitrine ANUNCIA — o desconto
+    /// real continua sendo aplicado pelo admin no fechamento.
+    /// </summary>
+    [Column("pix_discount_percent")]
+    public decimal? PixDiscountPercent { get; set; }
+
     [Column("display_order")]
     public int DisplayOrder { get; set; } = 0;
 

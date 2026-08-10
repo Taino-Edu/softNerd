@@ -1,5 +1,18 @@
 # Changelog — Santuário Nerd
 
+## [v1.25.0] — 2026-08-10
+
+### Adicionado
+- **Parcelamento e desconto do Pix na página do produto** (pedido do Maikon): abaixo do preço agora aparece "em até 12x de R$ 16,25 sem juros" e "ou R$ 189,14 com 3% OFF no Pix", igual às lojas grandes. É informação de vitrine — o desconto continua sendo aplicado por você no fechamento
+- **O parcelamento é definido item a item**, no cadastro do produto (campo "Parcelar no cartão em até", junto dos botões de marketplace e destaque): deixou vazio, aquele produto não mostra parcelamento nenhum. Produto novo já vem preenchido com o padrão configurado em Personalizar Site — é só mudar ou limpar
+- **Cada categoria pode ter o próprio percentual de Pix** (Categorias → Desconto no Pix): Pokémon com 3% enquanto o resto da loja segue o padrão. Subcategoria sem percentual herda o da categoria pai, e quem não tem nada usa o padrão da loja
+- Em Personalizar Site → *Vitrine — cartão e Pix* ficam o percentual padrão do Pix, o parcelamento padrão de produto novo e a **parcela mínima** — esta última vale pra loja toda: produto barato parcela em menos vezes sozinho, pra não aparecer "12x de R$ 1,67"
+- ⚠️ Os produtos que já estão cadastrados começam **sem parcelamento** (campo vazio). Quem quiser a linha do cartão neles precisa preencher o campo — em massa dá pra fazer depois, se valer a pena
+
+### Corrigido
+- **Carrinho de reserva vazava entre contas**: o carrinho ficava salvo no navegador e não era apagado no logout — quem entrasse depois na mesma máquina via itens que nunca tinha escolhido (a bolinha roxa com produto de outra pessoa)
+- **Risco de reserva duplicada**: quando o banco pedia pra repetir a operação (falha momentânea de conexão), a reserva da tentativa anterior podia ser gravada de novo junto com a nova, baixando o estoque duas vezes pelo mesmo pedido
+
 ## [v1.24.0] — 2026-07-30
 
 ### Corrigido — Nota fiscal

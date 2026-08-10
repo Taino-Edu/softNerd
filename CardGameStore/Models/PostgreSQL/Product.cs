@@ -134,6 +134,15 @@ public class Product
     public bool IsPreVenda { get; set; } = false;
 
     /// <summary>
+    /// Em quantas vezes este item pode ser parcelado no cartão, anunciado na página do produto.
+    /// Null (ou 1) = não anuncia parcelamento neste item — mesma lógica dos toggles de vitrine:
+    /// não marcou, não aparece. O piso da parcela (SiteConfig.MinInstallmentInCents) ainda pode
+    /// reduzir o número mostrado num item barato.
+    /// </summary>
+    [Column("max_installments")]
+    public int? MaxInstallments { get; set; }
+
+    /// <summary>
     /// Se true, o estoque é gerenciado por variantes (ProductVariant) em vez do campo StockQuantity.
     /// Use para produtos com grade de tamanho/cor (ex: camisas).
     /// </summary>

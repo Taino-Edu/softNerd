@@ -130,6 +130,8 @@ export interface Product {
   hasVariants: boolean
   /** "Data de rua" da pré-venda (YYYY-MM-DD) — retirada/venda só a partir dela. Null = sem trava. */
   preVendaReleaseDate: string | null
+  /** Parcelamento anunciado na página do produto. Null = este item não parcela (linha some). */
+  maxInstallments: number | null
   /** NCM (Nomenclatura Comum do Mercosul) — obrigatório para emitir NFC-e deste produto. */
   ncm: string | null
   /** CEST (7 dígitos) — obrigatório só nos CSOSNs de substituição tributária (201/202/203/500). */
@@ -150,6 +152,8 @@ export interface ProductCategory {
   id: string; name: string; emoji: string | null
   displayOrder: number; isActive: boolean; createdAt: string
   parentCategoryId: string | null
+  /** Desconto do Pix anunciado na vitrine, em %. Null = herda do pai / do padrão da loja. */
+  pixDiscountPercent: number | null
 }
 
 export const categoryApi = {
@@ -1397,6 +1401,12 @@ export interface SiteConfigDto {
   colorBackground: string
   colorCard: string
   borderRadiusStyle: 'Padrao' | 'Suave' | 'MuitoArredondado'
+  /** Desconto padrão do Pix anunciado na vitrine, em %. 0 = não anuncia Pix. */
+  pixDiscountPercent: number
+  /** Parcelamento que vem pré-preenchido no cadastro de produto novo (o valor real é por produto). */
+  maxInstallments: number
+  /** Piso da parcela em centavos — evita "12x de R$ 1,67" em produto barato. */
+  minInstallmentInCents: number
 }
 
 export const siteConfigApi = {

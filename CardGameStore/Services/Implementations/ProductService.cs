@@ -125,6 +125,8 @@ public class ProductService : IProductService
         existing.ShowOnMarketplace    = updated.ShowOnMarketplace;
         existing.IsPreVenda           = updated.IsPreVenda;
         existing.PreVendaReleaseDate  = updated.PreVendaReleaseDate;
+        // Null aqui é decisão do lojista ("não parcelar este item"), não campo omitido.
+        existing.MaxInstallments      = updated.MaxInstallments;
         existing.Ncm                  = updated.Ncm;
         existing.Cest                 = updated.Cest;
         existing.NaturezaOperacaoId   = updated.NaturezaOperacaoId;
@@ -360,6 +362,8 @@ public class ProductService : IProductService
             throw new ArgumentException($"Estoque limitado a {MaxEstoque:N0} unidades.");
         if (product.MinimumStock > MaxEstoque)
             throw new ArgumentException($"Estoque mínimo limitado a {MaxEstoque:N0} unidades.");
+        if (product.MaxInstallments is < 1 or > 24)
+            throw new ArgumentException("Parcelamento deve ficar entre 1x e 24x (ou vazio, pra não parcelar).");
     }
 
     /// <summary>

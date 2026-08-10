@@ -167,6 +167,30 @@ public class SiteConfig
     [Column("border_radius_style")]
     public string BorderRadiusStyle { get; set; } = "Padrao";
 
+    // ── Vitrine: parcelamento no cartão e desconto no Pix ─────────────────────
+    // Pedido do Maikon (03/08/2026): mostrar na página do produto que dá pra parcelar
+    // no cartão e quanto sai no Pix — igual às lojas grandes. Isto aqui é o padrão da
+    // loja; categoria com percentual próprio (ex: Pokémon = 3%) sobrescreve
+    // (ver ProductCategory.PixDiscountPercent).
+
+    /// <summary>Desconto padrão do Pix, em % do preço de venda. 0 = não anuncia Pix na vitrine.</summary>
+    [Column("pix_discount_percent")]
+    public decimal PixDiscountPercent { get; set; } = 5m;
+
+    /// <summary>
+    /// Parcelamento que já vem preenchido ao cadastrar um produto NOVO — quem manda de verdade
+    /// é Product.MaxInstallments, item a item. Mudar aqui não mexe no que já está cadastrado.
+    /// </summary>
+    [Column("max_installments")]
+    public int MaxInstallments { get; set; } = 12;
+
+    /// <summary>
+    /// Piso da parcela: o número de parcelas anunciado cai até a parcela alcançar este valor
+    /// (sem isso, um produto de R$ 20 apareceria como "12x de R$ 1,67").
+    /// </summary>
+    [Column("min_installment_in_cents")]
+    public int MinInstallmentInCents { get; set; } = 500;
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
