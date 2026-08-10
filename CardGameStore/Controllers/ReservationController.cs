@@ -693,10 +693,9 @@ public class ReservationController : ControllerBase
         return Ok(ToDto(res));
     }
 
-    // POST /api/reservations/{id}/homologar — admin homologa pré-venda → lança no PDV.
-    // Sempre PDV: homologar por comanda misturava o valor com outros itens do cliente e
-    // ficava impossível separar "Pré-venda" de "Comanda" no Financeiro com segurança.
-    // SkipStockDecrement: o estoque JÁ saiu no ato da pré-venda; aqui só se registra a venda.
+    // POST /api/reservations/{id}/homologar — homologa UM item da pré-venda.
+    // Continua existindo pra quem precisa resolver um item solto de um carrinho; a tela de
+    // admin usa sempre o endpoint de grupo abaixo (ver HomologarGrupo).
     [HttpPost("{id:guid}/homologar")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Homologar(Guid id, [FromBody] HomologarRequest req)
@@ -711,6 +710,44 @@ public class ReservationController : ControllerBase
         if (res.Status != "active" || res.Kind != "pre_venda")
             return BadRequest(new { Message = "Só pré-vendas ativas podem ser homologadas." });
 
+        return await HomologarItensAsync([res], req);
+    }
+
+    // POST /api/reservations/group/{groupId}/homologar — homologa o CARRINHO inteiro de uma vez.
+    //
+    // O cliente reserva vários itens juntos (mesmo ReservationGroupId) e retira tudo junto no
+    // balcão, mas o botão "Homologar" era por linha: clicar uma vez resolvia 1 item e o resto
+    // ficava "active" pra sempre, sem aviso nenhum ("reservei 2 itens, só retirou um").
+    // Reserva avulsa tem ReservationGroupId = o próprio Id, então este endpoint cobre os dois
+    // casos e a tela não precisa saber qual é qual.
+    [HttpPost("group/{groupId:guid}/homologar")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> HomologarGrupo(Guid groupId, [FromBody] HomologarRequest req)
+    {
+        var itens = await _db.ProductReservations
+            .Include(r => r.User)
+            .Include(r => r.Product)
+            .Include(r => r.Variant)
+            .Where(r => r.ReservationGroupId == groupId && r.Status == "active" && r.Kind == "pre_venda")
+            .OrderBy(r => r.ReservedAt)
+            .ToListAsync();
+
+        if (itens.Count == 0)
+            return NotFound(new { Message = "Nenhuma pré-venda ativa neste pedido." });
+
+        return await HomologarItensAsync(itens, req);
+    }
+
+    /// <summary>
+    /// Núcleo da homologação: marca os itens como retirados e lança UMA venda no PDV com todos
+    /// eles. Sempre PDV — homologar por comanda misturava o valor com outros itens do cliente e
+    /// ficava impossível separar "Pré-venda" de "Comanda" no Financeiro com segurança.
+    /// SkipStockDecrement: o estoque JÁ saiu no ato da pré-venda; aqui só se registra a venda.
+    /// </summary>
+    private async Task<IActionResult> HomologarItensAsync(List<ProductReservation> itens, HomologarRequest req)
+    {
+        var ids       = itens.Select(r => r.Id).ToList();
+        var primeiro  = itens[0];
         var adminId   = GetUserId();
         var adminName = User.FindFirst(ClaimTypes.Name)?.Value
                      ?? User.FindFirst("name")?.Value
@@ -718,33 +755,38 @@ public class ReservationController : ControllerBase
 
         VendaAvulsaDto? vendaResult = null;
 
-        // Claim atômico + registro da venda/comanda na MESMA transação (mesmo motivo do
+        // Claim atômico + registro da venda na MESMA transação (mesmo motivo do
         // Cancel/UpdateStatus — era o M9 da auditoria: duas homologações concorrentes, ou
         // uma homologação correndo com um cancelamento, podiam lançar a venda duas vezes
-        // ou lançar em cima de uma pré-venda já cancelada).
+        // ou lançar em cima de uma pré-venda já cancelada). No carrinho vale pro lote todo:
+        // se um item saiu do ar no meio do caminho, nenhum é homologado.
         var strategy = _db.Database.CreateExecutionStrategy();
         IActionResult? falha = null;
         await strategy.ExecuteAsync(async () =>
         {
+            falha = null;
+
             await using var tx = await _db.Database.BeginTransactionAsync();
 
             var claimed = await _db.ProductReservations
-                .Where(r => r.Id == id && r.Status == "active" && r.Kind == "pre_venda")
+                .Where(r => ids.Contains(r.Id) && r.Status == "active" && r.Kind == "pre_venda")
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(r => r.Status, "fulfilled")
                     .SetProperty(r => r.FulfilledAt, DateTime.UtcNow));
-            if (claimed == 0)
+            if (claimed != ids.Count)
             {
-                falha = BadRequest(new { Message = "Esta pré-venda já foi processada." });
-                return;
+                falha = BadRequest(new { Message = ids.Count == 1
+                    ? "Esta pré-venda já foi processada."
+                    : "Algum item deste pedido foi cancelado ou homologado enquanto você preenchia — abra de novo pra ver como ficou." });
+                return; // sem Commit: rollback desfaz o claim parcial
             }
 
             try
             {
                 var vendaReq = new VendaAvulsaRequest
                 {
-                    ClientName                 = res.User?.Name,
-                    UserId                     = res.UserId,
+                    ClientName                 = primeiro.User?.Name,
+                    UserId                     = primeiro.UserId,
                     PaymentMethod              = req.PaymentMethod ?? "Dinheiro",
                     SecondPaymentMethod        = req.SecondPaymentMethod,
                     SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
@@ -755,11 +797,16 @@ public class ReservationController : ControllerBase
                     SkipStockDecrement         = true, // estoque já baixado na pré-venda
                     // Marca a origem pra o Financeiro separar Comanda/PDV de venda do site — que
                     // ainda se divide em "Site" × "Pré-venda" pela tag do produto (mesma lógica
-                    // que separa as colunas do kanban de Pedidos).
+                    // que separa as colunas do kanban de Pedidos). Carrinho misturado (um item
+                    // marcado como pré-venda e outro não) conta como "Site": só é pré-venda a
+                    // venda em que TODO o pedido é de item pré-venda.
                     Origem                     = "Reserva",
-                    ReservationId              = res.Id,
-                    ProductIsPreVenda          = res.Product?.IsPreVenda ?? false,
-                    Items                      = [new VendaAvulsaItemRequest { ProductId = res.ProductId, VariantId = res.VariantId, Quantity = res.Quantity }],
+                    ReservationId              = primeiro.Id,
+                    ReservationGroupId         = primeiro.ReservationGroupId,
+                    ProductIsPreVenda          = itens.All(r => r.Product?.IsPreVenda ?? false),
+                    Items                      = itens
+                        .Select(r => new VendaAvulsaItemRequest { ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity })
+                        .ToList(),
                 };
                 vendaResult = await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
             }
@@ -775,8 +822,12 @@ public class ReservationController : ControllerBase
         if (falha is not null) return falha;
 
         return Ok(new {
-            message = "Pré-venda homologada com sucesso.",
-            reservationId = id,
+            message = itens.Count == 1
+                ? "Pré-venda homologada com sucesso."
+                : $"{itens.Count} itens do carrinho homologados de uma vez.",
+            reservationId   = primeiro.Id,   // compatibilidade com quem já consumia o endpoint de 1 item
+            reservationIds  = ids,
+            itemCount       = itens.Count,
             discountPercent = vendaResult?.DiscountPercent ?? 0,
             discountInReais = vendaResult?.DiscountInReais ?? 0,
         });

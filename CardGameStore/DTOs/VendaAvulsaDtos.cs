@@ -45,8 +45,14 @@ public class VendaAvulsaRequest
     /// backend; o PDV nunca envia — fica null pra venda de balcão comum.</summary>
     public string? Origem { get; set; }
 
-    /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva".</summary>
+    /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva".
+    /// Num carrinho homologado de uma vez, é o primeiro item — quem identifica a venda
+    /// inteira é o ReservationGroupId.</summary>
     public Guid? ReservationId { get; set; }
+
+    /// <summary>Grupo (carrinho) de origem, quando Origem == "Reserva". Uma venda por grupo,
+    /// mesmo que o cliente tenha reservado vários itens de uma vez.</summary>
+    public Guid? ReservationGroupId { get; set; }
 
     /// <summary>Snapshot de Product.IsPreVenda no momento da homologação — separa "Site" de
     /// "Pré-venda" no Financeiro. Só relevante quando Origem == "Reserva".</summary>

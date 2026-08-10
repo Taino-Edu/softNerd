@@ -515,7 +515,15 @@ export default function ReservasPage() {
     setHomDiscountValueStr('')
   }
 
-  const homSubtotalCents = Math.round((homModal?.subtotalEmReais ?? 0) * 100)
+  // Homologar resolve o CARRINHO inteiro, não a linha clicada: o valor, o desconto e o
+  // aviso do modal têm que falar do grupo todo. Reserva avulsa cai aqui como grupo de 1.
+  const homGroupItems = homModal
+    ? items.filter(r => r.reservationGroupId === homModal.reservationGroupId
+                     && r.status === 'active' && r.kind === 'pre_venda')
+    : []
+  const homSubtotalCents = Math.round(
+    homGroupItems.reduce((sum, r) => sum + (r.subtotalEmReais ?? 0), 0) * 100
+  )
   const homDiscountCents = homDiscountMode === 'cents'
     ? Math.min(Math.round(parseFloat(homDiscountValueStr.replace(',', '.') || '0') * 100), homSubtotalCents)
     : Math.round(homSubtotalCents * homDiscountPct / 100)
@@ -531,16 +539,19 @@ export default function ReservasPage() {
     }
     setSubmitting(true)
     try {
-      const { data } = await reservationApi.homologar(homModal.id, {
+      // Sempre pelo grupo: reserva avulsa tem reservationGroupId = o próprio id, então
+      // um clique resolve tanto o item solto quanto o carrinho de N itens.
+      const { data } = await reservationApi.homologarGrupo(homModal.reservationGroupId, {
         paymentMethod: homPayment,
         secondPaymentMethod:        homSplit ? homSecondPayment : undefined,
         secondPaymentAmountInCents: homSplit ? secondAmountInCents : undefined,
         discountPercent: homDiscountMode === 'percent' ? homDiscountPct : 0,
         discountInCents: homDiscountMode === 'cents' ? homDiscountCents : undefined,
       })
+      const oQue = data.itemCount > 1 ? `${data.itemCount} itens do carrinho homologados` : 'Pré-venda homologada'
       toast.success(data.discountInReais > 0
-        ? `Pré-venda homologada com desconto de R$ ${data.discountInReais.toFixed(2).replace('.', ',')}!`
-        : 'Pré-venda homologada!')
+        ? `${oQue} com desconto de R$ ${data.discountInReais.toFixed(2).replace('.', ',')}!`
+        : `${oQue}!`)
       setHomModal(null)
       load()
     } catch (e: any) {
@@ -876,10 +887,38 @@ export default function ReservasPage() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-5">
             <div>
-              <h2 className="text-lg font-black text-white">Homologar pré-venda</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
-                {homModal.productName} · {homModal.quantity}x · {homModal.userName}
-              </p>
+              <h2 className="text-lg font-black text-white">
+                {homGroupItems.length > 1 ? `Homologar carrinho de ${homGroupItems.length} itens` : 'Homologar pré-venda'}
+              </h2>
+              <p className="text-sm text-gray-400 mt-0.5">{homModal.userName}</p>
+
+              {homGroupItems.length > 1 ? (
+                <>
+                  <div className="mt-2 rounded-xl bg-surface-700 border border-surface-500 divide-y divide-surface-500">
+                    {homGroupItems.map(r => (
+                      <div key={r.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <span className="text-xs text-gray-300 truncate">
+                          {r.quantity}x {r.productName}
+                          {r.variantLabel && <span className="text-gray-500"> · {r.variantLabel}</span>}
+                        </span>
+                        <span className="text-xs text-gray-400 font-mono shrink-0">
+                          R$ {(r.subtotalEmReais ?? 0).toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-amber-300/90 mt-2 flex items-start gap-1.5">
+                    <Layers className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    O cliente reservou tudo junto: confirmar aqui marca os {homGroupItems.length} itens como
+                    retirados e lança <strong>uma venda só</strong>, com todos eles.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-400">
+                  {homModal.productName} · {homModal.quantity}x
+                </p>
+              )}
+
               <p className="text-xs text-gray-500 mt-1">
                 O estoque já foi baixado quando a pré-venda foi criada — aqui só registra a venda.
               </p>
@@ -930,9 +969,9 @@ export default function ReservasPage() {
                     placeholder="0,00"
                     className="input w-full"
                   />
-                  {homModal?.subtotalEmReais != null && (
+                  {homSubtotalCents > 0 && (
                     <p className="text-[11px] text-gray-500">
-                      Total do pedido: R$ {homModal.subtotalEmReais.toFixed(2).replace('.', ',')} · resto fica em {homPayment || '—'}
+                      Total do pedido: R$ {(homSubtotalCents / 100).toFixed(2).replace('.', ',')} · resto fica em {homPayment || '—'}
                     </p>
                   )}
                 </div>

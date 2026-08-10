@@ -10,6 +10,7 @@
 - ⚠️ Os produtos que já estão cadastrados começam **sem parcelamento** (campo vazio). Quem quiser a linha do cartão neles precisa preencher o campo — em massa dá pra fazer depois, se valer a pena
 
 ### Corrigido
+- **"Reservei 2 itens, só retirou um"**: quando o cliente reservava vários produtos de uma vez, o botão Homologar resolvia só a linha clicada e o resto do carrinho ficava em aberto pra sempre, sem aviso nenhum. Agora um clique homologa o pedido inteiro: o modal lista tudo que vai sair, o desconto é calculado sobre o total do carrinho e o caixa recebe **uma venda só**, com todos os itens. Se algum item for cancelado enquanto você preenche a tela, nada é homologado e o sistema avisa pra reabrir
 - **Carrinho de reserva vazava entre contas**: o carrinho ficava salvo no navegador e não era apagado no logout — quem entrasse depois na mesma máquina via itens que nunca tinha escolhido (a bolinha roxa com produto de outra pessoa)
 - **Risco de reserva duplicada**: quando o banco pedia pra repetir a operação (falha momentânea de conexão), a reserva da tentativa anterior podia ser gravada de novo junto com a nova, baixando o estoque duas vezes pelo mesmo pedido
 

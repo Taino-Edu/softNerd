@@ -629,6 +629,17 @@ export interface ReservationPixStatus {
   pixCopiaCola?: string; imagemQrCode?: string; expiraEm?: string; valorEmReais?: number
 }
 
+export interface HomologarResult {
+  message: string
+  /** Primeiro item homologado — mantido por compatibilidade. */
+  reservationId: string
+  /** Todos os itens que saíram como retirados nesta homologação. */
+  reservationIds: string[]
+  itemCount: number
+  discountPercent: number
+  discountInReais: number
+}
+
 export interface UpdateMeRequest {
   name?: string
   email?: string
@@ -1237,10 +1248,17 @@ export const reservationApi = {
                api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
   getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
+  /** Homologa o carrinho INTEIRO de uma vez (uma venda com todos os itens do grupo).
+   *  Reserva avulsa tem groupId = o próprio id, então serve pros dois casos. */
+  homologarGrupo: (groupId: string, body: {
+    paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
+    discountPercent?: number; discountInCents?: number
+  }) => api.post<HomologarResult>(`/api/reservations/group/${groupId}/homologar`, body),
+  /** Homologa só um item de um carrinho — a tela usa sempre o de grupo. */
   homologar: (id: string, body: {
     paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
     discountPercent?: number; discountInCents?: number
-  }) => api.post<{ message: string; reservationId: string; discountPercent: number; discountInReais: number }>(`/api/reservations/${id}/homologar`, body),
+  }) => api.post<HomologarResult>(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),
   /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */

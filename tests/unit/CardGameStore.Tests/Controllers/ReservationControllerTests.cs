@@ -15,6 +15,7 @@
 using System.Security.Claims;
 using CardGameStore.Controllers;
 using CardGameStore.Data;
+using CardGameStore.DTOs;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
@@ -75,11 +76,12 @@ public class ReservationControllerTests
         return mockHub.Object;
     }
 
-    private static ReservationController CreateController(AppDbContext db, Guid? loggedUserId = null)
+    private static ReservationController CreateController(
+        AppDbContext db, Guid? loggedUserId = null, IVendaAvulsaService? vendaService = null)
     {
         var controller = new ReservationController(
             db,
-            new Mock<IVendaAvulsaService>().Object,
+            vendaService ?? new Mock<IVendaAvulsaService>().Object,
             CreateInterStub(),
             new Mock<IPixReconciliationService>().Object,
             new Mock<IPushService>().Object,
@@ -236,6 +238,144 @@ public class ReservationControllerTests
 
         result.Should().BeOfType<BadRequestObjectResult>();
         (await db.ProductReservations.CountAsync()).Should().Be(0);
+    }
+
+    // ── Homologação do carrinho inteiro ────────────────────────────────────────
+    // Bug de produção: "reservei 2 itens, só retirou um". O botão Homologar era por
+    // linha, então o resto do carrinho ficava "active" pra sempre, sem aviso nenhum.
+
+    /// <summary>Mock que captura a VendaAvulsaRequest montada pela homologação.</summary>
+    private static (IVendaAvulsaService Service, List<VendaAvulsaRequest> Capturadas) CreateVendaSpy()
+    {
+        var capturadas = new List<VendaAvulsaRequest>();
+        var mock = new Mock<IVendaAvulsaService>();
+        mock.Setup(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()))
+            .Callback<VendaAvulsaRequest, Guid, string>((req, _, _) => capturadas.Add(req))
+            .ReturnsAsync(new VendaAvulsaDto());
+        return (mock.Object, capturadas);
+    }
+
+    private static async Task<List<ProductReservation>> SeedCarrinhoAsync(
+        AppDbContext db, Guid userId, Guid groupId, params (Guid ProductId, int Qty)[] itens)
+    {
+        var reservas = itens.Select(i => new ProductReservation
+        {
+            Id = Guid.NewGuid(), ReservationGroupId = groupId, UserId = userId,
+            ProductId = i.ProductId, Quantity = i.Qty,
+            Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
+        }).ToList();
+        db.ProductReservations.AddRange(reservas);
+        await db.SaveChangesAsync();
+        return reservas;
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_CarrinhoDeDoisItens_DeveHomologarTudoNumaVendaSo()
+    {
+        var db       = CreateDb(nameof(HomologarGrupo_CarrinhoDeDoisItens_DeveHomologarTudoNumaVendaSo));
+        var cliente  = await SeedUserAsync(db);
+        var produtoA = await SeedProductAsync(db, stock: 10);
+        var produtoB = await SeedProductAsync(db, stock: 10);
+        var groupId  = Guid.NewGuid();
+        await SeedCarrinhoAsync(db, cliente.Id, groupId, (produtoA.Id, 2), (produtoB.Id, 3));
+
+        var (venda, capturadas) = CreateVendaSpy();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        var result = await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<OkObjectResult>();
+
+        db.ChangeTracker.Clear();
+        var reservas = await db.ProductReservations.Where(r => r.ReservationGroupId == groupId).ToListAsync();
+        reservas.Should().OnlyContain(r => r.Status == "fulfilled",
+            "o cliente retirou o carrinho inteiro de uma vez — nenhum item pode ficar pra trás");
+        reservas.Should().OnlyContain(r => r.FulfilledAt != null);
+
+        capturadas.Should().HaveCount(1, "o carrinho vira UMA venda no PDV, não uma por item");
+        capturadas[0].Items.Should().HaveCount(2);
+        capturadas[0].Items.Sum(i => i.Quantity).Should().Be(5);
+        capturadas[0].ReservationGroupId.Should().Be(groupId);
+        capturadas[0].SkipStockDecrement.Should().BeTrue("o estoque já saiu quando a pré-venda foi criada");
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_CarrinhoMisturado_NaoContaComoPreVendaNoFinanceiro()
+    {
+        // Só é "Pré-venda" no Financeiro a venda em que TODO o pedido é de item com a tag;
+        // misturar um item comum joga a venda pro balde "Site", que é de onde ela veio.
+        var db       = CreateDb(nameof(HomologarGrupo_CarrinhoMisturado_NaoContaComoPreVendaNoFinanceiro));
+        var cliente  = await SeedUserAsync(db);
+        var comTag   = await SeedProductAsync(db, stock: 10, isPreVenda: true);
+        var semTag   = await SeedProductAsync(db, stock: 10, isPreVenda: false);
+        var groupId  = Guid.NewGuid();
+        await SeedCarrinhoAsync(db, cliente.Id, groupId, (comTag.Id, 1), (semTag.Id, 1));
+
+        var (venda, capturadas) = CreateVendaSpy();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Pix" });
+
+        capturadas.Should().ContainSingle();
+        capturadas[0].ProductIsPreVenda.Should().BeFalse();
+        capturadas[0].Origem.Should().Be("Reserva");
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_ReservaAvulsa_FuncionaPeloMesmoEndpoint()
+    {
+        // Reserva avulsa tem ReservationGroupId = o próprio Id, então a tela pode usar
+        // sempre o endpoint de grupo sem se preocupar em qual caso está.
+        var db      = CreateDb(nameof(HomologarGrupo_ReservaAvulsa_FuncionaPeloMesmoEndpoint));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var id      = Guid.NewGuid();
+
+        db.ProductReservations.Add(new ProductReservation
+        {
+            Id = id, ReservationGroupId = id, UserId = cliente.Id,
+            ProductId = produto.Id, Quantity = 1,
+            Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+
+        var (venda, capturadas) = CreateVendaSpy();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        var result = await controller.HomologarGrupo(id, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        capturadas.Should().ContainSingle();
+        capturadas[0].Items.Should().ContainSingle();
+
+        db.ChangeTracker.Clear();
+        (await db.ProductReservations.FindAsync(id))!.Status.Should().Be("fulfilled");
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_SemPreVendaAtiva_RetornaNotFoundSemLancarVenda()
+    {
+        var db      = CreateDb(nameof(HomologarGrupo_SemPreVendaAtiva_RetornaNotFoundSemLancarVenda));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+
+        // Grupo existe, mas já foi todo homologado antes (duplo clique / F5 na tela).
+        db.ProductReservations.Add(new ProductReservation
+        {
+            Id = Guid.NewGuid(), ReservationGroupId = groupId, UserId = cliente.Id,
+            ProductId = produto.Id, Quantity = 1,
+            Kind = "pre_venda", Status = "fulfilled", FulfilledAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+
+        var (venda, capturadas) = CreateVendaSpy();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        var result = await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+        capturadas.Should().BeEmpty("nada pra homologar não pode virar venda de R$ 0 no caixa");
     }
 
     // ── Timer de expiração removido ─────────────────────────────────────────────
