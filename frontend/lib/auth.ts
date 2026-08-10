@@ -8,6 +8,7 @@
 // =============================================================================
 import Cookies from 'js-cookie'
 import { AuthResponse } from './api'
+import { clearReservationCart } from '@/hooks/useReservationCart'
 
 export function saveAuth(auth: AuthResponse) {
   Cookies.set('userRole',  auth.role,     { expires: 30 })
@@ -21,6 +22,9 @@ export function saveAuth(auth: AuthResponse) {
 
 export function clearAuth() {
   ;['userRole', 'userName', 'userId', 'userPermissions'].forEach(k => Cookies.remove(k))
+  // O carrinho de reserva mora em localStorage, não em cookie: sem limpar aqui ele
+  // sobrevive ao logout e reaparece pra próxima conta que logar neste navegador.
+  clearReservationCart()
 }
 
 export function getRole():        string    { return Cookies.get('userRole') || '' }

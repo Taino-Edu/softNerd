@@ -136,6 +136,13 @@ public class ReservationController : ControllerBase
 
         await strategy.ExecuteAsync(async () =>
         {
+            // Numa reexecução, a ProductReservation da tentativa anterior continua "Added" no
+            // tracker (o SaveChangesAsync dela não chegou a terminar) e seria inserida DE NOVO
+            // junto com a nova — reserva duplicada e estoque baixado duas vezes.
+            _db.ChangeTracker.Clear();
+            reservation = null;
+            falha       = null;
+
             await using var tx = await _db.Database.BeginTransactionAsync();
 
             var created = await CriarItemAsync(userId, Guid.NewGuid(), productId, variantId, qty, notes,
@@ -187,6 +194,12 @@ public class ReservationController : ControllerBase
 
         await strategy.ExecuteAsync(async () =>
         {
+            // Mesmo motivo do CriarEPersistirAsync: sem limpar o tracker, as reservas da
+            // tentativa anterior (ainda "Added") entrariam de novo no AddRange abaixo.
+            _db.ChangeTracker.Clear();
+            criadas = null;
+            falha   = null;
+
             var toCreate  = new List<ProductReservation>();
             var virouFila = new List<Guid>();
 
