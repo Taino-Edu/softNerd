@@ -169,6 +169,15 @@ public class FiscalConfig
     public long DistUltimoNsu { get; set; }
 
     /// <summary>
+    /// Horário mínimo para uma nova rodada no NFeDistribuicaoDFe. A proteção é
+    /// persistida para sobreviver a reinícios e impedir que o botão manual rode
+    /// logo após o job automático. O intervalo inclui uma margem sobre a janela
+    /// de 1 hora exigida pelo SEFAZ para os cStat 137/656 e para consChNFe.
+    /// </summary>
+    [Column("dist_proxima_consulta_em")]
+    public DateTime? DistProximaConsultaEm { get; set; }
+
+    /// <summary>
     /// Formas de pagamento (CSV: "Pix,Dinheiro,...") que emitem NFC-e automaticamente ao
     /// fechar a venda, sem perguntar. Vazio por padrão — o Maikon não quer que o sistema
     /// emita nota sem antes perguntar; o admin decide explicitamente a cada fechamento

@@ -33,6 +33,10 @@ namespace CardGameStore.Services.Implementations;
 
 public class SefazNfeService
 {
+    // Impede que o job e o botão manual entrem juntos no webservice dentro da
+    // mesma instância. O cooldown persistido abaixo protege também reinícios.
+    private static readonly SemaphoreSlim SincronizacaoLock = new(1, 1);
+
     private readonly AppDbContext _db;
     private readonly EncryptionService _enc;
     private readonly ILogger<SefazNfeService> _logger;
@@ -42,6 +46,7 @@ public class SefazNfeService
     private const int MaxCienciasPorCiclo    = 60;   // em lotes de 20 chaves por evento
     private const int MaxDownloadsPorCiclo   = 20;
     private const int ChavesPorLoteDeCiencia = 20;   // limite do layout de eventos em lote
+    private static readonly TimeSpan IntervaloProtecao = TimeSpan.FromMinutes(65);
 
     public SefazNfeService(AppDbContext db, EncryptionService enc, ILogger<SefazNfeService> logger)
     {
@@ -64,71 +69,95 @@ public class SefazNfeService
     /// </summary>
     public async Task<SefazSyncResult> SincronizarAsync(CancellationToken ct = default)
     {
-        var cfg = await _db.FiscalConfigs.FindAsync(FiscalConfig.SingletonId);
-        if (cfg is null || !cfg.CertificadoConfigurado)
-            return SefazSyncResult.NaoExecutado("Certificado digital A1 não configurado em Admin > Fiscal.");
-        if (string.IsNullOrWhiteSpace(cfg.Cnpj) || string.IsNullOrWhiteSpace(cfg.Uf))
-            return SefazSyncResult.NaoExecutado("CNPJ/UF da empresa não configurados em Admin > Fiscal.");
-
-        // Cnpj.Normalizar preserva letras — filtrar só dígitos mutilaria o CNPJ
-        // alfanumérico (IN RFB 2.229/2024), mesmo motivo do resto do módulo fiscal.
-        var cnpj = Cnpj.Normalizar(cfg.Cnpj);
-
-        var pfxBytes    = Convert.FromBase64String(_enc.Decrypt(cfg.CertificadoPfxEncrypted!));
-        var senha       = _enc.Decrypt(cfg.CertificadoSenhaEncrypted!);
-        using var certificado = Pkcs12Loader.Abrir(pfxBytes, senha);
-
-        var cfgServico = new ConfiguracaoServico
-        {
-            cUF             = Enum.Parse<Estado>(cfg.Uf),
-            tpAmb           = cfg.Ambiente == AmbienteFiscal.Producao ? TipoAmbiente.Producao : TipoAmbiente.Homologacao,
-            ModeloDocumento = ModeloDocumento.NFe, // distribuição/manifestação são serviços da NF-e (55), não da NFC-e
-            VersaoLayout    = VersaoServico.Versao400,
-            // Mesmo bug que já tinha sido corrigido no NfceEmissionService (commit d2aaad0)
-            // e que passou batido aqui: sem tpEmis o campo fica 0 (valor de enum inválido),
-            // a lib não acha a URL do webservice na tabela interna (UF+ambiente+serviço+
-            // versão+tipoEmissao) e lança "Serviço NFeDistribuicaoDFe, versão , não
-            // disponível para a UF SP..." — com "versão" e "tipo" em branco, que é a
-            // assinatura desse defeito. Distribuição/manifestação é sempre online.
-            tpEmis          = TipoEmissao.teNormal,
-            TimeOut         = 30000,
-            ValidarSchemas  = false,
-        };
-
-        using var servico = new ServicosNFe(cfgServico, certificado);
-        var resultado = new SefazSyncResult { Executado = true };
+        if (!await SincronizacaoLock.WaitAsync(0, ct))
+            return SefazSyncResult.EmAndamento();
 
         try
         {
-            await ConsultarNsuAsync(servico, cfg, cnpj, resultado, ct);
-            if (!resultado.BloqueadoPorConsumoIndevido)
+            var cfg = await _db.FiscalConfigs.FindAsync(FiscalConfig.SingletonId);
+            if (cfg is null || !cfg.CertificadoConfigurado)
+                return SefazSyncResult.NaoExecutado("Certificado digital A1 não configurado em Admin > Fiscal.");
+            if (string.IsNullOrWhiteSpace(cfg.Cnpj) || string.IsNullOrWhiteSpace(cfg.Uf))
+                return SefazSyncResult.NaoExecutado("CNPJ/UF da empresa não configurados em Admin > Fiscal.");
+
+            var agora = DateTime.UtcNow;
+            if (cfg.DistProximaConsultaEm is { } proxima && proxima > agora)
+                return SefazSyncResult.EmCooldown(proxima);
+
+            // Cnpj.Normalizar preserva letras — filtrar só dígitos mutilaria o CNPJ
+            // alfanumérico (IN RFB 2.229/2024), mesmo motivo do resto do módulo fiscal.
+            var cnpj = Cnpj.Normalizar(cfg.Cnpj);
+
+            var pfxBytes    = Convert.FromBase64String(_enc.Decrypt(cfg.CertificadoPfxEncrypted!));
+            var senha       = _enc.Decrypt(cfg.CertificadoSenhaEncrypted!);
+            using var certificado = Pkcs12Loader.Abrir(pfxBytes, senha);
+
+            var cfgServico = new ConfiguracaoServico
             {
-                await ManifestarCienciaAsync(servico, cnpj, resultado, ct);
-                await BaixarXmlsPorChaveAsync(servico, cfg, cnpj, resultado, ct);
-            }
-            await GerarContasAsync(resultado, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "DFe Distribuição: falha na sincronização com a SEFAZ");
-            resultado.Mensagem = $"Falha na comunicação com a SEFAZ: {ex.Message}";
-        }
+                cUF             = Enum.Parse<Estado>(cfg.Uf),
+                tpAmb           = cfg.Ambiente == AmbienteFiscal.Producao ? TipoAmbiente.Producao : TipoAmbiente.Homologacao,
+                ModeloDocumento = ModeloDocumento.NFe, // distribuição/manifestação são serviços da NF-e (55), não da NFC-e
+                VersaoLayout    = VersaoServico.Versao400,
+                // Mesmo bug que já tinha sido corrigido no NfceEmissionService (commit d2aaad0)
+                // e que passou batido aqui: sem tpEmis o campo fica 0 (valor de enum inválido),
+                // a lib não acha a URL do webservice na tabela interna (UF+ambiente+serviço+
+                // versão+tipoEmissao) e lança "Serviço NFeDistribuicaoDFe, versão , não
+                // disponível para a UF SP..." — com "versão" e "tipo" em branco, que é a
+                // assinatura desse defeito. Distribuição/manifestação é sempre online.
+                tpEmis          = TipoEmissao.teNormal,
+                TimeOut         = 30000,
+                ValidarSchemas  = false,
+            };
 
-        // Marca a sincronização no card de integrações (se a linha existir)
-        var integracao = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "sefaz", ct);
-        if (integracao is not null)
-        {
-            integracao.LastSyncAt = DateTime.UtcNow;
-            integracao.UpdatedAt  = DateTime.UtcNow;
+            // Reserva a janela antes da primeira chamada externa. Se o processo
+            // reiniciar no meio da rodada, ele ainda não repetirá a consulta.
+            cfg.DistProximaConsultaEm = agora.Add(IntervaloProtecao);
             await _db.SaveChangesAsync(ct);
+
+            using var servico = new ServicosNFe(cfgServico, certificado);
+            var resultado = new SefazSyncResult { Executado = true };
+
+            try
+            {
+                await ConsultarNsuAsync(servico, cfg, cnpj, resultado, ct);
+                if (!resultado.BloqueadoPorConsumoIndevido)
+                {
+                    await ManifestarCienciaAsync(servico, cnpj, resultado, ct);
+                    await BaixarXmlsPorChaveAsync(servico, cfg, cnpj, resultado, ct);
+                }
+                await GerarContasAsync(resultado, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "DFe Distribuição: falha na sincronização com a SEFAZ");
+                resultado.Mensagem = $"Falha na comunicação com a SEFAZ: {ex.Message}";
+            }
+
+            // A margem passa a contar do fim da rodada, inclusive após erro de
+            // comunicação, evitando uma repetição imediata da mesma requisição.
+            cfg.DistProximaConsultaEm = DateTime.UtcNow.Add(IntervaloProtecao);
+            resultado.ProximaTentativaEm = cfg.DistProximaConsultaEm;
+
+            // Marca a sincronização no card de integrações (se a linha existir)
+            var integracao = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "sefaz", ct);
+            if (integracao is not null)
+            {
+                integracao.LastSyncAt = DateTime.UtcNow;
+                integracao.UpdatedAt  = DateTime.UtcNow;
+            }
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "DFe Distribuição: {Novas} nota(s) nova(s), {Ciencias} ciência(s), {Xmls} XML(s), {Contas} conta(s) a pagar. {Msg}",
+                resultado.NovasNotas, resultado.Manifestadas, resultado.XmlsBaixados, resultado.ContasCriadas,
+                resultado.Mensagem ?? "");
+
+            return resultado;
         }
-
-        _logger.LogInformation(
-            "DFe Distribuição: {Novas} nota(s) nova(s), {Ciencias} ciência(s), {Xmls} XML(s), {Contas} conta(s) a pagar. {Msg}",
-            resultado.NovasNotas, resultado.Manifestadas, resultado.XmlsBaixados, resultado.ContasCriadas,
-            resultado.Mensagem ?? "");
-
-        return resultado;
+        finally
+        {
+            SincronizacaoLock.Release();
+        }
     }
 
     // ── 1. Consulta NSU incremental ───────────────────────────────────────────
@@ -143,7 +172,10 @@ public class SefazNfeService
             if (ret.cStat == 656)
             {
                 resultado.BloqueadoPorConsumoIndevido = true;
-                resultado.Mensagem = "SEFAZ bloqueou temporariamente por consumo indevido (cStat 656) — aguarde 1 hora.";
+                cfg.DistProximaConsultaEm = DateTime.UtcNow.Add(IntervaloProtecao);
+                resultado.ProximaTentativaEm = cfg.DistProximaConsultaEm;
+                resultado.Mensagem = "SEFAZ bloqueou temporariamente por consumo indevido (cStat 656). O sistema impedirá novas tentativas por 1h05.";
+                await _db.SaveChangesAsync(ct);
                 _logger.LogWarning("DFe Distribuição: consumo indevido (656). ultNSU atual: {Nsu}", cfg.DistUltimoNsu);
                 return;
             }
@@ -151,6 +183,7 @@ public class SefazNfeService
             if (ret.cStat == 137) // nenhum documento novo
             {
                 cfg.DistUltimoNsu = Math.Max(cfg.DistUltimoNsu, ret.ultNSU);
+                cfg.DistProximaConsultaEm = DateTime.UtcNow.Add(IntervaloProtecao);
                 await _db.SaveChangesAsync(ct);
                 return;
             }
@@ -343,7 +376,10 @@ public class SefazNfeService
             if (ret.cStat == 656)
             {
                 resultado.BloqueadoPorConsumoIndevido = true;
-                resultado.Mensagem = "SEFAZ bloqueou temporariamente por consumo indevido (cStat 656) — aguarde 1 hora.";
+                cfg.DistProximaConsultaEm = DateTime.UtcNow.Add(IntervaloProtecao);
+                resultado.ProximaTentativaEm = cfg.DistProximaConsultaEm;
+                resultado.Mensagem = "SEFAZ bloqueou temporariamente por consumo indevido (cStat 656). O sistema impedirá novas tentativas por 1h05.";
+                await _db.SaveChangesAsync(ct);
                 return;
             }
 
@@ -511,7 +547,27 @@ public class SefazSyncResult
     public int     XmlsBaixados  { get; set; }
     public int     ContasCriadas { get; set; }
     public bool    BloqueadoPorConsumoIndevido { get; set; }
+    public bool    CooldownAtivo { get; set; }
+    public bool    SincronizacaoEmAndamento { get; set; }
+    public DateTime? ProximaTentativaEm { get; set; }
 
     public static SefazSyncResult NaoExecutado(string motivo) =>
         new() { Executado = false, Mensagem = motivo };
+
+    public static SefazSyncResult EmCooldown(DateTime proximaTentativaEm) =>
+        new()
+        {
+            Executado = false,
+            CooldownAtivo = true,
+            ProximaTentativaEm = proximaTentativaEm,
+            Mensagem = $"A consulta ao SEFAZ está em intervalo de segurança. Tente novamente após {proximaTentativaEm.ToLocalTime():dd/MM HH:mm}."
+        };
+
+    public static SefazSyncResult EmAndamento() =>
+        new()
+        {
+            Executado = false,
+            SincronizacaoEmAndamento = true,
+            Mensagem = "Já existe uma sincronização com o SEFAZ em andamento."
+        };
 }

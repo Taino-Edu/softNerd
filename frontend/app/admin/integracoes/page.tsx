@@ -61,6 +61,16 @@ function fmtDate(d?: string) {
   return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+function fmtTempoRestante(ms: number) {
+  const totalSegundos = Math.max(0, Math.ceil(ms / 1000))
+  const horas = Math.floor(totalSegundos / 3600)
+  const minutos = Math.floor((totalSegundos % 3600) / 60)
+  const segundos = totalSegundos % 60
+  return horas > 0
+    ? `${horas}h ${String(minutos).padStart(2, '0')}min`
+    : `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`
+}
+
 export default function IntegracoesPage() {
   const [integracoes, setIntegracoes] = useState<IntegracaoStatus[]>([])
   const [loading,     setLoading]     = useState(true)
@@ -70,6 +80,13 @@ export default function IntegracoesPage() {
   const [ofxLoading,  setOfxLoading]  = useState(false)
   const [syncingInter, setSyncingInter] = useState(false)
   const [syncingSefaz, setSyncingSefaz] = useState(false)
+  const [sefazProximaConsultaEm, setSefazProximaConsultaEm] = useState<string | null>(null)
+  const [agora, setAgora] = useState(() => Date.now())
+
+  const sefazTempoRestante = sefazProximaConsultaEm
+    ? new Date(sefazProximaConsultaEm).getTime() - agora
+    : 0
+  const sefazCooldownAtivo = sefazTempoRestante > 0
 
   async function load() {
     setLoading(true)
@@ -80,11 +97,16 @@ export default function IntegracoesPage() {
       ])
       setIntegracoes(ints)
       setSefazOk(sefaz.configured)
+      setSefazProximaConsultaEm(sefaz.proximaConsultaEm ?? null)
     } catch { toast.error('Erro ao carregar integrações') }
     finally  { setLoading(false) }
   }
 
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    const timer = window.setInterval(() => setAgora(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   async function openConfig(src: string, current?: IntegracaoStatus) {
     let certOk = false
@@ -161,7 +183,10 @@ export default function IntegracoesPage() {
       if (data.mensagem) toast(data.mensagem, { duration: 8000 })
       load()
     } catch (err: any) {
+      const proxima = err?.response?.data?.proximaTentativaEm
+      if (proxima) setSefazProximaConsultaEm(proxima)
       toast.error(err?.response?.data?.message ?? 'Erro ao sincronizar com a SEFAZ.')
+      load()
     } finally {
       setSyncingSefaz(false)
     }
@@ -251,6 +276,13 @@ export default function IntegracoesPage() {
                       Certificado ok. Clique em Configurar e salve para ativar a consulta automática (a cada 2h).
                     </div>
                   )}
+                  {int.source === 'sefaz' && sefazCooldownAtivo && (
+                    <div className="flex items-center gap-2 mt-2 text-amber-400 text-xs bg-amber-500/10 rounded-lg p-2">
+                      <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                      Intervalo de segurança do SEFAZ. Nova consulta disponível em {fmtTempoRestante(sefazTempoRestante)}
+                      {sefazProximaConsultaEm ? ` (${fmtDate(sefazProximaConsultaEm)})` : ''}.
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 mt-3">
                     <button
@@ -273,11 +305,15 @@ export default function IntegracoesPage() {
                     {int.source === 'sefaz' && sefazOk && (
                       <button
                         onClick={syncSefazAgora}
-                        disabled={syncingSefaz}
+                        disabled={syncingSefaz || sefazCooldownAtivo}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30
                                    border border-brand-500/30 text-sm text-brand-300 transition-colors disabled:opacity-50">
                         {syncingSefaz ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                        {syncingSefaz ? 'Consultando SEFAZ…' : 'Sincronizar agora'}
+                        {syncingSefaz
+                          ? 'Consultando SEFAZ…'
+                          : sefazCooldownAtivo
+                            ? `Aguarde ${fmtTempoRestante(sefazTempoRestante)}`
+                            : 'Sincronizar agora'}
                       </button>
                     )}
                     {info.docs && (

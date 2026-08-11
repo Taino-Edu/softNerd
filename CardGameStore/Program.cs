@@ -878,6 +878,12 @@ using (var scope = app.Services.CreateScope())
 
                 -- Fiscal: Manifestação do Destinatário (DDA) — NF-e destinadas ao CNPJ da loja
                 ALTER TABLE fiscal_config ADD COLUMN IF NOT EXISTS dist_ultimo_nsu BIGINT NOT NULL DEFAULT 0;
+                ALTER TABLE fiscal_config ADD COLUMN IF NOT EXISTS dist_proxima_consulta_em TIMESTAMPTZ NULL;
+                -- Na primeira implantação, assume uma janela ativa para não tocar no SEFAZ
+                -- enquanto o CNPJ pode ainda estar cumprindo um bloqueio 656 anterior.
+                UPDATE fiscal_config
+                SET dist_proxima_consulta_em = NOW() + INTERVAL '65 minutes'
+                WHERE dist_proxima_consulta_em IS NULL;
 
                 CREATE TABLE IF NOT EXISTS notas_destinadas (
                     id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -55,6 +55,7 @@ type SefazStatus = {
   ambiente?: string
   ultimoNsu: number
   lastSyncAt?: string
+  proximaConsultaEm?: string
   notas: { resumo: number; ciencia: number; xmlBaixado: number; contasGeradas: number; canceladas: number }
 }
 
@@ -96,6 +97,16 @@ function fmtMoney(v: number) {
 function fmtDate(d?: string) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function fmtTempoRestante(ms: number) {
+  const totalSegundos = Math.max(0, Math.ceil(ms / 1000))
+  const horas = Math.floor(totalSegundos / 3600)
+  const minutos = Math.floor((totalSegundos % 3600) / 60)
+  const segundos = totalSegundos % 60
+  return horas > 0
+    ? `${horas}h ${String(minutos).padStart(2, '0')}min`
+    : `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`
 }
 
 /** Mesmo padrão visual dos cards de KPI de Financeiro (ícone em caixa colorida, valor grande) —
@@ -262,6 +273,12 @@ function NotasRecebidasTab() {
   const [status,  setStatus]  = useState<SefazStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [agora, setAgora] = useState(() => Date.now())
+
+  const sefazTempoRestante = status?.proximaConsultaEm
+    ? new Date(status.proximaConsultaEm).getTime() - agora
+    : 0
+  const sefazCooldownAtivo = sefazTempoRestante > 0
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -277,6 +294,10 @@ function NotasRecebidasTab() {
   }, [])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const timer = window.setInterval(() => setAgora(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   async function syncAgora() {
     setSyncing(true)
@@ -290,6 +311,7 @@ function NotasRecebidasTab() {
       load()
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Erro ao sincronizar com a SEFAZ.')
+      load()
     } finally { setSyncing(false) }
   }
 
@@ -332,11 +354,20 @@ function NotasRecebidasTab() {
               Ambiente de homologação — a SEFAZ não devolve notas reais
             </span>
           )}
-          <button onClick={syncAgora} disabled={syncing}
+          {sefazCooldownAtivo && (
+            <span className="text-xs text-amber-400 bg-amber-500/10 rounded-lg px-2 py-1">
+              Intervalo de segurança: {fmtTempoRestante(sefazTempoRestante)}
+            </span>
+          )}
+          <button onClick={syncAgora} disabled={syncing || sefazCooldownAtivo}
             className="ml-auto flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-500 hover:bg-brand-400
                        text-white text-sm font-semibold transition-colors disabled:opacity-50">
             {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {syncing ? 'Consultando SEFAZ…' : 'Sincronizar agora'}
+            {syncing
+              ? 'Consultando SEFAZ…'
+              : sefazCooldownAtivo
+                ? `Aguarde ${fmtTempoRestante(sefazTempoRestante)}`
+                : 'Sincronizar agora'}
           </button>
         </div>
       )}

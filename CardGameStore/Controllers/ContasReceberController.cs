@@ -306,6 +306,7 @@ public class ContasReceberController : ControllerBase
             ambiente    = fiscal?.Ambiente.ToString(),
             ultimoNsu   = fiscal?.DistUltimoNsu ?? 0,
             lastSyncAt  = integracao?.LastSyncAt,
+            proximaConsultaEm = fiscal?.DistProximaConsultaEm,
             notas = new
             {
                 resumo        = porStatus.GetValueOrDefault(NotaDestinadaStatus.Resumo),
@@ -323,7 +324,24 @@ public class ContasReceberController : ControllerBase
     {
         var result = await _sefaz.SincronizarAsync(ct);
         if (!result.Executado)
-            return BadRequest(new { message = result.Mensagem });
+        {
+            var payload = new
+            {
+                message = result.Mensagem,
+                proximaTentativaEm = result.ProximaTentativaEm,
+            };
+            if (result.CooldownAtivo)
+                return StatusCode(StatusCodes.Status429TooManyRequests, payload);
+            if (result.SincronizacaoEmAndamento)
+                return Conflict(payload);
+            return BadRequest(payload);
+        }
+        if (result.BloqueadoPorConsumoIndevido)
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+                message = result.Mensagem,
+                proximaTentativaEm = result.ProximaTentativaEm,
+            });
         return Ok(new
         {
             novasNotas    = result.NovasNotas,
