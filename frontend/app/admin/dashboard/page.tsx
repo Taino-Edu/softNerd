@@ -2017,7 +2017,10 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 sm:flex sm:items-center sm:divide-x sm:divide-surface-500 gap-3 sm:gap-0">
           {[
             { label: 'Ativas',        value: String(comandas.length),                 icon: Users,         color: 'text-brand-400'   },
-            { label: 'Receita hoje',  value: finHoje ? fmt(finHoje.receita) : '—',   icon: DollarSign,    color: 'text-accent-gold'  },
+            // "Receita hoje" saiu a pedido do Maikon (11/08/2026) — é só a tira daqui;
+            // o número continua existindo no backend e na tab Análises/Financeiro.
+            // Pra voltar, é só descomentar a linha abaixo (o resto já está pronto).
+            // { label: 'Receita hoje',  value: finHoje ? fmt(finHoje.receita) : '—',   icon: DollarSign,    color: 'text-accent-gold'  },
             { label: 'Em aberto',     value: fmt(totalAberto),                         icon: Clock,         color: 'text-orange-400'   },
             { label: 'Estoque baixo', value: String(lowStock),                         icon: AlertTriangle, color: lowStock > 0 ? 'text-red-400' : 'text-gray-500' },
           ].map((m, i) => (

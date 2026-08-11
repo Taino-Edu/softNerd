@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.25.4] — 2026-08-11
+
+### Mudado
+- **"Receita hoje" saiu da barra do Dashboard**, a pedido do Maikon. É só a retirada da tira do topo — o número continua sendo calculado normalmente e segue disponível na tab **Análises** e no **Financeiro**
+
 ## [v1.25.3] — 2026-08-11
 
 ### Corrigido

@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 
 const LOJA = 'Santuário Nerd'
-const VERSION = 'v1.25.3'
+const VERSION = 'v1.25.4'
 const DATA = '11/08/2026'
 
 // Os capítulos são os MESMOS grupos do menu lateral, na mesma ordem: quem procura
