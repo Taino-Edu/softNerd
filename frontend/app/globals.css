@@ -160,6 +160,28 @@ html.light {
   .bg-surface-600 { background-color: #EBEBF0 !important; }
   .bg-surface-500 { background-color: #D1D1DB !important; }
 
+  /* Fundos COM OPACIDADE (bg-surface-700/60, /50, /40...).
+     O Tailwind gera uma classe própria pra cada opacidade, e as regras sólidas
+     acima não pegam nenhuma delas: no tema claro cada uma dessas caixas pintava
+     o cinza escuro do tema escuro a 40-90% por cima do branco — era o
+     "acinzentado" que aparecia em modal de produto, caixas de dica, cabeçalho
+     fixo da Liga e afins. Aqui elas viram o mesmo tom claro da versão sólida.
+     Opacidade nova usada num componente precisa de uma linha nova aqui —
+     ou, de preferência, use a classe sólida (bg-surface-700) e evite o problema. */
+  .bg-surface-900\/90 { background-color: #F5F5F7 !important; }
+  /* Levemente fora do branco: essas caixas ("Dica:", blocos de resumo) ficam em
+     cima de um card branco e sumiriam nele se virassem #FFF puro. */
+  .bg-surface-800\/50,
+  .bg-surface-800\/40 { background-color: #FAFAFC !important; }
+  .bg-surface-700\/80,
+  .bg-surface-700\/60,
+  .bg-surface-700\/50,
+  .bg-surface-700\/40,
+  .bg-surface-700\/30 { background-color: #F0F0F5 !important; }
+  .bg-surface-600\/50 { background-color: #EBEBF0 !important; }
+  .bg-surface-500\/30,
+  .bg-surface-500\/20 { background-color: #EDEDF2 !important; }
+
   /* Bordas */
   .border-surface-500 { border-color: #D1D1DB !important; }
   .border-surface-400 { border-color: #C0C0CC !important; }
