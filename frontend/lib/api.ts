@@ -301,7 +301,8 @@ export interface UserPreferences {
   aiButton:      { mode: 'draggable' | 'fixed'; corner: PrefCorner; enabled: boolean }
   vlibras:       { enabled: boolean; corner: PrefCorner }
   notifications: { soundEnabled: boolean; browserEnabled: boolean }
-  pdv:           { defaultDiscount: 0 | 5 | 10 | 15 | 20 }
+  /** defaultDiscount é % livre (0–100) — os atalhos 5/10/15/20 são só sugestão de tela. */
+  pdv:           { defaultDiscount: number }
   dashboard:     { refreshInterval: DashRefreshInterval; chartScheme: DashChartScheme; panels: DashboardPanels }
 }
 

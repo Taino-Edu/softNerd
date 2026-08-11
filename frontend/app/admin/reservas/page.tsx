@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, productApi, reservationApi, userApi, variantApi, Product, AdminReservation, ReservationPixStatus, UserSummary, ProductVariant } from '@/lib/api'
 import PixReservaModal from '@/components/PixReservaModal'
+import PercentPicker from '@/components/admin/PercentPicker'
 import { PageHeader } from '@/components/ui/PageHeader'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
@@ -1068,20 +1069,7 @@ export default function ReservasPage() {
               </div>
 
               {homDiscountMode === 'percent' ? (
-                <div className="flex gap-1.5">
-                  {[0, 5, 10, 15, 20].map(d => (
-                    <button
-                      key={d}
-                      onClick={() => setHomDiscountPct(d)}
-                      className={clsx(
-                        'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all',
-                        homDiscountPct === d
-                          ? 'bg-accent-green/20 border-accent-green/50 text-accent-green'
-                          : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
-                      )}
-                    >{d === 0 ? '—' : `${d}%`}</button>
-                  ))}
-                </div>
+                <PercentPicker value={homDiscountPct} onChange={setHomDiscountPct} />
               ) : (
                 <input
                   type="text"

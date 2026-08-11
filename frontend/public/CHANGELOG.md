@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.26.1] — 2026-08-11
+
+### Mudado
+- **Desconto em % agora aceita qualquer valor digitado**: o seletor só oferecia 5%, 10%, 15% e 20% — qualquer outro percentual obrigava a fazer a conta na mão e lançar em reais. Os atalhos continuam, e ao lado deles tem um campo pra escrever a % que quiser (0 a 100). Vale na **frente de caixa**, no **fechamento da comanda**, na **edição de comanda já fechada**, na **homologação de pré-venda** e no **desconto padrão** das Configurações. É tudo tela de admin — o cliente não escolhe desconto em lugar nenhum
+
 ## [v1.26.0] — 2026-08-11
 
 ### Adicionado

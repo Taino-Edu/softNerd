@@ -8,6 +8,7 @@ import { tocarSom, notificarBrowser, pedirPermissaoNotificacao, incrementBadge, 
 import CameraScanner from '@/components/CameraScanner'
 import { CobrancaPixModal } from '@/components/admin/CobrancaPixModal'
 import ConferenciaButton from '@/components/admin/ConferenciaButton'
+import PercentPicker from '@/components/admin/PercentPicker'
 import {
   useTopClientes, TopClientesFilterBar, TopClientesList,
   DEFAULT_TOP_CLIENTES, TopClientesState,
@@ -702,20 +703,7 @@ function CloseComandaModal({
           </div>
 
           {discountMode === 'percent' ? (
-            <div className="flex gap-1.5">
-              {[0, 5, 10, 15, 20].map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDiscountPct(d)}
-                  className={clsx(
-                    'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all',
-                    discountPct === d
-                      ? 'bg-accent-green/20 border-accent-green/50 text-accent-green'
-                      : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
-                  )}
-                >{d === 0 ? '—' : `${d}%`}</button>
-              ))}
-            </div>
+            <PercentPicker value={discountPct} onChange={setDiscountPct} />
           ) : (
             <input
               type="text"
@@ -1480,21 +1468,7 @@ function EditarComandaModal({
             </div>
 
             {descontoMode === 'percent' ? (
-              <div className="flex gap-1.5">
-                {[0, 5, 10, 15, 20].map(d => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setDescontoPct(d)}
-                    className={clsx(
-                      'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all',
-                      descontoPct === d
-                        ? 'bg-accent-green/20 border-accent-green/50 text-accent-green'
-                        : 'bg-surface-700 border-surface-500 text-gray-400 hover:border-surface-500'
-                    )}
-                  >{d === 0 ? '—' : `${d}%`}</button>
-                ))}
-              </div>
+              <PercentPicker value={descontoPct} onChange={setDescontoPct} />
             ) : (
               <input type="number" step="0.01" min="0" value={desconto} onChange={e => setDesconto(e.target.value)}
                 className="w-full bg-surface-700 border border-surface-500 text-white rounded-xl px-3 py-2 text-sm" />

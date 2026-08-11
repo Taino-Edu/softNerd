@@ -156,7 +156,7 @@ export default function ConfiguracoesPage() {
       {/* ── PDV ── */}
       <Section title="Frente de Caixa" icon={<Tag className="w-5 h-5 text-accent-green" />}>
         <Row label="Desconto padrão" desc="Pré-seleciona este desconto ao abrir uma nova venda">
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             {DISCOUNTS.map(d => (
               <button
                 key={d}
@@ -171,6 +171,26 @@ export default function ConfiguracoesPage() {
                 {d === 0 ? '—' : `${d}%`}
               </button>
             ))}
+            {/* Qualquer outro percentual, digitado */}
+            <div className="relative w-16">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="outro"
+                value={DISCOUNTS.includes(prefs.pdv.defaultDiscount as typeof DISCOUNTS[number]) ? '' : String(prefs.pdv.defaultDiscount)}
+                onChange={e => {
+                  const n = parseInt(e.target.value.replace(/\D/g, ''), 10)
+                  set('pdv', { defaultDiscount: Number.isNaN(n) ? 0 : Math.min(100, Math.max(0, n)) })
+                }}
+                className={clsx(
+                  'w-full h-8 pl-2 pr-5 rounded text-xs font-bold border text-center transition-all',
+                  DISCOUNTS.includes(prefs.pdv.defaultDiscount as typeof DISCOUNTS[number])
+                    ? 'bg-surface-700 border-surface-500 text-white'
+                    : 'bg-accent-green/20 border-accent-green/60 text-accent-green'
+                )}
+              />
+              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 pointer-events-none">%</span>
+            </div>
           </div>
         </Row>
       </Section>
