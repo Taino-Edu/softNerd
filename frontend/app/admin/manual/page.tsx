@@ -2,13 +2,39 @@
 import { useEffect } from 'react'
 
 const LOJA = 'Santuário Nerd'
-const VERSION = 'v1.22.0'
-const DATA = '27/07/2026'
+const VERSION = 'v1.25.2'
+const DATA = '10/08/2026'
 
-const SECOES = [
+// Os capítulos são os MESMOS grupos do menu lateral, na mesma ordem: quem procura
+// "onde mexo em categoria" acha no manual no mesmo lugar em que acha na tela.
+// A numeração é calculada na renderização — antes era digitada à mão em cada seção
+// e já tinha virado 07, 07b, 07c, 07d, 07e porque ninguém quis renumerar o resto.
+const GRUPOS = [
+  'Dia a dia',
+  'Catálogo',
+  'Clientes',
+  'Financeiro',
+  'Eventos',
+  'Divulgação',
+  'Configuração',
+  'Ajuda & Sistema',
+] as const
+
+interface Secao {
+  /** Capítulo — tem que ser um dos GRUPOS acima (mesmos nomes do menu lateral). */
+  grupo: string
+  titulo: string
+  cor: string
+  /** Posição dentro do capítulo. Sem isso, vale a ordem em que está neste arquivo. */
+  ordem?: number
+  itens: { t: string; d: string }[]
+  dicas?: string[]
+}
+
+const SECOES: Secao[] = [
   {
-    num: '01',
-    titulo: 'Dashboard',
+    grupo: 'Dia a dia',
+    titulo: 'Painel Geral (Dashboard)',
     cor: '#00F0A8',
     itens: [
       { t: 'Comandas em destaque', d: 'Ao abrir o dashboard, as comandas ativas aparecem imediatamente, sem scroll. Os 4 KPIs no topo (comandas ativas, receita do dia, valor em aberto, estoque baixo) ficam sempre visíveis.' },
@@ -23,7 +49,7 @@ const SECOES = [
     ],
   },
   {
-    num: '02',
+    grupo: 'Dia a dia',
     titulo: 'Comandas (Mesa / QR Code)',
     cor: '#3EC2F2',
     itens: [
@@ -43,8 +69,8 @@ const SECOES = [
     ],
   },
   {
-    num: '03',
-    titulo: 'Venda Avulsa — Frente de Caixa (PDV)',
+    grupo: 'Dia a dia',
+    titulo: 'Frente de Caixa (PDV)',
     cor: '#4ADE80',
     itens: [
       { t: 'Quando usar', d: 'Para vendas rápidas no balcão, sem QR Code. Ideal para clientes que chegam e pagam na hora.' },
@@ -63,7 +89,8 @@ const SECOES = [
     ],
   },
   {
-    num: '04',
+    grupo: 'Catálogo',
+    ordem: 5,
     titulo: 'Estoque (Produtos)',
     cor: '#FB923C',
     itens: [
@@ -83,7 +110,7 @@ const SECOES = [
     ],
   },
   {
-    num: '05',
+    grupo: 'Clientes',
     titulo: 'Clientes, Pontos & Cashback',
     cor: '#C084FC',
     itens: [
@@ -100,7 +127,7 @@ const SECOES = [
     ],
   },
   {
-    num: '06',
+    grupo: 'Clientes',
     titulo: 'Crediário (Fiado)',
     cor: '#F97316',
     itens: [
@@ -118,7 +145,7 @@ const SECOES = [
     ],
   },
   {
-    num: '07',
+    grupo: 'Eventos',
     titulo: 'Campeonatos',
     cor: '#FBBF24',
     itens: [
@@ -136,7 +163,7 @@ const SECOES = [
     ],
   },
   {
-    num: '07b',
+    grupo: 'Catálogo',
     titulo: 'Grade de Produtos (Tamanhos & Cores)',
     cor: '#34D399',
     itens: [
@@ -153,22 +180,110 @@ const SECOES = [
     ],
   },
   {
-    num: '07c',
-    titulo: 'Reservas de Produtos (Site)',
+    grupo: 'Dia a dia',
+    titulo: 'Pré-vendas e Reservas do Site',
     cor: '#60A5FA',
     itens: [
-      { t: 'O que é', d: 'Clientes podem reservar produtos pelo site sem precisar ir à loja. A reserva baixa o estoque na hora, sem prazo — fica reservada até ser paga, retirada ou cancelada.' },
-      { t: 'Como o cliente reserva', d: 'Na loja online (área do cliente → Loja), clique em "Reservar" no produto. Se tiver variantes, escolhe tamanho e cor.' },
-      { t: 'Confirmar retirada (admin)', d: 'Em Admin → Reservas, veja as pré-vendas ativas e clique "Homologar" para confirmar que o cliente pagou/retirou.' },
-      { t: 'Cancelar reserva', d: 'Admin ou o próprio cliente podem cancelar a qualquer momento — o estoque volta pra loja na hora e passa pro próximo da fila, se tiver.' },
+      { t: 'O que é', d: 'Clientes reservam produtos pelo site sem precisar ir à loja. A reserva baixa o estoque na hora, sem prazo — fica reservada até ser paga, retirada ou cancelada.' },
+      { t: 'Como o cliente reserva', d: 'Na página do produto, clique em "Comprar" (ou "Fazer pré-venda"). Se tiver grade, escolhe tamanho e cor. Dá pra juntar vários produtos e confirmar tudo de uma vez — vira um carrinho só.' },
+      { t: 'Kanban de pedidos', d: 'Admin → Pré-vendas mostra duas colunas (Vendas × Pré-vendas, pela tag do produto) com as raias A pagar → Pago → Retirado. Cancelados ficam recolhidos no fim.' },
+      { t: 'Homologar = confirmar a retirada', d: 'Clique em "Homologar" quando o cliente pagar/retirar. Escolha a forma de pagamento (dá pra dividir em duas) e, se quiser, um desconto na hora. Isso lança a venda no PDV — o estoque não é baixado de novo, já saiu na reserva.' },
+      { t: 'Carrinho sai inteiro de uma vez', d: 'Se o pedido tem vários itens (selo "Carrinho de N"), homologar resolve o pedido todo num clique: o modal lista tudo que vai sair, o desconto é calculado sobre o total e o caixa recebe uma venda só, com todos os itens.' },
+      { t: 'Pix da reserva', d: 'O botão "Pix" gera a cobrança do pedido inteiro pra mandar no WhatsApp. Quando o cliente paga, o pedido sobe sozinho pra raia "Pago · aguardando retirada".' },
+      { t: 'Corrigir quantidade', d: 'O botão "Qtd" ajusta a quantidade de um pedido lançado errado, devolvendo ou baixando a diferença no estoque.' },
+      { t: 'Cancelar', d: 'Admin ou o próprio cliente cancelam a qualquer momento — o estoque volta na hora. Pré-venda já paga só o admin cancela, porque o estorno é combinado à parte.' },
     ],
     dicas: [
-      'A reserva não é uma venda — nenhum pagamento é registrado até o admin confirmar a entrega.',
-      'Use para clientes que querem garantir o produto antes de vir buscar.',
+      'A reserva não é uma venda: nada entra no caixa até você homologar.',
+      'Se um item do carrinho for cancelado enquanto você preenche a tela de homologação, nada é homologado e o sistema avisa pra reabrir — nunca sai pela metade.',
     ],
   },
   {
-    num: '07d',
+    grupo: 'Catálogo',
+    ordem: 10,
+    titulo: 'Categorias e Subcategorias',
+    cor: '#FBBF24',
+    itens: [
+      { t: 'Pra que serve', d: 'A categoria organiza o produto no site, no cardápio do cliente e nos filtros do estoque. Cadastre em Catálogo → Categorias.' },
+      { t: 'Emoji', d: 'O emoji da categoria aparece na tela do cliente e na comanda — ajuda a bater o olho e achar rápido.' },
+      { t: 'Ordem de exibição', d: 'Menor número aparece primeiro. Use pra deixar as categorias que mais vendem no topo.' },
+      { t: 'Subcategoria', d: 'Escolha uma "categoria pai" pra virar subcategoria (ex: "One Piece" dentro de "Card Games"). Só um nível de aninhamento é permitido, de propósito — mais que isso vira labirinto na hora de cadastrar produto.' },
+      { t: 'Desconto do Pix por categoria', d: 'Cada categoria pode ter o próprio percentual de desconto do Pix anunciado no site (ex: Pokémon com 3% enquanto o resto da loja segue o padrão). Vazio = herda da categoria pai e, se ela também não tiver, do padrão da loja.' },
+      { t: 'Remover categoria', d: 'Os produtos vinculados NÃO são apagados — apenas ficam sem categoria definida, e é só reeditar cada um.' },
+    ],
+    dicas: [
+      'Categoria é só organização de vitrine: mudar não mexe em preço, estoque nem histórico de venda.',
+    ],
+  },
+  {
+    grupo: 'Catálogo',
+    titulo: 'Vitrine — Parcelamento e Desconto do Pix',
+    cor: '#00A88F',
+    itens: [
+      { t: 'O que o cliente vê', d: 'Abaixo do preço, na página do produto: "em até 12x de R$ 16,25 sem juros" e "ou R$ 189,14 com 3% OFF no Pix". O preço no Pix também aparece nos cards da vitrine, na listagem de produtos e no total do carrinho.' },
+      { t: 'É vitrine, não cobrança', d: 'Esses números são só o anúncio. O desconto de verdade continua sendo o que você digita na hora de fechar a venda no caixa ou na comanda.' },
+      { t: 'Parcelamento é por item', d: 'No cadastro do produto, campo "Parcelar no cartão em até". Vazio = aquele item não mostra parcelamento nenhum. Produto novo já vem preenchido com o padrão configurado em Personalizar Site.' },
+      { t: 'Desconto do Pix — 4 níveis', d: 'O sistema procura nesta ordem: o percentual do próprio item → o da categoria dele → o da categoria pai → o padrão da loja. Vazio significa "herda"; ZERO significa "este item não tem desconto no Pix", mesmo que a categoria dele tenha.' },
+      { t: 'Parcela mínima', d: 'Em Personalizar Site → Vitrine. Vale pra loja toda e derruba o número de parcelas em item barato: um produto de R$ 39,90 marcado como 12x aparece como "7x de R$ 5,70" em vez de "12x de R$ 3,33".' },
+      { t: 'Desligar', d: 'Percentual do Pix zero na loja toda tira a linha do Pix; parcelamento vazio no item tira a linha do cartão daquele produto.' },
+    ],
+    dicas: [
+      'Os produtos que já estavam cadastrados começam sem parcelamento — a linha do cartão só aparece depois que você preencher o campo no item.',
+      'Arredondamento é sempre a favor: a parcela arredonda pra cima (a soma nunca fica abaixo do preço) e o centavo do Pix pra baixo (a favor do cliente).',
+    ],
+  },
+  {
+    grupo: 'Clientes',
+    titulo: 'Análises de Clientes',
+    cor: '#818CF8',
+    itens: [
+      { t: 'Onde fica', d: 'Clientes → Análises. É o ranking de quem mais gastou, com filtros de verdade — diferente do Top Clientes do Painel Geral, que é um resumo.' },
+      { t: 'Filtro de período', d: 'Hoje, 7 dias, este mês, tudo, ou um intervalo de datas escolhido a dedo.' },
+      { t: 'Quantidade e forma de pagamento', d: 'Top 10/20/50 ou todos, e recorte por forma de pagamento (só quem pagou em Pix, só crediário, etc.).' },
+      { t: 'Incluir vendas do caixa', d: 'Por padrão o ranking soma comandas; ligue a opção pra somar também as vendas avulsas identificadas no PDV.' },
+    ],
+    dicas: [
+      'Venda de balcão sem cliente selecionado é anônima e não entra em ranking nenhum — identifique o cliente no PDV se quiser que conte.',
+    ],
+  },
+  {
+    grupo: 'Financeiro',
+    titulo: 'Contas a Pagar e a Receber',
+    cor: '#F59E0B',
+    itens: [
+      { t: 'Pra que serve', d: 'Controle do que a loja tem pra pagar (fornecedor, aluguel, energia) e pra receber fora do caixa do dia.' },
+      { t: 'Lançar conta', d: 'Informe descrição, valor, vencimento e se é a pagar ou a receber. Dá pra marcar como paga/recebida quando quitar.' },
+      { t: 'Nota de fornecedor vira conta', d: 'As NF-e emitidas contra o CNPJ da loja são baixadas automaticamente e viram conta a pagar, sem digitação.' },
+      { t: 'Vencidas em destaque', d: 'O que passou do vencimento aparece em vermelho, pra cobrança e pagamento não escaparem.' },
+    ],
+  },
+  {
+    grupo: 'Eventos',
+    titulo: 'Liga Mensal',
+    cor: '#A3E635',
+    itens: [
+      { t: 'O que é', d: 'Ranking mensal que soma as colocações dos campeonatos do mês: 1º lugar = 10 pontos, 2º = 7, 3º = 5, 4º = 3 e os demais participantes = 1.' },
+      { t: 'De onde vêm os pontos', d: 'Direto das colocações que você já lança em cada campeonato — não precisa cadastrar nada duas vezes.' },
+      { t: 'Lançamento manual', d: 'Em Eventos → Liga Mensal dá pra digitar jogador e pontos direto, sem campeonato cadastrado. Serve pra migrar o histórico que estava anotado no papel.' },
+      { t: 'Página pública', d: 'O ranking do mês fica visível pros clientes em /liga, com o link na navbar do site.' },
+    ],
+    dicas: [
+      'Mudou a colocação de um campeonato? O ranking da liga se ajusta sozinho — ele é calculado na hora, não é uma tabela separada.',
+    ],
+  },
+  {
+    grupo: 'Ajuda & Sistema',
+    titulo: 'LGPD & Auditoria',
+    cor: '#94A3B8',
+    itens: [
+      { t: 'Pedidos do titular', d: 'A tela lista os pedidos de acesso, correção ou exclusão de dados feitos pelos clientes, com prazo de resposta e histórico do que foi respondido.' },
+      { t: 'Consentimento de cookies', d: 'O site pede consentimento e guarda o registro — é o que comprova a autorização se alguém questionar.' },
+      { t: 'Trilha de auditoria', d: 'Ações sensíveis (reserva manual, mudança de permissão, exclusão de dados) ficam registradas com quem fez e quando.' },
+      { t: 'Contato do cliente no Mercado de Cartas', d: 'O WhatsApp do interessado só aparece pro admin se o próprio cliente autorizou na hora de marcar interesse.' },
+    ],
+  },
+  {
+    grupo: 'Catálogo',
     titulo: 'Mercado de Cartas (Vitrine)',
     cor: '#F472B6',
     itens: [
@@ -185,8 +300,8 @@ const SECOES = [
     ],
   },
   {
-    num: '07e',
-    titulo: 'Fila de Espera (Pré-venda)',
+    grupo: 'Dia a dia',
+    titulo: 'Fila de Espera (produto que ainda não chegou)',
     cor: '#38BDF8',
     itens: [
       { t: 'O que é', d: 'Para produtos em pré-venda com estoque zerado, o cliente entra numa fila de espera pelo site em vez de reservar. Diferente da reserva (que exige estoque disponível).' },
@@ -200,7 +315,7 @@ const SECOES = [
     ],
   },
   {
-    num: '08',
+    grupo: 'Financeiro',
     titulo: 'Relatórios',
     cor: '#22D3EE',
     itens: [
@@ -212,7 +327,7 @@ const SECOES = [
     ],
   },
   {
-    num: '09',
+    grupo: 'Configuração',
     titulo: 'Perfis de Acesso (Operadores)',
     cor: '#A78BFA',
     itens: [
@@ -229,7 +344,7 @@ const SECOES = [
     ],
   },
   {
-    num: '10',
+    grupo: 'Divulgação',
     titulo: 'Anúncios, Banners & Catálogo TCG',
     cor: '#FB7185',
     itens: [
@@ -241,7 +356,7 @@ const SECOES = [
     ],
   },
   {
-    num: '11',
+    grupo: 'Ajuda & Sistema',
     titulo: 'Atalhos de Teclado',
     cor: '#F472B6',
     itens: [
@@ -257,7 +372,7 @@ const SECOES = [
     ],
   },
   {
-    num: '12',
+    grupo: 'Configuração',
     titulo: 'Configurações e Preferências',
     cor: '#94A3B8',
     itens: [
@@ -274,7 +389,8 @@ const SECOES = [
     ],
   },
   {
-    num: '13',
+    grupo: 'Financeiro',
+    ordem: 10,
     titulo: 'Financeiro & Curva ABC',
     cor: '#38BDF8',
     itens: [
@@ -292,7 +408,8 @@ const SECOES = [
     ],
   },
   {
-    num: '14',
+    grupo: 'Configuração',
+    ordem: 20,
     titulo: 'Fiscal — Emissão de NFC-e',
     cor: '#EAB308',
     itens: [
@@ -317,7 +434,7 @@ const SECOES = [
     ],
   },
   {
-    num: '15',
+    grupo: 'Catálogo',
     titulo: 'Cartas TCG & Deck Builder',
     cor: '#F59E0B',
     itens: [
@@ -344,7 +461,7 @@ const SECOES = [
     ],
   },
   {
-    num: '16',
+    grupo: 'Ajuda & Sistema',
     titulo: 'Assistente IA — Voz & Navegação',
     cor: '#A78BFA',
     itens: [
@@ -361,7 +478,7 @@ const SECOES = [
     ],
   },
   {
-    num: '17',
+    grupo: 'Divulgação',
     titulo: 'Mensageria (Avisos aos Clientes)',
     cor: '#7C3AED',
     itens: [
@@ -378,7 +495,8 @@ const SECOES = [
     ],
   },
   {
-    num: '18',
+    grupo: 'Configuração',
+    ordem: 10,
     titulo: 'Personalizar Site',
     cor: '#F59E0B',
     itens: [
@@ -403,6 +521,28 @@ export default function ManualPdfPage() {
   useEffect(() => {
     document.title = `Manual do Sistema — ${LOJA} ${VERSION}`
   }, [])
+
+  // Seções na ordem dos capítulos, já numeradas de 01 em diante. Seção com grupo
+  // desconhecido (erro de digitação) cai no fim em vez de sumir sem aviso.
+  // Dentro do capítulo vale o campo `ordem` (menor primeiro) e, no empate, a ordem
+  // em que a seção está no arquivo — assim só quem precisa sair do lugar leva número.
+  const ordenar = (lista: Secao[]) =>
+    lista
+      .map((s, i) => ({ ...s, _i: i }))
+      .sort((a, b) => ((a.ordem ?? 50) - (b.ordem ?? 50)) || (a._i - b._i))
+
+  const capitulos: { grupo: string; secoes: (Secao & { _i: number })[] }[] =
+    GRUPOS.map(grupo => ({ grupo: grupo as string, secoes: ordenar(SECOES.filter(s => s.grupo === grupo)) }))
+          .filter(c => c.secoes.length > 0)
+
+  const orfas = SECOES.filter(s => !GRUPOS.includes(s.grupo as typeof GRUPOS[number]))
+  if (orfas.length > 0) capitulos.push({ grupo: 'Outros', secoes: ordenar(orfas) })
+
+  let contador = 0
+  const numerado = capitulos.map(c => ({
+    ...c,
+    secoes: c.secoes.map(s => ({ ...s, num: String(++contador).padStart(2, '0') })),
+  }))
 
   return (
     <>
@@ -472,7 +612,28 @@ export default function ManualPdfPage() {
         /* Índice */
         .indice { margin-bottom: 32px; }
         .indice h2 { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+        .indice-grupo { margin-bottom: 10px; break-inside: avoid; }
+        .indice-grupo-label {
+          font-size: 11px;
+          font-weight: 800;
+          color: #0C3D5A;
+          margin-bottom: 2px;
+        }
         .indice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 32px; }
+
+        /* Capítulo (mesmo nome do grupo do menu lateral) */
+        .capitulo {
+          font-size: 15px;
+          font-weight: 800;
+          color: #0C3D5A;
+          background: #f3f4f6;
+          border-left: 4px solid #00F0A8;
+          padding: 8px 12px;
+          border-radius: 0 8px 8px 0;
+          margin: 28px 0 16px;
+          break-after: avoid;
+          page-break-after: avoid;
+        }
         .indice-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151; padding: 3px 0; }
         .indice-num { font-weight: 700; color: #9ca3af; font-size: 11px; width: 20px; }
 
@@ -563,46 +724,57 @@ export default function ManualPdfPage() {
           </div>
         </div>
 
-        {/* Índice */}
+        {/* Índice — agrupado igual ao menu lateral */}
         <div className="indice">
           <h2>Índice</h2>
-          <div className="indice-grid">
-            {SECOES.map(s => (
-              <div key={s.num} className="indice-item">
-                <span className="indice-num">{s.num}</span>
-                <span>{s.titulo}</span>
+          {numerado.map(c => (
+            <div key={c.grupo} className="indice-grupo">
+              <div className="indice-grupo-label">{c.grupo}</div>
+              <div className="indice-grid">
+                {c.secoes.map(s => (
+                  <div key={s.num} className="indice-item">
+                    <span className="indice-num">{s.num}</span>
+                    <span>{s.titulo}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         {/* Seções */}
-        {SECOES.map(s => (
-          <div key={s.num} className="secao">
-            <div className="secao-header">
-              <span className="secao-num">{s.num}</span>
-              <span className="secao-title">{s.titulo}</span>
-              <span className="secao-dot" style={{ background: s.cor }} />
-            </div>
+        {numerado.map(c => (
+          <div key={c.grupo}>
+            <div className="capitulo">{c.grupo}</div>
 
-            {s.itens.map((item, i) => (
-              <div key={i} className="item">
-                <span className="item-bullet">{i + 1}</span>
-                <div>
-                  <div className="item-t">{item.t}</div>
-                  <div className="item-d">{item.d}</div>
+            {c.secoes.map(s => (
+              <div key={s.num} className="secao">
+                <div className="secao-header">
+                  <span className="secao-num">{s.num}</span>
+                  <span className="secao-title">{s.titulo}</span>
+                  <span className="secao-dot" style={{ background: s.cor }} />
                 </div>
+
+                {s.itens.map((item, i) => (
+                  <div key={i} className="item">
+                    <span className="item-bullet">{i + 1}</span>
+                    <div>
+                      <div className="item-t">{item.t}</div>
+                      <div className="item-d">{item.d}</div>
+                    </div>
+                  </div>
+                ))}
+
+                {s.dicas && s.dicas.length > 0 && (
+                  <div className="dicas">
+                    <div className="dicas-label">Dicas</div>
+                    {s.dicas.map((d, i) => (
+                      <div key={i} className="dica">{d}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
-
-            {s.dicas && s.dicas.length > 0 && (
-              <div className="dicas">
-                <div className="dicas-label">Dicas</div>
-                {s.dicas.map((d, i) => (
-                  <div key={i} className="dica">{d}</div>
-                ))}
-              </div>
-            )}
           </div>
         ))}
 

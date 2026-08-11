@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.25.2] — 2026-08-10
+
+### Mudado
+- **Menu lateral reorganizado por tarefa**: existia um grupo "Gestão & Loja" com 16 itens onde Estoque e Categorias ficavam a sete linhas de distância. Agora são grupos curtos — Dia a dia, Catálogo, Clientes, Financeiro, Eventos, Divulgação, Configuração e Ajuda & Sistema — com o que se usa toda hora no topo. Estoque e Categorias ficaram vizinhos e Pré-vendas subiu pro "Dia a dia"
+- **O Manual do Sistema entrou no menu** (Ajuda & Sistema). Antes só dava pra chegar nele por dentro da página "Sobre o Sistema"
+
+### Corrigido
+- **Manual reorganizado**: a numeração das seções era digitada à mão e já tinha virado 07, 07b, 07c, 07d, 07e. Agora é calculada sozinha (01 a 28) e as seções ficam em capítulos com os mesmos nomes do menu — o que você procura no manual está no mesmo lugar em que está na tela
+- Seções novas de **Categorias, Vitrine (parcelamento e Pix), Análises de Clientes, Contas a Pagar/Receber, Liga Mensal e LGPD**, que não estavam documentadas
+- A seção de reservas ainda ensinava o botão Homologar antigo, item a item — foi reescrita com o kanban, o carrinho saindo inteiro, o Pix do pedido e a correção de quantidade
+
 ## [v1.25.1] — 2026-08-10
 
 ### Adicionado

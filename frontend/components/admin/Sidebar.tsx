@@ -15,57 +15,79 @@ import clsx from 'clsx'
 import ThemeToggle from '@/components/ThemeToggle'
 import { SIDEBAR_SHORTCUT_KEYS } from '@/components/admin/KeyboardShortcutsOverlay'
 
+// Agrupado por TAREFA, não por área do sistema: quem vai mexer em produto quer
+// Estoque e Categorias no mesmo lugar, quem vai fechar o mês quer Financeiro,
+// Contas e Relatórios juntos. Antes existia um balde "Gestão & Loja" com 16 itens
+// onde Estoque e Categorias ficavam a 7 linhas de distância um do outro.
+// A ordem dos grupos segue o dia a dia da loja: o que se usa toda hora primeiro,
+// configuração no fim.
 const sections = [
   {
-    label: 'Operacional',
+    label: 'Dia a dia',
     items: [
-      { href: '/admin/dashboard',    label: 'Painel Geral',    icon: LayoutDashboard, badge: 'LIVE', perm: 'dashboard' },
-      { href: '/admin/venda-avulsa', label: 'Frente de Caixa', icon: ShoppingBag,                    perm: 'pdv' },
+      { href: '/admin/dashboard',    label: 'Painel Geral',     icon: LayoutDashboard, badge: 'LIVE', perm: 'dashboard' },
+      { href: '/admin/venda-avulsa', label: 'Frente de Caixa',  icon: ShoppingBag,                    perm: 'pdv' },
+      { href: '/admin/reservas',     label: 'Pré-vendas',       icon: ClipboardList,                  perm: 'estoque' },
       { href: '/admin/qrcodes',      label: 'Gatilhos QR Code', icon: QrCode,                         perm: 'qrcodes' },
     ],
   },
   {
-    label: 'Gestão & Loja',
+    label: 'Catálogo',
     items: [
-      { href: '/admin/usuarios',    label: 'Clientes',     icon: Users,       perm: 'usuarios' },
-      { href: '/admin/clientes/analises', label: 'Análises de Clientes', icon: BarChart2, perm: 'usuarios' },
-      { href: '/admin/crediario',   label: 'Crediário',    icon: CreditCard,  perm: 'crediario' },
-      { href: '/admin/estoque',     label: 'Estoque',      icon: Package,     perm: 'estoque' },
-      { href: '/admin/financeiro',      label: 'Financeiro',        icon: TrendingUp,    perm: 'financeiro' },
-      { href: '/admin/contas-receber', label: 'Contas a Pagar/Rec', icon: Wallet,        perm: 'financeiro' },
-      { href: '/admin/reservas',        label: 'Pré-vendas',         icon: ClipboardList, perm: 'estoque' },
-      { href: '/admin/relatorios',      label: 'Relatórios',         icon: BarChart2,     perm: 'relatorios' },
-      { href: '/admin/categorias',  label: 'Categorias',   icon: Tag,         perm: 'categorias' },
-      { href: '/admin/anuncios',    label: 'Anúncios',     icon: Megaphone,       perm: 'anuncios' },
-      { href: '/admin/mensageria', label: 'Mensageria',   icon: MessageSquare,   perm: 'anuncios' },
-      { href: '/admin/cartas',      label: 'Cartas TCG',   icon: Search,      perm: 'cartas' },
-      { href: '/admin/campeonatos',  label: 'Campeonatos',  icon: Trophy,      perm: 'campeonatos' },
-      { href: '/admin/liga-mensal',  label: 'Liga Mensal',  icon: Award,       perm: 'campeonatos' },
-      { href: '/admin/timer',        label: 'Timers',       icon: Timer,       perm: 'campeonatos' },
-      { href: '/admin/marketplace',  label: 'Mercado de Cartas', icon: Store, perm: 'estoque' },
+      { href: '/admin/estoque',     label: 'Estoque',           icon: Package, perm: 'estoque' },
+      { href: '/admin/categorias',  label: 'Categorias',        icon: Tag,     perm: 'categorias' },
+      { href: '/admin/cartas',      label: 'Cartas TCG',        icon: Search,  perm: 'cartas' },
+      { href: '/admin/marketplace', label: 'Mercado de Cartas', icon: Store,   perm: 'estoque' },
     ],
   },
   {
-    label: 'Administração',
+    label: 'Clientes',
+    items: [
+      { href: '/admin/usuarios',          label: 'Clientes',   icon: Users,      perm: 'usuarios' },
+      { href: '/admin/clientes/analises', label: 'Análises',   icon: BarChart2,  perm: 'usuarios' },
+      { href: '/admin/crediario',         label: 'Crediário',  icon: CreditCard, perm: 'crediario' },
+    ],
+  },
+  {
+    label: 'Financeiro',
+    items: [
+      { href: '/admin/financeiro',     label: 'Financeiro',        icon: TrendingUp, perm: 'financeiro' },
+      { href: '/admin/contas-receber', label: 'Contas a Pagar/Rec', icon: Wallet,    perm: 'financeiro' },
+      { href: '/admin/relatorios',     label: 'Relatórios',        icon: BarChart2,  perm: 'relatorios' },
+    ],
+  },
+  {
+    label: 'Eventos',
+    items: [
+      { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy, perm: 'campeonatos' },
+      { href: '/admin/liga-mensal', label: 'Liga Mensal', icon: Award,  perm: 'campeonatos' },
+      { href: '/admin/timer',       label: 'Timers',      icon: Timer,  perm: 'campeonatos' },
+    ],
+  },
+  {
+    label: 'Divulgação',
+    items: [
+      { href: '/admin/anuncios',   label: 'Anúncios',   icon: Megaphone,      perm: 'anuncios' },
+      { href: '/admin/mensageria', label: 'Mensageria', icon: MessageSquare,  perm: 'anuncios' },
+    ],
+  },
+  {
+    label: 'Configuração',
     adminOnly: true,
     items: [
-      { href: '/admin/perfis',      label: 'Perfis de Acesso', icon: UserCog, perm: null },
-      { href: '/admin/integracoes', label: 'Integrações',      icon: Plug,    perm: null },
-      { href: '/admin/fiscal',      label: 'Fiscal',           icon: Receipt, perm: null },
       { href: '/admin/site',        label: 'Personalizar Site', icon: Palette, perm: null },
+      { href: '/admin/fiscal',      label: 'Fiscal',            icon: Receipt, perm: null },
+      { href: '/admin/integracoes', label: 'Integrações',       icon: Plug,    perm: null },
+      { href: '/admin/perfis',      label: 'Perfis de Acesso',  icon: UserCog, perm: null },
     ],
   },
   {
-    label: 'Compliance',
+    label: 'Ajuda & Sistema',
     items: [
-      { href: '/admin/lgpd',  label: 'LGPD & Auditoria', icon: Shield, perm: 'lgpd' },
-      { href: '/admin/sobre',     label: 'Sobre o Sistema',  icon: Info,     perm: null },
-    ],
-  },
-  {
-    label: 'Pessoal',
-    items: [
-      { href: '/admin/configuracoes', label: 'Configurações', icon: Settings, perm: null },
+      { href: '/admin/manual',        label: 'Manual do Sistema', icon: BookOpen, perm: null },
+      { href: '/admin/lgpd',          label: 'LGPD & Auditoria',  icon: Shield,   perm: 'lgpd' },
+      { href: '/admin/sobre',         label: 'Sobre o Sistema',   icon: Info,     perm: null },
+      { href: '/admin/configuracoes', label: 'Configurações',     icon: Settings, perm: null },
     ],
   },
 ]
