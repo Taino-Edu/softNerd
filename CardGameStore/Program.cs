@@ -969,6 +969,8 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS pix_discount_percent NUMERIC(5,2) NULL;
                 -- Parcelamento é por item (decidido no cadastro do produto): null = não anuncia.
                 ALTER TABLE products ADD COLUMN IF NOT EXISTS max_installments INTEGER NULL;
+                -- Desconto do Pix do item; null = herda da categoria / do padrão da loja.
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS pix_discount_percent NUMERIC(5,2) NULL;
 
                 -- Liga Mensal: lançamentos manuais (jogador + pontos digitados direto pelo admin,
                 -- sem precisar cadastrar Championship — pra migrar histórico anotado à mão).

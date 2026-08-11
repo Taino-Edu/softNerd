@@ -132,6 +132,8 @@ export interface Product {
   preVendaReleaseDate: string | null
   /** Parcelamento anunciado na página do produto. Null = este item não parcela (linha some). */
   maxInstallments: number | null
+  /** Desconto do Pix anunciado neste item, em %. Null = herda da categoria / do padrão da loja. */
+  pixDiscountPercent: number | null
   /** NCM (Nomenclatura Comum do Mercosul) — obrigatório para emitir NFC-e deste produto. */
   ncm: string | null
   /** CEST (7 dígitos) — obrigatório só nos CSOSNs de substituição tributária (201/202/203/500). */

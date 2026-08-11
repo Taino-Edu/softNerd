@@ -847,6 +847,22 @@ function ProductModal({
               </p>
             </div>
             <div>
+              <label className="label">💠 Desconto no Pix deste item — opcional</label>
+              <div className="flex items-center gap-2">
+                <input className="input w-24" type="number" min={0} max={100} step={0.5} placeholder="—"
+                  value={form.pixDiscountPercent ?? ''}
+                  onChange={e => set('pixDiscountPercent', e.target.value === '' ? null : Number(e.target.value))}
+                />
+                <span className="text-sm text-[var(--text-muted)]">% de desconto pagando no Pix</span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                Vazio = usa o percentual da categoria do item (Categorias) e, se ela não tiver, o padrão da loja.
+                Zero = este item não anuncia desconto no Pix, mesmo que a categoria dele tenha.
+                É o aviso que o cliente vê no site — o desconto na hora de fechar a venda continua sendo o
+                que você digita no caixa.
+              </p>
+            </div>
+            <div>
               <label className="label">📅 Data de lançamento (data de rua) — opcional</label>
               <input className="input" type="date"
                 value={form.preVendaReleaseDate ? form.preVendaReleaseDate.slice(0, 10) : ''}

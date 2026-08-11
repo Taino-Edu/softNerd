@@ -249,6 +249,88 @@ public class ProductServiceTests
         salvo.NaturezaOperacaoId.Should().Be(naturezaId);
     }
 
+    // ── Vitrine: parcelamento e desconto do Pix por item ─────────────────────
+
+    [Fact]
+    public async Task Update_DevePersistirParcelamentoEDescontoDoPixDoItem()
+    {
+        var db      = CreateDb(nameof(Update_DevePersistirParcelamentoEDescontoDoPixDoItem));
+        var service = CreateService(db);
+        var p       = MakeProduct("Booster Box");
+        db.Products.Add(p);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var atualizado = MakeProduct("Booster Box");
+        atualizado.Id                 = p.Id;
+        atualizado.MaxInstallments    = 6;
+        atualizado.PixDiscountPercent = 3m;
+
+        await service.UpdateAsync(atualizado);
+        db.ChangeTracker.Clear();
+
+        var salvo = await db.Products.FindAsync(p.Id);
+        salvo!.MaxInstallments.Should().Be(6);
+        salvo.PixDiscountPercent.Should().Be(3m);
+    }
+
+    [Fact]
+    public async Task Update_LimparCamposDaVitrine_VoltaAHerdarDaCategoria()
+    {
+        // Vazio na tela é decisão do lojista ("volta a herdar"), não campo esquecido —
+        // por isso o null tem que sobrescrever o valor antigo em vez de ser ignorado.
+        var db      = CreateDb(nameof(Update_LimparCamposDaVitrine_VoltaAHerdarDaCategoria));
+        var service = CreateService(db);
+        var p       = MakeProduct("Deck Box");
+        p.MaxInstallments    = 12;
+        p.PixDiscountPercent = 8m;
+        db.Products.Add(p);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var atualizado = MakeProduct("Deck Box");
+        atualizado.Id = p.Id; // MaxInstallments e PixDiscountPercent ficam null
+
+        await service.UpdateAsync(atualizado);
+        db.ChangeTracker.Clear();
+
+        var salvo = await db.Products.FindAsync(p.Id);
+        salvo!.MaxInstallments.Should().BeNull();
+        salvo.PixDiscountPercent.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public async Task Update_DescontoDoPixForaDaFaixa_DeveRecusar(int percentual)
+    {
+        var db      = CreateDb($"pix_invalido_{percentual}");
+        var service = CreateService(db);
+        var p       = MakeProduct("Sleeve");
+        db.Products.Add(p);
+        await db.SaveChangesAsync();
+
+        p.PixDiscountPercent = percentual;
+
+        var act = async () => await service.UpdateAsync(p);
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task Update_ParcelamentoForaDaFaixa_DeveRecusar()
+    {
+        var db      = CreateDb(nameof(Update_ParcelamentoForaDaFaixa_DeveRecusar));
+        var service = CreateService(db);
+        var p       = MakeProduct("Playmat");
+        db.Products.Add(p);
+        await db.SaveChangesAsync();
+
+        p.MaxInstallments = 99;
+
+        var act = async () => await service.UpdateAsync(p);
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
     // ── Busca por ID ─────────────────────────────────────────────────────────
 
     [Fact]
