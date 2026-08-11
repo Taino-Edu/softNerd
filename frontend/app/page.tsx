@@ -46,6 +46,9 @@ const DEFAULT_SITE: SiteConfigDto = {
   colorBackground: '#EBF7FD',
   colorCard: '#FFFFFF',
   borderRadiusStyle: 'Padrao',
+  pixDiscountPercent: 5,
+  maxInstallments: 12,
+  minInstallmentInCents: 500,
 }
 
 /** Valores originais hardcoded do Tailwind pra cada utilitário rounded-* usado na landing —

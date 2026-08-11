@@ -36,6 +36,9 @@ public class CategoryService : ICategoryService
         existing.DisplayOrder     = category.DisplayOrder;
         existing.IsActive         = category.IsActive;
         existing.ParentCategoryId = category.ParentCategoryId;
+        // Null aqui é um valor de verdade ("volta a herdar"), não "não mexe" — por isso
+        // atribui direto, sem checagem de null como nos campos de texto.
+        existing.PixDiscountPercent = category.PixDiscountPercent;
         // CreatedAt não é atualizado — preserva a data de criação original
 
         await _db.SaveChangesAsync();

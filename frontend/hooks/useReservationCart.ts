@@ -30,6 +30,14 @@ function writeCart(items: ReservationCartItem[]) {
 
 const itemKey = (i: Pick<ReservationCartItem, 'productId' | 'variantId'>) => `${i.productId}:${i.variantId ?? ''}`
 
+/** Zera o carrinho fora do React — usado pelo clearAuth() no logout. O carrinho vive em
+ * localStorage sem vínculo com o usuário, então sem isso quem logasse depois no mesmo
+ * navegador herdava os itens de quem saiu (bolinha roxa com item que ele não reservou). */
+export function clearReservationCart() {
+  if (typeof window === 'undefined') return
+  writeCart([])
+}
+
 /** Carrinho de reserva persistido em localStorage — sobrevive navegação entre páginas de produto
  * até o cliente confirmar tudo de uma vez em /cliente/reserva/carrinho. */
 export function useReservationCart() {

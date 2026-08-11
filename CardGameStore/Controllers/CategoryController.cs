@@ -16,7 +16,9 @@ public record CategoryRequest(
     [MaxLength(10)]            string? Emoji,
     int  DisplayOrder,
     bool IsActive,
-    Guid? ParentCategoryId
+    Guid? ParentCategoryId,
+    /// <summary>Desconto do Pix desta categoria em %. Null = herda do pai / do padrão da loja.</summary>
+    [Range(0, 100)] decimal? PixDiscountPercent = null
 );
 
 [ApiController]
@@ -39,13 +41,14 @@ public class CategoryController : ControllerBase
         if (!ModelState.IsValid) return BadRequest(ModelState);
         var category = new ProductCategory
         {
-            Id               = Guid.NewGuid(),
-            Name             = req.Name.Trim(),
-            Emoji            = req.Emoji?.Trim(),
-            DisplayOrder     = req.DisplayOrder,
-            IsActive         = req.IsActive,
-            ParentCategoryId = req.ParentCategoryId,
-            CreatedAt        = DateTime.UtcNow,
+            Id                 = Guid.NewGuid(),
+            Name               = req.Name.Trim(),
+            Emoji              = req.Emoji?.Trim(),
+            DisplayOrder       = req.DisplayOrder,
+            IsActive           = req.IsActive,
+            ParentCategoryId   = req.ParentCategoryId,
+            PixDiscountPercent = req.PixDiscountPercent,
+            CreatedAt          = DateTime.UtcNow,
         };
         try { return Ok(await _service.CreateAsync(category)); }
         catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
@@ -58,12 +61,13 @@ public class CategoryController : ControllerBase
         if (!ModelState.IsValid) return BadRequest(ModelState);
         var category = new ProductCategory
         {
-            Id               = id,
-            Name             = req.Name.Trim(),
-            Emoji            = req.Emoji?.Trim(),
-            DisplayOrder     = req.DisplayOrder,
-            IsActive         = req.IsActive,
-            ParentCategoryId = req.ParentCategoryId,
+            Id                 = id,
+            Name               = req.Name.Trim(),
+            Emoji              = req.Emoji?.Trim(),
+            DisplayOrder       = req.DisplayOrder,
+            IsActive           = req.IsActive,
+            ParentCategoryId   = req.ParentCategoryId,
+            PixDiscountPercent = req.PixDiscountPercent,
         };
         try { return Ok(await _service.UpdateAsync(category)); }
         catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }

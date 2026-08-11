@@ -202,6 +202,7 @@ public class VendaAvulsaService : IVendaAvulsaService
             SoldByAdminName            = adminName,
             Origem                     = request.Origem,
             ReservationId              = request.ReservationId,
+            ReservationGroupId         = request.ReservationGroupId,
             ProductIsPreVenda          = request.ProductIsPreVenda,
         };
 

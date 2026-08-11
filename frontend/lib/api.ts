@@ -130,6 +130,8 @@ export interface Product {
   hasVariants: boolean
   /** "Data de rua" da pré-venda (YYYY-MM-DD) — retirada/venda só a partir dela. Null = sem trava. */
   preVendaReleaseDate: string | null
+  /** Parcelamento anunciado na página do produto. Null = este item não parcela (linha some). */
+  maxInstallments: number | null
   /** NCM (Nomenclatura Comum do Mercosul) — obrigatório para emitir NFC-e deste produto. */
   ncm: string | null
   /** CEST (7 dígitos) — obrigatório só nos CSOSNs de substituição tributária (201/202/203/500). */
@@ -150,6 +152,8 @@ export interface ProductCategory {
   id: string; name: string; emoji: string | null
   displayOrder: number; isActive: boolean; createdAt: string
   parentCategoryId: string | null
+  /** Desconto do Pix anunciado na vitrine, em %. Null = herda do pai / do padrão da loja. */
+  pixDiscountPercent: number | null
 }
 
 export const categoryApi = {
@@ -623,6 +627,17 @@ export interface MyReservation {
 export interface ReservationPixStatus {
   hasPix: boolean; status?: string; pagoEm?: string
   pixCopiaCola?: string; imagemQrCode?: string; expiraEm?: string; valorEmReais?: number
+}
+
+export interface HomologarResult {
+  message: string
+  /** Primeiro item homologado — mantido por compatibilidade. */
+  reservationId: string
+  /** Todos os itens que saíram como retirados nesta homologação. */
+  reservationIds: string[]
+  itemCount: number
+  discountPercent: number
+  discountInReais: number
 }
 
 export interface UpdateMeRequest {
@@ -1233,10 +1248,17 @@ export const reservationApi = {
                api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
   getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
+  /** Homologa o carrinho INTEIRO de uma vez (uma venda com todos os itens do grupo).
+   *  Reserva avulsa tem groupId = o próprio id, então serve pros dois casos. */
+  homologarGrupo: (groupId: string, body: {
+    paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
+    discountPercent?: number; discountInCents?: number
+  }) => api.post<HomologarResult>(`/api/reservations/group/${groupId}/homologar`, body),
+  /** Homologa só um item de um carrinho — a tela usa sempre o de grupo. */
   homologar: (id: string, body: {
     paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
     discountPercent?: number; discountInCents?: number
-  }) => api.post<{ message: string; reservationId: string; discountPercent: number; discountInReais: number }>(`/api/reservations/${id}/homologar`, body),
+  }) => api.post<HomologarResult>(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),
   /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */
@@ -1397,6 +1419,12 @@ export interface SiteConfigDto {
   colorBackground: string
   colorCard: string
   borderRadiusStyle: 'Padrao' | 'Suave' | 'MuitoArredondado'
+  /** Desconto padrão do Pix anunciado na vitrine, em %. 0 = não anuncia Pix. */
+  pixDiscountPercent: number
+  /** Parcelamento que vem pré-preenchido no cadastro de produto novo (o valor real é por produto). */
+  maxInstallments: number
+  /** Piso da parcela em centavos — evita "12x de R$ 1,67" em produto barato. */
+  minInstallmentInCents: number
 }
 
 export const siteConfigApi = {

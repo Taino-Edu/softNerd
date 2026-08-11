@@ -48,8 +48,13 @@ public class VendaAvulsa
     /// "Site" × "Pré-venda" via ProductIsPreVenda, mesma tag que separa as colunas do kanban.</summary>
     public string? Origem { get; set; }
 
-    /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva".</summary>
+    /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva". Num carrinho
+    /// homologado de uma vez, é o primeiro item — a venda inteira é identificada pelo grupo.</summary>
     public Guid? ReservationId { get; set; }
+
+    /// <summary>Grupo (carrinho) de origem, quando Origem == "Reserva" — uma venda por grupo,
+    /// mesmo com vários itens reservados juntos.</summary>
+    public Guid? ReservationGroupId { get; set; }
 
     /// <summary>Snapshot de Product.IsPreVenda no momento da homologação. Só relevante quando
     /// Origem == "Reserva" — decide se cai em "Site" ou "Pré-venda" no Financeiro.</summary>
