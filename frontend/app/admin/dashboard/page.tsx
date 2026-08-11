@@ -7,6 +7,7 @@ import { playGoalSound } from '@/lib/sounds'
 import { tocarSom, notificarBrowser, pedirPermissaoNotificacao, incrementBadge, clearBadge } from '@/lib/notificacoes'
 import CameraScanner from '@/components/CameraScanner'
 import { CobrancaPixModal } from '@/components/admin/CobrancaPixModal'
+import ConferenciaButton from '@/components/admin/ConferenciaButton'
 import {
   useTopClientes, TopClientesFilterBar, TopClientesList,
   DEFAULT_TOP_CLIENTES, TopClientesState,
@@ -1166,15 +1167,27 @@ function ComandaCard({
         </div>
 
         {/* Itens resumo */}
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-sm gap-2">
           <span className="text-gray-400">{comanda.items.length} {comanda.items.length === 1 ? 'item' : 'itens'}</span>
-          <button
-            onClick={() => setExpanded(v => !v)}
-            className="text-gray-500 hover:text-gray-300 flex items-center gap-1 text-xs transition-colors"
-          >
-            {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            {expanded ? 'Ocultar' : 'Ver itens'}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Conferência dos itens com o cliente antes de fechar — papel sem valor fiscal */}
+            <ConferenciaButton
+              compact
+              items={comanda.items.map(i => ({
+                name: i.itemNameSnapshot, quantity: i.quantity, unitPriceInCents: i.unitPriceInCents,
+              }))}
+              totalInCents={Math.round(netTotal * 100)}
+              clienteNome={comanda.userName}
+              origem={comanda.tableIdentifier ? `Comanda · ${comanda.tableIdentifier}` : 'Comanda'}
+            />
+            <button
+              onClick={() => setExpanded(v => !v)}
+              className="text-gray-500 hover:text-gray-300 flex items-center gap-1 text-xs transition-colors"
+            >
+              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {expanded ? 'Ocultar' : 'Ver itens'}
+            </button>
+          </div>
         </div>
 
         {expanded && comanda.items.length > 0 && (

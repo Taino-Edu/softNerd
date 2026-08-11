@@ -1,5 +1,20 @@
 # Changelog — Santuário Nerd
 
+## [v1.26.0] — 2026-08-11
+
+### Adicionado
+- **Pré-venda manual com vários itens**: a tela de registrar pré-venda em nome do cliente só aceitava um produto por vez — pra cada item era preciso refazer o modal inteiro, buscar o cliente de novo, e cada item virava um pedido solto (com Pix e homologação separados). Agora dá pra ir adicionando quantos produtos quiser no mesmo pedido, com uma lista pra revisar e remover antes de registrar. Tudo entra num pedido só, e se um item falhar nenhum estoque é baixado
+- **Impressão de conferência dos itens** (sem valor fiscal) no PDV e na comanda: lista com quadradinho de check por item, quantidade, valor unitário, subtotal, total e linha de assinatura — pra conferir a mercadoria com o cliente na entrega. Sai em **bobina 80mm**, **bobina 58mm** ou **A4** (pra salvar em PDF). Não substitui NFC-e/cupom fiscal, que continua no fechamento
+
+### Mudado
+- **Carrinho do PDV mais largo**: com a coluna estreita o nome do produto ficava cortado no meio e pedido grande não dava pra conferir. A coluna cresceu, o nome aparece inteiro e a barra de rolagem ficou visível
+- **Resumo antes de fechar a venda**: a caixinha dos itens na etapa de pagamento mostrava poucas linhas e cortava o nome. Agora é maior, mostra o nome completo, a variante e o total de produtos/unidades
+
+## [v1.25.5] — 2026-08-11
+
+### Corrigido
+- **Proteção contra bloqueio do SEFAZ (cStat 656)**: o sistema agora conserva no banco um intervalo seguro de 1h05 entre sincronizações, inclusive após reiniciar; impede que o job automático e o botão manual consultem ao mesmo tempo; desabilita o botão com contagem regressiva; e não mostra mais o falso aviso verde de sucesso quando o SEFAZ bloquear a consulta
+
 ## [v1.25.4] — 2026-08-11
 
 ### Mudado

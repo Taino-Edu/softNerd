@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import VariantPicker from '@/components/admin/VariantPicker'
+import ConferenciaButton from '@/components/admin/ConferenciaButton'
 
 interface CartItem {
   product: Product
@@ -610,6 +611,15 @@ function VendaWizard({
       ? i.product.discountPriceInCents : i.product.priceInCents
     return s + price * i.quantity
   }, 0)
+
+  // Carrinho no formato da lista de conferência (mesmo papel usado na comanda).
+  const conferenciaItems = cart.map(({ product, quantity, variantLabel }) => ({
+    name: product.name,
+    variantLabel,
+    quantity,
+    unitPriceInCents: product.isOnPromo && product.discountPriceInCents != null
+      ? product.discountPriceInCents : product.priceInCents,
+  }))
   const discountCents     = discountMode === 'cents'
     ? Math.min(Math.round(parseFloat(discountValueStr.replace(',', '.') || '0') * 100), subtotal)
     : Math.round(subtotal * discountPct / 100)
@@ -694,7 +704,7 @@ function VendaWizard({
     >
       <div className={clsx(
         "bg-surface-800 border border-surface-500 rounded-2xl w-full flex flex-col shadow-2xl animate-fade-in",
-        step === 2 ? "max-w-2xl max-h-[92vh]" : "max-w-md max-h-[92vh]"
+        step === 2 ? "max-w-3xl max-h-[92vh]" : "max-w-md max-h-[92vh]"
       )}>
 
         {/* Header + step indicator */}
@@ -904,11 +914,16 @@ function VendaWizard({
               {/* Divisor */}
               <div className="w-px bg-surface-600 shrink-0" />
 
-              {/* Coluna direita — carrinho */}
-              <div className="w-52 shrink-0 flex flex-col gap-2 min-h-0">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest shrink-0">
-                  Carrinho {cart.length > 0 && <span className="text-brand-400">({cart.reduce((s, i) => s + i.quantity, 0)})</span>}
-                </p>
+              {/* Coluna direita — carrinho (w-72: com w-52 o nome do produto ficava cortado
+                  no meio e pedido grande não dava pra conferir) */}
+              <div className="w-72 shrink-0 flex flex-col gap-2 min-h-0">
+                <div className="flex items-center justify-between gap-2 shrink-0">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    Carrinho {cart.length > 0 && <span className="text-brand-400">({cart.reduce((s, i) => s + i.quantity, 0)})</span>}
+                  </p>
+                  <ConferenciaButton compact items={conferenciaItems} totalInCents={subtotal}
+                    clienteNome={clientName.trim() || null} origem="Venda balcão (PDV)" />
+                </div>
 
                 {cart.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-600">
@@ -916,13 +931,15 @@ function VendaWizard({
                     <p className="text-[11px] text-center">Nenhum item<br/>adicionado</p>
                   </div>
                 ) : (
-                  <div className="flex-1 overflow-y-auto space-y-1.5 min-h-0">
+                  // Barra de rolagem destacada: a global tem 6px quase invisível no escuro
+                  // e o pessoal do balcão não percebia que a lista continuava pra baixo.
+                  <div className="flex-1 overflow-y-auto space-y-1.5 min-h-0 pr-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-surface-400 [&::-webkit-scrollbar-thumb]:rounded-full">
                     {cart.map(({ product, quantity, variantLabel, cartKey }) => {
                       const price = product.isOnPromo && product.discountPriceInCents != null
                         ? product.discountPriceInCents : product.priceInCents
                       return (
                         <div key={cartKey} className="bg-surface-700 border border-surface-500 rounded-xl px-2.5 py-2 space-y-1.5">
-                          <p className="text-xs text-white font-medium leading-tight truncate">{product.name}</p>
+                          <p className="text-xs text-white font-medium leading-tight break-words">{product.name}</p>
                           {variantLabel && (
                             <p className="text-[10px] text-violet-400 font-medium">{variantLabel}</p>
                           )}
@@ -968,18 +985,33 @@ function VendaWizard({
           {/* ── Etapa 3: Desconto + Pagamento ──────────────────── */}
           {step === 3 && (
             <div className="space-y-4">
-              {/* Resumo do carrinho */}
-              <div className="bg-surface-700 rounded-xl p-3 space-y-1 max-h-32 overflow-y-auto">
-                {cart.map(({ product, quantity }) => {
-                  const price = product.isOnPromo && product.discountPriceInCents != null
-                    ? product.discountPriceInCents : product.priceInCents
-                  return (
-                    <div key={product.id} className="flex justify-between text-sm">
-                      <span className="text-gray-400 truncate flex-1 mr-2">{quantity}× {product.name}</span>
-                      <span className="text-gray-400 font-mono shrink-0">{fmt(price * quantity / 100)}</span>
-                    </div>
-                  )
-                })}
+              {/* Resumo do carrinho — nome inteiro (sem cortar) e altura maior: em pedido
+                  grande o balconista precisa conferir item a item antes de fechar. */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs text-gray-500">
+                    Itens do pedido <span className="text-gray-400 font-semibold">
+                      ({cart.length} produto{cart.length !== 1 ? 's' : ''} / {cart.reduce((s, i) => s + i.quantity, 0)} un.)
+                    </span>
+                  </p>
+                  <ConferenciaButton items={conferenciaItems} totalInCents={subtotal}
+                    clienteNome={clientName.trim() || null} origem="Venda balcão (PDV)" />
+                </div>
+                <div className="bg-surface-700 rounded-xl p-3 space-y-1.5 max-h-64 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-surface-400 [&::-webkit-scrollbar-thumb]:rounded-full">
+                  {cart.map(({ product, quantity, variantLabel, cartKey }) => {
+                    const price = product.isOnPromo && product.discountPriceInCents != null
+                      ? product.discountPriceInCents : product.priceInCents
+                    return (
+                      <div key={cartKey} className="flex justify-between gap-2 text-sm">
+                        <span className="text-gray-300 flex-1 leading-snug">
+                          <span className="text-white font-semibold">{quantity}×</span> {product.name}
+                          {variantLabel && <span className="text-violet-400 text-xs"> · {variantLabel}</span>}
+                        </span>
+                        <span className="text-gray-400 font-mono shrink-0">{fmt(price * quantity / 100)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Desconto */}
