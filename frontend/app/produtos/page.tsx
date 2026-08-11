@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
-import { productApi, Product } from '@/lib/api'
+import { productApi, siteConfigApi, categoryApi, Product, ProductCategory, SiteConfigDto } from '@/lib/api'
+import { resolvePixPercent, calcPrecoVitrine } from '@/lib/precoVitrine'
 import Link from 'next/link'
 import {
   Package, ShoppingBag, ChevronLeft,
@@ -9,9 +10,11 @@ import {
 
 const NAVY = '#0C3D5A'
 
-type Theme = { bg: string; card: string; border: string; blue: string; yellow: string; text: string; navy: string; muted: string }
+type Theme = { bg: string; card: string; border: string; blue: string; yellow: string; text: string; navy: string; muted: string; pix: string }
 
 function fmt(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}` }
+/** "3" → "3%" e "2.5" → "2,5%" (sem casa decimal à toa no caso comum). */
+function fmtPct(v: number) { return `${(Math.round(v * 10) / 10).toString().replace('.', ',')}%` }
 
 function ProductBadge({ p }: { p: Product }) {
   if (p.isPreVenda) return (
@@ -25,7 +28,7 @@ function ProductBadge({ p }: { p: Product }) {
   return null
 }
 
-function ProductCard({ p, C }: { p: Product; C: Theme }) {
+function ProductCard({ p, C, pix }: { p: Product; C: Theme; pix: { precoPix: number; pixPercent: number } | null }) {
   return (
     <Link
       href={`/produtos/${p.id}`}
@@ -59,6 +62,14 @@ function ProductCard({ p, C }: { p: Product; C: Theme }) {
             {p.stockQuantity > 0 ? `${p.stockQuantity} un.` : 'Esgotado'}
           </span>
         </div>
+
+        {/* Aviso do Pix já na vitrine — o cliente vê o preço à vista antes de abrir o produto */}
+        {pix && pix.pixPercent > 0 && (
+          <p className="text-[10px] font-semibold leading-tight" style={{ color: C.pix }}>
+            {fmt(pix.precoPix)} no Pix
+            <span className="font-normal" style={{ color: C.muted }}> · {fmtPct(pix.pixPercent)} OFF</span>
+          </p>
+        )}
       </div>
     </Link>
   )
@@ -70,13 +81,18 @@ export default function ProdutosPage() {
   const [search,   setSearch]   = useState('')
   const [catFilter, setCatFilter] = useState<string | null>(null)
   const [isDark,   setIsDark]   = useState(false)
+  const [siteCfg,    setSiteCfg]    = useState<SiteConfigDto | null>(null)
+  const [categorias, setCategorias] = useState<ProductCategory[]>([])
 
+  // pix: tom fechado no claro e aberto no escuro, pra manter contraste nos dois temas
   const C: Theme = isDark ? {
     bg: '#121215', card: '#1A1A1F', border: 'rgba(255,255,255,0.07)',
     blue: '#3EC2F2', yellow: '#FFE45E', text: 'rgba(255,255,255,0.60)', navy: '#FFFFFF', muted: 'rgba(255,255,255,0.35)',
+    pix: '#2DD4BF',
   } : {
     bg: '#EBF7FD', card: '#FFFFFF', border: 'rgba(12,61,90,0.10)',
     blue: '#3EC2F2', yellow: '#FFE45E', text: '#4D8FAC', navy: '#0C3D5A', muted: '#9CA3AF',
+    pix: '#00806D',
   }
 
   useEffect(() => {
@@ -85,7 +101,20 @@ export default function ProdutosPage() {
     productApi.list()
       .then(r => setProducts(r.data.filter(p => p.isActive && p.stockQuantity > 0 && p.showOnMarketplace !== false)))
       .finally(() => setLoading(false))
+
+    // Aviso do Pix na vitrine: falhou, os cards seguem sem a linha (não trava a listagem).
+    siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
+    categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [])
+
+  /** Preço no Pix de um item, com a herança item → categoria → categoria pai → loja. */
+  function pixDoProduto(p: Product) {
+    if (!siteCfg) return null
+    const preco = p.isOnPromo && p.discountPriceInReais != null ? p.discountPriceInReais : p.priceInReais
+    const { precoPix, pixPercent } = calcPrecoVitrine(
+      preco, p.maxInstallments, siteCfg, resolvePixPercent(p, categorias, siteCfg.pixDiscountPercent))
+    return { precoPix, pixPercent }
+  }
 
   const categories = useMemo(() => [...new Set(products.map(p => p.category))].sort(), [products])
 
@@ -191,7 +220,7 @@ export default function ProdutosPage() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                   {items.map(p => (
-                    <ProductCard key={p.id} p={p} C={C} />
+                    <ProductCard key={p.id} p={p} C={C} pix={pixDoProduto(p)} />
                   ))}
                 </div>
               </section>

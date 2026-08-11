@@ -2,7 +2,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getRole } from '@/lib/auth'
-import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto, PixCobrancaDto } from '@/lib/api'
+import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, categoryApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto, ProductCategory, PixCobrancaDto } from '@/lib/api'
+import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { mixHex } from '@/lib/colors'
 import Link from 'next/link'
 import {
@@ -71,7 +72,13 @@ function formatWhatsapp(raw: string): string {
     : `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`
 }
 
-type Theme = { bg: string; card: string; cardAlt: string; border: string; blue: string; yellow: string; text: string; navy: string }
+type Theme = { bg: string; card: string; cardAlt: string; border: string; blue: string; yellow: string; text: string; navy: string; pix: string }
+
+/** Preço no Pix mostrado na vitrine — null quando a loja/o item não anuncia desconto. */
+type PixVitrine = { precoPix: number; pixPercent: number } | null
+
+function fmtBRL(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}` }
+function fmtPixPct(v: number) { return `${(Math.round(v * 10) / 10).toString().replace('.', ',')}%` }
 
 export default function LandingPage() {
   const router = useRouter()
@@ -89,6 +96,7 @@ export default function LandingPage() {
   const [bannerIdx,    setBannerIdx]  = useState(0)
   const [annIdx,       setAnnIdx]     = useState(0)
   const [site,         setSite]       = useState<SiteConfigDto>(DEFAULT_SITE)
+  const [categorias,   setCategorias] = useState<ProductCategory[]>([])
   const carouselRef   = useRef<HTMLDivElement>(null)
   const carouselPaused = useRef(false)
   const bannerPaused   = useRef(false)
@@ -102,16 +110,26 @@ export default function LandingPage() {
   const [heroFirstWord, ...heroRestWords] = site.siteName.split(' ')
   const heroRest = heroRestWords.join(' ')
 
+  // pix não sai da personalização de propósito: é a cor da forma de pagamento, não da
+  // marca — e precisa de contraste garantido nos dois temas.
   const C = isDark ? {
     bg: '#121215', card: '#1A1A1F', cardAlt: '#1E1E24',
     border: 'rgba(255,255,255,0.07)', blue: site.colorPrimary,
     yellow: site.colorAccent, text: 'rgba(255,255,255,0.60)',
-    navy: '#FFFFFF',
+    navy: '#FFFFFF', pix: '#2DD4BF',
   } : {
     bg: site.colorBackground, card: site.colorCard, cardAlt: mixHex(site.colorCard, site.colorPrimary, 0.06),
     border: 'rgba(12,61,90,0.10)', blue: site.colorPrimary,
     yellow: site.colorAccent, text: '#4D8FAC',
-    navy: '#0C3D5A',
+    navy: '#0C3D5A', pix: '#00806D',
+  }
+
+  /** Pix do item, com a herança item → categoria → categoria pai → padrão da loja. */
+  function pixDoProduto(p: Product): PixVitrine {
+    const preco = p.isOnPromo && p.discountPriceInReais != null ? p.discountPriceInReais : p.priceInReais
+    const { precoPix, pixPercent } = calcPrecoVitrine(
+      preco, p.maxInstallments, site, resolvePixPercent(p, categorias, site.pixDiscountPercent))
+    return pixPercent > 0 ? { precoPix, pixPercent } : null
   }
 
   // Fundo padrão do banner/anúncio quando não há imagem — antes era um navy fixo (#0D1B2A/
@@ -187,6 +205,8 @@ export default function LandingPage() {
       }),
       announcementApi.visible().then(r => setAnnouncements(r.data)),
       siteConfigApi.get().then(r => setSite(r.data)),
+      // Só pra resolver o desconto do Pix da categoria no card/modal de produto.
+      categoryApi.list().then(r => setCategorias(r.data)).catch(() => {}),
     ]).finally(() => setLoading(false))
   }, [router])
 
@@ -616,7 +636,7 @@ export default function LandingPage() {
                 >
                   {products.map(p => (
                     <div key={p.id} className="snap-start shrink-0 w-40 sm:w-48">
-                      <ProductCard product={p} onClick={() => setProductModal(p)} C={C} />
+                      <ProductCard product={p} onClick={() => setProductModal(p)} C={C} pix={pixDoProduto(p)} />
                     </div>
                   ))}
                   {/* Card final "Ver todos" */}
@@ -802,7 +822,7 @@ export default function LandingPage() {
 
       {/* ── MODAIS ──────────────────────────────────────────────────────── */}
       {annModal      && <AnnouncementModal ann={annModal}               onClose={() => setAnnModal(null)}      C={C} />}
-      {productModal  && <ProductModal      product={productModal}       onClose={() => setProductModal(null)}  C={C} />}
+      {productModal  && <ProductModal      product={productModal}       onClose={() => setProductModal(null)}  C={C} pix={pixDoProduto(productModal)} />}
       {registerModal && <RegisterModal     championship={registerModal} onClose={() => setRegisterModal(null)} C={C} whatsapp={site.whatsappNumber} contactPersonName={site.contactPersonName} />}
     </div>
   )
@@ -989,7 +1009,7 @@ function ChampionshipCard({ championship: c, onRegister, C }: { championship: Ch
 
 // ── Product Card ──────────────────────────────────────────────────────────────
 
-function ProductCard({ product: p, onClick, C }: { product: Product; onClick: () => void; C: Theme }) {
+function ProductCard({ product: p, onClick, C, pix }: { product: Product; onClick: () => void; C: Theme; pix: PixVitrine }) {
   return (
     <button
       onClick={onClick}
@@ -1042,6 +1062,14 @@ function ProductCard({ product: p, onClick, C }: { product: Product; onClick: ()
             {p.stockQuantity} un.
           </span>
         </div>
+
+        {/* Preço no Pix já na vitrine — o cliente compara antes mesmo de abrir o produto */}
+        {pix && (
+          <p className="text-[10px] font-semibold leading-tight mt-1" style={{ color: C.pix }}>
+            {fmtBRL(pix.precoPix)} no Pix
+            <span className="font-normal" style={{ color: C.text }}> · {fmtPixPct(pix.pixPercent)} OFF</span>
+          </p>
+        )}
       </div>
     </button>
   )
@@ -1096,7 +1124,7 @@ function AnnouncementModal({ ann, onClose, C }: { ann: AnnouncementDto; onClose:
   )
 }
 
-function ProductModal({ product: p, onClose, C }: { product: Product; onClose: () => void; C: Theme }) {
+function ProductModal({ product: p, onClose, C, pix }: { product: Product; onClose: () => void; C: Theme; pix: PixVitrine }) {
   const [imgIdx, setImgIdx] = useState(0)
 
   const images = p.imageUrls && p.imageUrls.length > 0
@@ -1220,6 +1248,14 @@ function ProductModal({ product: p, onClose, C }: { product: Product; onClose: (
                 <span className="text-3xl font-black" style={{ color: C.yellow }}>
                   R$ {p.priceInReais.toFixed(2).replace('.', ',')}
                 </span>
+              )}
+
+              {/* Preço no Pix — mesma informação da página do produto */}
+              {pix && (
+                <p className="text-sm -mt-2" style={{ color: C.text }}>
+                  ou <strong style={{ color: C.pix }}>{fmtBRL(pix.precoPix)}</strong>
+                  {' '}com <strong style={{ color: C.pix }}>{fmtPixPct(pix.pixPercent)} OFF</strong> no Pix
+                </p>
               )}
 
               {/* Estoque */}

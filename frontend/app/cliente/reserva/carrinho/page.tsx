@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { reservationApi, ReservationPixStatus } from '@/lib/api'
+import { reservationApi, productApi, siteConfigApi, categoryApi, ReservationPixStatus, Product, ProductCategory, SiteConfigDto } from '@/lib/api'
 import { isLoggedIn } from '@/lib/auth'
 import { useReservationCart } from '@/hooks/useReservationCart'
+import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import {
   ChevronLeft, Trash2, Minus, Plus, BookmarkPlus, QrCode, Copy, CheckCircle,
   Loader2, RefreshCw, Package,
@@ -23,6 +24,9 @@ export default function ReservationCartPage() {
   const [groupId, setGroupId] = useState<string | null>(null)
   const [temFila, setTemFila] = useState(false)
   const [semEstoque, setSemEstoque] = useState<{ productId: string; name: string }[] | null>(null)
+  const [catalogo,   setCatalogo]   = useState<Product[]>([])
+  const [categorias, setCategorias] = useState<ProductCategory[]>([])
+  const [siteCfg,    setSiteCfg]    = useState<SiteConfigDto | null>(null)
   const [pix, setPix] = useState<ReservationPixStatus | null>(null)
   const [pixLoading, setPixLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
@@ -30,9 +34,11 @@ export default function ReservationCartPage() {
   const C = isDark ? {
     bg: '#121215', card: '#1A1A1F', border: 'rgba(255,255,255,0.07)',
     navy: '#FFFFFF', text: 'rgba(255,255,255,0.65)', muted: 'rgba(255,255,255,0.35)',
+    pix: '#2DD4BF',
   } : {
     bg: '#F5F8FA', card: '#FFFFFF', border: 'rgba(12,61,90,0.10)',
     navy: NAVY, text: '#4D8FAC', muted: '#9CA3AF',
+    pix: '#00806D',
   }
 
   useEffect(() => {
@@ -40,6 +46,25 @@ export default function ReservationCartPage() {
     if (saved === 'dark') setIsDark(true)
     if (!isLoggedIn()) router.push('/')
   }, [router])
+
+  // Quanto o carrinho inteiro sai no Pix — é aqui que o cliente decide como vai pagar.
+  // O percentual pode ser diferente item a item (Pokémon 3%, resto no padrão), então a
+  // conta é feita por item e somada; nada disso trava a tela se a API não responder.
+  useEffect(() => {
+    productApi.list().then(r => setCatalogo(r.data)).catch(() => {})
+    siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
+    categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
+  }, [])
+
+  const pixTotalCents = siteCfg && catalogo.length > 0
+    ? items.reduce((soma, i) => {
+        const prod = catalogo.find(p => p.id === i.productId)
+        const pct  = resolvePixPercent(prod, categorias, siteCfg.pixDiscountPercent)
+        const { precoPix } = calcPrecoVitrine(i.priceInCents / 100, null, siteCfg, pct)
+        return soma + Math.round(precoPix * 100) * i.quantity
+      }, 0)
+    : null
+  const pixEconomiaCents = pixTotalCents != null ? totalCents - pixTotalCents : 0
 
   // allowFila=true só vem do diálogo de "acabou o estoque" — nunca por padrão,
   // pra reserva (estoque na hora) e fila (ainda não chegou) não se misturarem sozinhas.
@@ -247,10 +272,23 @@ export default function ReservationCartPage() {
               ))}
             </div>
 
-            <div className="rounded-2xl border p-4 mt-4 flex items-center justify-between"
+            <div className="rounded-2xl border p-4 mt-4 space-y-2"
               style={{ backgroundColor: C.card, borderColor: C.border }}>
-              <span className="font-semibold text-sm" style={{ color: C.text }}>Total</span>
-              <span className="text-xl font-black">{fmt(totalCents)}</span>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sm" style={{ color: C.text }}>Total</span>
+                <span className="text-xl font-black">{fmt(totalCents)}</span>
+              </div>
+              {pixTotalCents != null && pixEconomiaCents > 0 && (
+                <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: C.border }}>
+                  <span className="text-sm font-semibold" style={{ color: C.pix }}>Pagando no Pix</span>
+                  <div className="text-right">
+                    <p className="text-lg font-black" style={{ color: C.pix }}>{fmt(pixTotalCents)}</p>
+                    <p className="text-[11px]" style={{ color: C.muted }}>
+                      economia de {fmt(pixEconomiaCents)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button onClick={() => handleConfirm()} disabled={submitting}

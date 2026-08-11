@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.25.1] — 2026-08-10
+
+### Adicionado
+- **Desconto do Pix também item a item**: além do percentual por categoria, cada produto pode ter o seu no cadastro (campo "Desconto no Pix deste item"). Vazio herda da categoria — e da categoria pai, se for subcategoria — e cai no padrão da loja se ninguém tiver definido. **Zero** é decisão de verdade: aquele item não anuncia desconto no Pix, mesmo que a categoria dele tenha
+- **O aviso do Pix agora aparece enquanto o cliente navega**, não só depois de abrir o produto: nos cards da vitrine da home, na listagem de Produtos ("R$ 189,14 no Pix · 3% OFF") e no modal de produto da home
+- **Total no Pix na hora de fechar a reserva**: o carrinho mostra "Pagando no Pix R$ 260,96 — economia de R$ 13,83", com a conta feita item a item (um produto com 3% e outro com 10% no mesmo carrinho somam certo)
+
 ## [v1.25.0] — 2026-08-10
 
 ### Adicionado

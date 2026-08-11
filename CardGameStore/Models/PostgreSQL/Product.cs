@@ -143,6 +143,17 @@ public class Product
     public int? MaxInstallments { get; set; }
 
     /// <summary>
+    /// Desconto do Pix DESTE item, em % — o que o site anuncia na vitrine e na página do
+    /// produto. Null = herda: primeiro da categoria (e da categoria pai), depois do padrão
+    /// da loja (SiteConfig.PixDiscountPercent). 0 = este item não tem desconto no Pix,
+    /// mesmo que a categoria dele tenha.
+    /// Só muda o que o cliente VÊ — o desconto na hora de fechar a venda continua sendo o
+    /// que o admin digita no PDV/comanda.
+    /// </summary>
+    [Column("pix_discount_percent")]
+    public decimal? PixDiscountPercent { get; set; }
+
+    /// <summary>
     /// Se true, o estoque é gerenciado por variantes (ProductVariant) em vez do campo StockQuantity.
     /// Use para produtos com grade de tamanho/cor (ex: camisas).
     /// </summary>

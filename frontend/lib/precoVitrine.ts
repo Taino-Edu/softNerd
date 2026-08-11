@@ -10,7 +10,7 @@
 // produto (Pokémon tem margem menor e sai com 3%, o resto da loja com o padrão).
 // =============================================================================
 
-import type { ProductCategory, SiteConfigDto } from './api'
+import type { Product, ProductCategory, SiteConfigDto } from './api'
 
 export interface PrecoVitrine {
   /** Nº de parcelas anunciadas. < 2 = não anuncia parcelamento (item sem parcelamento ou preço baixo). */
@@ -26,15 +26,22 @@ export interface PrecoVitrine {
 }
 
 /**
- * Percentual de desconto do Pix que vale pra uma categoria: o dela, senão o da
- * categoria pai (subcategoria herda de "Card Game", por exemplo), senão o padrão da loja.
+ * Percentual de desconto do Pix que vale pra um produto, na ordem em que o lojista espera:
+ * o do próprio item → o da categoria dele → o da categoria pai (subcategoria herda de
+ * "Card Games", por exemplo) → o padrão da loja.
+ *
+ * Item com 0 é decisão de verdade ("este aqui não tem desconto"), não "não preenchi" —
+ * por isso a checagem é contra null, nunca contra falsy.
  * `categoryName` é o nome mesmo — em Product a categoria é string, não FK.
  */
 export function resolvePixPercent(
-  categoryName: string | null | undefined,
+  produto: Pick<Product, 'category' | 'pixDiscountPercent'> | null | undefined,
   categories: ProductCategory[],
   padraoLoja: number,
 ): number {
+  if (produto?.pixDiscountPercent != null) return produto.pixDiscountPercent
+
+  const categoryName = produto?.category
   const cat = categoryName
     ? categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase())
     : undefined

@@ -154,7 +154,7 @@ export default function ProductPage() {
   // já com promoção, que é o que o cliente vê em destaque na caixa de preço.
   const vitrine = siteCfg
     ? calcPrecoVitrine(precoUnit, product.maxInstallments, siteCfg,
-                       resolvePixPercent(product.category, categorias, siteCfg.pixDiscountPercent))
+                       resolvePixPercent(product, categorias, siteCfg.pixDiscountPercent))
     : null
 
   return (
