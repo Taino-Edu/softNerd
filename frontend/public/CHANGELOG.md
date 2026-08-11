@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.25.3] — 2026-08-11
+
+### Corrigido
+- **Fundo acinzentado no tema claro**: várias caixas do sistema (as opções de vitrine no cadastro de produto, os blocos de "Dica", os painéis do Financeiro, do Fiscal, do LGPD e das Integrações) apareciam com um cinza escuro chapado por cima do branco. Era o fundo do tema escuro vazando: quando a caixa tem transparência, o tema claro não estava trocando a cor. Agora essas caixas ficam no mesmo tom claro do resto da tela. O tema escuro não mudou em nada
+
 ## [v1.25.2] — 2026-08-10
 
 ### Mudado
