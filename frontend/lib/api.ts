@@ -1241,8 +1241,9 @@ export const reservationApi = {
                api.post('/api/reservations', body),
   createCart: (items: { productId: string; variantId?: string; quantity: number }[], allowFilaFallback = false, paymentMethod?: string) =>
                api.post<{ groupId: string; items: MyReservation[] }>('/api/reservations/cart', { items, allowFilaFallback, paymentMethod }),
-  adminCreate: (body: { userId: string; productId: string; variantId?: string; quantity?: number; notes?: string }) =>
-               api.post<AdminReservation>('/api/reservations/admin-create', body),
+  /** Registra pré-venda/fila em nome do cliente. Vários itens viram UM pedido (mesmo grupo). */
+  adminCreate: (body: { userId: string; items: { productId: string; variantId?: string; quantity: number }[]; notes?: string }) =>
+               api.post<{ groupId: string; items: AdminReservation[] }>('/api/reservations/admin-create', body),
   gerarPix:  (groupId: string)                     =>
                api.post<{ txId: string; status: string; pixCopiaCola?: string; imagemQrCode?: string; expiraEm?: string; valorEmReais: number }>(
                  `/api/reservations/group/${groupId}/pix`),

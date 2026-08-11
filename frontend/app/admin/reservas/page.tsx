@@ -11,7 +11,7 @@ import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
   LayoutList, RefreshCw, Loader2,
   TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
-  QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil, Tag,
+  QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil, Tag, Trash2,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
@@ -81,6 +81,9 @@ function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard, show
 }
 
 // ── Modal: admin registra pré-venda/fila em nome do cliente (pedido pelo WhatsApp/balcão) ──
+/** Item já adicionado ao pedido manual (ainda não enviado pra API). */
+type CartLine = { key: string; product: Product; variant?: ProductVariant; qty: number }
+
 function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [userSearch,  setUserSearch]  = useState('')
   const [users,       setUsers]       = useState<UserSummary[]>([])
@@ -97,6 +100,10 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [qty,        setQty]        = useState(1)
   const [notes,      setNotes]      = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  // Pedido do cliente pode ter vários itens (era o limite antigo: 1 produto por vez,
+  // e o balconista tinha que refazer o modal inteiro pra cada item do mesmo pedido).
+  const [cart, setCart] = useState<CartLine[]>([])
 
   // Cadastro rápido de cliente novo (pedido chegou pelo WhatsApp e a pessoa não tem conta)
   const [novoCliente, setNovoCliente] = useState(false)
@@ -139,20 +146,43 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
   const semEstoque = product ? product.stockQuantity <= 0 : false
   const qtyMax     = product ? (semEstoque ? 10 : Math.max(1, product.stockQuantity)) : 1
+  const totalItens = cart.length + (product ? 1 : 0)
 
-  async function handleSubmit() {
-    if (!user)    { toast.error('Selecione o cliente'); return }
+  /** Manda o item que está selecionado pra lista do pedido e limpa a busca pro próximo. */
+  function handleAddItem() {
     if (!product) { toast.error('Selecione o produto'); return }
     if (product.hasVariants && !variantId) { toast.error('Selecione a variante'); return }
+    setCart(c => [...c, {
+      key: `${product.id}-${variantId}-${Date.now()}`,
+      product, variant: variants.find(v => v.id === variantId), qty,
+    }])
+    setProduct(null); setProdSearch(''); setQty(1)
+  }
+
+  async function handleSubmit() {
+    if (!user) { toast.error('Selecione o cliente'); return }
+
+    // Item ainda selecionado (não clicou em "adicionar") entra junto — ninguém perde item
+    // por não ter apertado o botão certo.
+    const linhas = [...cart]
+    if (product) {
+      if (product.hasVariants && !variantId) { toast.error('Selecione a variante'); return }
+      linhas.push({ key: 'pendente', product, variant: variants.find(v => v.id === variantId), qty })
+    }
+    if (linhas.length === 0) { toast.error('Adicione pelo menos um item'); return }
+
     setSubmitting(true)
     try {
       const { data } = await reservationApi.adminCreate({
-        userId: user.id, productId: product.id,
-        variantId: variantId || undefined, quantity: qty, notes: notes.trim() || undefined,
+        userId: user.id,
+        items: linhas.map(l => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.qty })),
+        notes: notes.trim() || undefined,
       })
-      toast.success(data.kind === 'fila'
-        ? `${user.name} entrou na fila de "${product.name}"`
-        : `Pré-venda criada pra ${user.name} — estoque baixado`)
+      const soFila = data.items.every(i => i.kind === 'fila')
+      const quanto = linhas.length === 1 ? `"${linhas[0].product.name}"` : `${linhas.length} itens`
+      toast.success(soFila
+        ? `${user.name} entrou na fila de ${quanto}`
+        : `Pré-venda criada pra ${user.name} (${quanto}) — estoque baixado`)
       onCreated()
       onClose()
     } catch (e: any) {
@@ -187,7 +217,8 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
         <div>
           <h2 className="text-lg font-black text-white">Nova pré-venda para cliente</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Pedido chegou pelo WhatsApp ou no balcão? Registra aqui em nome do cliente.
+            Pedido chegou pelo WhatsApp ou no balcão? Registra aqui em nome do cliente —
+            pode colocar quantos itens quiser no mesmo pedido.
           </p>
         </div>
 
@@ -254,9 +285,37 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
           )}
         </div>
 
+        {/* Itens já adicionados ao pedido */}
+        {cart.length > 0 && (
+          <div>
+            <label className="text-xs text-gray-400 mb-1.5 block font-semibold">
+              Itens do pedido ({cart.length})
+            </label>
+            <div className="rounded-xl border border-surface-500 overflow-hidden">
+              {cart.map(l => (
+                <div key={l.key}
+                  className="flex items-center gap-2 px-3 py-2 border-b border-surface-700 last:border-0">
+                  <Package className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-white truncate">{l.product.name}</p>
+                    {l.variant && <p className="text-[11px] text-gray-500">{l.variant.label}</p>}
+                  </div>
+                  <span className="text-[11px] text-gray-400 shrink-0">{l.qty}x</span>
+                  <button onClick={() => setCart(c => c.filter(x => x.key !== l.key))}
+                    className="p-1 rounded hover:bg-surface-700 text-gray-500 hover:text-red-400 shrink-0">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Produto */}
         <div>
-          <label className="text-xs text-gray-400 mb-1.5 block font-semibold">Produto *</label>
+          <label className="text-xs text-gray-400 mb-1.5 block font-semibold">
+            {cart.length > 0 ? 'Outro produto' : 'Produto *'}
+          </label>
           {product ? (
             <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-brand-500/15 border border-brand-500/40">
               <div className="min-w-0">
@@ -319,6 +378,14 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
           </div>
         </div>
 
+        {/* Adiciona o item selecionado e libera a busca pro próximo produto do mesmo pedido */}
+        {product && (
+          <button type="button" onClick={handleAddItem}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-surface-500 text-xs font-semibold text-gray-300 hover:text-white hover:border-brand-500 transition-colors">
+            <Plus className="w-3.5 h-3.5" /> Adicionar este item e escolher outro
+          </button>
+        )}
+
         {/* Consequência */}
         {product && (
           <div className={clsx('text-xs rounded-xl px-3 py-2.5 border',
@@ -336,10 +403,10 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
             className="flex-1 py-3 rounded-xl bg-surface-700 text-gray-300 text-sm font-semibold">
             Cancelar
           </button>
-          <button onClick={handleSubmit} disabled={submitting || !user || !product}
+          <button onClick={handleSubmit} disabled={submitting || !user || (cart.length === 0 && !product)}
             className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-40 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-            Registrar
+            Registrar{totalItens > 1 ? ` ${totalItens} itens` : ''}
           </button>
         </div>
       </div>

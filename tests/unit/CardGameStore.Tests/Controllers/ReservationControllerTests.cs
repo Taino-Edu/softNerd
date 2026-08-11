@@ -227,6 +227,65 @@ public class ReservationControllerTests
     }
 
     [Fact]
+    public async Task AdminCreate_ComVariosItens_DeveCriarTudoNoMesmoGrupo()
+    {
+        // Pedido do balcão/WhatsApp com mais de um produto pro mesmo cliente: antes só
+        // dava pra registrar um item por vez (cada um virava um pedido solto).
+        var db      = CreateDb(nameof(AdminCreate_ComVariosItens_DeveCriarTudoNoMesmoGrupo));
+        var cliente = await SeedUserAsync(db);
+        var p1      = await SeedProductAsync(db, stock: 5);
+        var p2      = await SeedProductAsync(db, stock: 2);
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.AdminCreate(new AdminCreateReservationRequest
+        {
+            UserId = cliente.Id,
+            Items  =
+            [
+                new AdminCreateReservationItem { ProductId = p1.Id, Quantity = 2 },
+                new AdminCreateReservationItem { ProductId = p2.Id, Quantity = 1 },
+            ],
+        });
+
+        result.Should().BeOfType<OkObjectResult>();
+
+        db.ChangeTracker.Clear();
+        (await db.Products.FindAsync(p1.Id))!.StockQuantity.Should().Be(3);
+        (await db.Products.FindAsync(p2.Id))!.StockQuantity.Should().Be(1);
+
+        var reservas = await db.ProductReservations.Where(r => r.UserId == cliente.Id).ToListAsync();
+        reservas.Should().HaveCount(2);
+        reservas.Select(r => r.ReservationGroupId).Distinct().Should().HaveCount(1,
+            "os itens do mesmo pedido têm que ficar num grupo só — é o que junta o Pix e a homologação");
+    }
+
+    [Fact]
+    public async Task AdminCreate_ItemInvalidoNoMeio_DeveDesfazerAbaixaDosAnteriores()
+    {
+        var db      = CreateDb(nameof(AdminCreate_ItemInvalidoNoMeio_DeveDesfazerAbaixaDosAnteriores));
+        var cliente = await SeedUserAsync(db);
+        var p1      = await SeedProductAsync(db, stock: 5);
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.AdminCreate(new AdminCreateReservationRequest
+        {
+            UserId = cliente.Id,
+            Items  =
+            [
+                new AdminCreateReservationItem { ProductId = p1.Id,          Quantity = 2 },
+                new AdminCreateReservationItem { ProductId = Guid.NewGuid(), Quantity = 1 }, // não existe
+            ],
+        });
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+
+        db.ChangeTracker.Clear();
+        (await db.Products.FindAsync(p1.Id))!.StockQuantity.Should().Be(5,
+            "o estoque baixado dos itens anteriores volta no rollback quando um item do pedido falha");
+        (await db.ProductReservations.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
     public async Task Create_SemEstoqueEProdutoNaoAceitaFila_DeveRetornarBadRequestSemMexerNoEstoque()
     {
         var db      = CreateDb(nameof(Create_SemEstoqueEProdutoNaoAceitaFila_DeveRetornarBadRequestSemMexerNoEstoque));

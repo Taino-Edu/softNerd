@@ -264,6 +264,8 @@ public class ReservationController : ControllerBase
     // POST /api/reservations/admin-create — admin registra pré-venda/fila em nome do
     // cliente (pedido chegou pelo WhatsApp ou no balcão). Mesmas regras da criação
     // normal: em estoque vira pré-venda com baixa na hora; não chegou vira fila.
+    // Aceita vários itens de uma vez (Items): o pedido do cliente vira UM grupo só,
+    // igual ao carrinho do site — antes cada produto virava um pedido solto.
     [HttpPost("admin-create")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> AdminCreate([FromBody] AdminCreateReservationRequest req)
@@ -271,38 +273,113 @@ public class ReservationController : ControllerBase
         var clienteExiste = await _db.Users.AnyAsync(u => u.Id == req.UserId);
         if (!clienteExiste) return NotFound(new { Message = "Cliente não encontrado." });
 
-        var (r, falha) = await CriarEPersistirAsync(req.UserId, req.ProductId, req.VariantId,
-                                                     req.Quantity < 1 ? 1 : req.Quantity, req.Notes);
+        // Compat: chamada antiga manda o item solto nos campos de cima; a tela nova manda Items.
+        var itens = req.Items is { Count: > 0 }
+            ? req.Items
+            : [new AdminCreateReservationItem { ProductId = req.ProductId, VariantId = req.VariantId, Quantity = req.Quantity }];
+
+        var (criadas, falha) = await CriarGrupoEPersistirAsync(req.UserId, itens, req.Notes);
         if (falha is not null) return falha;
 
-        if (r!.Kind == "pre_venda") await AvisarEstoqueMudouAsync();
+        if (criadas!.Any(r => r.Kind == "pre_venda")) await AvisarEstoqueMudouAsync();
 
         // Auditoria: reserva manual movimenta estoque em nome de terceiro — registra quem fez.
-        await _audit.LogAsync("CriouReservaManual", "ProductReservation", r.Id.ToString(),
-            details: JsonSerializer.Serialize(new { clienteId = req.UserId, produtoId = r.ProductId, quantidade = r.Quantity, r.Kind }),
-            httpContext: HttpContext);
+        foreach (var r in criadas!)
+            await _audit.LogAsync("CriouReservaManual", "ProductReservation", r.Id.ToString(),
+                details: JsonSerializer.Serialize(new { clienteId = req.UserId, produtoId = r.ProductId, quantidade = r.Quantity, r.Kind }),
+                httpContext: HttpContext);
 
-        await _db.Entry(r).Reference(x => x.Product).LoadAsync();
-        await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
+        foreach (var r in criadas!)
+        {
+            await _db.Entry(r).Reference(x => x.Product).LoadAsync();
+            await _db.Entry(r).Reference(x => x.Variant).LoadAsync();
+        }
 
-        // Avisa o cliente (melhor-esforço): notificação in-app + push
+        // Avisa o cliente (melhor-esforço): notificação in-app + push — uma só pro pedido inteiro.
         try
         {
-            var titulo = r.Kind == "fila" ? "Você entrou na fila 📋" : "Pré-venda registrada ✅";
-            var corpo  = r.Kind == "fila"
-                ? $"A loja te colocou na fila de \"{r.Product?.Name}\". A gente avisa quando chegar."
-                : $"A loja registrou \"{r.Product?.Name}\" pra você — pague no Pix ou na retirada.";
+            var primeira = criadas![0];
+            var soFila   = criadas!.All(r => r.Kind == "fila");
+            var titulo   = soFila ? "Você entrou na fila 📋" : "Pré-venda registrada ✅";
+            string corpo;
+            if (criadas!.Count == 1)
+                corpo = soFila
+                    ? $"A loja te colocou na fila de \"{primeira.Product?.Name}\". A gente avisa quando chegar."
+                    : $"A loja registrou \"{primeira.Product?.Name}\" pra você — pague no Pix ou na retirada.";
+            else
+                corpo = soFila
+                    ? $"A loja te colocou na fila de {criadas!.Count} itens. A gente avisa quando chegarem."
+                    : $"A loja registrou {criadas!.Count} itens pra você — pague no Pix ou na retirada.";
+
             _db.Notifications.Add(new Notification
             {
-                UserId = r.UserId, Title = titulo, Body = corpo,
-                Link = "/cliente/perfil", ImageUrl = r.Product?.ImageUrl,
+                UserId = req.UserId, Title = titulo, Body = corpo,
+                Link = "/cliente/perfil", ImageUrl = primeira.Product?.ImageUrl,
             });
             await _db.SaveChangesAsync();
-            await _push.SendToManyAsync([r.UserId], titulo, corpo, "/cliente/perfil", r.Product?.ImageUrl);
+            await _push.SendToManyAsync([req.UserId], titulo, corpo, "/cliente/perfil", primeira.Product?.ImageUrl);
         }
         catch { /* notificação é melhor-esforço — a reserva já está valendo */ }
 
-        return Ok(ToDto(r));
+        return Ok(new
+        {
+            groupId = criadas![0].ReservationGroupId,
+            items   = criadas!.Select(r => ToDto(r)),
+        });
+    }
+
+    /// <summary>
+    /// Cria vários itens em nome do cliente num único ReservationGroupId e persiste tudo
+    /// na mesma transação — se um item falhar, o estoque já baixado dos anteriores volta
+    /// no rollback. Mesmo padrão do CreateCart, mas com fila permitida (o admin registra
+    /// pedido de item que ainda não chegou) e com Notes do pedido.
+    /// </summary>
+    private async Task<(List<ProductReservation>? Criadas, IActionResult? Error)> CriarGrupoEPersistirAsync(
+        Guid userId, List<AdminCreateReservationItem> itens, string? notes)
+    {
+        var strategy = _db.Database.CreateExecutionStrategy();
+
+        List<ProductReservation>? criadas = null;
+        IActionResult?            falha   = null;
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            // Sem limpar o tracker, as reservas da tentativa anterior (ainda "Added")
+            // entrariam de novo no AddRange — reserva duplicada e estoque baixado duas vezes.
+            _db.ChangeTracker.Clear();
+            criadas = null;
+            falha   = null;
+
+            var groupId  = Guid.NewGuid();
+            var toCreate = new List<ProductReservation>();
+
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            foreach (var item in itens)
+            {
+                var created = await CriarItemAsync(userId, groupId, item.ProductId, item.VariantId,
+                                                   item.Quantity < 1 ? 1 : item.Quantity, notes);
+                if (created.Error is not null)
+                {
+                    falha = created.Error switch
+                    {
+                        "not_found"   => NotFound(new { created.Message }),
+                        "conflict"    => Conflict(new { created.Message }),
+                        "sem_estoque" => Conflict(new { created.Message }),
+                        _             => BadRequest(new { created.Message }),
+                    };
+                    return; // sem Commit: rollback no Dispose devolve o estoque baixado
+                }
+                toCreate.Add(created.Reservation!);
+            }
+
+            _db.ProductReservations.AddRange(toCreate);
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+            criadas = toCreate;
+        });
+
+        return (criadas, falha);
     }
 
     /// <summary>
@@ -1039,13 +1116,25 @@ public class CreateReservationCartRequest
     public string? PaymentMethod { get; init; }
 }
 
-public class AdminCreateReservationRequest
+public class AdminCreateReservationItem
 {
-    public Guid  UserId    { get; init; }
     public Guid  ProductId { get; init; }
     public Guid? VariantId { get; init; }
     public int   Quantity  { get; init; } = 1;
+}
+
+public class AdminCreateReservationRequest
+{
+    public Guid  UserId    { get; init; }
     public string? Notes   { get; init; }
+
+    /// <summary>Pedido com vários itens — vira um grupo só. Tem prioridade sobre os campos avulsos.</summary>
+    public List<AdminCreateReservationItem>? Items { get; init; }
+
+    // ── Compat: pedido de um item só (chamadas antigas) ──
+    public Guid  ProductId { get; init; }
+    public Guid? VariantId { get; init; }
+    public int   Quantity  { get; init; } = 1;
 }
 
 public class UpdateReservationStatusRequest
