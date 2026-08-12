@@ -107,6 +107,20 @@ public class Comanda
     [Column("notes")]
     public string? Notes { get; set; }
 
+    // ── Estorno de comanda já fechada ─────────────────────────────────────────
+    // Comanda cobrada errada não se apaga: vira Estornada, sai do faturamento e
+    // continua no extrato com o motivo e quem fez.
+
+    [Column("estornada_em")]
+    public DateTime? EstornadaEm { get; set; }
+
+    [Column("estornada_por_admin_id")]
+    public Guid? EstornadaPorAdminId { get; set; }
+
+    [MaxLength(300)]
+    [Column("motivo_estorno")]
+    public string? MotivoEstorno { get; set; }
+
     // -------------------------------------------------------------------------
     // Propriedade calculada
     // -------------------------------------------------------------------------
@@ -141,5 +155,9 @@ public enum ComandaStatus
     Fechada,
 
     /// <summary>Cancelada pelo Admin (sem cobrança).</summary>
-    Cancelada
+    Cancelada,
+
+    /// <summary>Estava fechada (cobrada) e foi desfeita pelo Admin: estoque devolveu,
+    /// valor saiu do faturamento. Diferente de Cancelada, que nunca chegou a cobrar.</summary>
+    Estornada
 }

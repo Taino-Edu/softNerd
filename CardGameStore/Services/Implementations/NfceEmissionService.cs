@@ -474,7 +474,7 @@ public class NfceEmissionService : INfceEmissionService
             .FirstOrDefaultAsync(c => c.Id == comandaId)
             ?? throw new InvalidOperationException($"Comanda {comandaId} não encontrada para emissão fiscal.");
 
-        if (comanda.Status == ComandaStatus.Cancelada)
+        if (comanda.Status is ComandaStatus.Cancelada or ComandaStatus.Estornada)
             throw new ComandaCanceladaException(comandaId);
 
         var padrao = await _db.NaturezasOperacao.FirstOrDefaultAsync(n => n.IsPadrao);

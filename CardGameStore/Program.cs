@@ -917,6 +917,13 @@ using (var scope = app.Services.CreateScope())
                 -- Fila de espera: controle de quem já foi avisado do reestoque
                 ALTER TABLE product_waitlist ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ NULL;
 
+                -- Estorno de comanda já fechada: quem desfez, quando e por quê. Comanda
+                -- cobrada errada vira Estornada em vez de sumir — sai do faturamento mas
+                -- continua no extrato.
+                ALTER TABLE comandas ADD COLUMN IF NOT EXISTS estornada_em           TIMESTAMPTZ  NULL;
+                ALTER TABLE comandas ADD COLUMN IF NOT EXISTS estornada_por_admin_id UUID         NULL;
+                ALTER TABLE comandas ADD COLUMN IF NOT EXISTS motivo_estorno         VARCHAR(300) NULL;
+
                 -- Campeonatos: pagamento opcional da taxa de inscrição (Pix ou balcão)
                 ALTER TABLE championship_participants ADD COLUMN IF NOT EXISTS entry_fee_paid_at        TIMESTAMPTZ NULL;
                 ALTER TABLE championship_participants ADD COLUMN IF NOT EXISTS entry_fee_payment_method VARCHAR(20) NULL;

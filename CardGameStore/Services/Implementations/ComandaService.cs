@@ -403,7 +403,8 @@ public class ComandaService : IComandaService
             .Include(c => c.User)
             .FirstAsync(c => c.Id == comandaId);
 
-        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada)
+        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada
+         || comanda.Status == ComandaStatus.Estornada)
             throw new InvalidOperationException("Não é possível editar itens de uma comanda encerrada.");
 
         // Quantity == 0 → remover item
@@ -736,7 +737,8 @@ public class ComandaService : IComandaService
             .FirstOrDefaultAsync(c => c.Id == comandaId)
             ?? throw new InvalidOperationException($"Comanda {comandaId} não encontrada.");
 
-        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada)
+        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada
+         || comanda.Status == ComandaStatus.Estornada)
             throw new InvalidOperationException(
                 "Esta comanda já foi fechada (cobrada) ou cancelada — cancelamento sem cobrança só se aplica a comandas ainda abertas. " +
                 "Para estornar uma venda já fechada, use o cancelamento da nota fiscal (Admin > Fiscal).");
@@ -776,6 +778,86 @@ public class ComandaService : IComandaService
         return MapToDto(comanda);
     }
 
+    /// <summary>
+    /// Estorna uma comanda JÁ FECHADA: devolve estoque, devolve os pontos que o cliente
+    /// aplicou, tira os pontos de fidelidade que ganhou, baixa o crediário que a comanda
+    /// gerou e marca como Estornada — o faturamento só soma Fechada, então o valor sai
+    /// das contas. Diferente de CancelComandaAsync, que só vale pra comanda ainda aberta.
+    /// </summary>
+    public async Task<ComandaDto> EstornarComandaFechadaAsync(Guid comandaId, Guid adminId, string motivo)
+    {
+        if (string.IsNullOrWhiteSpace(motivo))
+            throw new InvalidOperationException("Informe o motivo do estorno.");
+
+        var comanda = await _db.Comandas
+            .Include(c => c.Items)
+            .Include(c => c.User)
+            .FirstOrDefaultAsync(c => c.Id == comandaId)
+            ?? throw new InvalidOperationException($"Comanda {comandaId} não encontrada.");
+
+        if (comanda.Status != ComandaStatus.Fechada)
+            throw new InvalidOperationException(
+                "Só dá pra estornar comanda fechada. Comanda ainda aberta se cancela pelo botão de cancelar.");
+
+        // Nota autorizada não se desfaz por dentro do sistema — tem prazo legal na SEFAZ.
+        var notaAtiva = await _db.NotasFiscaisEmitidas
+            .AnyAsync(n => n.ComandaId == comandaId
+                        && (n.Status == NotaFiscalStatus.Autorizada
+                         || n.Status == NotaFiscalStatus.AutorizadaContingencia));
+        if (notaAtiva)
+            throw new InvalidOperationException(
+                "Esta comanda tem NFC-e autorizada. Cancele a nota em Admin > Fiscal primeiro.");
+
+        // Crediário gerado por esta comanda: só desfaz se ninguém pagou nada ainda.
+        var crediario = await _db.Crediarios.FirstOrDefaultAsync(c => c.ComandaId == comandaId);
+        if (crediario is not null && crediario.ValorPagoEmCentavos > 0)
+            throw new InvalidOperationException(
+                $"O crediário desta comanda já tem R$ {crediario.ValorPagoEmCentavos / 100m:N2} pagos. " +
+                "Acerte o crediário do cliente antes de estornar.");
+
+        foreach (var item in comanda.Items.Where(i => i.ProductId.HasValue))
+        {
+            if (item.VariantId.HasValue)
+                await _db.ProductVariants
+                    .Where(v => v.Id == item.VariantId.Value)
+                    .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + item.Quantity));
+            else
+                await _db.Products
+                    .Where(p => p.Id == item.ProductId!.Value)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity + item.Quantity));
+        }
+
+        if (comanda.User != null)
+        {
+            // Devolve os pontos que o cliente usou pra abater e retira os que ganhou na compra.
+            var pontosGanhos = comanda.TotalInCents / 100;
+            comanda.User.PointsBalance = Math.Max(0, comanda.User.PointsBalance + comanda.PointsApplied - pontosGanhos);
+            comanda.User.UpdatedAt     = DateTime.UtcNow;
+        }
+
+        if (crediario is not null)
+        {
+            crediario.ValorEmCentavos = Math.Max(0, crediario.ValorEmCentavos - comanda.TotalInCents);
+            if (crediario.ValorEmCentavos == 0)
+                _db.Crediarios.Remove(crediario);
+        }
+
+        comanda.Status              = ComandaStatus.Estornada;
+        comanda.EstornadaEm         = DateTime.UtcNow;
+        comanda.EstornadaPorAdminId = adminId;
+        comanda.MotivoEstorno       = motivo.Trim();
+
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Comanda {Id} estornada pelo admin {AdminId} — R$ {Total:N2} fora do faturamento, estoque devolvido. Motivo: {Motivo}",
+            comandaId, adminId, comanda.TotalInReais, motivo);
+
+        await _hub.Clients.Group(ComandaHub.AdminGroup).SendAsync("StockChanged", new { });
+
+        return MapToDto(comanda);
+    }
+
     public async Task<IEnumerable<ComandaDto>> GetActiveCommandasForDashboardAsync()
     {
         var comandas = await _db.Comandas
@@ -794,7 +876,8 @@ public class ComandaService : IComandaService
             .Include(c => c.Items)
             .Include(c => c.User)
             .Where(c => c.UserId == userId &&
-                (c.Status == ComandaStatus.Fechada || c.Status == ComandaStatus.Cancelada))
+                (c.Status == ComandaStatus.Fechada || c.Status == ComandaStatus.Cancelada
+                     || c.Status == ComandaStatus.Estornada))
             .OrderByDescending(c => c.ClosedAt)
             .Take(limit)
             .ToListAsync();
@@ -812,7 +895,8 @@ public class ComandaService : IComandaService
         var comandas = await _db.Comandas
             .Include(c => c.Items)
             .Include(c => c.User)
-            .Where(c => (c.Status == ComandaStatus.Fechada || c.Status == ComandaStatus.Cancelada)
+            .Where(c => (c.Status == ComandaStatus.Fechada || c.Status == ComandaStatus.Cancelada
+                     || c.Status == ComandaStatus.Estornada)
                      && c.ClosedAt.HasValue
                      && c.ClosedAt.Value >= inicioUtc
                      && c.ClosedAt.Value <  fimUtc)
@@ -833,7 +917,8 @@ public class ComandaService : IComandaService
         if (comanda.UserId != userId)
             throw new InvalidOperationException("Você só pode usar pontos na sua própria comanda.");
 
-        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada)
+        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada
+         || comanda.Status == ComandaStatus.Estornada)
             throw new InvalidOperationException("Não é possível aplicar pontos em comanda encerrada.");
 
         if (comanda.PointsApplied > 0)
@@ -870,7 +955,8 @@ public class ComandaService : IComandaService
             .FirstOrDefaultAsync(c => c.Id == comandaId)
             ?? throw new InvalidOperationException("Comanda não encontrada.");
 
-        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada)
+        if (comanda.Status == ComandaStatus.Fechada || comanda.Status == ComandaStatus.Cancelada
+         || comanda.Status == ComandaStatus.Estornada)
             throw new InvalidOperationException("Não é possível remover pontos de comanda encerrada.");
 
         if (comanda.PointsApplied == 0)
@@ -1156,6 +1242,8 @@ public class ComandaService : IComandaService
         UserPointsBalance          = comanda.User?.PointsBalance  ?? 0,
         UserBalanceInCents         = comanda.User?.BalanceInCents ?? 0,
         ProfileImageUrl            = comanda.User?.ProfileImageUrl,
+        EstornadaEm                = comanda.EstornadaEm,
+        MotivoEstorno              = comanda.MotivoEstorno,
         Items                      = comanda.Items.Select(i => new ComandaItemDto
         {
             Id               = i.Id,

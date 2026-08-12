@@ -19,7 +19,7 @@ import {
   Clock, CheckCircle, XCircle, Plus, ChevronDown, ChevronUp,
   History, Search, Loader2, TableProperties, Trash2, CreditCard, ScanBarcode, Camera,
   AlertTriangle, DollarSign, BarChart2, Trophy, Star, FolderOpen, Package, Shield, MessageCircle,
-  Pencil, X, UserSearch, QrCode, Receipt,
+  Pencil, X, UserSearch, QrCode, Receipt, RotateCcw,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -1613,6 +1613,11 @@ export default function DashboardPage() {
   const [finOpen, setFinOpen] = useState(false)
   const [expandedHist, setExpandedHist] = useState<string | null>(null)
   const [editComanda, setEditComanda]   = useState<ComandaDto | null>(null)
+  // Estorno de comanda já fechada (cobrada errada): desfaz estoque/pontos/crediário
+  // e tira do faturamento — a comanda continua no histórico marcada como estornada.
+  const [estornoComanda, setEstornoComanda] = useState<ComandaDto | null>(null)
+  const [motivoEstorno,  setMotivoEstorno]  = useState('')
+  const [estornando,     setEstornando]     = useState(false)
   // Crediário — escolha de conta ao fechar comanda
   const [pendingClose, setPendingClose] = useState<{
     id: string; pm: string; pm2?: string; amt2?: number; discount?: number; emitirNota?: boolean
@@ -2246,7 +2251,7 @@ export default function DashboardPage() {
                             {fmt(c.totalInReais)}
                           </p>
                           <p className={clsx('text-xs', c.status === 'Fechada' ? 'text-accent-green' : 'text-red-400')}>
-                            {c.status === 'Fechada' ? 'Fechada' : 'Cancelada'}
+                            {c.status === 'Fechada' ? 'Fechada' : c.status === 'Estornada' ? 'Estornada' : 'Cancelada'}
                           </p>
                         </div>
                         {c.items.length > 0 && (
@@ -2275,6 +2280,19 @@ export default function DashboardPage() {
                             className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-brand-400 hover:text-brand-300 hover:bg-brand-600/10 border border-brand-600/30 hover:border-brand-500/50 rounded-xl py-1.5 transition-colors">
                             <Pencil className="w-3.5 h-3.5" /> Editar comanda
                           </button>
+                        )}
+                        {c.status === 'Fechada' && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setEstornoComanda(c); setMotivoEstorno('') }}
+                            className="mt-1.5 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-600/10 border border-red-600/30 hover:border-red-500/50 rounded-xl py-1.5 transition-colors">
+                            <RotateCcw className="w-3.5 h-3.5" /> Estornar comanda
+                          </button>
+                        )}
+                        {c.status === 'Estornada' && (
+                          <p className="mt-2 text-[11px] text-red-300 bg-red-500/10 border border-red-500/25 rounded-xl px-2.5 py-2">
+                            <span className="font-bold">Estornada</span>
+                            {c.motivoEstorno ? ` — ${c.motivoEstorno}` : ''}. Fora do faturamento, estoque devolvido.
+                          </p>
                         )}
                         {c.status === 'Fechada' && (
                           <button
@@ -2669,6 +2687,64 @@ export default function DashboardPage() {
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Modal de estorno de comanda fechada */}
+      {estornoComanda && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={e => { if (e.target === e.currentTarget) setEstornoComanda(null) }}>
+          <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+            <div>
+              <h3 className="font-bold text-white flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-red-400" /> Estornar comanda
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                {estornoComanda.userName} · {fmt(estornoComanda.totalInReais)}
+              </p>
+            </div>
+
+            <p className="text-xs text-red-200 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2.5">
+              Os itens voltam pro estoque, os pontos do cliente são desfeitos, o crediário
+              gerado é baixado e o valor sai do faturamento. A comanda continua no histórico
+              marcada como estornada. Se tiver NFC-e autorizada, cancele a nota antes.
+            </p>
+
+            <input
+              autoFocus
+              className="input text-sm w-full"
+              placeholder="Motivo do estorno (ex.: cobrada na conta errada)"
+              value={motivoEstorno}
+              onChange={e => setMotivoEstorno(e.target.value)}
+              maxLength={300}
+            />
+
+            <div className="flex gap-2">
+              <button onClick={() => setEstornoComanda(null)} disabled={estornando}
+                className="btn-secondary flex-1 justify-center text-sm">
+                Cancelar
+              </button>
+              <button
+                disabled={estornando}
+                onClick={async () => {
+                  if (motivoEstorno.trim().length < 3) { toast.error('Escreva o motivo do estorno'); return }
+                  setEstornando(true)
+                  try {
+                    await comandaApi.estornar(estornoComanda.id, motivoEstorno.trim())
+                    toast.success('Comanda estornada — estoque devolvido e fora do faturamento')
+                    setEstornoComanda(null)
+                    setMotivoEstorno('')
+                    fetchHistory(histData)
+                  } catch (e: any) {
+                    toast.error(e?.response?.data?.message ?? 'Erro ao estornar a comanda')
+                  } finally { setEstornando(false) }
+                }}
+                className="btn-danger flex-1 justify-center text-sm">
+                {estornando ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                Confirmar estorno
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -40,6 +40,10 @@ public interface IComandaService
     /// <summary>Cancela a comanda sem cobrança.</summary>
     Task<ComandaDto> CancelComandaAsync(Guid comandaId, Guid adminId);
 
+    /// <summary>Desfaz uma comanda já fechada: estoque volta, pontos voltam, crediário baixa
+    /// e o valor sai do faturamento. A comanda fica como Estornada, com motivo.</summary>
+    Task<ComandaDto> EstornarComandaFechadaAsync(Guid comandaId, Guid adminId, string motivo);
+
     /// <summary>Lista todas as comandas abertas/em andamento para o dashboard do Admin.</summary>
     Task<IEnumerable<ComandaDto>> GetActiveCommandasForDashboardAsync();
 

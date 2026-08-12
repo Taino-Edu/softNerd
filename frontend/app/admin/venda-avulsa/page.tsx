@@ -209,6 +209,25 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
   const [saving,     setSaving]     = useState(false)
   const [emitindoNota, setEmitindoNota] = useState(false)
 
+  // Estorno: venda lançada errada não se apaga — desfaz estoque/pontos/crediário e
+  // sai do faturamento, mas continua no extrato com o motivo.
+  const [estornando,    setEstornando]    = useState(false)
+  const [confirmEstorno, setConfirmEstorno] = useState(false)
+  const [motivoEstorno,  setMotivoEstorno]  = useState('')
+
+  async function handleEstornar() {
+    if (motivoEstorno.trim().length < 3) { toast.error('Escreva o motivo do estorno'); return }
+    setEstornando(true)
+    try {
+      const { data } = await vendaAvulsaApi.estornar(venda.id, motivoEstorno.trim())
+      toast.success('Venda estornada — estoque devolvido e valor fora do faturamento')
+      onUpdate(data)
+      onClose()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Erro ao estornar a venda')
+    } finally { setEstornando(false) }
+  }
+
   async function handleEmitirNota() {
     setEmitindoNota(true)
     try {
@@ -389,6 +408,56 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
           </div>
         ) : (
         <div className="px-5 pb-5 space-y-2">
+          {venda.cancelada ? (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-300">
+              <p className="font-bold">Venda estornada</p>
+              <p className="mt-0.5 text-red-200/80">
+                {venda.motivoCancelamento}
+                {venda.canceladaPorAdminNome && ` · por ${venda.canceladaPorAdminNome}`}
+              </p>
+              <p className="mt-0.5 text-red-200/60">Não conta mais no faturamento.</p>
+            </div>
+          ) : confirmEstorno ? (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 space-y-2">
+              <p className="text-xs text-red-200">
+                Isso devolve os itens ao estoque, desfaz pontos/cashback, baixa o crediário
+                gerado e tira o valor do faturamento. A venda fica registrada como estornada.
+              </p>
+              <input
+                autoFocus
+                className="input text-sm w-full"
+                placeholder="Motivo do estorno (ex.: lançado na conta errada)"
+                value={motivoEstorno}
+                onChange={e => setMotivoEstorno(e.target.value)}
+                maxLength={300}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setConfirmEstorno(false); setMotivoEstorno('') }}
+                  disabled={estornando}
+                  className="btn-secondary flex-1 justify-center text-sm"
+                >
+                  Voltar
+                </button>
+                <button
+                  onClick={handleEstornar}
+                  disabled={estornando}
+                  className="btn-danger flex-1 justify-center text-sm"
+                >
+                  {estornando ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                  Confirmar estorno
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmEstorno(true)}
+              className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-600/10 border border-red-600/30 hover:border-red-500/50 rounded-xl py-2 transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" /> Estornar venda
+            </button>
+          )}
+
           <button
             onClick={handleEmitirNota}
             disabled={emitindoNota}

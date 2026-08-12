@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { analyticsApi, vendaAvulsaApi, FinanceiroDto, FormaPagamentoTotalDto, PagamentoCrediarioPeriodoDto, AberturaCrediarioPeriodoDto } from '@/lib/api'
+import { analyticsApi, vendaAvulsaApi, FinanceiroDto, FormaPagamentoTotalDto, PagamentoCrediarioPeriodoDto, AberturaCrediarioPeriodoDto, ExtratoDto, ExtratoLinhaDto } from '@/lib/api'
 import { gerarRelatorioPDF } from '@/lib/relatorio'
 import toast from 'react-hot-toast'
 import {
@@ -8,8 +8,9 @@ import {
   RefreshCw, Printer, Package, ShoppingBag, BarChart2,
   Banknote, CreditCard, QrCode, Receipt, ChevronDown, ChevronUp,
   Store, ShoppingCart, X, Search, Star, Wallet, Filter, Trophy, Globe,
-  FileText, Lightbulb, ArrowUp, ArrowDown, Minus,
+  FileText, Lightbulb, ArrowUp, ArrowDown, Minus, Loader2,
 } from 'lucide-react'
+import clsx from 'clsx'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function toDateInput(d: Date) {
@@ -1343,6 +1344,12 @@ export default function FinanceiroPage() {
   const [topCatFilter, setTopCatFilter] = useState<string | null>(null)
   const [metaManualInput, setMetaManualInput] = useState('')
   const [dayModal,  setDayModal]  = useState<FinanceiroDto['diaDia'][0] | null>(null)
+  // Extrato: de onde veio cada real do período (e o que foi estornado). Carrega só
+  // quando o painel é aberto — é a consulta mais pesada da tela.
+  const [extrato,        setExtrato]        = useState<ExtratoDto | null>(null)
+  const [extratoOpen,    setExtratoOpen]    = useState(false)
+  const [extratoLoading, setExtratoLoading] = useState(false)
+  const [extratoTipo,    setExtratoTipo]    = useState<'todos' | ExtratoLinhaDto['tipo']>('todos')
   const iniRef    = useRef(inicio)
   const fimRef    = useRef(fim)
   const loadIdRef = useRef(0)
@@ -1791,6 +1798,120 @@ export default function FinanceiroPage() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* ── Extrato: de onde veio cada real ──────────────────────────── */}
+          <div className="card p-0 overflow-hidden">
+            <button
+              onClick={async () => {
+                const abrindo = !extratoOpen
+                setExtratoOpen(abrindo)
+                if (abrindo && !extratoLoading) {
+                  setExtratoLoading(true)
+                  try {
+                    const res = await analyticsApi.extrato(inicio, fim)
+                    setExtrato(res.data)
+                  } catch { toast.error('Erro ao carregar o extrato') }
+                  finally { setExtratoLoading(false) }
+                }
+              }}
+              className="w-full px-5 py-4 flex items-center justify-between hover:bg-surface-700/40 transition-colors"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Receipt className="w-4 h-4 text-brand-400 shrink-0" />
+                <div className="text-left min-w-0">
+                  <p className="font-bold text-white text-sm">Extrato do período</p>
+                  <p className="text-xs text-gray-500">
+                    Cada entrada com a origem — e o que foi estornado
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {extrato && (
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-bold font-mono text-accent-green">{fmt(extrato.totalEmReais)}</p>
+                    {extrato.totalEstornado > 0 && (
+                      <p className="text-[11px] text-red-400">−{fmt(extrato.totalEstornado)} estornado</p>
+                    )}
+                  </div>
+                )}
+                {extratoLoading
+                  ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                  : extratoOpen
+                    ? <ChevronUp className="w-4 h-4 text-gray-500" />
+                    : <ChevronDown className="w-4 h-4 text-gray-500" />}
+              </div>
+            </button>
+
+            {extratoOpen && extrato && (
+              <div className="border-t border-surface-500">
+                <div className="px-5 py-3 flex flex-wrap gap-1.5 border-b border-surface-500">
+                  {([
+                    ['todos',               'Tudo'],
+                    ['venda_balcao',        'Balcão'],
+                    ['comanda',             'Comanda'],
+                    ['site',                'Site'],
+                    ['pre_venda',           'Pré-venda'],
+                    ['pagamento_crediario', 'Crediário'],
+                  ] as const).map(([valor, label]) => (
+                    <button
+                      key={valor}
+                      onClick={() => setExtratoTipo(valor)}
+                      className={clsx('px-2.5 py-1 rounded-full text-xs font-semibold border transition-all',
+                        extratoTipo === valor
+                          ? 'bg-brand-600/20 border-brand-500/60 text-brand-300'
+                          : 'bg-surface-700 border-surface-500 text-gray-400 hover:text-white')}
+                    >{label}</button>
+                  ))}
+                </div>
+
+                <div className="max-h-[28rem] overflow-y-auto divide-y divide-surface-700">
+                  {extrato.linhas
+                    .filter(l => extratoTipo === 'todos' || l.tipo === extratoTipo)
+                    .map(l => (
+                      <div key={`${l.tipo}-${l.id}`} className="px-5 py-2.5 flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className={clsx('text-sm', l.estornada ? 'text-gray-500 line-through' : 'text-white')}>
+                            {l.descricao}
+                          </p>
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            {new Date(l.data).toLocaleString('pt-BR', {
+                              day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                            })}
+                            {l.cliente && ` · ${l.cliente}`}
+                            {l.formaPagamento && ` · ${l.formaPagamento}`}
+                            {l.lancadoPor && ` · por ${l.lancadoPor}`}
+                          </p>
+                          {l.estornada && (
+                            <p className="text-[11px] text-red-400 mt-0.5">
+                              Estornado{l.motivoEstorno ? `: ${l.motivoEstorno}` : ''}
+                            </p>
+                          )}
+                        </div>
+                        <span className={clsx('font-mono text-sm shrink-0',
+                          l.estornada ? 'text-gray-600 line-through' : 'text-accent-green')}>
+                          {fmt(l.valorEmReais)}
+                        </span>
+                      </div>
+                    ))}
+                  {extrato.linhas.length === 0 && (
+                    <p className="px-5 py-6 text-center text-xs text-gray-500">
+                      Nenhuma entrada no período.
+                    </p>
+                  )}
+                </div>
+
+                <div className="px-5 py-3 border-t border-surface-500 flex items-center justify-between text-xs">
+                  <span className="text-gray-500">{extrato.lancamentos} lançamento(s) no período</span>
+                  <span className="text-gray-300">
+                    Entrou: <strong className="text-accent-green font-mono">{fmt(extrato.totalEmReais)}</strong>
+                    {extrato.totalEstornado > 0 && (
+                      <> · estornado: <strong className="text-red-400 font-mono">{fmt(extrato.totalEstornado)}</strong></>
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── DRE ─────────────────────────────────────────────────────── */}

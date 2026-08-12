@@ -102,6 +102,21 @@ public class VendaAvulsaDto
     public Guid?   NotaFiscalId             { get; set; }
     public string? NotaFiscalStatus         { get; set; }
     public string? NotaFiscalMotivoRejeicao { get; set; }
+
+    // ── Estorno ───────────────────────────────────────────────────────────────
+    /// <summary>Crediário que esta venda gerou (quando o pagamento foi no crediário).</summary>
+    public Guid?     CrediarioId           { get; set; }
+    public bool      Cancelada             { get; set; }
+    public DateTime? CanceladaEm           { get; set; }
+    public string?   CanceladaPorAdminNome { get; set; }
+    public string?   MotivoCancelamento    { get; set; }
+}
+
+public class EstornarVendaRequest
+{
+    /// <summary>Por que a venda está sendo desfeita — vai pro extrato e pra auditoria.</summary>
+    [Required(ErrorMessage = "Informe o motivo do estorno."), MinLength(3), MaxLength(300)]
+    public string Motivo { get; set; } = string.Empty;
 }
 
 /// <summary>Totais de PDV de um cliente dentro do recorte pedido (período + forma).</summary>

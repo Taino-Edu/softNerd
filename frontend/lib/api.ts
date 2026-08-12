@@ -92,6 +92,9 @@ export interface ComandaDto {
   notaFiscalId?: string | null
   notaFiscalStatus?: string | null
   notaFiscalMotivoRejeicao?: string | null
+  /** Preenchidos quando a comanda fechada foi estornada (status = "Estornada"). */
+  estornadaEm?: string | null
+  motivoEstorno?: string | null
 }
 
 export interface ComandaItemDto {
@@ -384,6 +387,38 @@ export interface VendaAvulsaDto {
   notaFiscalId?: string | null
   notaFiscalStatus?: string | null
   notaFiscalMotivoRejeicao?: string | null
+  /** Crediário que esta venda gerou, quando o pagamento foi no crediário. */
+  crediarioId?: string | null
+  /** Estorno: a venda continua existindo, mas não conta mais no faturamento. */
+  cancelada?: boolean
+  canceladaEm?: string | null
+  canceladaPorAdminNome?: string | null
+  motivoCancelamento?: string | null
+}
+
+/** Uma linha do extrato do Financeiro — de onde veio cada real do período. */
+export interface ExtratoLinhaDto {
+  id: string
+  tipo: 'venda_balcao' | 'comanda' | 'site' | 'pre_venda' | 'pagamento_crediario'
+  data: string
+  descricao: string
+  cliente: string | null
+  formaPagamento: string | null
+  valorEmReais: number
+  lancadoPor?: string | null
+  estornada: boolean
+  motivoEstorno?: string | null
+  estornadaEm?: string | null
+}
+
+export interface ExtratoDto {
+  inicio: string
+  fim: string
+  /** Só o que vale — estorno não entra na soma. */
+  totalEmReais: number
+  totalEstornado: number
+  lancamentos: number
+  linhas: ExtratoLinhaDto[]
 }
 
 export const PAYMENT_METHODS = [
@@ -418,6 +453,8 @@ export const comandaApi = {
   close:        (id: string, paymentMethod = 'Dinheiro', observacao?: string, secondPaymentMethod?: string, secondPaymentAmountInCents = 0, crediarioExistenteId?: string, discountInCents = 0, emitirNotaFiscal = false) =>
     api.put<ComandaDto>(`/api/comanda/${id}/close`, { paymentMethod, observacao, secondPaymentMethod, secondPaymentAmountInCents, crediarioExistenteId, discountInCents, emitirNotaFiscal }),
   cancel:       (id: string) => api.put<ComandaDto>(`/api/comanda/${id}/cancel`),
+  /** Comanda JÁ FECHADA cobrada errada: devolve estoque e pontos, baixa crediário e sai do faturamento. */
+  estornar:     (id: string, motivo: string) => api.post<ComandaDto>(`/api/comanda/${id}/estornar`, { motivo }),
   editar:       (id: string, request: EditarComandaRequest) => api.put<ComandaDto>(`/api/comanda/${id}/editar`, request),
   adminOpen:    (userId: string, tableIdentifier?: string) =>
     api.post<ComandaDto>('/api/comanda/admin-open', { userId, tableIdentifier }),
@@ -581,6 +618,9 @@ export const vendaAvulsaApi = {
     api.post<{ itensAtualizados: number; mensagem: string }>('/api/venda-avulsa/backfill-costs'),
   editarPagamento: (id: string, request: EditarPagamentoVendaAvulsaRequest) =>
     api.patch<VendaAvulsaDto>(`/api/venda-avulsa/${id}/pagamento`, request),
+  /** Desfaz a venda: estoque volta, pontos/cashback voltam, crediário baixa e sai do faturamento. */
+  estornar: (id: string, motivo: string) =>
+    api.post<VendaAvulsaDto>(`/api/venda-avulsa/${id}/estornar`, { motivo }),
 }
 
 export const productApi = {
@@ -1059,6 +1099,9 @@ export interface ClientesFiltro {
 
 export const analyticsApi = {
   dashboard: () => api.get('/api/analytics/dashboard'),
+  /** Extrato do período: cada entrada de dinheiro com origem, incluindo as estornadas. */
+  extrato: (inicio?: string, fim?: string) =>
+    api.get<ExtratoDto>('/api/analytics/extrato', { params: { inicio: inicio || undefined, fim: fim || undefined } }),
   clientes:  (filtro: ClientesFiltro | boolean = false) => {
     // Aceita o booleano antigo (`clientes(true)` = só inativos) pra não quebrar
     // as chamadas que já existiam antes dos filtros.

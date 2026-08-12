@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.27.0] — 2026-08-12
+
+### Adicionado
+- **Estorno de venda e de comanda**: venda lançada errada agora tem botão de desfazer — no detalhe da venda (frente de caixa) e no histórico de comandas fechadas. O estorno devolve os itens ao estoque, desfaz pontos e cashback usados, retira os pontos de fidelidade ganhos, baixa o crediário que a venda gerou e **tira o valor do faturamento**. Exige motivo, guarda quem fez e fica registrado na auditoria. A venda não é apagada: continua no histórico marcada como estornada
+- **Extrato do período no Financeiro**: painel que mostra de onde veio cada real — venda de balcão, comanda, pedido do site, pré-venda e pagamento de crediário — com hora, cliente, forma de pagamento e quem lançou. As estornadas aparecem riscadas com o motivo, e o rodapé separa quanto entrou de quanto foi estornado
+- **Total do pedido na pré-venda**: o kanban mostrava só o subtotal de cada item; agora o selo do carrinho traz o total do pedido inteiro, sem precisar somar na mão
+
+### Corrigido
+- **Excluir crediário não desfazia a venda**: o produto não voltava pro estoque e o valor continuava no faturamento, porque a receita pertence à venda e o crediário é só o registro da dívida — e venda de balcão nem tinha vínculo com o crediário que gerava. Agora a venda guarda esse vínculo e o estorno resolve os dois lados de uma vez
+- Estorno é recusado quando a venda tem **NFC-e autorizada** (o cancelamento da nota tem prazo legal e vai à SEFAZ) ou quando o **crediário já recebeu pagamento**
+
 ## [v1.26.1] — 2026-08-11
 
 ### Mudado

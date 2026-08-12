@@ -88,6 +88,37 @@ public class FinanceiroDto
     public decimal AbertoCrediario { get; set; }
 }
 
+/// <summary>
+/// Extrato do período: cada real que entrou, com origem — é o rastro que faltava pra
+/// saber de onde veio o faturamento e o que foi desfeito depois.
+/// </summary>
+public class ExtratoDto
+{
+    public DateTime Inicio         { get; set; }
+    public DateTime Fim            { get; set; }
+    /// <summary>Soma só do que vale (estorno não entra).</summary>
+    public decimal  TotalEmReais   { get; set; }
+    public decimal  TotalEstornado { get; set; }
+    public int      Lancamentos    { get; set; }
+    public List<ExtratoLinhaDto> Linhas { get; set; } = new();
+}
+
+public class ExtratoLinhaDto
+{
+    public string    Id             { get; set; } = string.Empty;
+    /// <summary>venda_balcao | comanda | site | pre_venda | pagamento_crediario</summary>
+    public string    Tipo           { get; set; } = string.Empty;
+    public DateTime  Data           { get; set; }
+    public string    Descricao      { get; set; } = string.Empty;
+    public string?   Cliente        { get; set; }
+    public string?   FormaPagamento { get; set; }
+    public decimal   ValorEmReais   { get; set; }
+    public string?   LancadoPor     { get; set; }
+    public bool      Estornada      { get; set; }
+    public string?   MotivoEstorno  { get; set; }
+    public DateTime? EstornadaEm    { get; set; }
+}
+
 public class PagamentoCrediarioPeriodoDto
 {
     public string   ClienteNome     { get; set; } = string.Empty;

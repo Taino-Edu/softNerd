@@ -544,6 +544,14 @@ export default function ReservasPage() {
     return acc
   }, {})
 
+  // Total do pedido inteiro: cada item vira um card com o subtotal dele, e sem isto
+  // o balconista tinha que somar na mão pra saber quanto o cliente deve pelo pedido
+  // (foi o que levou o Maikon a lançar pré-venda no crediário só pra ver a soma).
+  const groupTotals = items.reduce<Record<string, number>>((acc, r) => {
+    acc[r.reservationGroupId] = (acc[r.reservationGroupId] ?? 0) + (r.subtotalEmReais ?? 0)
+    return acc
+  }, {})
+
   // ── Kanban: 2 colunas (Vendas × Pré-vendas, pela tag do produto) × raias de status ──
   // "A pagar" = active com expiresAt (ainda não confirmou Pix nem foi marcado retirada-paga).
   // "Pago" = active sem expiresAt (Pix confirmado). "Retirado" = fulfilled. "Cancelado" = cancelled.
@@ -688,7 +696,8 @@ export default function ReservasPage() {
           <div className="flex items-center gap-1.5 flex-wrap mt-1">
             {groupCounts[r.reservationGroupId] > 1 && (
               <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-300">
-                <Layers className="w-2.5 h-2.5" /> Carrinho de {groupCounts[r.reservationGroupId]}
+                <Layers className="w-2.5 h-2.5" />
+                Carrinho de {groupCounts[r.reservationGroupId]} · pedido R$ {(groupTotals[r.reservationGroupId] ?? 0).toFixed(2).replace('.', ',')}
               </span>
             )}
             {pixByGroup[r.reservationGroupId]?.hasPix && (

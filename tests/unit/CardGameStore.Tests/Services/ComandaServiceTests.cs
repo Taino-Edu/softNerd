@@ -459,4 +459,97 @@ public class ComandaServiceTests
         estoqueAtual.Should().Be(0, "todo o estoque foi consumido atomicamente");
     }
 
+    // ── Estorno de comanda fechada ────────────────────────────────────────────
+    // Reportado pelo Maikon: comanda/venda lançada errada sumia do crediário mas
+    // continuava no faturamento e o produto não voltava pro estoque.
+
+    [Fact]
+    public async Task EstornarComandaFechada_DeveDevolverEstoqueETirarDoFaturamento()
+    {
+        var db      = CreateDb(nameof(EstornarComandaFechada_DeveDevolverEstoqueETirarDoFaturamento));
+        var service = CreateService(db);
+        var (user, product, _) = await SeedAsync(db);
+
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 3 });
+        db.ChangeTracker.Clear();
+        (await db.Products.FindAsync(product.Id))!.StockQuantity.Should().Be(7);
+
+        var comanda = await db.Comandas.FirstAsync(c => c.UserId == user.Id && c.Status != ComandaStatus.Fechada);
+        await service.CloseComandaAsync(comanda.Id, Guid.NewGuid(), "Dinheiro");
+
+        var estornada = await service.EstornarComandaFechadaAsync(comanda.Id, Guid.NewGuid(), "lançada na conta errada");
+
+        estornada.Status.Should().Be("Estornada");
+
+        db.ChangeTracker.Clear();
+        (await db.Products.FindAsync(product.Id))!.StockQuantity.Should().Be(10,
+            "o produto tem que voltar pra prateleira quando a venda é desfeita");
+
+        var noBanco = await db.Comandas.FirstAsync(c => c.Id == comanda.Id);
+        noBanco.Status.Should().Be(ComandaStatus.Estornada,
+            "o financeiro só soma comanda Fechada — Estornada sai do faturamento sozinha");
+        noBanco.MotivoEstorno.Should().Be("lançada na conta errada");
+        noBanco.EstornadaEm.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task EstornarComandaFechada_ComCrediarioSemPagamento_DeveApagarADivida()
+    {
+        var db      = CreateDb(nameof(EstornarComandaFechada_ComCrediarioSemPagamento_DeveApagarADivida));
+        var service = CreateService(db);
+        var (user, product, _) = await SeedAsync(db);
+
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 2 });
+        var comanda = await db.Comandas.FirstAsync(c => c.UserId == user.Id && c.Status != ComandaStatus.Fechada);
+        await service.CloseComandaAsync(comanda.Id, Guid.NewGuid(), "Crediario");
+
+        db.ChangeTracker.Clear();
+        (await db.Crediarios.CountAsync(c => c.UserId == user.Id)).Should().Be(1);
+
+        await service.EstornarComandaFechadaAsync(comanda.Id, Guid.NewGuid(), "cliente desistiu");
+
+        db.ChangeTracker.Clear();
+        (await db.Crediarios.CountAsync(c => c.UserId == user.Id)).Should().Be(0,
+            "dívida zerada pelo estorno não pode continuar cobrando o cliente");
+        (await db.Products.FindAsync(product.Id))!.StockQuantity.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task EstornarComandaFechada_ComPagamentoNoCrediario_DeveRecusar()
+    {
+        var db      = CreateDb(nameof(EstornarComandaFechada_ComPagamentoNoCrediario_DeveRecusar));
+        var service = CreateService(db);
+        var (user, product, _) = await SeedAsync(db);
+
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 2 });
+        var comanda = await db.Comandas.FirstAsync(c => c.UserId == user.Id && c.Status != ComandaStatus.Fechada);
+        await service.CloseComandaAsync(comanda.Id, Guid.NewGuid(), "Crediario");
+
+        var crediario = await db.Crediarios.FirstAsync(c => c.ComandaId == comanda.Id);
+        crediario.ValorPagoEmCentavos = 500;
+        await db.SaveChangesAsync();
+
+        var act = async () => await service.EstornarComandaFechadaAsync(comanda.Id, Guid.NewGuid(), "erro de lançamento");
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*já tem R$*");
+
+        db.ChangeTracker.Clear();
+        (await db.Products.FindAsync(product.Id))!.StockQuantity.Should().Be(8,
+            "estorno recusado não pode mexer no estoque");
+    }
+
+    [Fact]
+    public async Task EstornarComandaFechada_ComandaAindaAberta_DeveRecusar()
+    {
+        var db      = CreateDb(nameof(EstornarComandaFechada_ComandaAindaAberta_DeveRecusar));
+        var service = CreateService(db);
+        var (user, product, _) = await SeedAsync(db);
+
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 1 });
+        var comanda = await db.Comandas.FirstAsync(c => c.UserId == user.Id);
+
+        var act = async () => await service.EstornarComandaFechadaAsync(comanda.Id, Guid.NewGuid(), "teste");
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*comanda fechada*");
+    }
 }

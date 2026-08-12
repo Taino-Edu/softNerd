@@ -773,4 +773,112 @@ public class AnalyticsController : ControllerBase
             AbertoCrediario            = Math.Round(abertoCrediario, 2),
         });
     }
+
+    /// <summary>
+    /// GET /api/analytics/extrato — o que entrou no faturamento do período, linha a linha:
+    /// venda de balcão, comanda, pedido do site/pré-venda e pagamento de crediário. Inclui
+    /// as ESTORNADAS, marcadas e com motivo, pra dar pra rastrear o que foi desfeito — os
+    /// totais no topo já são líquidos (estorno não soma).
+    /// </summary>
+    [HttpGet("extrato")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Extrato([FromQuery] DateTime? inicio, [FromQuery] DateTime? fim)
+    {
+        var agoraBr   = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BrazilZone);
+        var dataBrIni = inicio.HasValue ? inicio.Value.Date : new DateTime(agoraBr.Year, agoraBr.Month, 1);
+        var dataBrFim = fim.HasValue    ? fim.Value.Date    : agoraBr.Date;
+
+        var ini = BrDateToUtcStart(dataBrIni);
+        var end = BrDateToUtcStart(dataBrFim.AddDays(1));
+
+        var linhas = new List<ExtratoLinhaDto>();
+
+        // ── Comandas fechadas e estornadas ────────────────────────────────────
+        var comandas = await _db.Comandas
+            .Where(c => c.ClosedAt >= ini && c.ClosedAt < end
+                     && (c.Status == ComandaStatus.Fechada || c.Status == ComandaStatus.Estornada))
+            .Select(c => new
+            {
+                c.Id, c.ClosedAt, c.TotalInCents, c.PaymentMethod, c.SecondPaymentMethod,
+                Cliente = c.User != null ? c.User.Name : null,
+                c.TableIdentifier, c.Status, c.MotivoEstorno, c.EstornadaEm,
+                Itens = c.Items.Count,
+            })
+            .ToListAsync();
+
+        foreach (var c in comandas)
+            linhas.Add(new ExtratoLinhaDto
+            {
+                Id             = c.Id.ToString(),
+                Tipo           = "comanda",
+                Data           = c.ClosedAt!.Value,
+                Descricao      = $"Comanda{(string.IsNullOrWhiteSpace(c.TableIdentifier) ? "" : $" · {c.TableIdentifier}")} — {c.Itens} item(ns)",
+                Cliente        = c.Cliente,
+                FormaPagamento = c.SecondPaymentMethod is null ? c.PaymentMethod : $"{c.PaymentMethod} + {c.SecondPaymentMethod}",
+                ValorEmReais   = c.TotalInCents / 100m,
+                Estornada      = c.Status == ComandaStatus.Estornada,
+                MotivoEstorno  = c.MotivoEstorno,
+                EstornadaEm    = c.EstornadaEm,
+            });
+
+        // ── Vendas do PDV, site e pré-venda (inclui estornadas) ───────────────
+        foreach (var v in await _vendas.GetPeriodoComCanceladasAsync(ini, end))
+        {
+            var tipo = v.Origem == "Reserva"
+                ? (v.ProductIsPreVenda ? "pre_venda" : "site")
+                : "venda_balcao";
+
+            linhas.Add(new ExtratoLinhaDto
+            {
+                Id             = v.Id,
+                Tipo           = tipo,
+                Data           = v.SoldAt,
+                Descricao      = $"{(tipo == "venda_balcao" ? "Venda no balcão" : "Pedido do site")} — {v.Items.Count} item(ns)",
+                Cliente        = v.ClientName,
+                FormaPagamento = v.SecondPaymentMethod is null ? v.PaymentMethod : $"{v.PaymentMethod} + {v.SecondPaymentMethod}",
+                ValorEmReais   = v.TotalInReais,
+                LancadoPor     = v.SoldByAdminName,
+                Estornada      = v.Cancelada,
+                MotivoEstorno  = v.MotivoCancelamento,
+                EstornadaEm    = v.CanceladaEm,
+            });
+        }
+
+        // ── Pagamentos de crediário (dinheiro que entrou de dívida antiga) ────
+        var pagamentos = await _db.PagamentosCrediario
+            .Where(p => p.CreatedAt >= ini && p.CreatedAt < end)
+            .Select(p => new
+            {
+                p.Id, p.CreatedAt, p.ValorEmCentavos, p.FormaPagamento, p.Observacao,
+                Cliente = p.Crediario.User.Name,
+            })
+            .ToListAsync();
+
+        foreach (var p in pagamentos)
+            linhas.Add(new ExtratoLinhaDto
+            {
+                Id             = p.Id.ToString(),
+                Tipo           = "pagamento_crediario",
+                Data           = p.CreatedAt,
+                Descricao      = string.IsNullOrWhiteSpace(p.Observacao)
+                    ? "Pagamento de crediário"
+                    : $"Pagamento de crediário — {p.Observacao}",
+                Cliente        = p.Cliente,
+                FormaPagamento = p.FormaPagamento,
+                ValorEmReais   = p.ValorEmCentavos / 100m,
+            });
+
+        var ordenadas = linhas.OrderByDescending(l => l.Data).ToList();
+        var validas   = ordenadas.Where(l => !l.Estornada).ToList();
+
+        return Ok(new ExtratoDto
+        {
+            Inicio          = dataBrIni,
+            Fim             = dataBrFim,
+            TotalEmReais    = Math.Round(validas.Sum(l => l.ValorEmReais), 2),
+            TotalEstornado  = Math.Round(ordenadas.Where(l => l.Estornada).Sum(l => l.ValorEmReais), 2),
+            Lancamentos     = ordenadas.Count,
+            Linhas          = ordenadas,
+        });
+    }
 }

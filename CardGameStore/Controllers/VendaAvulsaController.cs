@@ -27,7 +27,13 @@ public class VendaAvulsaController : ControllerBase
 {
     private readonly IVendaAvulsaService _service;
 
-    public VendaAvulsaController(IVendaAvulsaService service) => _service = service;
+    private readonly IAuditService _audit;
+
+    public VendaAvulsaController(IVendaAvulsaService service, IAuditService audit)
+    {
+        _service = service;
+        _audit   = audit;
+    }
 
     /// <summary>
     /// Registra uma venda avulsa no balcão.
@@ -106,6 +112,42 @@ public class VendaAvulsaController : ControllerBase
         }
         catch (KeyNotFoundException ex)   { return NotFound(new { Message = ex.Message }); }
         catch (ArgumentException ex)      { return BadRequest(new { Message = ex.Message }); }
+    }
+
+    /// <summary>
+    /// Estorna uma venda avulsa (Admin only): devolve estoque, desfaz pontos/cashback,
+    /// baixa o crediário gerado e tira o valor do faturamento. A venda não some — fica
+    /// marcada como estornada, com motivo e autor, e continua visível no extrato.
+    /// </summary>
+    [HttpPost("{id}/estornar")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(VendaAvulsaDto), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> Estornar(string id, [FromBody] EstornarVendaRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        try
+        {
+            var adminId   = GetUserId();
+            var adminName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                         ?? User.FindFirst("name")?.Value
+                         ?? "Admin";
+
+            var result = await _service.EstornarAsync(id, adminId, adminName, request.Motivo);
+
+            await _audit.LogAsync("EstornouVendaAvulsa", "VendaAvulsa", id,
+                details: System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    motivo = request.Motivo, totalEmReais = result.TotalInReais, cliente = result.ClientName,
+                }),
+                httpContext: HttpContext);
+
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)   { return NotFound(new { Message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
     }
 
     [HttpPost("backfill-costs")]

@@ -43,4 +43,11 @@ public interface IVendaAvulsaService
 
     /// <summary>Corrige a forma de pagamento de uma venda avulsa já registrada (Admin only).</summary>
     Task<VendaAvulsaDto> EditarPagamentoAsync(string id, EditarPagamentoVendaAvulsaRequest request);
+
+    /// <summary>Estorna a venda: devolve estoque, desfaz pontos/cashback, baixa o crediário
+    /// gerado e tira o valor do faturamento. A venda fica marcada, não é apagada.</summary>
+    Task<VendaAvulsaDto> EstornarAsync(string id, Guid adminId, string adminNome, string motivo);
+
+    /// <summary>Vendas do período incluindo as estornadas — exclusivo do extrato.</summary>
+    Task<IEnumerable<VendaAvulsaDto>> GetPeriodoComCanceladasAsync(DateTime inicio, DateTime fim);
 }

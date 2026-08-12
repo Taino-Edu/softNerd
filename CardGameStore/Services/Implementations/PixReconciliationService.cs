@@ -147,7 +147,7 @@ public class PixReconciliationService : IPixReconciliationService
             .Select(c => (ComandaStatus?)c.Status)
             .FirstOrDefaultAsync();
 
-        if (status is null or ComandaStatus.Fechada or ComandaStatus.Cancelada) return null;
+        if (status is null or ComandaStatus.Fechada or ComandaStatus.Cancelada or ComandaStatus.Estornada) return null;
 
         try
         {

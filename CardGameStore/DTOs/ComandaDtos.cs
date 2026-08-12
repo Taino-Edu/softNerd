@@ -72,6 +72,10 @@ public class ComandaDto
   public Guid?   NotaFiscalId             { get; set; }
   public string? NotaFiscalStatus         { get; set; }
   public string? NotaFiscalMotivoRejeicao { get; set; }
+
+    /// <summary>Preenchidos quando a comanda fechada foi estornada (Status = Estornada).</summary>
+    public DateTime? EstornadaEm   { get; set; }
+    public string?   MotivoEstorno { get; set; }
 }
 
 /// <summary>Request para aplicar pontos a uma comanda.</summary>

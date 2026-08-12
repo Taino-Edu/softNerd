@@ -37,12 +37,14 @@ public class ComandaController : ControllerBase
     private readonly IPixReconciliationService _pixReconciliation;
     private readonly IHubContext<ComandaHub> _hub;
     private readonly IPushService     _push;
+    private readonly IAuditService    _audit;
     private readonly ILogger<ComandaController> _logger;
 
     public ComandaController(
         IComandaService service, AppDbContext db, InterSyncService inter,
         IPixReconciliationService pixReconciliation,
-        IHubContext<ComandaHub> hub, IPushService push, ILogger<ComandaController> logger)
+        IHubContext<ComandaHub> hub, IPushService push, IAuditService audit,
+        ILogger<ComandaController> logger)
     {
         _service           = service;
         _db                = db;
@@ -50,6 +52,7 @@ public class ComandaController : ControllerBase
         _pixReconciliation = pixReconciliation;
         _hub               = hub;
         _push              = push;
+        _audit             = audit;
         _logger            = logger;
     }
 
@@ -208,6 +211,35 @@ public class ComandaController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Estorna uma comanda JÁ FECHADA (Admin only): devolve estoque e pontos, baixa o
+    /// crediário gerado e tira o valor do faturamento. Comanda ainda aberta usa /cancel.
+    /// </summary>
+    [HttpPost("{id:guid}/estornar")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(ComandaDto), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> Estornar(Guid id, [FromBody] EstornarVendaRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        try
+        {
+            var adminId = GetUserId();
+            var result  = await _service.EstornarComandaFechadaAsync(id, adminId, request.Motivo);
+
+            await _audit.LogAsync("EstornouComanda", "Comanda", id.ToString(),
+                details: System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    motivo = request.Motivo, totalEmReais = result.TotalInReais, cliente = result.UserName,
+                }),
+                httpContext: HttpContext);
+
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { Message = ex.Message }); }
+    }
+
     /// <summary>Edita uma comanda fechada: pagamento, itens, desconto, cliente (Admin only).</summary>
     [HttpPut("{id:guid}/editar")]
     [Authorize(Policy = "AdminOnly")]
@@ -284,7 +316,7 @@ public class ComandaController : ControllerBase
             if (comanda == null)
                 return NotFound(new { Message = "Comanda não encontrada." });
 
-            if (comanda.Status is ComandaStatus.Fechada or ComandaStatus.Cancelada)
+            if (comanda.Status is ComandaStatus.Fechada or ComandaStatus.Cancelada or ComandaStatus.Estornada)
                 return BadRequest(new { Message = "Comanda já está fechada ou cancelada." });
 
             var valorEmCentavos = Math.Max(0, comanda.TotalInCents - comanda.PointsApplied);
@@ -403,7 +435,8 @@ public class ComandaController : ControllerBase
 
         var comandaId = await _db.Comandas
             .Where(c => c.UserId == userId &&
-                        c.Status != ComandaStatus.Fechada && c.Status != ComandaStatus.Cancelada)
+                        c.Status != ComandaStatus.Fechada && c.Status != ComandaStatus.Cancelada
+                     && c.Status != ComandaStatus.Estornada)
             .Select(c => (Guid?)c.Id)
             .FirstOrDefaultAsync();
         if (comandaId == null) return null;

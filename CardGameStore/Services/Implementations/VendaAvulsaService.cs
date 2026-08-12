@@ -245,6 +245,9 @@ public class VendaAvulsaService : IVendaAvulsaService
             await _hub.Clients.Group(ComandaHub.AdminGroup).SendAsync("StockChanged", new { });
 
         // ── Pós-venda: operações que dependem de cliente cadastrado ──────────────
+        // Crediário gerado aqui fica gravado na venda (CrediarioId): é o que permite
+        // baixar a dívida no estorno e achar a venda a partir do crediário.
+        Guid? crediarioIdVinculado = null;
         var pm = request.PaymentMethod;
         if (pm is PaymentMethod.Crediario or PaymentMethod.Pontos or PaymentMethod.Cashback)
         {
@@ -282,6 +285,7 @@ public class VendaAvulsaService : IVendaAvulsaService
                     crediarioExistente.ItensJson        = JsonSerializer.Serialize(itensAtuais);
                     crediarioExistente.ValorEmCentavos += primaryAmt;
                     crediarioExistente.DataVencimento   = vencimento;
+                    crediarioIdVinculado                = crediarioExistente.Id;
                     _logger.LogInformation(
                         "Venda avulsa acumulada no crediário {CredId} do usuário {UserId} — novo total R$ {Valor:N2}",
                         crediarioExistente.Id, userId, crediarioExistente.ValorEmCentavos / 100m);
@@ -301,6 +305,7 @@ public class VendaAvulsaService : IVendaAvulsaService
                         ItensJson        = JsonSerializer.Serialize(novosItens),
                     };
                     _db.Crediarios.Add(crediario);
+                    crediarioIdVinculado = crediario.Id;
                     _logger.LogInformation(
                         "Crediário {CredId} criado para usuário {UserId} via venda avulsa — R$ {Valor:N2}",
                         crediario.Id, userId, primaryAmt / 100m);
@@ -423,6 +428,14 @@ public class VendaAvulsaService : IVendaAvulsaService
             }
         }
 
+        if (crediarioIdVinculado.HasValue)
+        {
+            venda.CrediarioId = crediarioIdVinculado;
+            await _collection.UpdateOneAsync(
+                Builders<VendaAvulsa>.Filter.Eq(v => v.Id, venda.Id),
+                Builders<VendaAvulsa>.Update.Set(v => v.CrediarioId, crediarioIdVinculado));
+        }
+
         var dto = MapToDto(venda);
         dto.NotaFiscalId             = nota?.Id;
         dto.NotaFiscalStatus         = bloqueioFiscal is null ? nota?.Status.ToString() : "Bloqueada";
@@ -430,11 +443,134 @@ public class VendaAvulsaService : IVendaAvulsaService
         return dto;
     }
 
+    /// <summary>
+    /// Venda estornada não entra em nenhuma conta do financeiro. Toda leitura de venda
+    /// passa por este filtro — quem quiser ver as estornadas (extrato) pede explicitamente.
+    /// </summary>
+    private static FilterDefinition<VendaAvulsa> NaoCancelada =>
+        Builders<VendaAvulsa>.Filter.Eq(v => v.CanceladaEm, null);
+
+    /// <summary>
+    /// Estorna uma venda: devolve estoque, desfaz pontos/cashback, baixa o crediário que
+    /// ela gerou e tira o valor do faturamento. A venda não é apagada — fica marcada com
+    /// motivo e autor, e continua aparecendo no extrato como estornada.
+    /// </summary>
+    public async Task<VendaAvulsaDto> EstornarAsync(string id, Guid adminId, string adminNome, string motivo)
+    {
+        if (string.IsNullOrWhiteSpace(motivo))
+            throw new InvalidOperationException("Informe o motivo do estorno.");
+
+        var venda = await _collection.Find(Builders<VendaAvulsa>.Filter.Eq(v => v.Id, id)).FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Venda avulsa {id} não encontrada.");
+
+        if (venda.Cancelada)
+            throw new InvalidOperationException("Esta venda já foi estornada.");
+
+        // ── Trava fiscal: nota autorizada não se desfaz por dentro ────────────────
+        var notaAtiva = await _db.NotasFiscaisEmitidas
+            .Where(n => n.VendaAvulsaId == id
+                     && (n.Status == NotaFiscalStatus.Autorizada
+                      || n.Status == NotaFiscalStatus.AutorizadaContingencia))
+            .FirstOrDefaultAsync();
+        if (notaAtiva is not null)
+            throw new InvalidOperationException(
+                "Esta venda tem NFC-e autorizada. Cancele a nota em Admin > Fiscal primeiro — " +
+                "o cancelamento tem prazo legal e precisa ir à SEFAZ.");
+
+        // ── Crediário gerado pela venda ───────────────────────────────────────────
+        Crediario? crediario = null;
+        if (venda.CrediarioId.HasValue)
+        {
+            crediario = await _db.Crediarios.FirstOrDefaultAsync(c => c.Id == venda.CrediarioId.Value);
+            if (crediario is not null && crediario.ValorPagoEmCentavos > 0)
+                throw new InvalidOperationException(
+                    $"O crediário desta venda já tem R$ {crediario.ValorPagoEmCentavos / 100m:N2} pagos. " +
+                    "Acerte o crediário do cliente antes de estornar a venda.");
+        }
+
+        // ── Devolve estoque ───────────────────────────────────────────────────────
+        // Venda vinda da homologação de pré-venda também devolve: quem baixou foi a
+        // reserva, e o produto está voltando pra prateleira do mesmo jeito.
+        foreach (var item in venda.Items)
+        {
+            if (item.VariantId.HasValue)
+                await _db.ProductVariants
+                    .Where(v => v.Id == item.VariantId.Value)
+                    .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + item.Quantity));
+            else
+                await _db.Products
+                    .Where(p => p.Id == item.ProductId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity + item.Quantity));
+        }
+
+        // ── Desfaz o que mexeu no saldo do cliente ────────────────────────────────
+        if (venda.UserId.HasValue)
+        {
+            var userId    = venda.UserId.Value;
+            var principal = venda.TotalInCents - venda.SecondPaymentAmountInCents;
+
+            // Devolve o que foi pago em pontos/cashback (principal e segundo método)
+            var pontosDevolver   = (venda.PaymentMethod       == PaymentMethod.Pontos   ? principal : 0)
+                                 + (venda.SecondPaymentMethod == PaymentMethod.Pontos   ? venda.SecondPaymentAmountInCents : 0);
+            var cashbackDevolver = (venda.PaymentMethod       == PaymentMethod.Cashback ? principal : 0)
+                                 + (venda.SecondPaymentMethod == PaymentMethod.Cashback ? venda.SecondPaymentAmountInCents : 0);
+
+            // Retira os pontos de fidelidade ganhos na venda (1 ponto por R$1), sem
+            // deixar o saldo negativo caso o cliente já tenha gasto.
+            var pontosGanhosNaVenda = venda.PaymentMethod is PaymentMethod.Crediario or PaymentMethod.Pontos or PaymentMethod.Cashback
+                ? 0                       // esses caminhos não acumulam fidelidade
+                : venda.TotalInCents / 100;
+
+            if (pontosDevolver > 0 || cashbackDevolver > 0 || pontosGanhosNaVenda > 0)
+            {
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user is not null)
+                {
+                    user.PointsBalance  = Math.Max(0, user.PointsBalance + pontosDevolver - pontosGanhosNaVenda);
+                    user.BalanceInCents = Math.Max(0, user.BalanceInCents + cashbackDevolver);
+                    user.UpdatedAt      = DateTime.UtcNow;
+                }
+            }
+        }
+
+        // ── Baixa a dívida do crediário ───────────────────────────────────────────
+        if (crediario is not null)
+        {
+            var principal = venda.TotalInCents - venda.SecondPaymentAmountInCents;
+            crediario.ValorEmCentavos = Math.Max(0, crediario.ValorEmCentavos - principal);
+
+            // Conta que ficou zerada e sem pagamento nenhum não deve continuar cobrando.
+            if (crediario.ValorEmCentavos == 0)
+                _db.Crediarios.Remove(crediario);
+        }
+
+        await _db.SaveChangesAsync();
+
+        var agora = DateTime.UtcNow;
+        var atualizada = await _collection.FindOneAndUpdateAsync(
+            Builders<VendaAvulsa>.Filter.Eq(v => v.Id, id),
+            Builders<VendaAvulsa>.Update
+                .Set(v => v.CanceladaEm,           agora)
+                .Set(v => v.CanceladaPorAdminId,   adminId)
+                .Set(v => v.CanceladaPorAdminNome, adminNome)
+                .Set(v => v.MotivoCancelamento,    motivo.Trim()),
+            new FindOneAndUpdateOptions<VendaAvulsa> { ReturnDocument = ReturnDocument.After })
+            ?? throw new KeyNotFoundException($"Venda avulsa {id} não encontrada.");
+
+        _logger.LogInformation(
+            "Venda avulsa {Id} estornada por {Admin}: R$ {Total:N2} devolvidos ao estoque. Motivo: {Motivo}",
+            id, adminNome, venda.TotalInCents / 100m, motivo);
+
+        await _hub.Clients.Group(ComandaHub.AdminGroup).SendAsync("StockChanged", new { });
+
+        return MapToDto(atualizada);
+    }
+
     public async Task<IEnumerable<VendaAvulsaDto>> GetRecentAsync(int limit = 50, DateTime? desde = null)
     {
         var filter = desde.HasValue
-            ? Builders<VendaAvulsa>.Filter.Gte(v => v.SoldAt, desde.Value)
-            : Builders<VendaAvulsa>.Filter.Empty;
+            ? Builders<VendaAvulsa>.Filter.And(NaoCancelada, Builders<VendaAvulsa>.Filter.Gte(v => v.SoldAt, desde.Value))
+            : NaoCancelada;
 
         var vendas = await _collection
             .Find(filter)
@@ -452,6 +588,7 @@ public class VendaAvulsaService : IVendaAvulsaService
         var (inicio, fim) = DiaBrasil(date);
 
         var filter = Builders<VendaAvulsa>.Filter.And(
+            NaoCancelada,
             Builders<VendaAvulsa>.Filter.Gte(v => v.SoldAt, inicio),
             Builders<VendaAvulsa>.Filter.Lt(v => v.SoldAt, fim));
 
@@ -463,9 +600,27 @@ public class VendaAvulsaService : IVendaAvulsaService
         return vendas.Select(MapToDto);
     }
 
+    /// <summary>
+    /// Vendas do período INCLUINDO as estornadas — só o extrato usa isto. Todo o resto
+    /// do financeiro passa pelos métodos que filtram, pra não somar o que foi desfeito.
+    /// </summary>
+    public async Task<IEnumerable<VendaAvulsaDto>> GetPeriodoComCanceladasAsync(DateTime inicio, DateTime fim)
+    {
+        var vendas = await _collection
+            .Find(Builders<VendaAvulsa>.Filter.And(
+                Builders<VendaAvulsa>.Filter.Gte(v => v.SoldAt, inicio),
+                Builders<VendaAvulsa>.Filter.Lt (v => v.SoldAt, fim)))
+            .SortByDescending(v => v.SoldAt)
+            .ToListAsync();
+
+        return vendas.Select(MapToDto);
+    }
+
     public async Task<IEnumerable<VendaAvulsaDto>> GetByUserAsync(Guid userId)
     {
-        var filter = Builders<VendaAvulsa>.Filter.Eq(v => v.UserId, userId);
+        var filter = Builders<VendaAvulsa>.Filter.And(
+            NaoCancelada,
+            Builders<VendaAvulsa>.Filter.Eq(v => v.UserId, userId));
         var vendas = await _collection
             .Find(filter)
             .SortByDescending(v => v.SoldAt)
@@ -479,6 +634,7 @@ public class VendaAvulsaService : IVendaAvulsaService
         var f = Builders<VendaAvulsa>.Filter;
         var condicoes = new List<FilterDefinition<VendaAvulsa>>
         {
+            NaoCancelada,
             f.Ne(v => v.UserId, null),
         };
 
@@ -542,7 +698,7 @@ public class VendaAvulsaService : IVendaAvulsaService
     public async Task<IReadOnlyDictionary<Guid, DateTime>> UltimaVendaPorClienteAsync()
     {
         var vendas = await _collection
-            .Find(Builders<VendaAvulsa>.Filter.Ne(v => v.UserId, null))
+            .Find(Builders<VendaAvulsa>.Filter.And(NaoCancelada, Builders<VendaAvulsa>.Filter.Ne(v => v.UserId, null)))
             .Project(v => new { v.UserId, v.SoldAt })
             .ToListAsync();
 
@@ -650,6 +806,11 @@ public class VendaAvulsaService : IVendaAvulsaService
         SoldByAdminName            = v.SoldByAdminName,
         Origem                     = v.Origem,
         ProductIsPreVenda          = v.ProductIsPreVenda,
+        CrediarioId                = v.CrediarioId,
+        Cancelada                  = v.Cancelada,
+        CanceladaEm                = v.CanceladaEm,
+        CanceladaPorAdminNome      = v.CanceladaPorAdminNome,
+        MotivoCancelamento         = v.MotivoCancelamento,
         Items                      = v.Items.Select(i => new VendaAvulsaItemDto
         {
             ProductName      = i.ProductName,

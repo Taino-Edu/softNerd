@@ -60,6 +60,27 @@ public class VendaAvulsa
     /// Origem == "Reserva" — decide se cai em "Site" ou "Pré-venda" no Financeiro.</summary>
     public bool ProductIsPreVenda { get; set; }
 
+    /// <summary>Crediário criado (ou acumulado) por esta venda, quando o pagamento foi no
+    /// crediário. Sem isto não dava pra saber qual dívida baixar ao estornar a venda — nem
+    /// qual venda desfazer ao mexer no crediário (o Crediario só aponta pra comanda).</summary>
+    public Guid? CrediarioId { get; set; }
+
+    // ── Estorno ───────────────────────────────────────────────────────────────
+    // Venda não se apaga: se foi lançada errada, é estornada e some das contas, mas
+    // continua no extrato com o motivo. Toda leitura do financeiro filtra CanceladaEm.
+
+    /// <summary>Preenchido no estorno — null = venda vale normalmente.</summary>
+    public DateTime? CanceladaEm { get; set; }
+
+    public Guid?   CanceladaPorAdminId   { get; set; }
+    public string? CanceladaPorAdminNome { get; set; }
+
+    /// <summary>Motivo digitado pelo admin no estorno (obrigatório).</summary>
+    public string? MotivoCancelamento { get; set; }
+
+    [BsonIgnore]
+    public bool Cancelada => CanceladaEm.HasValue;
+
     [BsonIgnore]
     public decimal TotalInReais => TotalInCents / 100m;
 
