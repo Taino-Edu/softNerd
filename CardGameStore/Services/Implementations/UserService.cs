@@ -6,6 +6,7 @@ using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
+using CardGameStore.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace CardGameStore.Services.Implementations;
@@ -227,23 +228,16 @@ public class UserService : IUserService
 
     public async Task<UserSummaryDto> AdminCreateUserAsync(AdminCreateUserRequest request, Guid adminId)
     {
-        // Valida duplicidade de CPF
-        if (!string.IsNullOrWhiteSpace(request.Cpf))
-        {
-            var cpfLimpo = request.Cpf.Trim();
-            var existe = await _db.Users.AnyAsync(u => u.Cpf == cpfLimpo);
-            if (existe)
-                throw new InvalidOperationException($"Já existe um cadastro com o CPF {cpfLimpo}.");
-        }
+        // Duplicidade de e-mail, CPF e WhatsApp — mesma regra do cadastro pelo site,
+        // comparando normalizado (o balcão digita com ponto, traço e parênteses).
+        var emailNorm    = Identificadores.NormalizarEmail(request.Email);
+        var cpfNorm      = Identificadores.NormalizarCpf(request.Cpf);
+        var whatsAppNorm = Identificadores.NormalizarWhatsApp(request.WhatsApp);
 
-        // Valida duplicidade de e-mail
-        if (!string.IsNullOrWhiteSpace(request.Email))
-        {
-            var email = request.Email.Trim().ToLowerInvariant();
-            var existe = await _db.Users.AnyAsync(u => u.Email == email);
-            if (existe)
-                throw new InvalidOperationException($"Já existe um cadastro com o e-mail {request.Email}.");
-        }
+        if (cpfNorm is not null && !CpfValidAttribute.ValidarCpf(cpfNorm))
+            throw new InvalidOperationException("CPF inválido — confira os números digitados.");
+
+        await AuthService.GarantirIdentificadoresLivresAsync(_db, emailNorm, cpfNorm, whatsAppNorm);
 
         var role = request.Role == UserRole.Operator ? UserRole.Operator : UserRole.Customer;
 
@@ -258,9 +252,9 @@ public class UserService : IUserService
         var user = new User
         {
             Name      = request.Name.Trim(),
-            Cpf       = string.IsNullOrWhiteSpace(request.Cpf) ? null : request.Cpf.Trim(),
-            WhatsApp  = string.IsNullOrWhiteSpace(request.WhatsApp) ? null : request.WhatsApp.Trim(),
-            Email     = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant(),
+            Cpf       = cpfNorm,
+            WhatsApp  = whatsAppNorm,
+            Email     = emailNorm,
             Role      = role,
             PerfilId  = role == UserRole.Operator ? request.PerfilId : null,
             IsActive  = true,
@@ -307,41 +301,25 @@ public class UserService : IUserService
         if (!string.IsNullOrWhiteSpace(request.Name))
             user.Name = request.Name.Trim();
 
-        if (request.Email is not null)
-        {
-            var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
-            if (email is not null && email != user.Email)
-            {
-                var emailEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.Email == email);
-                if (emailEmUso)
-                    throw new InvalidOperationException($"Já existe uma conta com o e-mail {email}.");
-            }
-            user.Email = email;
-        }
+        // Correção de cadastro passa pela mesma checagem normalizada — trocar o CPF de um
+        // cliente pelo de outro que já existe é o mesmo problema do cadastro duplicado.
+        var emailEdit    = request.Email    is null ? null : Identificadores.NormalizarEmail(request.Email);
+        var cpfEdit      = request.Cpf      is null ? null : Identificadores.NormalizarCpf(request.Cpf);
+        var whatsAppEdit = request.WhatsApp is null ? null : Identificadores.NormalizarWhatsApp(request.WhatsApp);
 
-        if (request.Cpf is not null)
-        {
-            var cpf = string.IsNullOrWhiteSpace(request.Cpf) ? null : request.Cpf.Trim();
-            if (cpf is not null && cpf != user.Cpf)
-            {
-                var cpfEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.Cpf == cpf);
-                if (cpfEmUso)
-                    throw new InvalidOperationException($"Já existe uma conta com o CPF {cpf}.");
-            }
-            user.Cpf = cpf;
-        }
+        if (cpfEdit is not null && !CpfValidAttribute.ValidarCpf(cpfEdit))
+            throw new InvalidOperationException("CPF inválido — confira os números digitados.");
 
-        if (request.WhatsApp is not null)
-        {
-            var whatsApp = string.IsNullOrWhiteSpace(request.WhatsApp) ? null : request.WhatsApp.Trim();
-            if (whatsApp is not null && whatsApp != user.WhatsApp)
-            {
-                var whatsAppEmUso = await _db.Users.AnyAsync(u => u.Id != userId && u.WhatsApp == whatsApp);
-                if (whatsAppEmUso)
-                    throw new InvalidOperationException($"Já existe uma conta com o WhatsApp {whatsApp}.");
-            }
-            user.WhatsApp = whatsApp;
-        }
+        await AuthService.GarantirIdentificadoresLivresAsync(
+            _db,
+            request.Email    is not null ? emailEdit    : null,
+            request.Cpf      is not null ? cpfEdit      : null,
+            request.WhatsApp is not null ? whatsAppEdit : null,
+            ignorarUserId: userId);
+
+        if (request.Email    is not null) user.Email    = emailEdit;
+        if (request.Cpf      is not null) user.Cpf      = cpfEdit;
+        if (request.WhatsApp is not null) user.WhatsApp = whatsAppEdit;
 
         user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();

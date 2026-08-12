@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.27.1] — 2026-08-12
+
+### Corrigido
+- **Cliente que já tem conta conseguia se cadastrar de novo**: a checagem de duplicidade comparava o texto exatamente como foi digitado, então bastava mudar a pontuação — "529.982.247-25" passava por cima de "52998224725", e "+55 (17) 99112-2890" não era reconhecido como o mesmo "17991122890". Agora e-mail, CPF e WhatsApp são comparados normalizados (e a busca também limpa os cadastros antigos, que foram salvos formatados). Vale no cadastro pelo site, no cadastro feito pela loja, na correção de dados do cliente e no login por QR Code — que também criava conta repetida em vez de reencontrar a existente
+- **"CPF inválido" para CPF válido**: digitar o CPF com ponto e traço era recusado, porque o validador exigia exatamente 11 dígitos sem pontuação. Agora aceita dos dois jeitos e guarda só os números
+- **Aviso de cadastro repetido agora diz o que aconteceu**: em vez de um "erro ao criar conta" genérico, a tela marca o campo repetido (e-mail, CPF ou WhatsApp), explica que já existe conta com aquele dado e oferece o caminho — login ou "esqueci minha senha"
+- WhatsApp duplicado passou a ser verificado no cadastro (antes só e-mail e CPF eram checados)
+
+### Segurança
+- Índices únicos de e-mail e CPF no banco, criados no deploy **apenas se não houver duplicados** — a checagem da aplicação continua valendo de qualquer forma
+
 ## [v1.27.0] — 2026-08-12
 
 ### Adicionado

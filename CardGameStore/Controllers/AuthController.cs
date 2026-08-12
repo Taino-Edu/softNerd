@@ -9,6 +9,7 @@
 
 using CardGameStore.DTOs;
 using CardGameStore.Services.Interfaces;
+using CardGameStore.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -294,7 +295,10 @@ public class AuthController : ControllerBase
             SetAuthCookies(response.AccessToken, response.RefreshToken);
             return Ok(new SafeAuthResponse(response.ExpiresAt, response.Role, response.UserName, response.UserId));
         }
-        catch (InvalidOperationException ex) { return Conflict(new { Message = ex.Message }); }
+        // Campo vai junto pra tela marcar exatamente o dado repetido (e-mail, CPF ou
+        // WhatsApp) em vez de mostrar um "erro ao criar conta" solto.
+        catch (CadastroDuplicadoException ex) { return Conflict(new { Message = ex.Message, Campo = ex.Campo }); }
+        catch (InvalidOperationException ex)  { return Conflict(new { Message = ex.Message }); }
     }
 
     // =========================================================================

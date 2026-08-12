@@ -26,20 +26,28 @@ function CadastroForm() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm]   = useState('')
   const [loading, setLoading]   = useState(false)
+  // Qual campo o servidor recusou ("email" | "whatsapp" | "cpf") — a mensagem aparece
+  // embaixo do campo certo em vez de um toast solto dizendo "erro ao criar conta".
+  const [erroCampo,    setErroCampo]    = useState<string | null>(null)
+  const [erroMensagem, setErroMensagem] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (password !== confirm) { toast.error('As senhas não coincidem.'); return }
     if (password.length < 8) { toast.error('A senha precisa ter pelo menos 8 caracteres.'); return }
     setLoading(true)
+    setErroCampo(null); setErroMensagem(null)
     try {
       const { data } = await authApi.register(name.trim(), email.trim(), password, whatsApp.trim() || undefined)
       saveAuth(data)
       toast.success('Conta criada! Bem-vindo, ' + data.userName)
       router.push(returnTo)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(msg || 'Erro ao criar conta.')
+      const data = (err as { response?: { data?: { message?: string; campo?: string } } })?.response?.data
+      const msg  = data?.message || 'Erro ao criar conta.'
+      setErroCampo(data?.campo ?? null)
+      setErroMensagem(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -86,11 +94,16 @@ function CadastroForm() {
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="email" required value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="input pl-9"
+                onChange={e => { setEmail(e.target.value); if (erroCampo === 'email') { setErroCampo(null); setErroMensagem(null) } }}
+                className={`input pl-9 ${erroCampo === 'email' ? 'border-red-500/60' : ''}`}
                 placeholder="seu@email.com"
               />
             </div>
+            {erroCampo === 'email' && (
+              <p className="text-xs text-red-400 mt-1.5">
+                {erroMensagem} <Link href="/entrar" className="underline hover:text-red-300">Ir para o login</Link>
+              </p>
+            )}
           </div>
           <div>
             <label className="label">WhatsApp <span className="text-gray-500 font-normal">(opcional)</span></label>
@@ -98,11 +111,16 @@ function CadastroForm() {
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="tel" value={whatsApp}
-                onChange={e => setWhatsApp(e.target.value)}
-                className="input pl-9"
+                onChange={e => { setWhatsApp(e.target.value); if (erroCampo === 'whatsapp') { setErroCampo(null); setErroMensagem(null) } }}
+                className={`input pl-9 ${erroCampo === 'whatsapp' ? 'border-red-500/60' : ''}`}
                 placeholder="11999999999"
               />
             </div>
+            {erroCampo === 'whatsapp' && (
+              <p className="text-xs text-red-400 mt-1.5">
+                {erroMensagem} <Link href="/entrar" className="underline hover:text-red-300">Ir para o login</Link>
+              </p>
+            )}
           </div>
           <div>
             <label className="label">Senha</label>

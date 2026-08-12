@@ -6,6 +6,7 @@ using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
+using CardGameStore.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -63,21 +64,27 @@ public class AuthService : IAuthService
     // =========================================================================
     public async Task<AuthResponse> QuickLoginAsync(QuickLoginRequest request)
     {
-        var cpf = request.Cpf?.Trim();
-        var hasCpf = !string.IsNullOrEmpty(cpf);
+        // Normaliza antes de procurar: o cliente digita o CPF com ponto numa visita e sem
+        // ponto na outra, e a busca crua criava um cadastro novo em vez de reencontrar o dele.
+        var cpf      = Identificadores.NormalizarCpf(request.Cpf);
+        var whatsApp = Identificadores.NormalizarWhatsApp(request.WhatsApp);
+        var hasCpf   = cpf is not null;
 
         // Busca por CPF (preferido) ou WhatsApp quando CPF não informado
         var user = hasCpf
-            ? await _db.Users.FirstOrDefaultAsync(u => u.Cpf == cpf)
-            : await _db.Users.FirstOrDefaultAsync(u => u.WhatsApp == request.WhatsApp && u.IsActive);
+            ? await _db.Users.FirstOrDefaultAsync(u => u.Cpf != null
+                && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf)
+            : await _db.Users.FirstOrDefaultAsync(u => u.IsActive && u.WhatsApp != null
+                && u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
+                             .Replace("-", "").Replace("+", "") == whatsApp);
 
         if (user == null)
         {
             user = new User
             {
                 Name     = request.Name,
-                Cpf      = hasCpf ? cpf : null,
-                WhatsApp = request.WhatsApp,
+                Cpf      = cpf,
+                WhatsApp = whatsApp,
                 Role     = UserRole.Customer,
                 IsActive = true
             };
@@ -87,7 +94,7 @@ public class AuthService : IAuthService
         else
         {
             user.Name      = request.Name;
-            user.WhatsApp  = request.WhatsApp;
+            user.WhatsApp  = whatsApp ?? user.WhatsApp;
             // Preenche CPF caso tenha sido informado agora e estava vazio
             if (hasCpf && user.Cpf == null) user.Cpf = cpf;
             user.UpdatedAt = DateTime.UtcNow;
@@ -101,8 +108,11 @@ public class AuthService : IAuthService
         {
             _db.ChangeTracker.Clear();
             user = hasCpf
-                ? await _db.Users.FirstOrDefaultAsync(u => u.Cpf == cpf && u.IsActive)
-                : await _db.Users.FirstOrDefaultAsync(u => u.WhatsApp == request.WhatsApp && u.IsActive);
+                ? await _db.Users.FirstOrDefaultAsync(u => u.IsActive && u.Cpf != null
+                    && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf)
+                : await _db.Users.FirstOrDefaultAsync(u => u.IsActive && u.WhatsApp != null
+                    && u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
+                                 .Replace("-", "").Replace("+", "") == whatsApp);
             if (user == null) throw;
         }
 
@@ -279,26 +289,18 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
+        var email    = Identificadores.NormalizarEmail(request.Email)!;
+        var cpf      = Identificadores.NormalizarCpf(request.Cpf);
+        var whatsApp = Identificadores.NormalizarWhatsApp(request.WhatsApp);
 
-        var emailInUse = await _db.Users.AnyAsync(u => u.Email == email);
-        if (emailInUse)
-            throw new InvalidOperationException("Este e-mail já está em uso. Tente fazer login.");
-
-        var cpf = string.IsNullOrWhiteSpace(request.Cpf) ? null : request.Cpf;
-        if (cpf is not null)
-        {
-            var cpfInUse = await _db.Users.AnyAsync(u => u.Cpf == cpf);
-            if (cpfInUse)
-                throw new InvalidOperationException("Este CPF já está cadastrado. Tente fazer login ou use \"Esqueci minha senha\".");
-        }
+        await GarantirIdentificadoresLivresAsync(_db, email, cpf, whatsApp);
 
         var user = new User
         {
             Name         = request.Name.Trim(),
             Email        = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            WhatsApp     = string.IsNullOrWhiteSpace(request.WhatsApp) ? null : request.WhatsApp,
+            WhatsApp     = whatsApp,
             Cpf          = cpf,
             Role         = UserRole.Customer,
         };
@@ -307,6 +309,41 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Nova conta criada via cadastro público: {Name} ({Email})", user.Name, user.Email);
         return await GenerateAuthResponseAsync(user);
+    }
+
+    /// <summary>
+    /// Barra cadastro repetido comparando os identificadores JÁ NORMALIZADOS contra a
+    /// base — e limpando também a coluna, porque cadastro antigo foi salvo formatado
+    /// ("123.456.789-00", "(17) 99112-2890"). Sem isso o mesmo cliente entrava de novo
+    /// só mudando a pontuação. Cada campo devolve a sua própria mensagem: quem está
+    /// cadastrando precisa saber QUAL dado já existe, não um "erro ao criar conta".
+    /// </summary>
+    internal static async Task GarantirIdentificadoresLivresAsync(
+        AppDbContext db, string? email, string? cpf, string? whatsApp, Guid? ignorarUserId = null)
+    {
+        var outros = ignorarUserId.HasValue
+            ? db.Users.Where(u => u.Id != ignorarUserId.Value)
+            : db.Users;
+
+        if (email is not null && await outros.AnyAsync(u => u.Email != null && u.Email.ToLower() == email))
+            throw new CadastroDuplicadoException("email",
+                "Este e-mail já tem cadastro. Faça login ou use \"Esqueci minha senha\".");
+
+        if (cpf is not null && await outros.AnyAsync(u => u.Cpf != null
+                && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf))
+            throw new CadastroDuplicadoException("cpf",
+                "Este CPF já tem cadastro. Faça login ou use \"Esqueci minha senha\" — se não reconhece, fale com a loja.");
+
+        // Compara com e sem o 55 do país em vez de remover "55" da string — remover
+        // estragaria números que têm 55 no meio (ex: 17 99155-2890).
+        var whatsAppComDdi = whatsApp is null ? null : "55" + whatsApp;
+        if (whatsApp is not null && await outros.AnyAsync(u => u.WhatsApp != null
+                && (u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
+                              .Replace("-", "").Replace("+", "") == whatsApp
+                 || u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
+                              .Replace("-", "").Replace("+", "") == whatsAppComDdi)))
+            throw new CadastroDuplicadoException("whatsapp",
+                "Este WhatsApp já tem cadastro. Faça login ou use \"Esqueci minha senha\".");
     }
 
     public async Task<AuthResponse> ClientLoginAsync(ClientLoginRequest request)

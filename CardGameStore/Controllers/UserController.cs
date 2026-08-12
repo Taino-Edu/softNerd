@@ -19,6 +19,7 @@ using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
+using CardGameStore.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +71,11 @@ public class UserController : ControllerBase
             var result  = await _service.AdminCreateUserAsync(request, adminId);
             await _audit.LogAsync("CriouCliente", "User", result.Id.ToString(), httpContext: HttpContext);
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        }
+        catch (CadastroDuplicadoException ex)
+        {
+            // Campo junto: o balcao precisa saber QUAL dado ja existe.
+            return Conflict(new { Message = ex.Message, Campo = ex.Campo });
         }
         catch (InvalidOperationException ex)
         {
@@ -230,6 +236,8 @@ public class UserController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            if (ex is CadastroDuplicadoException dup)
+                return Conflict(new { Message = dup.Message, Campo = dup.Campo });
             return ex.Message.Contains("não encontrado")
                 ? NotFound(new { Message = ex.Message })
                 : BadRequest(new { Message = ex.Message });

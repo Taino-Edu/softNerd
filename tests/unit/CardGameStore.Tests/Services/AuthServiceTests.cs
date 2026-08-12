@@ -9,6 +9,7 @@ using CardGameStore.DTOs;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
+using CardGameStore.Validation;
 using CardGameStore.Services.Interfaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.SignalR;
@@ -516,5 +517,108 @@ public class AuthServiceTests
         atualizado!.RefreshToken.Should().BeNull(
             "sessões ativas devem ser invalidadas quando a senha é alterada");
         atualizado.RefreshTokenExpiry.Should().BeNull();
+    }
+
+    // ── Cadastro duplicado ────────────────────────────────────────────────────
+    // Reportado pelo Maikon: cliente que já tem conta conseguia se cadastrar de novo.
+    // A checagem existia, mas comparava o texto cru — bastava mudar a pontuação.
+
+    [Fact]
+    public async Task Register_CpfJaCadastradoComMascara_DeveRecusarApontandoOCampo()
+    {
+        var db = CreateSqliteDb();
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(), Name = "Pietro", Email = "pietro@teste.com",
+            Cpf = "529.982.247-25", PasswordHash = "hash", Role = UserRole.Customer,
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateAuthService(db);
+
+        // Mesmo CPF, digitado só com números
+        var act = async () => await service.RegisterAsync(new RegisterRequest(
+            "Pietro de novo", "outro@teste.com", "senha12345", null, "52998224725"));
+
+        var ex = await act.Should().ThrowAsync<CadastroDuplicadoException>();
+        ex.Which.Campo.Should().Be("cpf");
+        (await db.Users.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Register_EmailComMaiusculasEEspacos_DeveRecusar()
+    {
+        var db = CreateSqliteDb();
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(), Name = "Ana", Email = "ana@teste.com",
+            PasswordHash = "hash", Role = UserRole.Customer,
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateAuthService(db);
+
+        var act = async () => await service.RegisterAsync(new RegisterRequest(
+            "Ana", "  ANA@Teste.com ", "senha12345"));
+
+        var ex = await act.Should().ThrowAsync<CadastroDuplicadoException>();
+        ex.Which.Campo.Should().Be("email");
+    }
+
+    [Fact]
+    public async Task Register_WhatsAppComMascaraEDdi_DeveRecusar()
+    {
+        var db = CreateSqliteDb();
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(), Name = "Cliente", Email = "cliente@teste.com",
+            WhatsApp = "(17) 99112-2890", PasswordHash = "hash", Role = UserRole.Customer,
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateAuthService(db);
+
+        var act = async () => await service.RegisterAsync(new RegisterRequest(
+            "Cliente", "novo@teste.com", "senha12345", "+55 17 99112-2890"));
+
+        var ex = await act.Should().ThrowAsync<CadastroDuplicadoException>();
+        ex.Which.Campo.Should().Be("whatsapp");
+    }
+
+    [Fact]
+    public async Task Register_NumeroDiferenteCom55NoMeio_DevePassar()
+    {
+        // Guarda contra a tentação de "limpar" o 55 do país com Replace: isso
+        // transformaria 17 99155-2890 em outro número e barraria cadastro legítimo.
+        var db = CreateSqliteDb();
+        db.Users.Add(new User
+        {
+            Id = Guid.NewGuid(), Name = "Cliente", Email = "cliente@teste.com",
+            WhatsApp = "17991122890", PasswordHash = "hash", Role = UserRole.Customer,
+        });
+        await db.SaveChangesAsync();
+
+        var service = CreateAuthService(db);
+
+        var resp = await service.RegisterAsync(new RegisterRequest(
+            "Outro", "outro@teste.com", "senha12345", "17991552890"));
+
+        resp.UserName.Should().Be("Outro");
+        (await db.Users.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Register_DadosNovos_DeveSalvarNormalizado()
+    {
+        var db      = CreateSqliteDb();
+        var service = CreateAuthService(db);
+
+        await service.RegisterAsync(new RegisterRequest(
+            "Novo Cliente", " NOVO@Teste.com ", "senha12345", "+55 (17) 99112-2890", "529.982.247-25"));
+
+        var user = await db.Users.SingleAsync();
+        user.Email.Should().Be("novo@teste.com");
+        user.Cpf.Should().Be("52998224725", "guardar só dígitos é o que faz a próxima checagem bater");
+        user.WhatsApp.Should().Be("17991122890");
     }
 }

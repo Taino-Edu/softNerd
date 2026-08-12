@@ -4,6 +4,7 @@
 // =============================================================================
 
 using System.ComponentModel.DataAnnotations;
+using CardGameStore.Validation;
 
 namespace CardGameStore.DTOs;
 
@@ -18,20 +19,14 @@ public sealed class ValidCpfAttribute : ValidationAttribute
 
     protected override ValidationResult? IsValid(object? value, ValidationContext ctx)
     {
-        var cpf = (value as string)?.Trim() ?? string.Empty;
-        if (string.IsNullOrEmpty(cpf)) return ValidationResult.Success; // campo opcional
-        if (cpf.Length != 11 || !cpf.All(char.IsDigit) || cpf.Distinct().Count() == 1)
-            return new ValidationResult(ErrorMessage);
+        if (value is not string bruto || string.IsNullOrWhiteSpace(bruto))
+            return ValidationResult.Success; // campo opcional
 
-        static int Digit(string s, int len)
-        {
-            var sum = s.Take(len).Select((c, i) => (c - '0') * (len + 1 - i)).Sum();
-            var rem = (sum * 10) % 11;
-            return rem == 10 ? 0 : rem;
-        }
-
-        return Digit(cpf, 9)  == (cpf[9]  - '0') &&
-               Digit(cpf, 10) == (cpf[10] - '0')
+        // Aceita com máscara: quem digita "529.982.247-25" está mandando um CPF certo,
+        // e recusar isso com "CPF inválido" era mentira na cara do cliente. O serviço
+        // grava só os dígitos. Algoritmo único, em Validation/CpfValidAttribute.
+        var digitos = Identificadores.SomenteDigitos(bruto);
+        return digitos is not null && CpfValidAttribute.ValidarCpf(digitos)
             ? ValidationResult.Success
             : new ValidationResult(ErrorMessage);
     }
@@ -53,7 +48,7 @@ public record LoginRequest(
 /// </summary>
 public record QuickLoginRequest(
     [Required, MaxLength(150)]  string  Name,
-    [ValidCpf, MaxLength(11)]   string? Cpf,              // Opcional — apenas dígitos se fornecido
+    [ValidCpf, MaxLength(14)]   string? Cpf,              // Opcional — aceita com máscara, grava só dígitos
     [Required, MaxLength(20)]   string  WhatsApp,
     [MaxLength(50)]             string? TableIdentifier = null
 );
@@ -89,7 +84,9 @@ public record RegisterRequest(
     [Required, EmailAddress]    string  Email,
     [Required, MinLength(8)]    string  Password,
     [MaxLength(20)]             string? WhatsApp = null,
-    [ValidCpf, MaxLength(11)]   string? Cpf      = null
+    // 14 = CPF com máscara ("529.982.247-25"). O serviço grava só os dígitos; recusar
+    // aqui devolvia "CPF inválido" pra um CPF certo, só porque veio pontuado.
+    [ValidCpf, MaxLength(14)]   string? Cpf      = null
 );
 
 /// <summary>Login de cliente pelo site (email + senha).</summary>

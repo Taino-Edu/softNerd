@@ -157,7 +157,8 @@ public class AdminCreateUserRequest
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
 
-    [MaxLength(11)]
+    /// <summary>Aceita com ou sem máscara — é gravado só com os dígitos.</summary>
+    [MaxLength(14)]
     public string? Cpf { get; set; }
 
     [MaxLength(20)]
@@ -202,7 +203,8 @@ public class AdminUpdateUserRequest
     [MaxLength(255)]
     public string? Email { get; set; }
 
-    [MaxLength(11)]
+    /// <summary>Aceita com ou sem máscara — é gravado só com os dígitos.</summary>
+    [MaxLength(14)]
     public string? Cpf { get; set; }
 
     [MaxLength(20)]

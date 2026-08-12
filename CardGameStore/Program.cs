@@ -917,6 +917,29 @@ using (var scope = app.Services.CreateScope())
                 -- Fila de espera: controle de quem já foi avisado do reestoque
                 ALTER TABLE product_waitlist ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ NULL;
 
+                -- Cadastro duplicado: trava no banco além da checagem da aplicação. O índice
+                -- só é criado se a base já estiver limpa — se existir duplicado antigo, criar
+                -- derrubaria o startup, então fica só a checagem da aplicação até alguém
+                -- resolver os cadastros repetidos na mão.
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM users WHERE email IS NOT NULL
+                        GROUP BY lower(email) HAVING count(*) > 1
+                    ) THEN
+                        CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email_lower
+                            ON users (lower(email)) WHERE email IS NOT NULL;
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM users WHERE cpf IS NOT NULL
+                        GROUP BY regexp_replace(cpf, '\D', '', 'g') HAVING count(*) > 1
+                    ) THEN
+                        CREATE UNIQUE INDEX IF NOT EXISTS ux_users_cpf_digitos
+                            ON users (regexp_replace(cpf, '\D', '', 'g')) WHERE cpf IS NOT NULL;
+                    END IF;
+                END $$;
+
                 -- Estorno de comanda já fechada: quem desfez, quando e por quê. Comanda
                 -- cobrada errada vira Estornada em vez de sumir — sai do faturamento mas
                 -- continua no extrato.
