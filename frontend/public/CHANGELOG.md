@@ -1,5 +1,17 @@
 # Changelog — Santuário Nerd
 
+## [v1.27.2] — 2026-08-12
+
+### Adicionado
+- **Vencimento do crediário escolhido na abertura**: ao abrir conta nova — pelo fechamento da comanda, pela frente de caixa ou no cadastro manual de dívida — dá pra definir a data de vencimento em vez de aceitar os 30 dias fixos. Serve pro caso do produto que chega depois: a dívida não vence antes de o cliente receber a mercadoria. Em branco continua sendo 30 dias, e alterar o vencimento de uma conta já existente segue disponível no botão de editar da lista
+
+### Mudado
+- **Venda no crediário pela frente de caixa agora pergunta em qual conta lançar**: se o cliente já tem conta aberta, aparece a mesma escolha que o fechamento de comanda já oferecia — acumular numa conta existente ou **abrir conta nova com prazo próprio**. Antes o balcão grudava tudo na primeira conta aberta, sem perguntar, e não dava pra ter duas dívidas separadas (o caso do cliente com dois crediários)
+
+### Corrigido
+- **Extrato parecia brigar com a Receita**: o total do extrato aparecia maior que a Receita do topo (ex.: R$ 38.040,70 contra R$ 28.395,47) porque ele soma **entrada de caixa**, e recebimento de crediário entra no caixa sem ser receita nova — a venda fiada já tinha virado receita no dia em que foi feita. Nenhum dos dois números estava errado, faltava dizer isso: agora o painel mostra a conta separada — vendas do período, recebimento de crediário e o total que entrou no caixa
+- **Compra nova renovava o prazo da dívida antiga**: ao acumular no crediário pelo PDV, o vencimento da conta inteira era jogado 30 dias pra frente, então dívida velha ganhava prazo novo a cada compra. Agora o vencimento da conta não é alterado ao acumular — o fechamento de comanda já se comportava assim
+
 ## [v1.27.1] — 2026-08-12
 
 ### Corrigido

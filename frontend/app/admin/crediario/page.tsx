@@ -39,6 +39,9 @@ function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSucces
   const [valor, setValor]           = useState('')
   const [obs, setObs]               = useState('')
   const [dataAbertura, setDataAbertura] = useState(hoje())
+  // Vencimento escolhido pelo admin — o backend já aceitava, mas a tela só sabia
+  // fazer abertura + 30 dias, e o Maikon precisa casar o prazo com a entrega.
+  const [dataVencimento, setDataVencimento] = useState('')
   const [loading, setLoading]       = useState(false)
   const [itens, setItens]           = useState<ItemForm[]>([])
   const [novoItem, setNovoItem]     = useState<ItemForm>({ nome: '', qty: '1', preco: '' })
@@ -114,6 +117,7 @@ function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSucces
         valorEmCentavos: Math.round(valorNum * 100),
         observacao:      obs || undefined,
         dataAbertura:    dataAbertura || undefined,
+        dataVencimento:  dataVencimento || undefined,
         itens:           itensDto,
       })
       toast.success(`Crediário de R$ ${valorNum.toFixed(2).replace('.', ',')} criado para ${selected.name}!`)
@@ -274,7 +278,23 @@ function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               onChange={e => setDataAbertura(e.target.value)}
               className="input"
             />
-            <p className="text-xs text-gray-400 mt-1">Quando a dívida foi gerada. O vencimento é calculado como data + 30 dias.</p>
+            <p className="text-xs text-gray-400 mt-1">Quando a dívida foi gerada.</p>
+          </div>
+
+          {/* Vencimento */}
+          <div>
+            <label className="label flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" /> Vencimento
+            </label>
+            <input
+              type="date"
+              value={dataVencimento}
+              onChange={e => setDataVencimento(e.target.value)}
+              className="input"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Em branco = 30 dias após a data da dívida. É esta data que manda na cobrança e nos avisos.
+            </p>
           </div>
 
           {/* Observação */}

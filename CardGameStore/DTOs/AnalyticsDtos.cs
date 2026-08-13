@@ -96,8 +96,17 @@ public class ExtratoDto
 {
     public DateTime Inicio         { get; set; }
     public DateTime Fim            { get; set; }
-    /// <summary>Soma só do que vale (estorno não entra).</summary>
+    /// <summary>Tudo que ENTROU de dinheiro no período (venda + recebimento de dívida),
+    /// já sem os estornos. Não confundir com receita: pagamento de crediário é caixa
+    /// entrando de uma venda que já foi contada como receita lá atrás.</summary>
     public decimal  TotalEmReais   { get; set; }
+
+    /// <summary>Só as vendas do período — bate com a Receita do topo do Financeiro.</summary>
+    public decimal  TotalVendas    { get; set; }
+
+    /// <summary>Recebimento de dívida antiga. Entra no caixa, não na receita.</summary>
+    public decimal  TotalCrediario { get; set; }
+
     public decimal  TotalEstornado { get; set; }
     public int      Lancamentos    { get; set; }
     public List<ExtratoLinhaDto> Linhas { get; set; } = new();

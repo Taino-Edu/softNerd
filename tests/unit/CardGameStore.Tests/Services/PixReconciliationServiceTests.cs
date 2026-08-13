@@ -175,7 +175,7 @@ public class PixReconciliationServiceTests
         comandaSvc.Setup(c => c.CloseComandaAsync(
                 comanda.Id, It.IsAny<Guid>(), "Pix",
                 It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int>(),
-                It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<bool>()))
+                It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new ComandaDto { Id = comanda.Id });
 
         var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, comandaSvc.Object);
@@ -187,7 +187,7 @@ public class PixReconciliationServiceTests
         comandaSvc.Verify(c => c.CloseComandaAsync(
             comanda.Id, pix.CriadoPorAdminId, "Pix",
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int>(),
-            It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Once);
+            It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<DateTime?>()), Times.Once);
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class PixReconciliationServiceTests
         comandaSvc.Verify(c => c.CloseComandaAsync(
             It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(),
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int>(),
-            It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never,
+            It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<DateTime?>()), Times.Never,
             "comanda já fechada por outro caminho não pode ser fechada de novo (pontos duplicados)");
     }
 

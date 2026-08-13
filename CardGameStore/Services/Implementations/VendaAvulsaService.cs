@@ -261,9 +261,31 @@ public class VendaAvulsaService : IVendaAvulsaService
 
             if (pm == PaymentMethod.Crediario)
             {
-                var crediarioExistente = await _db.Crediarios
-                    .FirstOrDefaultAsync(c => c.UserId == userId && c.Status == CrediariosStatus.Aberto);
-                var vencimento = DateTime.UtcNow.AddDays(30);
+                // Conta escolhida pelo caixa > primeira conta aberta. AbrirNovoCrediario
+                // força conta nova: o cliente pode ter duas dívidas com prazos diferentes
+                // (era o pedido do Maikon — o PDV grudava tudo na mesma conta sem perguntar).
+                Crediario? crediarioExistente = null;
+                if (request.CrediarioExistenteId.HasValue)
+                {
+                    crediarioExistente = await _db.Crediarios
+                        .FirstOrDefaultAsync(c => c.Id == request.CrediarioExistenteId.Value)
+                        ?? throw new InvalidOperationException("Conta de crediário não encontrada.");
+
+                    if (crediarioExistente.UserId != userId)
+                        throw new InvalidOperationException("A conta de crediário escolhida não é deste cliente.");
+                    if (crediarioExistente.Status != CrediariosStatus.Aberto)
+                        throw new InvalidOperationException("A conta de crediário escolhida já foi quitada.");
+                }
+                else if (!request.AbrirNovoCrediario)
+                {
+                    crediarioExistente = await _db.Crediarios
+                        .FirstOrDefaultAsync(c => c.UserId == userId && c.Status == CrediariosStatus.Aberto);
+                }
+
+                // Vencimento escolhido pelo caixa (o produto chega dia 16, então a conta não
+                // pode vencer dia 11) — sem escolha, mantém os 30 dias de sempre.
+                var vencimento = request.CrediarioVencimento?.Date.ToUniversalTime()
+                                 ?? DateTime.UtcNow.AddDays(30);
 
                 // Snapshot dos itens desta venda para registrar no crediário
                 var novosItens = vendaItems.Select(i => new ItemCrediarioDto
@@ -284,7 +306,8 @@ public class VendaAvulsaService : IVendaAvulsaService
                     itensAtuais.AddRange(novosItens);
                     crediarioExistente.ItensJson        = JsonSerializer.Serialize(itensAtuais);
                     crediarioExistente.ValorEmCentavos += primaryAmt;
-                    crediarioExistente.DataVencimento   = vencimento;
+                    // Sem mexer no vencimento: acumular uma compra nova NÃO pode dar mais 30
+                    // dias pra dívida velha (o fechamento de comanda já fazia certo).
                     crediarioIdVinculado                = crediarioExistente.Id;
                     _logger.LogInformation(
                         "Venda avulsa acumulada no crediário {CredId} do usuário {UserId} — novo total R$ {Valor:N2}",

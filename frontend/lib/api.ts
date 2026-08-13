@@ -414,8 +414,12 @@ export interface ExtratoLinhaDto {
 export interface ExtratoDto {
   inicio: string
   fim: string
-  /** Só o que vale — estorno não entra na soma. */
+  /** Tudo que entrou de caixa (vendas + recebimento de dívida), sem os estornos. */
   totalEmReais: number
+  /** Só as vendas — é este que bate com a Receita do topo do Financeiro. */
+  totalVendas: number
+  /** Recebimento de crediário: entra no caixa, mas não é receita nova. */
+  totalCrediario: number
   totalEstornado: number
   lancamentos: number
   linhas: ExtratoLinhaDto[]
@@ -450,8 +454,9 @@ export const comandaApi = {
   removeItem:   (id: string, itemId: string) => api.delete<ComandaDto>(`/api/comanda/${id}/items/${itemId}`),
   updateItem:   (id: string, itemId: string, quantity: number) =>
     api.patch<ComandaDto>(`/api/comanda/${id}/items/${itemId}`, { quantity }),
-  close:        (id: string, paymentMethod = 'Dinheiro', observacao?: string, secondPaymentMethod?: string, secondPaymentAmountInCents = 0, crediarioExistenteId?: string, discountInCents = 0, emitirNotaFiscal = false) =>
-    api.put<ComandaDto>(`/api/comanda/${id}/close`, { paymentMethod, observacao, secondPaymentMethod, secondPaymentAmountInCents, crediarioExistenteId, discountInCents, emitirNotaFiscal }),
+  /** crediarioVencimento (YYYY-MM-DD) só vale pra conta NOVA — acumular não mexe no prazo da conta existente. */
+  close:        (id: string, paymentMethod = 'Dinheiro', observacao?: string, secondPaymentMethod?: string, secondPaymentAmountInCents = 0, crediarioExistenteId?: string, discountInCents = 0, emitirNotaFiscal = false, crediarioVencimento?: string) =>
+    api.put<ComandaDto>(`/api/comanda/${id}/close`, { paymentMethod, observacao, secondPaymentMethod, secondPaymentAmountInCents, crediarioExistenteId, discountInCents, emitirNotaFiscal, crediarioVencimento }),
   cancel:       (id: string) => api.put<ComandaDto>(`/api/comanda/${id}/cancel`),
   /** Comanda JÁ FECHADA cobrada errada: devolve estoque e pontos, baixa crediário e sai do faturamento. */
   estornar:     (id: string, motivo: string) => api.post<ComandaDto>(`/api/comanda/${id}/estornar`, { motivo }),
@@ -603,9 +608,16 @@ export const vendaAvulsaApi = {
     secondPaymentAmountInCents = 0,
     discountInCents?: number,
     emitirNotaFiscal = false,
+    /** Conta de crediário onde lançar, quando o cliente já tem mais de uma aberta. */
+    crediarioExistenteId?: string,
+    /** Força abrir conta nova de crediário mesmo já existindo outra aberta. */
+    abrirNovoCrediario?: boolean,
+    /** Vencimento da conta nova (YYYY-MM-DD). Sem isso, 30 dias. */
+    crediarioVencimento?: string,
   ) =>
     api.post<VendaAvulsaDto>('/api/venda-avulsa', {
       clientName, paymentMethod, items, discountPercent, discountInCents, userId,
+      crediarioExistenteId, abrirNovoCrediario, crediarioVencimento,
       secondPaymentMethod: secondPaymentMethod || null,
       secondPaymentAmountInCents,
       emitirNotaFiscal,

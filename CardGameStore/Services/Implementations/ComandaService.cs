@@ -461,7 +461,8 @@ public class ComandaService : IComandaService
         return dto;
     }
 
-    public async Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = "Dinheiro", string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false)
+    public async Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = "Dinheiro", string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false,
+        DateTime? crediarioVencimento = null)
     {
         var comanda = await _db.Comandas
             .Include(c => c.Items)
@@ -582,8 +583,9 @@ public class ComandaService : IComandaService
             }
             else
             {
-                // Cria conta nova com prazo próprio de 30 dias
-                var vencimento = DateTime.UtcNow.AddDays(30);
+                // Conta nova: vencimento escolhido no fechamento (o produto da pré-venda pode
+                // chegar depois) ou os 30 dias de sempre quando ninguém escolheu.
+                var vencimento = crediarioVencimento?.Date.ToUniversalTime() ?? DateTime.UtcNow.AddDays(30);
                 var crediario  = new Crediario
                 {
                     UserId           = comanda.UserId,

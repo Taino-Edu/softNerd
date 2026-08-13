@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { productApi, categoryApi, vendaAvulsaApi, userApi, fiscalApi, PAYMENT_METHODS, PAYMENT_NEEDS_USER, SECOND_PAYMENT_METHODS, Product, ProductCategory, ProductVariant, VendaAvulsaDto, UserSummary, EditarPagamentoVendaAvulsaRequest } from '@/lib/api'
+import { productApi, categoryApi, vendaAvulsaApi, userApi, fiscalApi, crediarioApi, CrediariosDto, PAYMENT_METHODS, PAYMENT_NEEDS_USER, SECOND_PAYMENT_METHODS, Product, ProductCategory, ProductVariant, VendaAvulsaDto, UserSummary, EditarPagamentoVendaAvulsaRequest } from '@/lib/api'
 import { useThrottle } from '@/lib/hooks'
 import { usePreferences } from '@/hooks/usePreferences'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -15,6 +15,7 @@ import {
 import clsx from 'clsx'
 import VariantPicker from '@/components/admin/VariantPicker'
 import ConferenciaButton from '@/components/admin/ConferenciaButton'
+import EscolherContaCrediarioModal from '@/components/admin/EscolherContaCrediarioModal'
 import PercentPicker from '@/components/admin/PercentPicker'
 
 interface CartItem {
@@ -554,6 +555,8 @@ function VendaWizard({
   const [discountValueStr, setDiscountValueStr] = useState('')
   const [received, setReceived] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Contas de crediário abertas do cliente — quando tem alguma, o caixa escolhe onde lançar.
+  const [contasCrediario, setContasCrediario] = useState<CrediariosDto[] | null>(null)
 
   // Pagamento dividido (segundo método)
   const [splitEnabled, setSplit] = useState(false)
@@ -733,9 +736,8 @@ function VendaWizard({
     return matchCat && matchSearch
   })
 
-  const submitRaw = useCallback(async () => {
-    if (cart.length === 0) { toast.error('Adicione pelo menos um produto.'); return }
-    if (!splitValid) { toast.error('Valor do segundo pagamento inválido.'); return }
+  /** Registra a venda. crediario: conta escolhida quando o cliente já tem uma aberta. */
+  const registrarVenda = useCallback(async (crediario?: { existenteId?: string; novaConta?: boolean; vencimento?: string }) => {
     setSubmitting(true)
     try {
       const { data } = await vendaAvulsaApi.register(
@@ -748,6 +750,9 @@ function VendaWizard({
         splitEnabled ? secondAmountCents : 0,
         discountMode === 'cents' ? discountCents : undefined,
         emitirNota,
+        crediario?.existenteId,
+        crediario?.novaConta,
+        crediario?.vencimento,
       )
       onComplete(data)
       toast.success('Venda registrada!')
@@ -756,7 +761,24 @@ function VendaWizard({
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(msg || 'Erro ao registrar venda.')
     } finally { setSubmitting(false) }
-  }, [cart, clientName, payment, discountMode, discountPct, discountCents, selectedUserId, onComplete, splitEnabled, secondPayment, secondAmountCents, splitValid, emitirNota])
+  }, [cart, clientName, payment, discountMode, discountPct, discountCents, selectedUserId, onComplete, splitEnabled, secondPayment, secondAmountCents, emitirNota])
+
+  const submitRaw = useCallback(async () => {
+    if (cart.length === 0) { toast.error('Adicione pelo menos um produto.'); return }
+    if (!splitValid) { toast.error('Valor do segundo pagamento inválido.'); return }
+
+    // Venda no crediário com o cliente já devendo: pergunta em qual conta lançar em vez
+    // de grudar na primeira aberta (o cliente pode ter dívidas com prazos diferentes).
+    if (payment === 'Crediario' && selectedUserId) {
+      try {
+        const { data } = await crediarioApi.byUser(selectedUserId)
+        const abertas = data.filter(c => c.status === 'Aberto')
+        if (abertas.length > 0) { setContasCrediario(abertas); return }
+      } catch { /* não conseguiu listar: segue no caminho antigo */ }
+    }
+
+    await registrarVenda()
+  }, [cart, payment, selectedUserId, splitValid, registrarVenda])
 
   const handleSubmit = useThrottle(submitRaw, 2000)
 
@@ -1397,6 +1419,18 @@ function VendaWizard({
         </div>
       </div>
     </div>
+
+    {/* Conta de crediário: cliente já devendo escolhe entre acumular ou abrir conta nova */}
+    {contasCrediario && (
+      <EscolherContaCrediarioModal
+        userName={clientName.trim() || 'Cliente'}
+        contasAbertas={contasCrediario}
+        valorNovo={total}
+        onEscolher={async id => { setContasCrediario(null); await registrarVenda({ existenteId: id }) }}
+        onNova={async venc => { setContasCrediario(null); await registrarVenda({ novaConta: true, vencimento: venc }) }}
+        onCancel={()       => setContasCrediario(null)}
+      />
+    )}
 
     {/* Seletor de variante (tamanho/cor) */}
     {variantPickerProduct && (

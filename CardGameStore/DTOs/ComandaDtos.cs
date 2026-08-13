@@ -128,6 +128,12 @@ public class CloseComandaRequest
     /// </summary>
     public Guid? CrediarioExistenteId { get; set; }
 
+    /// <summary>
+    /// Vencimento da conta NOVA de crediário. Null = 30 dias (padrão de sempre). Ignorado
+    /// quando a dívida vai pra uma conta existente — acumular não mexe no prazo dela.
+    /// </summary>
+    public DateTime? CrediarioVencimento { get; set; }
+
     /// <summary>Desconto administrativo em centavos aplicado no fechamento (opcional).</summary>
     [Range(0, int.MaxValue)]
     public int DiscountInCents { get; set; } = 0;

@@ -876,6 +876,8 @@ public class AnalyticsController : ControllerBase
             Inicio          = dataBrIni,
             Fim             = dataBrFim,
             TotalEmReais    = Math.Round(validas.Sum(l => l.ValorEmReais), 2),
+            TotalVendas     = Math.Round(validas.Where(l => l.Tipo != "pagamento_crediario").Sum(l => l.ValorEmReais), 2),
+            TotalCrediario  = Math.Round(validas.Where(l => l.Tipo == "pagamento_crediario").Sum(l => l.ValorEmReais), 2),
             TotalEstornado  = Math.Round(ordenadas.Where(l => l.Estornada).Sum(l => l.ValorEmReais), 2),
             Lancamentos     = ordenadas.Count,
             Linhas          = ordenadas,

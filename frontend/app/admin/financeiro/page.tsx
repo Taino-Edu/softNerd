@@ -1820,9 +1820,10 @@ export default function FinanceiroPage() {
               <div className="flex items-center gap-2 min-w-0">
                 <Receipt className="w-4 h-4 text-brand-400 shrink-0" />
                 <div className="text-left min-w-0">
-                  <p className="font-bold text-white text-sm">Extrato do período</p>
+                  <p className="font-bold text-white text-sm">Extrato do período — entrada de caixa</p>
                   <p className="text-xs text-gray-500">
-                    Cada entrada com a origem — e o que foi estornado
+                    Vendas + recebimento de crediário. Não é a Receita: dívida paga hoje
+                    virou receita no dia da venda.
                   </p>
                 </div>
               </div>
@@ -1830,6 +1831,10 @@ export default function FinanceiroPage() {
                 {extrato && (
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-bold font-mono text-accent-green">{fmt(extrato.totalEmReais)}</p>
+                    <p className="text-[11px] text-gray-500">
+                      {fmt(extrato.totalVendas)} vendas
+                      {extrato.totalCrediario > 0 && <> + {fmt(extrato.totalCrediario)} crediário</>}
+                    </p>
                     {extrato.totalEstornado > 0 && (
                       <p className="text-[11px] text-red-400">−{fmt(extrato.totalEstornado)} estornado</p>
                     )}
@@ -1901,14 +1906,29 @@ export default function FinanceiroPage() {
                   )}
                 </div>
 
-                <div className="px-5 py-3 border-t border-surface-500 flex items-center justify-between text-xs">
-                  <span className="text-gray-500">{extrato.lancamentos} lançamento(s) no período</span>
-                  <span className="text-gray-300">
-                    Entrou: <strong className="text-accent-green font-mono">{fmt(extrato.totalEmReais)}</strong>
+                <div className="px-5 py-3 border-t border-surface-500 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Vendas do período <span className="text-gray-600">(= Receita do topo)</span></span>
+                    <strong className="text-gray-200 font-mono">{fmt(extrato.totalVendas)}</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">
+                      Recebimento de crediário <span className="text-gray-600">(dívida antiga, não é receita nova)</span>
+                    </span>
+                    <strong className="text-gray-200 font-mono">{fmt(extrato.totalCrediario)}</strong>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-surface-600 pt-1.5">
+                    <span className="text-gray-300 font-semibold">Entrou no caixa</span>
+                    <strong className="text-accent-green font-mono text-sm">{fmt(extrato.totalEmReais)}</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] pt-0.5">
+                    <span className="text-gray-600">{extrato.lancamentos} lançamento(s)</span>
                     {extrato.totalEstornado > 0 && (
-                      <> · estornado: <strong className="text-red-400 font-mono">{fmt(extrato.totalEstornado)}</strong></>
+                      <span className="text-red-400">
+                        estornado no período: <strong className="font-mono">{fmt(extrato.totalEstornado)}</strong>
+                      </span>
                     )}
-                  </span>
+                  </div>
                 </div>
               </div>
             )}

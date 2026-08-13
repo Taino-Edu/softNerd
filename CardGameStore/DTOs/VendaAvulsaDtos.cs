@@ -35,6 +35,22 @@ public class VendaAvulsaRequest
     public bool EmitirNotaFiscal { get; set; } = false;
 
     /// <summary>
+    /// Conta de crediário onde lançar a venda, quando o cliente tem mais de uma aberta.
+    /// Null + AbrirNovoCrediario=false mantém o comportamento antigo (acumula na conta
+    /// aberta que existir). Mesma escolha que o fechamento de comanda já oferecia.
+    /// </summary>
+    public Guid? CrediarioExistenteId { get; set; }
+
+    /// <summary>Força abrir uma conta NOVA, com prazo próprio, mesmo já existindo outra aberta.</summary>
+    public bool AbrirNovoCrediario { get; set; } = false;
+
+    /// <summary>
+    /// Vencimento da conta NOVA de crediário. Null = 30 dias. Ignorado quando a venda é
+    /// acumulada numa conta existente — o prazo dela não muda.
+    /// </summary>
+    public DateTime? CrediarioVencimento { get; set; }
+
+    /// <summary>
     /// Se true, NÃO valida nem decrementa estoque — usado na homologação de pré-venda,
     /// onde o estoque já foi baixado no ato da reserva (a venda só registra a saída).
     /// Uso interno do backend; o PDV nunca envia.

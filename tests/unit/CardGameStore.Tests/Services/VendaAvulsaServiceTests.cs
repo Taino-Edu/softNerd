@@ -454,4 +454,137 @@ public class VendaAvulsaServiceTests
         resultado[0].TotalInReais.Should().Be(30.00m);
         resultado[0].PaymentMethod.Should().Be(PaymentMethod.Dinheiro);
     }
+
+    // ── Crediário: escolha de conta no PDV ────────────────────────────────────
+    // Antes o balcão grudava toda venda na primeira conta aberta do cliente E ainda
+    // empurrava o vencimento dela pra 30 dias à frente — dívida velha ganhava prazo novo.
+
+    [Fact]
+    public async Task Register_Crediario_ContaEscolhida_DeveAcumularSemRenovarVencimento()
+    {
+        var db      = CreateDb(nameof(Register_Crediario_ContaEscolhida_DeveAcumularSemRenovarVencimento));
+        var product = await SeedProductAsync(db, priceInCents: 3000, stock: 5);
+        var user    = new User { Id = Guid.NewGuid(), Name = "Pietro", PasswordHash = "h", Role = UserRole.Customer };
+        db.Users.Add(user);
+
+        var vencimentoOriginal = DateTime.UtcNow.AddDays(5);
+        var conta = new Crediario
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, ValorEmCentavos = 5000,
+            DataAbertura = DateTime.UtcNow.AddDays(-25), DataVencimento = vencimentoOriginal,
+            Status = CrediariosStatus.Aberto,
+        };
+        db.Crediarios.Add(conta);
+        await db.SaveChangesAsync();
+
+        var (mockMongo, _) = CreateMongoBacks();
+        var service = CreateService(db, mockMongo.Object);
+
+        await service.RegisterAsync(new VendaAvulsaRequest
+        {
+            PaymentMethod        = PaymentMethod.Crediario,
+            UserId               = user.Id,
+            CrediarioExistenteId = conta.Id,
+            Items = [new VendaAvulsaItemRequest { ProductId = product.Id, Quantity = 1 }],
+        }, AdminId, AdminName);
+
+        db.ChangeTracker.Clear();
+        var atualizada = await db.Crediarios.FirstAsync(c => c.Id == conta.Id);
+        atualizada.ValorEmCentavos.Should().Be(8000, "R$ 50 que já devia + R$ 30 da venda");
+        atualizada.DataVencimento.Should().BeCloseTo(vencimentoOriginal, TimeSpan.FromSeconds(1),
+            "compra nova não pode dar mais 30 dias pra dívida antiga");
+        (await db.Crediarios.CountAsync(c => c.UserId == user.Id)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Register_Crediario_AbrirNovaConta_DeveCriarSegundaDivida()
+    {
+        var db      = CreateDb(nameof(Register_Crediario_AbrirNovaConta_DeveCriarSegundaDivida));
+        var product = await SeedProductAsync(db, priceInCents: 3000, stock: 5);
+        var user    = new User { Id = Guid.NewGuid(), Name = "Pietro", PasswordHash = "h", Role = UserRole.Customer };
+        db.Users.Add(user);
+        db.Crediarios.Add(new Crediario
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, ValorEmCentavos = 5000,
+            DataAbertura = DateTime.UtcNow.AddDays(-25), DataVencimento = DateTime.UtcNow.AddDays(5),
+            Status = CrediariosStatus.Aberto,
+        });
+        await db.SaveChangesAsync();
+
+        var (mockMongo, _) = CreateMongoBacks();
+        var service = CreateService(db, mockMongo.Object);
+
+        await service.RegisterAsync(new VendaAvulsaRequest
+        {
+            PaymentMethod      = PaymentMethod.Crediario,
+            UserId             = user.Id,
+            AbrirNovoCrediario = true,
+            Items = [new VendaAvulsaItemRequest { ProductId = product.Id, Quantity = 1 }],
+        }, AdminId, AdminName);
+
+        db.ChangeTracker.Clear();
+        var contas = await db.Crediarios.Where(c => c.UserId == user.Id).ToListAsync();
+        contas.Should().HaveCount(2, "o cliente pode ter duas dívidas separadas, com prazos próprios");
+        contas.Sum(c => c.ValorEmCentavos).Should().Be(8000);
+    }
+
+    [Fact]
+    public async Task Register_Crediario_ContaDeOutroCliente_DeveRecusar()
+    {
+        var db      = CreateDb(nameof(Register_Crediario_ContaDeOutroCliente_DeveRecusar));
+        var product = await SeedProductAsync(db, priceInCents: 3000, stock: 5);
+        var cliente = new User { Id = Guid.NewGuid(), Name = "Pietro", PasswordHash = "h", Role = UserRole.Customer };
+        var outro   = new User { Id = Guid.NewGuid(), Name = "Outro",  PasswordHash = "h", Role = UserRole.Customer };
+        db.Users.AddRange(cliente, outro);
+
+        var contaDoOutro = new Crediario
+        {
+            Id = Guid.NewGuid(), UserId = outro.Id, ValorEmCentavos = 5000,
+            DataAbertura = DateTime.UtcNow, DataVencimento = DateTime.UtcNow.AddDays(30),
+            Status = CrediariosStatus.Aberto,
+        };
+        db.Crediarios.Add(contaDoOutro);
+        await db.SaveChangesAsync();
+
+        var (mockMongo, _) = CreateMongoBacks();
+        var service = CreateService(db, mockMongo.Object);
+
+        var act = async () => await service.RegisterAsync(new VendaAvulsaRequest
+        {
+            PaymentMethod        = PaymentMethod.Crediario,
+            UserId               = cliente.Id,
+            CrediarioExistenteId = contaDoOutro.Id,
+            Items = [new VendaAvulsaItemRequest { ProductId = product.Id, Quantity = 1 }],
+        }, AdminId, AdminName);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*não é deste cliente*");
+    }
+
+    [Fact]
+    public async Task Register_Crediario_ContaNovaComVencimentoEscolhido_DeveUsarAData()
+    {
+        // Pré-venda que chega dia 16 não pode virar dívida vencida no dia 11: o caixa
+        // escolhe a data e ela manda na cobrança e nos avisos.
+        var db      = CreateDb(nameof(Register_Crediario_ContaNovaComVencimentoEscolhido_DeveUsarAData));
+        var product = await SeedProductAsync(db, priceInCents: 3000, stock: 5);
+        var user    = new User { Id = Guid.NewGuid(), Name = "Pietro", PasswordHash = "h", Role = UserRole.Customer };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var vencimentoEscolhido = DateTime.UtcNow.Date.AddDays(45);
+        var (mockMongo, _) = CreateMongoBacks();
+        var service = CreateService(db, mockMongo.Object);
+
+        await service.RegisterAsync(new VendaAvulsaRequest
+        {
+            PaymentMethod       = PaymentMethod.Crediario,
+            UserId              = user.Id,
+            CrediarioVencimento = vencimentoEscolhido,
+            Items = [new VendaAvulsaItemRequest { ProductId = product.Id, Quantity = 1 }],
+        }, AdminId, AdminName);
+
+        db.ChangeTracker.Clear();
+        var conta = await db.Crediarios.SingleAsync(c => c.UserId == user.Id);
+        conta.DataVencimento.Date.Should().Be(vencimentoEscolhido.Date);
+    }
 }
