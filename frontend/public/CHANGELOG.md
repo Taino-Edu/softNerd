@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.27.3] — 2026-08-17
+
+### Corrigido
+- **Cliente não via quantas unidades tinha reservado**: na aba "Pré-vendas" do painel do cliente, o card mostrava só o nome do produto — quem reservou duas ou três unidades via a mesma coisa de quem reservou uma, e ficava sem confirmação do que pediu. A quantidade aparecia no carrinho na hora de reservar e some depois de confirmar. Agora o card mostra **"2× Nome do Produto"**, tanto na pré-venda quanto na fila de espera. Do lado do admin a quantidade sempre apareceu — era só a tela do cliente que omitia
+
 ## [v1.27.2] — 2026-08-12
 
 ### Adicionado

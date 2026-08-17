@@ -553,7 +553,9 @@ export default function PerfilPage() {
                                 : <Package className="w-5 h-5 text-amber-400" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate">{r.productName}</p>
+                              <p className="text-sm font-bold text-gray-900 truncate">
+                                <span className="text-amber-500">{r.quantity}×</span> {r.productName}
+                              </p>
                               {r.variantLabel && <p className="text-[11px] text-gray-400">{r.variantLabel}</p>}
                               {r.expiresAt ? (
                                 <p className="text-[11px] text-amber-500 font-bold flex items-center gap-1 mt-0.5">
@@ -600,7 +602,9 @@ export default function PerfilPage() {
                                 : <Package className="w-5 h-5 text-purple-400" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate">{f.productName}</p>
+                              <p className="text-sm font-bold text-gray-900 truncate">
+                                <span className="text-purple-500">{f.quantity}×</span> {f.productName}
+                              </p>
                               <p className="text-[11px] text-purple-500 font-bold mt-0.5">
                                 {f.posicaoFila ? `#${f.posicaoFila} na fila` : 'Na fila'}
                               </p>
