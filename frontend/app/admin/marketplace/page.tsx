@@ -41,7 +41,7 @@ const statusLabel: Record<string, string> = {
 }
 
 function fmtPrice(cents: number) {
-  return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 // ── Modal criar / editar anúncio ───────────────────────────────────────────────
@@ -53,17 +53,18 @@ function ListingModal({ initial, onClose, onSave }: {
   const [form, setForm] = useState({
     cardName:    initial?.cardName ?? '',
     cardGame:    initial?.cardGame ?? '',
-    priceInCents:initial?.priceInCents ?? 0,
     condition:   initial?.condition ?? 'NM',
     description: initial?.description ?? '',
     status:      initial?.status ?? 'Available',
   })
+  const [priceStr,  setPriceStr]  = useState(initial?.priceInCents ? (initial.priceInCents / 100).toFixed(2).replace('.', ',') : '')
   const [imageUrl,  setImageUrl]  = useState<string | null>(initial?.cardImageUrl ?? null)
   const [uploading, setUploading] = useState(false)
   const [saving,    setSaving]    = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const set = (k: keyof typeof form, v: string | number) => setForm(p => ({ ...p, [k]: v }))
+  const priceInCents = Math.round(parseFloat(priceStr.replace(',', '.') || '0') * 100)
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -78,14 +79,14 @@ function ListingModal({ initial, onClose, onSave }: {
 
   async function submit() {
     if (!form.cardName.trim()) { toast.error('Informe o nome da carta'); return }
-    if (form.priceInCents <= 0) { toast.error('Informe o preço'); return }
+    if (priceInCents <= 0) { toast.error('Informe o preço'); return }
     setSaving(true)
     try {
       const req = {
         cardName:     form.cardName.trim(),
         cardGame:     form.cardGame || undefined,
         cardImageUrl: imageUrl || undefined,
-        priceInCents: form.priceInCents,
+        priceInCents,
         condition:    form.condition,
         description:  form.description || undefined,
         status:       form.status,
@@ -166,9 +167,12 @@ function ListingModal({ initial, onClose, onSave }: {
           <div>
             <label className="label">Preço (R$) *</label>
             <input
-              className="input" type="number" min={0} step={0.01}
-              value={(form.priceInCents / 100).toFixed(2)}
-              onChange={e => set('priceInCents', Math.round(parseFloat(e.target.value || '0') * 100))}
+              className="input" type="text" inputMode="decimal" placeholder="0,00"
+              value={priceStr}
+              onChange={e => {
+                const v = e.target.value.replace(/[^\d.,]/g, '').replace('.', ',')
+                if (/^\d*(,\d{0,2})?$/.test(v)) setPriceStr(v)
+              }}
             />
           </div>
           <div>

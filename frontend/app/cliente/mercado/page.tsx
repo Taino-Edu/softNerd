@@ -24,7 +24,7 @@ const conditionColor = Object.fromEntries(CONDITIONS.map(c => [c.value, c.color]
 const GAMES = ['Magic', 'Pokémon', 'Yu-Gi-Oh!', 'One Piece', 'Dragon Ball', 'Digimon', 'Outro']
 
 function fmtPrice(cents: number) {
-  return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 // ── Card de listagem ──────────────────────────────────────────────────────────

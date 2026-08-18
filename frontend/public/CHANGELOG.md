@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.27.4] — 2026-08-18
+
+### Corrigido
+- **Não dava pra digitar o preço no Mercado de Cartas**: o campo se reescrevia sozinho a cada tecla, então digitar "129,90" terminava em R$ 0,02 e só as setinhas funcionavam — de um centavo em um centavo. Agora o valor é digitado normalmente, aceita vírgula ou ponto, corta na segunda casa decimal e ignora letra. Vale pra anunciar carta nova e pra editar anúncio existente, que já abre com o preço preenchido
+- **Preço alto ficava difícil de ler**: a carta de R$ 12.345,67 aparecia como "R$ 12345,67", sem separador de milhar, tanto no painel quanto na vitrine do cliente
+
 ## [v1.27.3] — 2026-08-17
 
 ### Corrigido
