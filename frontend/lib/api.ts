@@ -1444,6 +1444,33 @@ export const minhasNotasApi = {
   obterCupom: (id: string) => api.get<CupomDto>(`/api/minhas-notas/${id}/cupom`),
 }
 
+// ── Compras de balcão (PDV) do próprio cliente ────────────────────────────────
+// Recorte enxuto da venda avulsa: sem custo do produto, sem quem operou o caixa.
+// As comandas do cliente continuam vindo de comandaApi.myHistory().
+
+export interface MinhaCompraItemDto {
+  productName: string; quantity: number
+  unitPriceInReais: number; subtotalInReais: number
+}
+
+export interface MinhaCompraDto {
+  id: string; soldAt: string
+  paymentMethod: string
+  secondPaymentMethod: string | null
+  secondPaymentAmountInCents: number
+  totalInReais: number
+  discountInReais: number
+  items: MinhaCompraItemDto[]
+  /** Compra desfeita pela loja — vem na lista marcada, não some. */
+  estornada: boolean
+  estornadaEm: string | null
+  motivoEstorno: string | null
+}
+
+export const minhasComprasApi = {
+  list: () => api.get<MinhaCompraDto[]>('/api/minhas-compras'),
+}
+
 // ── Personalização do site (nome, textos, cores da landing) ───────────────────
 
 export interface SiteConfigDto {

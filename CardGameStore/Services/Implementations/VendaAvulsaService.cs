@@ -651,6 +651,15 @@ public class VendaAvulsaService : IVendaAvulsaService
         return vendas.Select(MapToDto);
     }
 
+    public async Task<IEnumerable<VendaAvulsaDto>> GetByUserComEstornadasAsync(Guid userId)
+    {
+        var vendas = await _collection
+            .Find(Builders<VendaAvulsa>.Filter.Eq(v => v.UserId, userId))
+            .SortByDescending(v => v.SoldAt)
+            .ToListAsync();
+        return vendas.Select(MapToDto);
+    }
+
     public async Task<IReadOnlyList<VendaAvulsaClienteAgregadoDto>> AgregarPorClienteAsync(
         DateTime? inicio, DateTime? fim, string? formaPagamento)
     {

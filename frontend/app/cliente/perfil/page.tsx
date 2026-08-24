@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   userApi, UserProfile, crediarioApi, CrediariosDto, comandaApi, ComandaDto, championshipApi, MyParticipation,
-  reservationApi, MyReservation, minhasNotasApi, MinhaNotaDto,
+  reservationApi, MyReservation, minhasNotasApi, MinhaNotaDto, COMANDA_PAYMENT_METHODS,
+  minhasComprasApi, MinhaCompraDto,
 } from '@/lib/api'
 import { getUserName, clearAuth } from '@/lib/auth'
 import { authApi } from '@/lib/api'
@@ -18,6 +19,110 @@ import {
 import PixReservaModal from '@/components/PixReservaModal'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
+
+const fmtBRL = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
+
+// ── Forma de pagamento ────────────────────────────────────────────────────────
+// Rótulos curtos para caber no card do histórico; cai no rótulo do admin se
+// aparecer um método novo que ainda não estiver mapeado aqui.
+const PM_SHORT: Record<string, string> = {
+  Dinheiro:      'Dinheiro',
+  Pix:           'Pix',
+  CartaoCredito: 'Crédito',
+  CartaoDebito:  'Débito',
+  Crediario:     'Crediário',
+  Pontos:        'Pontos',
+  Cashback:      'Cashback',
+}
+const pmLabel = (key: string) =>
+  PM_SHORT[key] ?? COMANDA_PAYMENT_METHODS.find(m => m.value === key)?.label ?? key
+
+/** Parte de pagamento comum a comanda e venda de balcão. */
+type Pagamento = {
+  paymentMethod: string | null
+  secondPaymentMethod: string | null
+  secondPaymentAmountInCents: number
+}
+
+const temSegundoPagamento = (p: Pagamento) =>
+  !!p.secondPaymentMethod && p.secondPaymentAmountInCents > 0
+
+/** Resumo curto para o chip: "Pix" ou "Pix + Cashback". */
+function pagamentoResumo(p: Pagamento): string | null {
+  if (!p.paymentMethod) return null
+  return temSegundoPagamento(p)
+    ? `${pmLabel(p.paymentMethod)} + ${pmLabel(p.secondPaymentMethod!)}`
+    : pmLabel(p.paymentMethod)
+}
+
+/** Chip de forma de pagamento no cabeçalho do card do histórico. */
+function ChipPagamento({ pagamento }: { pagamento: Pagamento }) {
+  const resumo = pagamentoResumo(pagamento)
+  if (!resumo) return null
+  return (
+    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-gray-100 border border-gray-200 px-2 py-0.5 text-[10px] font-black text-gray-500 uppercase tracking-tight">
+      <CreditCard className="w-3 h-3" />
+      {resumo}
+    </span>
+  )
+}
+
+/**
+ * Quebra do que foi pago, dentro do card expandido.
+ * `total` é o valor líquido (comanda e venda avulsa já chegam descontadas);
+ * o valor da forma principal sai do total menos o segundo pagamento.
+ */
+function DetalhePagamento({ pagamento, total, pointsAppliedInCents = 0, discountInReais = 0 }: {
+  pagamento: Pagamento
+  total: number
+  pointsAppliedInCents?: number
+  discountInReais?: number
+}) {
+  if (!pagamento.paymentMethod) {
+    return (
+      <div className="pt-3 mt-1 border-t border-gray-200">
+        <p className="text-[11px] text-gray-400 italic">Forma de pagamento não registrada nesta compra.</p>
+      </div>
+    )
+  }
+
+  const hasSecond  = temSegundoPagamento(pagamento)
+  const secondAmt  = pagamento.secondPaymentAmountInCents / 100
+  const primaryAmt = hasSecond ? total - secondAmt : total
+
+  return (
+    <div className="pt-3 mt-1 border-t border-gray-200 space-y-1.5">
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Como foi pago</p>
+      {pointsAppliedInCents > 0 && (
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-gray-500 font-medium">Pontos aplicados</span>
+          <span className="font-bold text-amber-500">− {fmtBRL(pointsAppliedInCents / 100)}</span>
+        </div>
+      )}
+      {discountInReais > 0 && (
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-gray-500 font-medium">Desconto</span>
+          <span className="font-bold text-emerald-500">− {fmtBRL(discountInReais)}</span>
+        </div>
+      )}
+      <div className="flex justify-between items-center text-xs">
+        <span className="text-gray-600 font-bold">{pmLabel(pagamento.paymentMethod)}</span>
+        <span className="font-bold text-gray-900">{fmtBRL(primaryAmt)}</span>
+      </div>
+      {hasSecond && (
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-gray-600 font-bold">{pmLabel(pagamento.secondPaymentMethod!)}</span>
+          <span className="font-bold text-gray-900">{fmtBRL(secondAmt)}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Histórico do cliente = comandas + vendas de balcão, na mesma linha do tempo. */
+type HistoricoItem =
+  | { kind: 'comanda'; id: string; quando: number; comanda: ComandaDto }
+  | { kind: 'balcao';  id: string; quando: number; compra: MinhaCompraDto }
 
 function EditProfileModal({ profile, onClose, onSaved }: {
   profile: UserProfile
@@ -123,6 +228,7 @@ export default function PerfilPage() {
   const [profile,        setProfile]        = useState<UserProfile | null>(null)
   const [crediarios,     setCrediarios]     = useState<CrediariosDto[]>([])
   const [history,        setHistory]        = useState<ComandaDto[]>([])
+  const [compras,        setCompras]        = useState<MinhaCompraDto[]>([])
   const [participations, setParticipations] = useState<MyParticipation[]>([])
   const [fila,           setFila]           = useState<MyReservation[]>([])
   const [reservations,   setReservations]   = useState<MyReservation[]>([])
@@ -148,6 +254,7 @@ export default function PerfilPage() {
       userApi.me().then(r => setProfile(r.data)).catch(() => {}),
       crediarioApi.meuHistorico().then(r => setCrediarios(r.data)).catch(() => {}),
       comandaApi.myHistory().then(r => setHistory(r.data)).catch(() => {}),
+      minhasComprasApi.list().then(r => setCompras(r.data)).catch(() => {}),
       championshipApi.myParticipations().then(r => setParticipations(r.data)).catch(() => {}),
       reservationApi.mine().then(r => {
         setReservations(r.data.filter(x => x.kind === 'pre_venda' && x.status === 'active'))
@@ -180,13 +287,31 @@ export default function PerfilPage() {
   const crediario = crediarios.find(c => c.status === 'Aberto' || c.status === 'Vencido') ?? null
 
   const agora = new Date()
-  const consumoMensal = history
-    .filter(c => {
-      if (!c.closedAt || c.status !== 'Fechada') return false
-      const d = new Date(c.closedAt)
-      return d.getMonth() === agora.getMonth() && d.getFullYear() === agora.getFullYear()
-    })
-    .reduce((s, c) => s + c.totalInReais, 0)
+  const doMesAtual = (iso: string) => {
+    const d = new Date(iso)
+    return d.getMonth() === agora.getMonth() && d.getFullYear() === agora.getFullYear()
+  }
+
+  // Gasto do mês soma comanda + balcão — o histórico mostra os dois, o total
+  // tem que bater com o que está na tela.
+  const consumoMensal =
+    history
+      .filter(c => !!c.closedAt && c.status === 'Fechada' && doMesAtual(c.closedAt))
+      .reduce((s, c) => s + c.totalInReais, 0)
+    + compras
+      .filter(v => !v.estornada && doMesAtual(v.soldAt))
+      .reduce((s, v) => s + v.totalInReais, 0)
+
+  const historico: HistoricoItem[] = [
+    ...history.map(c => ({
+      kind: 'comanda' as const, id: c.id, comanda: c,
+      quando: new Date(c.closedAt ?? c.openedAt).getTime(),
+    })),
+    ...compras.map(v => ({
+      kind: 'balcao' as const, id: v.id, compra: v,
+      quando: new Date(v.soldAt).getTime(),
+    })),
+  ].sort((a, b) => b.quando - a.quando)
 
   async function handleLogout() {
     try { await authApi.logout() } catch {}
@@ -443,36 +568,75 @@ export default function PerfilPage() {
             {/* ── TAB: HISTÓRICO ── */}
             {tab === 'historico' && (
               <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {history.length === 0 ? (
+                {historico.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
                     <Clock className="w-10 h-10 mx-auto mb-3 text-gray-200" />
                     <p className="text-sm text-gray-400 italic">Nenhum registro encontrado...</p>
                   </div>
                 ) : (
-                  history.map(c => {
-                    const open = expanded === c.id
+                  historico.map(h => {
+                    const open = expanded === h.id
+
+                    // Cada origem tem seu cabeçalho; o corpo (itens + pagamento) é o mesmo.
+                    const c      = h.kind === 'comanda' ? h.comanda : null
+                    const v      = h.kind === 'balcao'  ? h.compra  : null
+                    const titulo = c
+                      ? `Comanda ${c.closedAt ? new Date(c.closedAt).toLocaleDateString('pt-BR') : 'Ativa'}`
+                      : `Balcão ${new Date(v!.soldAt).toLocaleDateString('pt-BR')}`
+                    const legenda = c
+                      ? `${c.items.length} itens • ${c.status}`
+                      : `${v!.items.length} itens • Compra no balcão`
+                    const total = c ? c.totalInReais : v!.totalInReais
+
+                    // Compra desfeita continua na lista, riscada: o registro de que ela
+                    // existiu é justamente o que o cliente precisa poder conferir.
+                    const estornada     = c ? c.status === 'Estornada' : v!.estornada
+                    const estornadaEm   = c ? c.estornadaEm   : v!.estornadaEm
+                    const motivoEstorno = c ? c.motivoEstorno : v!.motivoEstorno
+
                     return (
-                      <div key={c.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                      <div key={h.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
                         <button
-                          onClick={() => setExpanded(open ? null : c.id)}
+                          onClick={() => setExpanded(open ? null : h.id)}
                           className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                         >
                           <div className="flex items-center gap-3 text-left">
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
-                              <Receipt className="w-5 h-5 text-[#42B6EE]" />
+                            <div className={clsx(
+                              'w-10 h-10 rounded-xl flex items-center justify-center border',
+                              estornada ? 'bg-gray-100 border-gray-200'
+                                        : c ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100',
+                            )}>
+                              {c
+                                ? <Receipt   className={clsx('w-5 h-5', estornada ? 'text-gray-400' : 'text-[#42B6EE]')} />
+                                : <ShoppingBag className={clsx('w-5 h-5', estornada ? 'text-gray-400' : 'text-amber-500')} />}
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-gray-900">
-                                Comanda {c.closedAt ? new Date(c.closedAt).toLocaleDateString('pt-BR') : 'Ativa'}
+                              <p className={clsx(
+                                'text-sm font-bold',
+                                estornada ? 'text-gray-400 line-through' : 'text-gray-900',
+                              )}>
+                                {titulo}
                               </p>
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                                {c.items.length} itens • {c.status}
+                                {legenda}
                               </p>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <ChipPagamento pagamento={c ?? v!} />
+                                {estornada && (
+                                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-500 uppercase tracking-tight">
+                                    <XCircle className="w-3 h-3" />
+                                    Estornada
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="font-black text-emerald-500 text-sm">
-                              R$ {c.totalInReais.toFixed(2).replace('.', ',')}
+                            <span className={clsx(
+                              'font-black text-sm',
+                              estornada ? 'text-gray-400 line-through' : 'text-emerald-500',
+                            )}>
+                              {fmtBRL(total)}
                             </span>
                             {open
                               ? <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -481,12 +645,45 @@ export default function PerfilPage() {
                         </button>
                         {open && (
                           <div className="px-4 pb-4 border-t border-gray-100 bg-gray-50 space-y-2 pt-3">
-                            {c.items.map((item, idx) => (
-                              <div key={idx} className="flex justify-between items-center text-xs">
-                                <span className="text-gray-500 font-medium">{item.quantity}x {item.itemNameSnapshot}</span>
-                                <span className="text-gray-700 font-bold">R$ {item.subtotalInReais.toFixed(2).replace('.', ',')}</span>
+                            {estornada && (
+                              <div className="rounded-xl bg-rose-50 border border-rose-100 p-3 mb-1">
+                                <p className="text-[11px] font-black text-rose-500 uppercase tracking-wider">
+                                  {c ? 'Comanda estornada' : 'Compra estornada'}
+                                  {estornadaEm && ` em ${new Date(estornadaEm).toLocaleDateString('pt-BR')}`}
+                                </p>
+                                {motivoEstorno && (
+                                  <p className="text-xs text-rose-500 mt-1">Motivo: {motivoEstorno}</p>
+                                )}
+                                <p className="text-[11px] text-rose-400 mt-1">Este valor não entra no seu gasto do mês.</p>
                               </div>
-                            ))}
+                            )}
+
+                            {c
+                              ? c.items.map((item, idx) => (
+                                  <div key={idx} className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-500 font-medium">{item.quantity}x {item.itemNameSnapshot}</span>
+                                    <span className="text-gray-700 font-bold">{fmtBRL(item.subtotalInReais)}</span>
+                                  </div>
+                                ))
+                              : v!.items.map((item, idx) => (
+                                  <div key={idx} className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-500 font-medium">{item.quantity}x {item.productName}</span>
+                                    <span className="text-gray-700 font-bold">{fmtBRL(item.subtotalInReais)}</span>
+                                  </div>
+                                ))}
+
+                            {c
+                              ? <DetalhePagamento
+                                  pagamento={c}
+                                  total={c.totalInReais}
+                                  pointsAppliedInCents={c.pointsApplied}
+                                  discountInReais={c.discountInCents / 100}
+                                />
+                              : <DetalhePagamento
+                                  pagamento={v!}
+                                  total={v!.totalInReais}
+                                  discountInReais={v!.discountInReais}
+                                />}
                           </div>
                         )}
                       </div>

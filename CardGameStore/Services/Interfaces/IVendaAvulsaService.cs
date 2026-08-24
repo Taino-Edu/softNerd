@@ -20,6 +20,13 @@ public interface IVendaAvulsaService
     Task<IEnumerable<VendaAvulsaDto>> GetByUserAsync(Guid userId);
 
     /// <summary>
+    /// Como <see cref="GetByUserAsync"/>, mas mantém as vendas estornadas na lista.
+    /// Serve pro histórico que o próprio cliente enxerga: a compra estornada aparece
+    /// marcada como tal em vez de sumir. Não usar pra somar dinheiro — estorno não é receita.
+    /// </summary>
+    Task<IEnumerable<VendaAvulsaDto>> GetByUserComEstornadasAsync(Guid userId);
+
+    /// <summary>
     /// Agrega, por cliente identificado, as vendas do período/forma de pagamento pedidos.
     /// Todos os predicados vão pro MongoDB — não usar <see cref="GetRecentAsync"/> pra isso:
     /// ele corta nas N mais recentes ANTES de filtrar, o que faz o ranking perder histórico

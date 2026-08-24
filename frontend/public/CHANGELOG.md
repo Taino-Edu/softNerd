@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.28.0] — 2026-08-24
+
+### Adicionado
+- **Forma de pagamento no histórico do cliente**: cada compra no painel do cliente agora mostra como foi paga — um selo com "Pix", "Dinheiro", "Crediário", e "Pix + Cashback" quando o pagamento foi dividido. Ao abrir a compra, a conta aparece inteira: pontos aplicados, desconto e quanto saiu em cada forma de pagamento. Compra antiga, de antes do sistema guardar isso, diz "forma de pagamento não registrada" em vez de deixar o espaço em branco
+- **Compra no balcão aparece no histórico do cliente**: venda feita na frente de caixa com o cliente identificado só era visível pro admin — o cliente via só as comandas. Agora as duas coisas aparecem na mesma lista, em ordem de data, com ícone próprio pra cada origem. Venda de balcão sem cliente identificado continua fora, porque não tem a quem vincular
+- **Compra estornada aparece marcada, não some**: a compra desfeita pela loja fica na lista riscada, com selo "Estornada", a data e o motivo que a loja registrou — e não entra no "Gasto no Mês". Vale pra venda de balcão e pra comanda
+
+### Mudado
+- **"Gasto no Mês" do cliente agora soma comanda + balcão**: antes contava só comanda, então o total não batia com o que a própria tela mostrava
+
 ## [v1.27.4] — 2026-08-18
 
 ### Corrigido

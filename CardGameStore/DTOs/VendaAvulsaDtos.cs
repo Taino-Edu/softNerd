@@ -176,3 +176,35 @@ public class VendaAvulsaItemDto
     public decimal SubtotalInReais  { get; set; }
     public int     UnitCostInCents  { get; set; }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Venda de balcão como o próprio cliente vê no histórico dele.
+// Recorte deliberado do VendaAvulsaDto: fica de fora o custo do produto
+// (UnitCostInCents), quem operou o caixa e os dados fiscais/de estorno —
+// o cliente precisa saber o que comprou, quanto pagou e como pagou.
+// ─────────────────────────────────────────────────────────────────────────────
+public class MinhaCompraDto
+{
+    public string   Id                         { get; set; } = string.Empty;
+    public DateTime SoldAt                     { get; set; }
+    public string   PaymentMethod              { get; set; } = string.Empty;
+    public string?  SecondPaymentMethod        { get; set; }
+    public int      SecondPaymentAmountInCents { get; set; }
+    public decimal  TotalInReais               { get; set; }
+    public decimal  DiscountInReais            { get; set; }
+    public List<MinhaCompraItemDto> Items      { get; set; } = new();
+
+    /// <summary>Compra desfeita pela loja. Continua na lista, marcada — some da lista seria
+    /// exatamente o oposto do que o histórico serve pra provar.</summary>
+    public bool      Estornada          { get; set; }
+    public DateTime? EstornadaEm        { get; set; }
+    public string?   MotivoEstorno      { get; set; }
+}
+
+public class MinhaCompraItemDto
+{
+    public string  ProductName      { get; set; } = string.Empty;
+    public int     Quantity         { get; set; }
+    public decimal UnitPriceInReais { get; set; }
+    public decimal SubtotalInReais  { get; set; }
+}
