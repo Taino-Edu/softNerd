@@ -55,6 +55,16 @@ function pagamentoResumo(p: Pagamento): string | null {
     : pmLabel(p.paymentMethod)
 }
 
+/** Posição na ordem canônica dos métodos; o que não estiver na lista vai pro fim. */
+const ordemDaForma = (forma: string) => {
+  const i = COMANDA_PAYMENT_METHODS.findIndex(m => m.value === forma)
+  return i < 0 ? COMANDA_PAYMENT_METHODS.length : i
+}
+
+/** Uma compra "usou" a forma tanto no pagamento principal quanto no segundo. */
+const usouForma = (p: Pagamento, forma: string) =>
+  p.paymentMethod === forma || (temSegundoPagamento(p) && p.secondPaymentMethod === forma)
+
 /** Chip de forma de pagamento no cabeçalho do card do histórico. */
 function ChipPagamento({ pagamento }: { pagamento: Pagamento }) {
   const resumo = pagamentoResumo(pagamento)
@@ -123,6 +133,9 @@ function DetalhePagamento({ pagamento, total, pointsAppliedInCents = 0, discount
 type HistoricoItem =
   | { kind: 'comanda'; id: string; quando: number; comanda: ComandaDto }
   | { kind: 'balcao';  id: string; quando: number; compra: MinhaCompraDto }
+
+const pagamentoDe = (h: HistoricoItem): Pagamento =>
+  h.kind === 'comanda' ? h.comanda : h.compra
 
 function EditProfileModal({ profile, onClose, onSaved }: {
   profile: UserProfile
@@ -237,6 +250,7 @@ export default function PerfilPage() {
   const [loading,        setLoading]        = useState(true)
   const [expanded,       setExpanded]       = useState<string | null>(null)
   const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas' | 'notas'>('pontos')
+  const [filtroPagamento, setFiltroPagamento] = useState<string | null>(null)
   const [isUploading,    setIsUploading]    = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
   const [pixGroupId,     setPixGroupId]     = useState<string | null>(null)
@@ -312,6 +326,32 @@ export default function PerfilPage() {
       quando: new Date(v.soldAt).getTime(),
     })),
   ].sort((a, b) => b.quando - a.quando)
+
+  // Filtro por forma de pagamento: só entram os métodos que aparecem no histórico
+  // do cliente — chip de "Crediário" pra quem nunca comprou fiado é ruído.
+  // Compra dividida conta nas duas formas.
+  //
+  // As formas saem dos próprios dados, não da lista fixa: o fechamento de comanda
+  // grava a string que receber, sem passar por PaymentMethod.IsValid como a venda
+  // avulsa faz. Se aparecer um valor fora da lista, ele vira chip com o rótulo cru
+  // em vez de a compra sumir do filtro — que seria o oposto do que essa tela serve.
+  const formasUsadas = Array.from(new Set(
+    historico
+      .flatMap(h => {
+        const p = pagamentoDe(h)
+        return [p.paymentMethod, temSegundoPagamento(p) ? p.secondPaymentMethod : null]
+      })
+      .filter((f): f is string => !!f)
+  )).sort((a, b) => ordemDaForma(a) - ordemDaForma(b))
+
+  const historicoFiltrado = filtroPagamento
+    ? historico.filter(h => usouForma(pagamentoDe(h), filtroPagamento))
+    : historico
+
+  function aplicarFiltro(forma: string | null) {
+    setFiltroPagamento(forma)
+    setExpanded(null)   // o card aberto pode não estar no novo recorte
+  }
 
   async function handleLogout() {
     try { await authApi.logout() } catch {}
@@ -568,13 +608,56 @@ export default function PerfilPage() {
             {/* ── TAB: HISTÓRICO ── */}
             {tab === 'historico' && (
               <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {historico.length === 0 ? (
+                {formasUsadas.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    <button
+                      onClick={() => aplicarFiltro(null)}
+                      className={clsx(
+                        'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-tight transition-colors',
+                        filtroPagamento === null
+                          ? 'bg-[#42B6EE] border-[#42B6EE] text-white'
+                          : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50',
+                      )}
+                    >
+                      Tudo
+                    </button>
+                    {formasUsadas.map(forma => {
+                      const qtd = historico.filter(h => usouForma(pagamentoDe(h), forma)).length
+                      return (
+                        <button
+                          key={forma}
+                          onClick={() => aplicarFiltro(filtroPagamento === forma ? null : forma)}
+                          className={clsx(
+                            'shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-tight transition-colors',
+                            filtroPagamento === forma
+                              ? 'bg-[#42B6EE] border-[#42B6EE] text-white'
+                              : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50',
+                          )}
+                        >
+                          {pmLabel(forma)}
+                          <span className={clsx(
+                            'rounded-full px-1.5 text-[10px]',
+                            filtroPagamento === forma ? 'bg-white/25' : 'bg-gray-100 text-gray-400',
+                          )}>
+                            {qtd}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {historicoFiltrado.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
                     <Clock className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-                    <p className="text-sm text-gray-400 italic">Nenhum registro encontrado...</p>
+                    <p className="text-sm text-gray-400 italic">
+                      {filtroPagamento
+                        ? `Nenhuma compra paga com ${pmLabel(filtroPagamento)}...`
+                        : 'Nenhum registro encontrado...'}
+                    </p>
                   </div>
                 ) : (
-                  historico.map(h => {
+                  historicoFiltrado.map(h => {
                     const open = expanded === h.id
 
                     // Cada origem tem seu cabeçalho; o corpo (itens + pagamento) é o mesmo.

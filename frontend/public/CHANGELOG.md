@@ -5,6 +5,7 @@
 ### Adicionado
 - **Forma de pagamento no histórico do cliente**: cada compra no painel do cliente agora mostra como foi paga — um selo com "Pix", "Dinheiro", "Crediário", e "Pix + Cashback" quando o pagamento foi dividido. Ao abrir a compra, a conta aparece inteira: pontos aplicados, desconto e quanto saiu em cada forma de pagamento. Compra antiga, de antes do sistema guardar isso, diz "forma de pagamento não registrada" em vez de deixar o espaço em branco
 - **Compra no balcão aparece no histórico do cliente**: venda feita na frente de caixa com o cliente identificado só era visível pro admin — o cliente via só as comandas. Agora as duas coisas aparecem na mesma lista, em ordem de data, com ícone próprio pra cada origem. Venda de balcão sem cliente identificado continua fora, porque não tem a quem vincular
+- **Filtro por forma de pagamento no histórico**: uma barra de botões no topo da lista — "Tudo", "Pix", "Dinheiro", e por aí — pra ver só as compras pagas de um jeito, com a quantidade em cada um. Só aparecem as formas que o cliente realmente usou, e compra dividida conta nas duas (Pix + Cashback aparece nos dois filtros)
 - **Compra estornada aparece marcada, não some**: a compra desfeita pela loja fica na lista riscada, com selo "Estornada", a data e o motivo que a loja registrou — e não entra no "Gasto no Mês". Vale pra venda de balcão e pra comanda
 
 ### Mudado
