@@ -41,6 +41,23 @@ public sealed class TenantErpIntegrationController : ControllerBase
         catch (TenantErpApiException ex) { return IntegrationFailure(ex); }
     }
 
+    [HttpPost("financeiro/analisar")]
+    public async Task<IActionResult> AnalisarFinanceiro(
+        [FromBody] TenantErpFinancialAnalysisRequest request, CancellationToken ct)
+    {
+        try { return Ok(await _client.AnalyzeFinanceiroAsync(request, ct)); }
+        catch (TenantErpApiException ex) { return IntegrationFailure(ex); }
+    }
+
+    [HttpGet("fiscal/ibpt/{ncm}")]
+    public async Task<IActionResult> Ibpt(
+        string ncm, [FromQuery] string uf, [FromQuery] bool importado = false,
+        CancellationToken ct = default)
+    {
+        try { return Ok(await _client.GetIbptAsync(ncm, uf, importado, ct)); }
+        catch (TenantErpApiException ex) { return IntegrationFailure(ex); }
+    }
+
     private ObjectResult IntegrationFailure(TenantErpApiException ex) => StatusCode(
         ex.StatusCode is >= 400 and < 500 ? ex.StatusCode.Value : StatusCodes.Status502BadGateway,
         new { Message = ex.Message });

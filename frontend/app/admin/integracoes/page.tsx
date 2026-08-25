@@ -9,6 +9,7 @@ import clsx from 'clsx'
 import {
   CheckCircle, XCircle, Settings, Loader2, RefreshCw,
   Upload, Info, AlertTriangle, ExternalLink, X, Save, Link2,
+  Search,
 } from 'lucide-react'
 
 type IntegracaoStatus = {
@@ -42,6 +43,12 @@ type TenantErpProbe = {
   financeiro: { success: boolean; statusCode?: number; message: string }
   fiscal: { success: boolean; statusCode?: number; message: string }
   durationMs: number
+}
+
+type IbptResult = {
+  ncm: string; uf: string; importado: boolean
+  percentualFederal: number; percentualEstadual: number; percentualMunicipal: number; percentualTotal: number
+  fonte?: string; versao?: string; vigenciaInicio?: string; vigenciaFim?: string; vencida: boolean
 }
 
 const INTEGRACAO_INFO: Record<string, {
@@ -96,6 +103,11 @@ export default function IntegracoesPage() {
   const [tenantErp, setTenantErp] = useState<TenantErpStatus>({ enabled: false })
   const [tenantErpProbe, setTenantErpProbe] = useState<TenantErpProbe | null>(null)
   const [testingTenantErp, setTestingTenantErp] = useState(false)
+  const [ibptNcm, setIbptNcm] = useState('')
+  const [ibptUf, setIbptUf] = useState('SP')
+  const [ibptImportado, setIbptImportado] = useState(false)
+  const [ibptLoading, setIbptLoading] = useState(false)
+  const [ibptResult, setIbptResult] = useState<IbptResult | null>(null)
   const [sefazProximaConsultaEm, setSefazProximaConsultaEm] = useState<string | null>(null)
   const [agora, setAgora] = useState(() => Date.now())
 
@@ -228,6 +240,26 @@ export default function IntegracoesPage() {
     }
   }
 
+  async function lookupIbpt() {
+    const ncm = ibptNcm.replace(/\D/g, '')
+    if (ncm.length !== 8) {
+      toast.error('Informe os 8 dígitos do NCM.')
+      return
+    }
+    setIbptLoading(true)
+    setIbptResult(null)
+    try {
+      const { data } = await api.get<IbptResult>(`/api/integrations/tenant-erp/fiscal/ibpt/${ncm}`, {
+        params: { uf: ibptUf, importado: ibptImportado },
+      })
+      setIbptResult(data)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'NCM não encontrado na tabela IBPT publicada.')
+    } finally {
+      setIbptLoading(false)
+    }
+  }
+
   async function handleOfxUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -301,6 +333,35 @@ export default function IntegracoesPage() {
                   : <RefreshCw className="w-3.5 h-3.5" />}
                 {testingTenantErp ? 'Testando conexão…' : 'Testar conexão'}
               </button>
+
+              <div className="mt-4 border-t border-surface-600 pt-4">
+                <p className="text-xs font-semibold uppercase text-gray-500">Consulta fiscal IBPT</p>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_90px_auto_auto]">
+                  <input value={ibptNcm} onChange={event => setIbptNcm(event.target.value)} inputMode="numeric" maxLength={10} placeholder="NCM, ex.: 95044000" className="input w-full" />
+                  <select value={ibptUf} onChange={event => setIbptUf(event.target.value)} className="input w-full">
+                    {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => <option key={uf}>{uf}</option>)}
+                  </select>
+                  <label className="flex items-center gap-2 rounded-lg border border-surface-500 bg-surface-700 px-3 text-xs text-gray-300">
+                    <input type="checkbox" checked={ibptImportado} onChange={event => setIbptImportado(event.target.checked)} /> Importado
+                  </label>
+                  <button onClick={lookupIbpt} disabled={!tenantErp.enabled || ibptLoading} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/20 px-3 py-2 text-sm text-brand-300 disabled:opacity-50">
+                    {ibptLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Consultar
+                  </button>
+                </div>
+                {ibptResult && (
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                    {[
+                      ['Federal', ibptResult.percentualFederal], ['Estadual', ibptResult.percentualEstadual],
+                      ['Municipal', ibptResult.percentualMunicipal], ['Total', ibptResult.percentualTotal],
+                    ].map(([label, value]) => (
+                      <div key={label as string} className="rounded-lg bg-surface-700 p-2">
+                        <p className="text-gray-500">{label as string}</p><p className="text-base font-bold text-white">{Number(value).toFixed(2)}%</p>
+                      </div>
+                    ))}
+                    <p className="col-span-full text-gray-500">Versão {ibptResult.versao ?? 'não informada'} · {ibptResult.fonte ?? 'IBPT'}{ibptResult.vencida ? ' · tabela vencida' : ''}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

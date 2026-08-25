@@ -401,10 +401,14 @@ const SECOES: Secao[] = [
       { t: 'Curva ABC', d: 'Classifica automaticamente os produtos pela contribuição na receita: A = top 80% (produtos mais importantes), B = 80–95%, C = restante. Use para decidir o que priorizar no estoque.' },
       { t: 'Gráfico de Pareto', d: 'Visualização da Curva ABC com barras coloridas por classe e linha de acumulado. Linhas de referência nos 80% e 95% facilitam a leitura.' },
       { t: 'Filtros na Curva ABC', d: 'Clique em qualquer badge de classe (A, B ou C) ou em uma categoria para filtrar a tabela. Clique novamente para limpar o filtro.' },
+      { t: 'Análise inteligente', d: 'No topo do Financeiro, clique em Análise inteligente. Informe despesas fixas, despesas variáveis e o total vencido. A 3ESysten calcula margem bruta, markup, resultado operacional, ponto de equilíbrio e ações recomendadas sem copiar clientes ou vendas para outro banco.' },
+      { t: 'Margem e markup', d: 'Margem é o ganho em relação ao preço de venda. Markup é o ganho em relação ao custo. Eles usam bases diferentes e por isso os percentuais não são iguais.' },
+      { t: 'Ajuda contextual', d: 'Dentro da Análise inteligente, clique no ícone ? para rever o significado dos indicadores e das despesas usadas no cálculo.' },
     ],
     dicas: [
       'Classe A = poucos produtos que respondem por 80% da receita — são os que nunca podem faltar no estoque.',
       'O mini filtro de período abaixo do gráfico atualiza os dados sem disparar uma nova requisição separada — usa o mesmo estado do filtro do topo.',
+      'Quanto mais completas forem as despesas informadas, mais fiel será o resultado operacional e o ponto de equilíbrio.',
     ],
   },
   {
@@ -417,6 +421,7 @@ const SECOES: Secao[] = [
       { t: 'Certificado digital A1', d: 'Envie o arquivo .pfx do certificado A1 e a senha. O sistema valida e guarda criptografado — nunca aparece de novo em texto puro depois de salvo.' },
       { t: 'Natureza de Operação', d: 'Cadastre CFOP/CSOSN uma vez (ex: "Venda dentro do estado") e marque uma como padrão. Produtos sem natureza específica usam a padrão automaticamente.' },
       { t: 'NCM é obrigatório', d: 'Todo produto vendido por NFC-e precisa ter o NCM cadastrado (Admin → Estoque), copiado da nota fiscal de compra do produto — o sistema nunca inventa ou sugere um NCM sozinho.' },
+      { t: 'Consulta IBPT integrada', d: 'Em Admin → Integrações, informe NCM, UF e se o item é importado para consultar os percentuais federal, estadual, municipal e total da tabela IBPT publicada pela 3ESysten.' },
       { t: 'Emissão não é mais automática', d: 'Ao fechar uma comanda ou registrar uma venda avulsa, a nota só é emitida se você marcar o checkbox "Emitir cupom fiscal" no momento do fechamento — o sistema não emite nota sozinho sem perguntar.' },
       { t: 'Formas de pagamento com auto-emissão', d: 'Em Fiscal → Emissão automática, marque quais formas de pagamento (Pix, Dinheiro, Cartão...) vêm com o checkbox já pré-marcado no fechamento. Por padrão nenhuma vem marcada — é sempre uma escolha explícita até você configurar isso.' },
       { t: 'Emitir nota depois (manual)', d: 'Se a venda foi fechada sem nota, use o botão "Emitir nota fiscal" no histórico da comanda ou no detalhe da venda avulsa a qualquer momento depois.' },

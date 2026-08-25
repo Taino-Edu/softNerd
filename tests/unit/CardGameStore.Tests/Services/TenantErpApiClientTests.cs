@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using CardGameStore.Configuration;
 using CardGameStore.Services.Implementations;
+using CardGameStore.Services.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -141,6 +142,66 @@ public sealed class TenantErpApiClientTests
         await Task.WhenAll(calls);
 
         tokenCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task FinancialAnalysis_SendsAggregatedSnapshotToIntegrationEndpoint()
+    {
+        string? body = null;
+        var handler = new StubHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+                return Json(HttpStatusCode.OK, """{"access_token":"token","expires_in":900}""");
+
+            request.Method.Should().Be(HttpMethod.Post);
+            request.RequestUri.AbsolutePath.Should().Be("/api/integrations/services/financeiro/analisar");
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return Json(HttpStatusCode.OK, """{"formulaVersion":"2026.08.1"}""");
+        });
+        var client = CreateClient(handler);
+
+        await client.AnalyzeFinanceiroAsync(new TenantErpFinancialAnalysisRequest(
+            null, null, 1_000m, 600m, 50m, 100m, 200m, 20m, 35m,
+            [new TenantErpFinancialProductRequest("Produto A", 2, 200m, 120m)]), default);
+
+        body.Should().Contain("\"receita\":1000");
+        body.Should().Contain("\"nome\":\"Produto A\"");
+        body.Should().NotContain("cliente");
+    }
+
+    [Fact]
+    public async Task IbptLookup_SendsNcmUfAndOriginToFiscalEndpoint()
+    {
+        Uri? requestedUri = null;
+        var handler = new StubHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+                return Json(HttpStatusCode.OK, """{"access_token":"token","expires_in":900}""");
+
+            requestedUri = request.RequestUri;
+            return Json(HttpStatusCode.OK, """{"ncm":"95044000"}""");
+        });
+        var client = CreateClient(handler);
+
+        await client.GetIbptAsync("9504.40.00", "SP", true, default);
+
+        requestedUri!.AbsolutePath.Should().Be("/api/integrations/services/fiscal/ibpt/9504.40.00");
+        requestedUri.Query.Should().Contain("uf=SP").And.Contain("importado=true");
+    }
+
+    [Fact]
+    public async Task IbptLookup_WhenCatalogHasNoMatch_ReturnsUsefulMessage()
+    {
+        var handler = new StubHandler(request => request.RequestUri!.AbsolutePath.EndsWith("/token")
+            ? Json(HttpStatusCode.OK, """{"access_token":"token","expires_in":900}""")
+            : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var client = CreateClient(handler);
+
+        var action = () => client.GetIbptAsync("95044000", "SP", false, default);
+
+        var error = await action.Should().ThrowAsync<TenantErpApiException>();
+        error.Which.StatusCode.Should().Be(404);
+        error.Which.Message.Should().Contain("NCM nao encontrado");
     }
 
     private static TenantErpApiClient CreateClient(StubHandler handler, bool enabled = true)

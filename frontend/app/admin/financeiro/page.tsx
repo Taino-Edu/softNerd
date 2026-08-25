@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { analyticsApi, vendaAvulsaApi, FinanceiroDto, FormaPagamentoTotalDto, PagamentoCrediarioPeriodoDto, AberturaCrediarioPeriodoDto, ExtratoDto, ExtratoLinhaDto } from '@/lib/api'
+import { api, analyticsApi, vendaAvulsaApi, FinanceiroDto, FormaPagamentoTotalDto, PagamentoCrediarioPeriodoDto, AberturaCrediarioPeriodoDto, ExtratoDto, ExtratoLinhaDto } from '@/lib/api'
 import { gerarRelatorioPDF } from '@/lib/relatorio'
 import toast from 'react-hot-toast'
 import {
@@ -8,7 +8,7 @@ import {
   RefreshCw, Printer, Package, ShoppingBag, BarChart2,
   Banknote, CreditCard, QrCode, Receipt, ChevronDown, ChevronUp,
   Store, ShoppingCart, X, Search, Star, Wallet, Filter, Trophy, Globe,
-  FileText, Lightbulb, ArrowUp, ArrowDown, Minus, Loader2,
+  FileText, Lightbulb, ArrowUp, ArrowDown, Minus, Loader2, Sparkles, CircleHelp,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -22,6 +22,17 @@ function fmt(v: number) {
 function fmtShort(v: number) {
   if (v >= 1000) return `R$${(v / 1000).toFixed(1)}k`
   return `R$${v.toFixed(0)}`
+}
+
+interface IntelligentAnalysis {
+  formulaVersion: string
+  summary: {
+    lucroBruto: number; margemBrutaPercent: number; markupPercent: number
+    margemContribuicao: number; margemContribuicaoPercent: number
+    resultadoOperacional: number; pontoEquilibrioReceita: number | null
+    margemSeguranca: number | null; inadimplenciaPercent: number
+  }
+  insights: { code: string; severity: 'success' | 'info' | 'warning' | 'critical'; title: string; message: string; action: string }[]
 }
 
 // ── Formas de pagamento ───────────────────────────────────────────────────────
@@ -1335,6 +1346,13 @@ export default function FinanceiroPage() {
   const [loading,     setLoading]     = useState(true)
   const [exporting,   setExporting]   = useState(false)
   const [backfilling, setBackfilling] = useState(false)
+  const [analysisOpen, setAnalysisOpen] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysis, setAnalysis] = useState<IntelligentAnalysis | null>(null)
+  const [analysisHelp, setAnalysisHelp] = useState(false)
+  const [fixedExpenses, setFixedExpenses] = useState('0')
+  const [variableExpenses, setVariableExpenses] = useState('0')
+  const [overdueReceivables, setOverdueReceivables] = useState('0')
   const [kpiModal,   setKpiModal]   = useState<string | null>(null)
   const [targetPct,  setTargetPct]  = useState(40)
   const [tableView,  setTableView]  = useState<'simples' | 'analise' | 'abc'>('analise')
@@ -1394,6 +1412,37 @@ export default function FinanceiroPage() {
   function applyCustom() {
     setPreset('custom')
     load(inicio, fim, filterPaymentMethod)
+  }
+
+  async function runIntelligentAnalysis() {
+    if (!data) return
+    const decimal = (value: string) => Math.max(0, Number(value.replace(',', '.')) || 0)
+    const overdue = Math.min(decimal(overdueReceivables), data.crediarios)
+    setAnalyzing(true)
+    try {
+      const response = await api.post<IntelligentAnalysis>('/api/integrations/tenant-erp/financeiro/analisar', {
+        inicio,
+        fim,
+        receita: data.receita,
+        custoProdutos: data.custo,
+        despesasVariaveis: decimal(variableExpenses),
+        despesasFixas: decimal(fixedExpenses),
+        recebiveisEmAberto: data.crediarios,
+        recebiveisVencidos: overdue,
+        margemAlvoPercent: targetPct,
+        produtos: data.topProdutos.slice(0, 100).map(product => ({
+          nome: product.nome,
+          quantidadeVendida: product.qtd,
+          receita: product.receita,
+          custo: product.custo,
+        })),
+      })
+      setAnalysis(response.data)
+    } catch {
+      toast.error('Não foi possível gerar a análise inteligente')
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   const d = data
@@ -1603,6 +1652,75 @@ export default function FinanceiroPage() {
       {/* Modal de detalhe do dia */}
       {dayModal && <DayDetailModal day={dayModal} onClose={() => setDayModal(null)} />}
 
+      {analysisOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 print:hidden" onMouseDown={() => setAnalysisOpen(false)}>
+          <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-surface-500 bg-surface-800 shadow-2xl" onMouseDown={event => event.stopPropagation()}>
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-surface-600 bg-surface-800 px-5 py-4">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-white"><Sparkles className="h-5 w-5 text-brand-400" />Análise inteligente</h2>
+                <p className="mt-0.5 text-xs text-gray-400">Indicadores calculados pela 3ESysten com os totais deste período.</p>
+              </div>
+              <div className="flex items-center">
+                <button className="p-2 text-gray-400 hover:text-white" title="Entender os indicadores" onClick={() => setAnalysisHelp(value => !value)}><CircleHelp className="h-5 w-5" /></button>
+                <button className="p-2 text-gray-400 hover:text-white" title="Fechar" onClick={() => setAnalysisOpen(false)}><X className="h-5 w-5" /></button>
+              </div>
+            </div>
+
+            <div className="space-y-5 p-5">
+              {analysisHelp && (
+                <div className="rounded-lg border border-brand-500/30 bg-brand-500/10 p-3 text-xs leading-relaxed text-gray-300">
+                  <strong className="text-white">Margem</strong> mede o lucro sobre o preço vendido; <strong className="text-white">markup</strong> mede o ganho sobre o custo. Despesas variáveis acompanham as vendas, enquanto despesas fixas existem mesmo sem vender. O ponto de equilíbrio é a receita mínima estimada para cobrir todos esses valores.
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  ['Despesas fixas', fixedExpenses, setFixedExpenses],
+                  ['Despesas variáveis', variableExpenses, setVariableExpenses],
+                  ['Recebíveis vencidos', overdueReceivables, setOverdueReceivables],
+                ].map(([label, value, setter]) => (
+                  <label key={label as string} className="text-xs text-gray-400">
+                    {label as string}
+                    <input type="text" inputMode="decimal" value={value as string} onChange={event => (setter as (value: string) => void)(event.target.value)} className="mt-1 w-full rounded-lg border border-surface-500 bg-surface-900 px-3 py-2 text-sm text-white outline-none focus:border-brand-500" />
+                  </label>
+                ))}
+              </div>
+              <button onClick={runIntelligentAnalysis} disabled={analyzing || !d} className="btn-primary w-full justify-center">
+                {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {analyzing ? 'Analisando...' : 'Gerar análise'}
+              </button>
+
+              {analysis && (
+                <>
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    {[
+                      ['Margem bruta', `${analysis.summary.margemBrutaPercent.toFixed(1)}%`],
+                      ['Markup', `${analysis.summary.markupPercent.toFixed(1)}%`],
+                      ['Resultado', fmt(analysis.summary.resultadoOperacional)],
+                      ['Ponto de equilíbrio', analysis.summary.pontoEquilibrioReceita == null ? 'Não calculável' : fmt(analysis.summary.pontoEquilibrioReceita)],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg border border-surface-600 bg-surface-900 p-3">
+                        <p className="text-[11px] text-gray-500">{label}</p>
+                        <p className="mt-1 text-base font-bold text-white">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    {analysis.insights.map(insight => (
+                      <div key={insight.code} className={clsx('rounded-lg border p-3', insight.severity === 'critical' ? 'border-red-500/40 bg-red-500/10' : insight.severity === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-brand-500/30 bg-brand-500/10')}>
+                        <p className="text-sm font-semibold text-white">{insight.title}</p>
+                        <p className="mt-1 text-xs text-gray-300">{insight.message}</p>
+                        <p className="mt-2 text-xs font-medium text-brand-300">Próxima ação: {insight.action}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-right text-[10px] text-gray-600">Fórmulas {analysis.formulaVersion}</p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <div>
@@ -1610,6 +1728,10 @@ export default function FinanceiroPage() {
           <p className="text-gray-400 text-sm mt-0.5">Receita, custo e margem do período</p>
         </div>
         <div className="flex gap-2">
+          <button onClick={() => setAnalysisOpen(true)} disabled={!d} className="btn-secondary text-sm print:hidden" title="Calcular markup, resultado e ponto de equilíbrio">
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Análise inteligente</span>
+          </button>
           <button
             onClick={async () => {
               if (!d) return

@@ -49,6 +49,29 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
     public Task<JsonElement> GetFiscalSaudeAsync(CancellationToken ct) =>
         GetJsonAsync("api/fiscal/saude", ct);
 
+    public Task<JsonElement> AnalyzeFinanceiroAsync(
+        TenantErpFinancialAnalysisRequest request, CancellationToken ct) =>
+        SendJsonAsync(HttpMethod.Post, "api/integrations/services/financeiro/analisar", request, ct);
+
+    public async Task<JsonElement> GetIbptAsync(string ncm, string uf, bool importado, CancellationToken ct)
+    {
+        var path = QueryHelpers.AddQueryString(
+            $"api/integrations/services/fiscal/ibpt/{Uri.EscapeDataString(ncm)}",
+            new Dictionary<string, string?>
+            {
+                ["uf"] = uf,
+                ["importado"] = importado.ToString().ToLowerInvariant(),
+            });
+        try
+        {
+            return await GetJsonAsync(path, ct);
+        }
+        catch (TenantErpApiException ex) when (ex.StatusCode == 404)
+        {
+            throw new TenantErpApiException("NCM nao encontrado na tabela IBPT publicada para a UF e origem informadas.", 404);
+        }
+    }
+
     public async Task<TenantErpProbeResult> ProbeAsync(CancellationToken ct)
     {
         if (!IsConfigured)
@@ -94,13 +117,17 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
     }
 
     private async Task<JsonElement> GetJsonAsync(string relativePath, CancellationToken ct)
+        => await SendJsonAsync(HttpMethod.Get, relativePath, null, ct);
+
+    private async Task<JsonElement> SendJsonAsync(
+        HttpMethod method, string relativePath, object? body, CancellationToken ct)
     {
         EnsureConfigured();
-        var attempt = await SendAuthenticatedAsync(relativePath, false, null, ct);
+        var attempt = await SendAuthenticatedAsync(method, relativePath, body, false, null, ct);
         if (attempt.Response.StatusCode == HttpStatusCode.Unauthorized)
         {
             attempt.Response.Dispose();
-            attempt = await SendAuthenticatedAsync(relativePath, true, attempt.Token, ct);
+            attempt = await SendAuthenticatedAsync(method, relativePath, body, true, attempt.Token, ct);
         }
 
         using (attempt.Response)
@@ -115,11 +142,14 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
     }
 
     private async Task<(HttpResponseMessage Response, string Token)> SendAuthenticatedAsync(
-        string relativePath, bool forceRefresh, string? rejectedToken, CancellationToken ct)
+        HttpMethod method, string relativePath, object? body,
+        bool forceRefresh, string? rejectedToken, CancellationToken ct)
     {
         var token = await GetAccessTokenAsync(forceRefresh, rejectedToken, ct);
-        using var request = new HttpRequestMessage(HttpMethod.Get, BuildUri(relativePath));
+        using var request = new HttpRequestMessage(method, BuildUri(relativePath));
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (body is not null)
+            request.Content = JsonContent.Create(body);
         try
         {
             var response = await _httpClientFactory.CreateClient(HttpClientName)
@@ -201,6 +231,7 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
 
     private static TenantErpApiException UpstreamFailure(HttpStatusCode statusCode) => statusCode switch
     {
+        HttpStatusCode.BadRequest => new("Os dados enviados foram recusados pelo Tenant-ERP.", 400),
         HttpStatusCode.Forbidden => new("Escopo ou modulo recusado pelo Tenant-ERP.", 403),
         HttpStatusCode.NotFound => new("Tenant ou rota nao encontrado no Tenant-ERP.", 404),
         _ => new("Tenant-ERP retornou uma falha temporaria.", (int)statusCode),
