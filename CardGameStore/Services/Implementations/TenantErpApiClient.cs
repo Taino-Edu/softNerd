@@ -69,10 +69,13 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
             return new TenantErpProbeResult(true, false, failed, failed, stopwatch.ElapsedMilliseconds);
         }
 
-        var inicio = DateTime.UtcNow.Date.AddDays(-7);
-        var fim = DateTime.UtcNow.Date;
-        var financeiro = await ProbeEndpointAsync(() => GetFinanceiroAsync(inicio, fim, ct));
-        var fiscal = await ProbeEndpointAsync(() => GetFiscalSaudeAsync(ct));
+        // Tenant externo mantém os dados operacionais no Soft Nerd. O teste da
+        // conexão valida autenticação e escopos sem consultar um schema central
+        // vazio nem sugerir que vendas/estoque foram sincronizados.
+        var financeiro = await ProbeEndpointAsync(() =>
+            GetJsonAsync("api/integrations/capabilities/financeiro", ct));
+        var fiscal = await ProbeEndpointAsync(() =>
+            GetJsonAsync("api/integrations/capabilities/fiscal", ct));
         stopwatch.Stop();
         return new TenantErpProbeResult(true, true, financeiro, fiscal, stopwatch.ElapsedMilliseconds);
     }

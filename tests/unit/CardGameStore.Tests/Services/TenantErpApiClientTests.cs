@@ -92,6 +92,30 @@ public sealed class TenantErpApiClientTests
     }
 
     [Fact]
+    public async Task Probe_ValidatesCatalogCapabilitiesWithoutReadingCentralTenantSchema()
+    {
+        var requestedPaths = new List<string>();
+        var handler = new StubHandler(request =>
+        {
+            requestedPaths.Add(request.RequestUri!.AbsolutePath);
+            return request.RequestUri.AbsolutePath == "/api/integrations/token"
+                ? Json(HttpStatusCode.OK, """{"access_token":"token","expires_in":900}""")
+                : Json(HttpStatusCode.OK, """{"dataResidency":"ExternalSystem"}""");
+        });
+        var client = CreateClient(handler);
+
+        var result = await client.ProbeAsync(default);
+
+        result.Authenticated.Should().BeTrue();
+        result.Financeiro.Success.Should().BeTrue();
+        result.Fiscal.Success.Should().BeTrue();
+        requestedPaths.Should().Contain("/api/integrations/capabilities/financeiro");
+        requestedPaths.Should().Contain("/api/integrations/capabilities/fiscal");
+        requestedPaths.Should().NotContain("/api/analytics/financeiro");
+        requestedPaths.Should().NotContain("/api/fiscal/saude");
+    }
+
+    [Fact]
     public async Task ConcurrentUnauthorizedResponses_ShareSingleTokenRefresh()
     {
         var tokenCalls = 0;

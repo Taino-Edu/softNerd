@@ -278,15 +278,15 @@ export default function IntegracoesPage() {
                 {tenantErp.endpoint && <span className="text-xs text-gray-500 ml-auto">{tenantErp.endpoint}</span>}
               </div>
               <p className="text-sm text-gray-400 mt-1">
-                Canal seguro para consultar indicadores financeiros e a saúde fiscal da loja.
+                Canal técnico com a 3ESysten. Os dados da loja continuam no banco do Soft Nerd.
               </p>
               {tenantErpProbe && (
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
                   <span className={tenantErpProbe.financeiro.success ? 'text-green-400' : 'text-amber-400'}>
-                    Financeiro: {tenantErpProbe.financeiro.success ? 'acesso confirmado' : tenantErpProbe.financeiro.message}
+                    Financeiro: {tenantErpProbe.financeiro.success ? 'escopo confirmado' : tenantErpProbe.financeiro.message}
                   </span>
                   <span className={tenantErpProbe.fiscal.success ? 'text-green-400' : 'text-amber-400'}>
-                    Fiscal: {tenantErpProbe.fiscal.success ? 'acesso confirmado' : tenantErpProbe.fiscal.message}
+                    Fiscal: {tenantErpProbe.fiscal.success ? 'escopo confirmado' : tenantErpProbe.fiscal.message}
                   </span>
                   <span className="text-gray-500">{tenantErpProbe.durationMs} ms</span>
                 </div>
