@@ -112,6 +112,11 @@ services:
       # Integrações
       GeminiSettings__ApiKey: "${GEMINI_API_KEY}"
       TcgSettings__PokemonApiKey: "${POKEMON_API_KEY:-}"
+      # Tenant-ERP — credencial tecnica criada no dominio da loja
+      TenantErp__Enabled: "${TENANT_ERP_ENABLED:-false}"
+      TenantErp__BaseUrl: "${TENANT_ERP_BASE_URL:-}"
+      TenantErp__ClientId: "${TENANT_ERP_CLIENT_ID:-}"
+      TenantErp__ClientSecret: "${TENANT_ERP_CLIENT_SECRET:-}"
       # Inter PJ — certificado mTLS (Client ID/Secret são salvos via /admin/integracoes)
       Inter__CertificatePath: "/app/certs/inter/inter.crt"
       Inter__KeyPath: "/app/certs/inter/inter.key"

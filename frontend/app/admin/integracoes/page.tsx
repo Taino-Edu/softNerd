@@ -8,7 +8,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   CheckCircle, XCircle, Settings, Loader2, RefreshCw,
-  Upload, Info, AlertTriangle, ExternalLink, X, Save,
+  Upload, Info, AlertTriangle, ExternalLink, X, Save, Link2,
 } from 'lucide-react'
 
 type IntegracaoStatus = {
@@ -29,6 +29,19 @@ type ConfigModal = {
   pixKey: string
   certOk?: boolean
   certUploading?: boolean
+}
+
+type TenantErpStatus = {
+  enabled: boolean
+  endpoint?: string
+}
+
+type TenantErpProbe = {
+  configured: boolean
+  authenticated: boolean
+  financeiro: { success: boolean; statusCode?: number; message: string }
+  fiscal: { success: boolean; statusCode?: number; message: string }
+  durationMs: number
 }
 
 const INTEGRACAO_INFO: Record<string, {
@@ -80,6 +93,9 @@ export default function IntegracoesPage() {
   const [ofxLoading,  setOfxLoading]  = useState(false)
   const [syncingInter, setSyncingInter] = useState(false)
   const [syncingSefaz, setSyncingSefaz] = useState(false)
+  const [tenantErp, setTenantErp] = useState<TenantErpStatus>({ enabled: false })
+  const [tenantErpProbe, setTenantErpProbe] = useState<TenantErpProbe | null>(null)
+  const [testingTenantErp, setTestingTenantErp] = useState(false)
   const [sefazProximaConsultaEm, setSefazProximaConsultaEm] = useState<string | null>(null)
   const [agora, setAgora] = useState(() => Date.now())
 
@@ -91,13 +107,15 @@ export default function IntegracoesPage() {
   async function load() {
     setLoading(true)
     try {
-      const [{ data: ints }, { data: sefaz }] = await Promise.all([
+      const [{ data: ints }, { data: sefaz }, tenantErpResponse] = await Promise.all([
         api.get('/api/contas-receber/integracoes'),
         api.get('/api/contas-receber/sefaz-status'),
+        api.get<TenantErpStatus>('/api/integrations/tenant-erp/status').catch(() => null),
       ])
       setIntegracoes(ints)
       setSefazOk(sefaz.configured)
       setSefazProximaConsultaEm(sefaz.proximaConsultaEm ?? null)
+      if (tenantErpResponse) setTenantErp(tenantErpResponse.data)
     } catch { toast.error('Erro ao carregar integrações') }
     finally  { setLoading(false) }
   }
@@ -192,6 +210,24 @@ export default function IntegracoesPage() {
     }
   }
 
+  async function testTenantErp() {
+    setTestingTenantErp(true)
+    try {
+      const { data } = await api.post<TenantErpProbe>('/api/integrations/tenant-erp/test')
+      setTenantErpProbe(data)
+      if (data.authenticated && data.financeiro.success && data.fiscal.success)
+        toast.success('Tenant-ERP conectado ao Financeiro e Fiscal.')
+      else if (data.authenticated)
+        toast.error('Autenticação aceita, mas há escopo ou módulo pendente.')
+      else
+        toast.error(data.financeiro.message || 'Credencial recusada pelo Tenant-ERP.')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Não foi possível testar o Tenant-ERP.')
+    } finally {
+      setTestingTenantErp(false)
+    }
+  }
+
   async function handleOfxUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -231,6 +267,43 @@ export default function IntegracoesPage() {
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
       ) : (
         <div className="flex flex-col gap-4">
+          <div className={clsx('card p-5 flex gap-4', tenantErpProbe?.authenticated && 'border-green-500/20')}>
+            <Link2 className="w-7 h-7 text-brand-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-white">Tenant-ERP</h3>
+                <Badge tone={tenantErpProbe?.authenticated ? 'success' : 'neutral'} className="uppercase">
+                  {tenantErpProbe?.authenticated ? 'Conectado' : tenantErp.enabled ? 'Configurado' : 'Não configurado'}
+                </Badge>
+                {tenantErp.endpoint && <span className="text-xs text-gray-500 ml-auto">{tenantErp.endpoint}</span>}
+              </div>
+              <p className="text-sm text-gray-400 mt-1">
+                Canal seguro para consultar indicadores financeiros e a saúde fiscal da loja.
+              </p>
+              {tenantErpProbe && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
+                  <span className={tenantErpProbe.financeiro.success ? 'text-green-400' : 'text-amber-400'}>
+                    Financeiro: {tenantErpProbe.financeiro.success ? 'acesso confirmado' : tenantErpProbe.financeiro.message}
+                  </span>
+                  <span className={tenantErpProbe.fiscal.success ? 'text-green-400' : 'text-amber-400'}>
+                    Fiscal: {tenantErpProbe.fiscal.success ? 'acesso confirmado' : tenantErpProbe.fiscal.message}
+                  </span>
+                  <span className="text-gray-500">{tenantErpProbe.durationMs} ms</span>
+                </div>
+              )}
+              <button
+                onClick={testTenantErp}
+                disabled={!tenantErp.enabled || testingTenantErp}
+                className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30
+                           border border-brand-500/30 text-sm text-brand-300 transition-colors disabled:opacity-50">
+                {testingTenantErp
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <RefreshCw className="w-3.5 h-3.5" />}
+                {testingTenantErp ? 'Testando conexão…' : 'Testar conexão'}
+              </button>
+            </div>
+          </div>
+
           {/* Cards de integrações */}
           {integracoes.map(int => {
             const info = INTEGRACAO_INFO[int.source]

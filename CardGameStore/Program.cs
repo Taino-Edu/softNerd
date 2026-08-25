@@ -50,6 +50,13 @@ var mongoSettings = builder.Configuration.GetSection("MongoDbSettings").Get<Mong
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
+builder.Services.AddOptions<TenantErpIntegrationOptions>()
+    .Bind(builder.Configuration.GetSection(TenantErpIntegrationOptions.SectionName))
+    .Validate(options => !options.Enabled || options.IsConfigured,
+        "TenantErp habilitado exige BaseUrl, ClientId e ClientSecret validos.")
+    .Validate(options => options.TimeoutSeconds is >= 2 and <= 120,
+        "TenantErp:TimeoutSeconds deve ficar entre 2 e 120.")
+    .ValidateOnStart();
 
 // ---------------------------------------------------------------------------
 // 2. BANCO RELACIONAL — SQLite (dev local) ou PostgreSQL (produção/Docker)
@@ -330,6 +337,14 @@ builder.Services.AddHttpClient("gemini", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+builder.Services.AddHttpClient(TenantErpApiClient.HttpClientName, (services, client) =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<TenantErpIntegrationOptions>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "SoftNerd/TenantErpIntegration");
+});
+
 // ---------------------------------------------------------------------------
 // 10. HEALTH CHECKS — Postgres + MongoDB via IHealthCheck com injeção correta
 // ---------------------------------------------------------------------------
@@ -354,6 +369,7 @@ builder.Services.AddScoped<IAiChatService,       GeminiChatService>();
 builder.Services.AddSingleton<ITcgApiClient,     TcgApiClient>();
 builder.Services.AddSingleton<ITcgService,       TcgService>();
 builder.Services.AddSingleton<CurrencyService>();
+builder.Services.AddSingleton<ITenantErpApiClient, TenantErpApiClient>();
 builder.Services.AddMemoryCache();
 
 // LGPD — Auditoria e privacidade
