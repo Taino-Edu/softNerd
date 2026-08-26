@@ -199,6 +199,11 @@ public class AppDbContext : DbContext
                   .IsUnique()
                   .HasFilter("chave_acesso IS NOT NULL")
                   .HasDatabaseName("ix_notas_fiscais_chave_acesso");
+
+            entity.HasIndex(n => n.CentralFiscalNoteId)
+                  .IsUnique()
+                  .HasFilter("central_fiscal_note_id IS NOT NULL")
+                  .HasDatabaseName("ix_notas_fiscais_central_note");
         });
 
         // =====================================================================

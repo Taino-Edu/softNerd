@@ -37,6 +37,7 @@ const SECOES: Secao[] = [
     titulo: 'Painel Geral (Dashboard)',
     cor: '#00F0A8',
     itens: [
+      { t: 'Motor fiscal central', d: 'Quando a faixa "Motor fiscal central ativo" aparece, o Soft Nerd envia o snapshot da venda para o Tenant ERP. Certificado, numeração, XML, contingência e SEFAZ ficam no motor central; venda, estoque e caixa continuam somente no Soft Nerd.' },
       { t: 'Comandas em destaque', d: 'Ao abrir o dashboard, as comandas ativas aparecem imediatamente, sem scroll. Os 4 KPIs no topo (comandas ativas, receita do dia, valor em aberto, estoque baixo) ficam sempre visíveis.' },
       { t: 'Tab Ativas', d: 'Lista em tempo real de todas as comandas abertas, com busca por cliente e botão para abrir nova comanda.' },
       { t: 'Tab Histórico', d: 'Comandas fechadas e canceladas do dia selecionado. Inclui breakdown por forma de pagamento no topo.' },
@@ -44,6 +45,7 @@ const SECOES: Secao[] = [
       { t: 'Atualização automática', d: 'Intervalo configurável: 15s, 30s, 1 minuto ou manual. Também recebe eventos em tempo real via SignalR.' },
     ],
     dicas: [
+      'Se a API central ficar indisponível, a venda continua fechando e a nota fica Pendente. A outbox local reenvia depois com a mesma chave, sem criar nota duplicada.',
       'Quais painéis aparecem na tab Análises é controlado em Configurações → Dashboard.',
       'O esquema de cores do gráfico (Padrão, Azul, Neon) é configurável por usuário.',
     ],

@@ -9,6 +9,7 @@ public sealed class TenantErpIntegrationOptions
     public string ClientId { get; set; } = string.Empty;
     public string ClientSecret { get; set; } = string.Empty;
     public int TimeoutSeconds { get; set; } = 15;
+    public bool UseCentralFiscalEngine { get; set; }
 
     public bool IsConfigured =>
         Enabled &&

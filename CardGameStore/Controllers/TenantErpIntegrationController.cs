@@ -2,6 +2,8 @@ using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using CardGameStore.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CardGameStore.Controllers;
 
@@ -12,13 +14,20 @@ namespace CardGameStore.Controllers;
 public sealed class TenantErpIntegrationController : ControllerBase
 {
     private readonly ITenantErpApiClient _client;
+    private readonly TenantErpIntegrationOptions _options;
 
-    public TenantErpIntegrationController(ITenantErpApiClient client) => _client = client;
+    public TenantErpIntegrationController(
+        ITenantErpApiClient client, IOptions<TenantErpIntegrationOptions> options)
+    {
+        _client = client;
+        _options = options.Value;
+    }
 
     [HttpGet("status")]
     public IActionResult Status() => Ok(new
     {
         enabled = _client.IsConfigured,
+        centralFiscalEngine = _client.IsConfigured && _options.UseCentralFiscalEngine,
         endpoint = _client.EndpointHost,
     });
 

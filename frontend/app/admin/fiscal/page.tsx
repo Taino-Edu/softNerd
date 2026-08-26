@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { fiscalApi, FiscalConfigDto, NaturezaOperacaoDto, NotaFiscalDto, COMANDA_PAYMENT_METHODS } from '@/lib/api'
+import { api, fiscalApi, FiscalConfigDto, NaturezaOperacaoDto, NotaFiscalDto, COMANDA_PAYMENT_METHODS } from '@/lib/api'
 import { PageHeader } from '@/components/ui/PageHeader'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -55,6 +55,7 @@ export default function FiscalPage() {
   const [saving,   setSaving]   = useState(false)
   const [savingTrava, setSavingTrava] = useState(false)
   const [moduloFiscalAtivo, setModuloFiscalAtivo] = useState(false)
+  const [centralFiscal, setCentralFiscal] = useState(false)
 
   // Formulário de dados da empresa
   const [cnpj, setCnpj]                   = useState('')
@@ -171,10 +172,13 @@ export default function FiscalPage() {
   async function load() {
     setLoading(true)
     try {
-      const [{ data: cfg }, { data: nats }] = await Promise.all([
+      const [{ data: cfg }, { data: nats }, integration] = await Promise.all([
         fiscalApi.getConfig(),
         fiscalApi.listNaturezas(),
+        api.get<{ centralFiscalEngine: boolean }>('/api/integrations/tenant-erp/status').catch(() => null),
       ])
+      const usesCentral = integration?.data.centralFiscalEngine === true
+      setCentralFiscal(usesCentral)
       setConfig(cfg)
       setCnpj(cfg.cnpj ?? '')
       setRazaoSocial(cfg.razaoSocial ?? '')
@@ -182,7 +186,7 @@ export default function FiscalPage() {
       setRegime(cfg.regimeTributario ?? 'SimplesNacional')
       setAmbiente(cfg.ambiente ?? 'Homologacao')
       setModoSimulacao(cfg.modoSimulacao ?? false)
-      setModuloFiscalAtivo(cfg.moduloFiscalAtivo ?? false)
+      setModuloFiscalAtivo(usesCentral || (cfg.moduloFiscalAtivo ?? false))
       setSerieNfce(cfg.serieNfce ?? 1)
       setEmailContador(cfg.emailContador ?? '')
       setLogradouro(cfg.logradouro ?? '')
@@ -196,7 +200,7 @@ export default function FiscalPage() {
       setCscId(cfg.cscId ?? '')
       setAutoEmit(cfg.formasPagamentoAutoEmissao ?? [])
       setNaturezas(nats)
-      if (cfg.moduloFiscalAtivo) {
+      if (usesCentral || cfg.moduloFiscalAtivo) {
         await loadNotas()
       } else {
         setNotas([])
@@ -218,7 +222,7 @@ export default function FiscalPage() {
     try {
       const { data } = await fiscalApi.saveConfig({
         cnpj, razaoSocial, inscricaoEstadual: ie, regimeTributario: regime,
-        ambiente, modoSimulacao, moduloFiscalAtivo, serieNfce, emailContador,
+        ambiente, ...(centralFiscal ? {} : { modoSimulacao, moduloFiscalAtivo }), serieNfce, emailContador,
         logradouro, numero, complemento, bairro,
         codigoMunicipioIbge, municipio, uf, cep,
         cscId, ...(cscToken ? { cscToken } : {}),
@@ -353,8 +357,22 @@ export default function FiscalPage() {
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       <PageHeader title="Fiscal — NFC-e" subtitle="Certificado digital, dados da empresa e naturezas de operação" />
 
-      {/* Trava geral do motor fiscal */}
-      <div className={clsx(
+      {/* Origem e trava geral do motor fiscal */}
+      {centralFiscal ? (
+        <div className="card p-5 border border-green-500/30 flex flex-col sm:flex-row sm:items-center gap-4">
+          <ShieldCheck className="w-5 h-5 text-green-400 shrink-0" />
+          <div className="flex-1">
+            <h3 className="font-bold text-white">Motor fiscal central ativo</h3>
+            <p className="text-sm text-gray-400 mt-1">
+              Certificado, numeração, XML, contingência e comunicação com a SEFAZ são processados no Tenant ERP.
+              O Soft Nerd mantém somente a venda e a referência da nota.
+            </p>
+          </div>
+          <Link href="/admin/manual" className="btn-secondary justify-center">
+            <ScrollText className="w-4 h-4" /> Manual
+          </Link>
+        </div>
+      ) : <div className={clsx(
         'card p-5 border',
         moduloFiscalAtivo ? 'border-green-500/30' : 'border-red-500/40 bg-red-500/5',
       )}>
@@ -399,7 +417,7 @@ export default function FiscalPage() {
             </button>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Certificado */}
       <div className={clsx('card p-5', certStatusColor === 'red' && 'border-red-500/30', certStatusColor === 'green' && 'border-green-500/20')}>
@@ -472,7 +490,7 @@ export default function FiscalPage() {
               {AMBIENTES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
             </select>
           </div>
-          <div className="sm:col-span-2">
+          {!centralFiscal && <div className="sm:col-span-2">
             <label className="flex items-start gap-2 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 cursor-pointer">
               <input
                 type="checkbox"
@@ -491,7 +509,7 @@ export default function FiscalPage() {
                 </span>
               </span>
             </label>
-          </div>
+          </div>}
           <div>
             <label className="text-xs text-gray-400 font-semibold mb-1 block">Série NFC-e</label>
             <input type="number" min={1} value={serieNfce} onChange={e => setSerieNfce(Number(e.target.value))} className="input w-full" />

@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using CardGameStore.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CardGameStore.Controllers;
 
@@ -27,22 +29,32 @@ public class FiscalController : ControllerBase
     private readonly FiscalCertificadoService  _certificado;
     private readonly FiscalXmlExportService    _export;
     private readonly INfceEmissionService      _emissao;
+    private readonly ITenantErpApiClient       _tenantErp;
+    private readonly bool                      _centralFiscal;
 
     public FiscalController(
         AppDbContext db, EncryptionService enc, FiscalCertificadoService certificado,
-        FiscalXmlExportService export, INfceEmissionService emissao)
+        FiscalXmlExportService export, INfceEmissionService emissao,
+        ITenantErpApiClient tenantErp, IOptions<TenantErpIntegrationOptions> tenantErpOptions)
     {
         _db          = db;
         _enc         = enc;
         _certificado = certificado;
         _export      = export;
         _emissao     = emissao;
+        _tenantErp   = tenantErp;
+        _centralFiscal = tenantErpOptions.Value.UseCentralFiscalEngine && tenantErpOptions.Value.IsConfigured;
     }
 
     // ── GET /api/fiscal/config ────────────────────────────────────────────────
     [HttpGet("config")]
     public async Task<IActionResult> GetConfig()
     {
+        if (_centralFiscal)
+        {
+            try { return Ok(await _tenantErp.GetFiscalConfigAsync(HttpContext.RequestAborted)); }
+            catch (TenantErpApiException ex) { return CentralFailure(ex); }
+        }
         var cfg = await _db.FiscalConfigs.FindAsync(FiscalConfig.SingletonId);
         return Ok(ToDto(cfg));
     }
@@ -51,6 +63,11 @@ public class FiscalController : ControllerBase
     [HttpPut("config")]
     public async Task<IActionResult> SaveConfig([FromBody] SaveFiscalConfigRequest req)
     {
+        if (_centralFiscal)
+        {
+            try { return Ok(await _tenantErp.UpdateFiscalConfigAsync(req, HttpContext.RequestAborted)); }
+            catch (TenantErpApiException ex) { return CentralFailure(ex); }
+        }
         var cfg = await GetOrCreateConfigAsync();
 
         // Cnpj.Normalizar em vez de tirar só a máscara: preserva letras (o CNPJ
@@ -178,6 +195,18 @@ public class FiscalController : ControllerBase
             return BadRequest(new { Message = "Arquivo de certificado (.pfx) inválido ou vazio." });
         if (string.IsNullOrWhiteSpace(senha))
             return BadRequest(new { Message = "Informe a senha do certificado." });
+
+        if (_centralFiscal)
+        {
+            using var centralStream = new MemoryStream();
+            await file.CopyToAsync(centralStream);
+            try
+            {
+                return Ok(await _tenantErp.UploadFiscalCertificateAsync(
+                    centralStream.ToArray(), file.FileName, senha, HttpContext.RequestAborted));
+            }
+            catch (TenantErpApiException ex) { return CentralFailure(ex); }
+        }
 
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);
@@ -594,6 +623,10 @@ public class FiscalController : ControllerBase
             ? StatusCode(StatusCodes.Status423Locked, new { Message = FiscalModuloBloqueadoException.Mensagem })
             : null;
     }
+
+    private ObjectResult CentralFailure(TenantErpApiException ex) => StatusCode(
+        ex.StatusCode is >= 400 and < 500 ? ex.StatusCode.Value : StatusCodes.Status502BadGateway,
+        new { Message = ex.Message });
 
     private static object ToDto(FiscalConfig? cfg)
     {

@@ -47,7 +47,7 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
     }
 
     public Task<JsonElement> GetFiscalSaudeAsync(CancellationToken ct) =>
-        GetJsonAsync("api/fiscal/saude", ct);
+        GetJsonAsync("api/integrations/services/fiscal/health", ct);
 
     public Task<JsonElement> AnalyzeFinanceiroAsync(
         TenantErpFinancialAnalysisRequest request, CancellationToken ct) =>
@@ -69,6 +69,75 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
         catch (TenantErpApiException ex) when (ex.StatusCode == 404)
         {
             throw new TenantErpApiException("NCM nao encontrado na tabela IBPT publicada para a UF e origem informadas.", 404);
+        }
+    }
+
+    public Task<TenantErpFiscalNoteResponse> EmitFiscalNoteAsync(
+        TenantErpFiscalEmissionRequest request, CancellationToken ct) =>
+        SendAsync<TenantErpFiscalNoteResponse>(
+            HttpMethod.Post, "api/integrations/services/fiscal/nfce", request, ct);
+
+    public Task<TenantErpFiscalNoteResponse> RetryFiscalNoteAsync(Guid noteId, CancellationToken ct) =>
+        SendAsync<TenantErpFiscalNoteResponse>(
+            HttpMethod.Post, $"api/integrations/services/fiscal/nfce/{noteId}/retry", new { }, ct);
+
+    public Task<TenantErpFiscalNoteResponse> CancelFiscalNoteAsync(
+        Guid noteId, string justification, CancellationToken ct) =>
+        SendAsync<TenantErpFiscalNoteResponse>(
+            HttpMethod.Post, $"api/integrations/services/fiscal/nfce/{noteId}/cancel",
+            new { justification }, ct);
+
+    public Task<JsonElement> GetFiscalReceiptAsync(Guid noteId, CancellationToken ct) =>
+        GetJsonAsync($"api/integrations/services/fiscal/nfce/{noteId}/receipt", ct);
+
+    public Task<JsonElement> GetFiscalConfigAsync(CancellationToken ct) =>
+        GetJsonAsync("api/integrations/services/fiscal/config", ct);
+
+    public Task<JsonElement> UpdateFiscalConfigAsync(object request, CancellationToken ct) =>
+        SendJsonAsync(HttpMethod.Put, "api/integrations/services/fiscal/config", request, ct);
+
+    public async Task<JsonElement> UploadFiscalCertificateAsync(
+        byte[] certificate, string fileName, string password, CancellationToken ct)
+    {
+        EnsureConfigured();
+        var token = await GetAccessTokenAsync(false, null, ct);
+        var response = await SendCertificateAsync(token, certificate, fileName, password, ct);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            response.Dispose();
+            token = await GetAccessTokenAsync(true, token, ct);
+            response = await SendCertificateAsync(token, certificate, fileName, password, ct);
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode) throw UpstreamFailure(response.StatusCode);
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            return document.RootElement.Clone();
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendCertificateAsync(
+        string token, byte[] certificate, string fileName, string password, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post, BuildUri("api/integrations/services/fiscal/certificate"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(certificate);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/x-pkcs12");
+        content.Add(file, "certificate", fileName);
+        content.Add(new StringContent(password), "password");
+        request.Content = content;
+        try
+        {
+            return await _httpClientFactory.CreateClient(HttpClientName)
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new TenantErpApiException("Tenant-ERP indisponivel ou inacessivel.", innerException: ex);
         }
     }
 
@@ -139,6 +208,14 @@ public sealed class TenantErpApiClient : ITenantErpApiClient
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
             return document.RootElement.Clone();
         }
+    }
+
+    private async Task<T> SendAsync<T>(
+        HttpMethod method, string relativePath, object? body, CancellationToken ct)
+    {
+        var json = await SendJsonAsync(method, relativePath, body, ct);
+        return json.Deserialize<T>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            ?? throw new TenantErpApiException("Resposta invalida do Tenant-ERP.");
     }
 
     private async Task<(HttpResponseMessage Response, string Token)> SendAuthenticatedAsync(

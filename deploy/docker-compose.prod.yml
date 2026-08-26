@@ -117,6 +117,7 @@ services:
       TenantErp__BaseUrl: "${TENANT_ERP_BASE_URL:-}"
       TenantErp__ClientId: "${TENANT_ERP_CLIENT_ID:-}"
       TenantErp__ClientSecret: "${TENANT_ERP_CLIENT_SECRET:-}"
+      TenantErp__UseCentralFiscalEngine: "${TENANT_ERP_USE_CENTRAL_FISCAL_ENGINE:-false}"
       # Inter PJ — certificado mTLS (Client ID/Secret são salvos via /admin/integracoes)
       Inter__CertificatePath: "/app/certs/inter/inter.crt"
       Inter__KeyPath: "/app/certs/inter/inter.key"

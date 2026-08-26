@@ -384,11 +384,20 @@ builder.Services.AddHostedService<InterSyncBackgroundService>();
 // Fiscal — emissão de NFC-e, certificado A1, exportação de XMLs
 builder.Services.AddScoped<FiscalCertificadoService>();
 builder.Services.AddScoped<FiscalXmlExportService>();
-builder.Services.AddScoped<INfceEmissionService, NfceEmissionService>();
-builder.Services.AddHostedService<FiscalAlertBackgroundService>();
-builder.Services.AddHostedService<FiscalXmlExportBackgroundService>();
+var useCentralFiscalEngine =
+    builder.Configuration.GetValue<bool>("TenantErp:UseCentralFiscalEngine") &&
+    builder.Configuration.GetValue<bool>("TenantErp:Enabled");
+if (useCentralFiscalEngine)
+    builder.Services.AddScoped<INfceEmissionService, TenantErpNfceEmissionService>();
+else
+    builder.Services.AddScoped<INfceEmissionService, NfceEmissionService>();
 builder.Services.AddHostedService<FiscalRetryBackgroundService>();
-builder.Services.AddHostedService<SefazDistBackgroundService>();
+if (!useCentralFiscalEngine)
+{
+    builder.Services.AddHostedService<FiscalAlertBackgroundService>();
+    builder.Services.AddHostedService<FiscalXmlExportBackgroundService>();
+    builder.Services.AddHostedService<SefazDistBackgroundService>();
+}
 
 // Pix — sem webhook do Inter: o robô reconcilia cobranças ATIVA a cada 5 min e
 // dá a baixa por origem (mesmo caminho dos controllers, com claim atômico no

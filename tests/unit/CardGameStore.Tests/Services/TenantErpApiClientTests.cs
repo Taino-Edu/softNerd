@@ -204,6 +204,59 @@ public sealed class TenantErpApiClientTests
         error.Which.Message.Should().Contain("NCM nao encontrado");
     }
 
+    [Fact]
+    public async Task FiscalEmission_SendsIdempotentSnapshotToCentralEngine()
+    {
+        string? body = null;
+        var id = Guid.NewGuid();
+        var handler = new StubHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+                return Json(HttpStatusCode.OK, """{"access_token":"token","expires_in":900}""");
+
+            request.Method.Should().Be(HttpMethod.Post);
+            request.RequestUri.AbsolutePath.Should().Be("/api/integrations/services/fiscal/nfce");
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return Json(HttpStatusCode.OK,
+                $$"""{"id":"{{id}}","source":"softnerd","externalDocumentId":"comanda:1","status":"PendenteEmissao","totalInCents":1000,"series":null,"number":null,"accessKey":null,"protocol":null,"rejectionReason":null,"issuedAt":null,"authorizedAt":null,"cancelledAt":null,"createdAt":"2026-08-26T12:00:00Z"}""");
+        });
+        var client = CreateClient(handler);
+
+        var result = await client.EmitFiscalNoteAsync(new TenantErpFiscalEmissionRequest(
+            "softnerd", "comanda:1", "softnerd:comanda:1",
+            [new TenantErpFiscalItemRequest("Produto", "95044000", "5102", "102", null, 1, 1000, 1000, 0, null, null)],
+            "Pix", null, 0, 0, null, 0, null), default);
+
+        result.Id.Should().Be(id);
+        body.Should().Contain("\"idempotencyKey\":\"softnerd:comanda:1\"");
+        body.Should().Contain("\"ncm\":\"95044000\"");
+    }
+
+    [Fact]
+    public async Task CertificateUpload_UsesAuthenticatedMultipartWithoutLoggingSecret()
+    {
+        string? contentType = null;
+        string? body = null;
+        var handler = new StubHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+                return Json(HttpStatusCode.OK, """{"access_token":"token","expires_in":900}""");
+
+            request.RequestUri.AbsolutePath.Should().Be("/api/integrations/services/fiscal/certificate");
+            request.Headers.Authorization.Should().Be(new AuthenticationHeaderValue("Bearer", "token"));
+            contentType = request.Content!.Headers.ContentType!.MediaType;
+            body = request.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            return Json(HttpStatusCode.OK, """{"message":"ok"}""");
+        });
+        var client = CreateClient(handler);
+
+        await client.UploadFiscalCertificateAsync([1, 2, 3], "loja.pfx", "senha-forte", default);
+
+        contentType.Should().Be("multipart/form-data");
+        body.Should().Contain("name=password").And.Contain("senha-forte");
+        body.Should().Contain("filename=loja.pfx");
+    }
+
     private static TenantErpApiClient CreateClient(StubHandler handler, bool enabled = true)
     {
         var httpClient = new HttpClient(handler);

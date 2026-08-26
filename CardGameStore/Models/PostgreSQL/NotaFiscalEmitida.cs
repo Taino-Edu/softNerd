@@ -51,6 +51,14 @@ public class NotaFiscalEmitida
     [Column("venda_avulsa_id")]
     public string? VendaAvulsaId { get; set; }
 
+    /// <summary>Identificador da nota no motor fiscal central. Null em documentos historicos locais.</summary>
+    [Column("central_fiscal_note_id")]
+    public Guid? CentralFiscalNoteId { get; set; }
+
+    /// <summary>Outbox temporaria; apagada quando o motor central aceita o snapshot.</summary>
+    [Column("central_fiscal_payload_json")]
+    public string? CentralFiscalPayloadJson { get; set; }
+
     [Column("status")]
     public NotaFiscalStatus Status { get; set; } = NotaFiscalStatus.PendenteEmissao;
 

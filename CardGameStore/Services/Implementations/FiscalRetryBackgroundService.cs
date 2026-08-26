@@ -7,6 +7,8 @@ using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using CardGameStore.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -14,11 +16,16 @@ public class FiscalRetryBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<FiscalRetryBackgroundService> _logger;
+    private readonly bool _centralFiscal;
 
-    public FiscalRetryBackgroundService(IServiceScopeFactory scopeFactory, ILogger<FiscalRetryBackgroundService> logger)
+    public FiscalRetryBackgroundService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<FiscalRetryBackgroundService> logger,
+        IOptions<TenantErpIntegrationOptions> tenantErpOptions)
     {
         _scopeFactory = scopeFactory;
         _logger       = logger;
+        _centralFiscal = tenantErpOptions.Value.UseCentralFiscalEngine && tenantErpOptions.Value.IsConfigured;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -50,7 +57,7 @@ public class FiscalRetryBackgroundService : BackgroundService
             .Where(c => c.Id == FiscalConfig.SingletonId)
             .Select(c => (bool?)c.ModuloFiscalAtivo)
             .FirstOrDefaultAsync();
-        if (moduloAtivo == false)
+        if (!_centralFiscal && moduloAtivo == false)
         {
             _logger.LogDebug("Reprocessamento fiscal ignorado: módulo bloqueado.");
             return;
