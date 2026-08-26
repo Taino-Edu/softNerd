@@ -805,6 +805,13 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE notas_fiscais_emitidas ADD COLUMN IF NOT EXISTS protocolo_inutilizacao      VARCHAR(30) NULL;
                 ALTER TABLE notas_fiscais_emitidas ADD COLUMN IF NOT EXISTS tentativas_reprocessamento  INTEGER     NOT NULL DEFAULT 0;
 
+                -- Fiscal central: referência local e outbox para integração com o Tenant ERP
+                ALTER TABLE notas_fiscais_emitidas ADD COLUMN IF NOT EXISTS central_fiscal_note_id      UUID NULL;
+                ALTER TABLE notas_fiscais_emitidas ADD COLUMN IF NOT EXISTS central_fiscal_payload_json TEXT NULL;
+                CREATE UNIQUE INDEX IF NOT EXISTS ix_notas_fiscais_central_note
+                    ON notas_fiscais_emitidas (central_fiscal_note_id)
+                    WHERE central_fiscal_note_id IS NOT NULL;
+
                 -- Fiscal: URL do QR Code calculada pela lib no momento da autorização (evita recalcular)
                 ALTER TABLE notas_fiscais_emitidas ADD COLUMN IF NOT EXISTS url_qrcode TEXT NULL;
 
