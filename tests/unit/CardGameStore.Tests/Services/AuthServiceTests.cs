@@ -486,6 +486,29 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task Logout_ComCookieAntigo_NaoDerrubaOsOutrosDispositivos()
+    {
+        var db = CreateSqliteDb();
+        var userId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = userId, Name = "Lojista", Email = "logout-antigo@softnerd.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Senha123!"),
+            Role = UserRole.Admin, IsActive = true,
+        });
+        await db.SaveChangesAsync();
+        var service = CreateAuthService(db);
+
+        var pdv = await service.LoginAsync(new LoginRequest("logout-antigo@softnerd.com", "Senha123!"));
+
+        await service.LogoutAsync(userId, "cookie-que-ja-expirou-ou-foi-limpo");
+
+        var aindaVale = await service.RefreshTokenAsync(new RefreshTokenRequest(pdv.RefreshToken));
+        aindaVale.RefreshToken.Should().NotBeNullOrEmpty(
+            "um cookie antigo não pode transformar logout por dispositivo em logout global");
+    }
+
+    [Fact]
     public async Task ResetPassword_DeveDerrubarAsSessoesDeTodosOsDispositivos()
     {
         const string resetToken = "token-reset-multi-dispositivo";

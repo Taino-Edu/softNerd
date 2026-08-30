@@ -22,17 +22,10 @@ export const api = axios.create({
 // quando o token expira com várias chamadas em paralelo na mesma página.
 let refreshPromise: Promise<void> | null = null
 
-/** Nº de refreshes que falharam por rede (não por 401). Zera no primeiro sucesso. */
-let falhasDeRede = 0
-
-/** Só desloga depois de esgotar as tentativas — internet oscilando não é sessão inválida. */
-const MAX_FALHAS_DE_REDE = 3
-
 async function doRefresh(): Promise<void> {
   // O refreshToken é enviado automaticamente via cookie HttpOnly (withCredentials).
   // O backend lê o cookie e retorna novos cookies — sem manipulação manual de tokens.
   await axios.post(`${BASE_URL}/api/auth/refresh`, {}, { withCredentials: true })
-  falhasDeRede = 0
 }
 
 /**
@@ -43,11 +36,8 @@ async function doRefresh(): Promise<void> {
 function sessaoRealmenteExpirou(err: unknown): boolean {
   const status = (err as { response?: { status?: number } })?.response?.status
   if (status === 401 || status === 403) return true
-  if (status === undefined) {
-    // Sem resposta = rede/servidor fora. Tolera algumas seguidas antes de desistir.
-    falhasDeRede += 1
-    return falhasDeRede >= MAX_FALHAS_DE_REDE
-  }
+  // Sem resposta, timeout e 5xx nunca provam que a sessão expirou. Manter os
+  // dados locais permite que o usuário continue assim que a rede voltar.
   return false
 }
 

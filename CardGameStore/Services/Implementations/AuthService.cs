@@ -209,8 +209,12 @@ public class AuthService : IAuthService
             {
                 session.RevokedAt = agora;
                 await _db.SaveChangesAsync();
-                return;
             }
+
+            // A API sempre envia o cookie quando ele existe. Se essa sessão já
+            // expirou/foi limpa, não há nada a revogar — e principalmente não
+            // devemos derrubar os outros dispositivos como efeito colateral.
+            return;
         }
 
         var sessions = await _db.UserSessions
