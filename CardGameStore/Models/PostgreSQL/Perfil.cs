@@ -70,7 +70,7 @@ public static class Permissao
         [Categorias]  = ["/api/category"],
         [Usuarios]    = ["/api/user"],
         [Crediario]   = ["/api/crediarios"],
-        [Campeonatos] = ["/api/championship"],
+        [Campeonatos] = ["/api/championship", "/api/timers"],
         [Financeiro]  = ["/api/analytics/financeiro", "/api/relatorios/financeiro", "/api/relatorios/pdv"],
         [Relatorios]  = ["/api/relatorios"],
         [Anuncios]    = ["/api/announcements"],

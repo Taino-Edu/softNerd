@@ -215,9 +215,10 @@ public class UserService : IUserService
         user.IsActive  = false;
         user.DeletedAt = DateTime.UtcNow;
         user.UpdatedAt = DateTime.UtcNow;
-        // Invalida tokens de sessão ativos
+        // Invalida tokens de sessão ativos, na coluna antiga e nas sessões por dispositivo
         user.RefreshToken       = null;
         user.RefreshTokenExpiry = null;
+        await RevogarSessoesAsync(user.Id);
 
         await _db.SaveChangesAsync();
 
@@ -286,6 +287,9 @@ public class UserService : IUserService
         user.PasswordResetTokenExpiry = null;
         user.UpdatedAt              = DateTime.UtcNow;
 
+        // Senha trocada pelo admin tem que cortar os dispositivos já logados.
+        await RevogarSessoesAsync(user.Id);
+
         await _db.SaveChangesAsync();
 
         _logger.LogInformation(
@@ -336,6 +340,20 @@ public class UserService : IUserService
 
     private static int GetEffectivePoints(User user) =>
         IsExpired(user) ? 0 : user.PointsBalance;
+
+    /// <summary>
+    /// Revoga as sessões por dispositivo do usuário (user_sessions). Não salva —
+    /// quem chama já faz o SaveChanges do próprio fluxo.
+    /// </summary>
+    private async Task RevogarSessoesAsync(Guid userId)
+    {
+        var sessoes = await _db.UserSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .ToListAsync();
+
+        var agora = DateTime.UtcNow;
+        foreach (var s in sessoes) s.RevokedAt = agora;
+    }
 
     public static UserSummaryDto MapToSummary(User user) => new()
     {

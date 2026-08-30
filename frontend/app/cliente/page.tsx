@@ -826,8 +826,17 @@ export default function ClientePage() {
             </div>
             <div>
               <h2 className="font-black text-lg" style={{ color: C.navy }}>Nenhuma comanda aberta</h2>
-              <p className="text-sm mt-1" style={{ color: C.muted }}>Escaneie o QR Code da sua mesa para começar.</p>
+              <p className="text-sm mt-1" style={{ color: C.muted }}>
+                Escaneie o QR Code da sua mesa ou peça pro atendente abrir — quando abrir,
+                ela aparece aqui sozinha, sem precisar entrar de novo.
+              </p>
             </div>
+            {/* Sem comanda a conta continua útil: pontos, histórico e notas ficam no perfil. */}
+            <Link href="/cliente/perfil"
+              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all active:scale-95"
+              style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, color: C.navy }}>
+              <UserIcon className="w-3.5 h-3.5" /> Ver minha conta e meus pontos
+            </Link>
           </div>
         ) : (
           <>

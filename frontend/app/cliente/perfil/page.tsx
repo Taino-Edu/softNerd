@@ -14,7 +14,7 @@ import {
   CheckCircle, Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
   ShoppingBag, XCircle, Trophy, Coins, ShieldCheck, Mail, Settings, BookOpen,
   Bell, Package, X, Hourglass, FileText, Pencil, Check, Loader2 as Loader2Icon,
-  QrCode,
+  QrCode, ShoppingCart, ChevronRight,
 } from 'lucide-react'
 import PixReservaModal from '@/components/PixReservaModal'
 import clsx from 'clsx'
@@ -254,6 +254,8 @@ export default function PerfilPage() {
   const [isUploading,    setIsUploading]    = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
   const [pixGroupId,     setPixGroupId]     = useState<string | null>(null)
+  /** Comanda aberta agora — o atalho pra ela é o que evita reler o QR Code da mesa. */
+  const [comandaAberta,  setComandaAberta]  = useState<ComandaDto | null>(null)
 
   async function refetchReservas() {
     try {
@@ -268,6 +270,8 @@ export default function PerfilPage() {
       userApi.me().then(r => setProfile(r.data)).catch(() => {}),
       crediarioApi.meuHistorico().then(r => setCrediarios(r.data)).catch(() => {}),
       comandaApi.myHistory().then(r => setHistory(r.data)).catch(() => {}),
+      // 404 = nenhuma comanda aberta; qualquer outro erro também só esconde o atalho.
+      comandaApi.myComanda().then(r => setComandaAberta(r.data)).catch(() => setComandaAberta(null)),
       minhasComprasApi.list().then(r => setCompras(r.data)).catch(() => {}),
       championshipApi.myParticipations().then(r => setParticipations(r.data)).catch(() => {}),
       reservationApi.mine().then(r => {
@@ -521,6 +525,35 @@ export default function PerfilPage() {
           </div>
         ) : (
           <>
+            {/* ── COMANDA ABERTA ──
+                Atalho direto pra comanda: entrar pela conta agora dá acesso a ela,
+                sem precisar escanear o QR Code da mesa de novo. */}
+            {comandaAberta && (
+              <Link
+                href="/cliente"
+                className="mb-5 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm border border-[#42B6EE]/40 transition-all active:scale-[0.98]"
+              >
+                <div className="w-11 h-11 rounded-xl bg-[#42B6EE]/15 flex items-center justify-center shrink-0">
+                  <ShoppingCart className="w-5 h-5 text-[#1A6DB5]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-[#42B6EE] uppercase tracking-wider">Comanda aberta</p>
+                  <p className="text-sm font-black text-gray-900 leading-tight">
+                    {comandaAberta.tableIdentifier ? `Mesa ${comandaAberta.tableIdentifier}` : 'Sua comanda'}
+                    {' · '}
+                    {comandaAberta.items.length} {comandaAberta.items.length === 1 ? 'item' : 'itens'}
+                  </p>
+                  <p className="text-[11px] text-gray-400">Toque para ver e adicionar itens</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-base font-black text-gray-900">
+                    R$ {comandaAberta.totalInReais.toFixed(2).replace('.', ',')}
+                  </p>
+                  <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
+                </div>
+              </Link>
+            )}
+
             {/* ── STATS RÁPIDOS ── */}
             <div className="grid grid-cols-2 gap-3 mb-5">
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">

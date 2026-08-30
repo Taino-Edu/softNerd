@@ -22,10 +22,54 @@ export const api = axios.create({
 // quando o token expira com várias chamadas em paralelo na mesma página.
 let refreshPromise: Promise<void> | null = null
 
+/** Nº de refreshes que falharam por rede (não por 401). Zera no primeiro sucesso. */
+let falhasDeRede = 0
+
+/** Só desloga depois de esgotar as tentativas — internet oscilando não é sessão inválida. */
+const MAX_FALHAS_DE_REDE = 3
+
 async function doRefresh(): Promise<void> {
   // O refreshToken é enviado automaticamente via cookie HttpOnly (withCredentials).
   // O backend lê o cookie e retorna novos cookies — sem manipulação manual de tokens.
   await axios.post(`${BASE_URL}/api/auth/refresh`, {}, { withCredentials: true })
+  falhasDeRede = 0
+}
+
+/**
+ * O refresh só é definitivo quando o backend responde 401/403: aí o token realmente
+ * não vale mais. Timeout, 5xx e queda de rede não são sessão expirada — deslogar
+ * nesses casos era o que tirava o lojista do sistema no meio do atendimento.
+ */
+function sessaoRealmenteExpirou(err: unknown): boolean {
+  const status = (err as { response?: { status?: number } })?.response?.status
+  if (status === 401 || status === 403) return true
+  if (status === undefined) {
+    // Sem resposta = rede/servidor fora. Tolera algumas seguidas antes de desistir.
+    falhasDeRede += 1
+    return falhasDeRede >= MAX_FALHAS_DE_REDE
+  }
+  return false
+}
+
+function encerrarSessao() {
+  if (typeof window === 'undefined') return
+
+  const path = window.location.pathname
+  // Já está numa tela de autenticação: limpar e redirecionar só causaria um loop.
+  if (path.startsWith('/login') || path.startsWith('/entrar')) return
+
+  clearAuth()
+
+  // Redireciona de acordo com o tipo de página:
+  //   /admin/*   → /login   (painel de gestão)
+  //   /cliente/* → /entrar, guardando pra onde voltar depois de entrar
+  //   demais     → limpa cookies e fica na página (QR code, campeonatos, etc.)
+  if (path.startsWith('/admin')) {
+    window.location.href = '/login'
+  } else if (path.startsWith('/cliente')) {
+    const returnTo = encodeURIComponent(path + window.location.search)
+    window.location.href = `/entrar?returnTo=${returnTo}`
+  }
 }
 
 // Tenta renovar o token se receber 401
@@ -33,7 +77,7 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true
       try {
         // Reutiliza o mesmo promise se já há um refresh em andamento
@@ -43,22 +87,8 @@ api.interceptors.response.use(
         await refreshPromise
         // Re-tenta a requisição original — o novo accessToken já está no cookie
         return api(original)
-      } catch {
-        // Refresh falhou — redireciona de acordo com o tipo de página:
-        //   /admin/*  → /login   (painel de gestão)
-        //   /cliente/* → /entrar (área do cliente)
-        //   demais    → limpa cookies e fica na página (QR code, campeonatos, etc.)
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          const path = window.location.pathname
-          clearAuth()
-          if (path.startsWith('/admin')) {
-            window.location.href = '/login'
-          } else if (path.startsWith('/cliente')) {
-            window.location.href = '/entrar'
-          }
-          // Páginas públicas (/mesa, /campeonato, /produtos…): só limpa os cookies,
-          // o usuário continua na mesma página sem redirecionamento.
-        }
+      } catch (refreshError) {
+        if (sessaoRealmenteExpirou(refreshError)) encerrarSessao()
       }
     }
     return Promise.reject(error)
@@ -303,6 +333,8 @@ export interface DashboardPanels {
 export interface UserPreferences {
   aiButton:      { mode: 'draggable' | 'fixed'; corner: PrefCorner; enabled: boolean }
   vlibras:       { enabled: boolean; corner: PrefCorner }
+  /** Widget lateral de timer de torneio — mesma ideia do VLibras, visível em todo o sistema. */
+  timer:         { enabled: boolean; corner: PrefCorner }
   notifications: { soundEnabled: boolean; browserEnabled: boolean }
   /** defaultDiscount é % livre (0–100) — os atalhos 5/10/15/20 são só sugestão de tela. */
   pdv:           { defaultDiscount: number }
@@ -317,6 +349,7 @@ export const DEFAULT_DASHBOARD_PANELS: DashboardPanels = {
 export const DEFAULT_PREFERENCES: UserPreferences = {
   aiButton:      { mode: 'draggable', corner: 'bottom-right', enabled: true },
   vlibras:       { enabled: true, corner: 'bottom-right' },
+  timer:         { enabled: true, corner: 'bottom-right' },
   notifications: { soundEnabled: true, browserEnabled: true },
   pdv:           { defaultDiscount: 0 },
   dashboard:     { refreshInterval: 30, chartScheme: 'default', panels: DEFAULT_DASHBOARD_PANELS },

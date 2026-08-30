@@ -21,8 +21,11 @@ public interface IAuthService
     /// <summary>Renova o AccessToken usando o RefreshToken armazenado.</summary>
     Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request);
 
-    /// <summary>Invalida o RefreshToken (logout).</summary>
-    Task LogoutAsync(Guid userId);
+    /// <summary>
+    /// Encerra a sessão. Com <paramref name="refreshToken"/> derruba só o dispositivo
+    /// atual (sair no celular não desloga o PDV); sem ele, derruba todas.
+    /// </summary>
+    Task LogoutAsync(Guid userId, string? refreshToken = null);
 
     /// <summary>
     /// Gera token de reset, persiste no banco e dispara email.

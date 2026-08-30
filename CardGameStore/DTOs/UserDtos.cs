@@ -22,6 +22,13 @@ public class VLibrasPrefs
     [JsonPropertyName("corner")]  public string Corner  { get; set; } = "bottom-right";
 }
 
+/// <summary>Widget lateral do timer de torneio — mesmo formato do VLibras.</summary>
+public class TimerPrefs
+{
+    [JsonPropertyName("enabled")] public bool   Enabled { get; set; } = true;
+    [JsonPropertyName("corner")]  public string Corner  { get; set; } = "bottom-right";
+}
+
 public class NotificationPrefs
 {
     [JsonPropertyName("soundEnabled")]
@@ -61,6 +68,7 @@ public class UserPreferencesDto
 {
     [JsonPropertyName("aiButton")]      public AiButtonPrefs     AiButton      { get; set; } = new();
     [JsonPropertyName("vlibras")]       public VLibrasPrefs      Vlibras       { get; set; } = new();
+    [JsonPropertyName("timer")]         public TimerPrefs        Timer         { get; set; } = new();
     [JsonPropertyName("notifications")] public NotificationPrefs Notifications { get; set; } = new();
     [JsonPropertyName("pdv")]           public PdvPrefs          Pdv           { get; set; } = new();
     [JsonPropertyName("dashboard")]     public DashboardPrefs    Dashboard     { get; set; } = new();

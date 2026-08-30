@@ -1,6 +1,6 @@
 'use client'
 import { usePreferences } from '@/hooks/usePreferences'
-import { BrainCircuit, Bell, Tag, Check, Loader2, Accessibility, LayoutDashboard, RotateCcw } from 'lucide-react'
+import { BrainCircuit, Bell, Tag, Check, Loader2, Accessibility, LayoutDashboard, RotateCcw, Timer } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
@@ -135,6 +135,36 @@ export default function ConfiguracoesPage() {
                   )}
                 >
                   {prefs.vlibras.corner === c.value && <Check className="w-3.5 h-3.5" />}
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </Section>
+
+      {/* ── Timer de torneio ── */}
+      <Section title="Timer de Torneio" icon={<Timer className="w-5 h-5 text-emerald-400" />}>
+        <Row label="Widget lateral" desc="Deixa o timer preso na lateral em qualquer tela do sistema">
+          <Toggle value={prefs.timer.enabled} onChange={v => set('timer', { enabled: v })} />
+        </Row>
+
+        {prefs.timer.enabled && (
+          <div>
+            <p className="text-xs text-gray-400 mb-2">Posição na tela</p>
+            <div className="grid grid-cols-2 gap-2">
+              {CORNERS.map(c => (
+                <button
+                  key={c.value}
+                  onClick={() => set('timer', { corner: c.value })}
+                  className={clsx(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all',
+                    prefs.timer.corner === c.value
+                      ? 'bg-emerald-600/20 border-emerald-500/60 text-emerald-300'
+                      : 'bg-surface-700 border-surface-500 text-gray-400'
+                  )}
+                >
+                  {prefs.timer.corner === c.value && <Check className="w-3.5 h-3.5" />}
                   {c.label}
                 </button>
               ))}

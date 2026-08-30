@@ -456,6 +456,13 @@ export default function ContasReceberPage() {
 
   useEffect(() => { load(); loadSummary() }, [load, loadSummary])
 
+  // O sync do Inter roda a cada 15 min no servidor: a lista se atualiza sozinha
+  // pra pegar o que entrou no banco, sem precisar sair e voltar na tela.
+  useEffect(() => {
+    const id = window.setInterval(() => { load(); loadSummary() }, 5 * 60 * 1000)
+    return () => window.clearInterval(id)
+  }, [load, loadSummary])
+
   async function handleMarkPaid(t: Transaction) {
     try {
       const { data } = await api.put(`/api/contas-receber/${t.id}`, { status: 'paid' })

@@ -12,6 +12,7 @@ using CardGameStore.Services.Implementations;
 using CardGameStore.Validation;
 using CardGameStore.Services.Interfaces;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +72,8 @@ public class AuthServiceTests
             Audience                     = "TestAudience",
             AccessTokenExpirationMinutes = 60,
             RefreshTokenExpirationDays   = 30,
+            RefreshTokenGraceSeconds     = 120,
+            MaxSessionsPerUser           = 20,
         });
 
         var comandaService = new ComandaService(
@@ -85,7 +88,10 @@ public class AuthServiceTests
             jwtSettings,
             logger ?? NullLogger<AuthService>.Instance,
             comandaService,
-            new Mock<IEmailService>().Object);
+            new Mock<IEmailService>().Object,
+            // O AuthService anota user-agent/IP na sessão; sem requisição no teste,
+            // o HttpContext nulo do mock é exatamente o caso que ele já trata.
+            new Mock<IHttpContextAccessor>().Object);
     }
 
     // ── Login ─────────────────────────────────────────────────────────────────
@@ -389,6 +395,122 @@ public class AuthServiceTests
         var act = async () => await service.RefreshTokenAsync(new RefreshTokenRequest("token-que-nao-existe-xyz"));
 
         await act.Should().ThrowAsync<UnauthorizedAccessException>("token inexistente não deve ser aceito");
+    }
+
+    // Regressão do logout automático: entrar no celular derrubava o PDV, porque o
+    // refresh token vivia numa coluna única do usuário e cada login sobrescrevia o
+    // anterior. Agora cada dispositivo tem a sua sessão.
+    [Fact]
+    public async Task Login_EmOutroDispositivo_NaoDerrubaASessaoAnterior()
+    {
+        var db = CreateSqliteDb();
+        db.Users.Add(new User
+        {
+            Id           = Guid.NewGuid(),
+            Name         = "Lojista",
+            Email        = "lojista@softnerd.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Senha123!"),
+            Role         = UserRole.Admin,
+            IsActive     = true,
+        });
+        await db.SaveChangesAsync();
+        var service = CreateAuthService(db);
+
+        var pdv     = await service.LoginAsync(new LoginRequest("lojista@softnerd.com", "Senha123!"));
+        var celular = await service.LoginAsync(new LoginRequest("lojista@softnerd.com", "Senha123!"));
+
+        pdv.RefreshToken.Should().NotBe(celular.RefreshToken);
+
+        // O token do PDV continua renovando mesmo depois do login no celular.
+        var renovado = await service.RefreshTokenAsync(new RefreshTokenRequest(pdv.RefreshToken));
+        renovado.RefreshToken.Should().NotBeNullOrEmpty();
+    }
+
+    // Duas abas renovando ao mesmo tempo: a segunda chega com o token que a primeira
+    // acabou de rotacionar. Dentro da janela de graça isso não pode deslogar ninguém.
+    [Fact]
+    public async Task RefreshToken_ReusoDentroDaJanelaDeGraca_DeveSerAceito()
+    {
+        var db = CreateSqliteDb();
+        db.Users.Add(new User
+        {
+            Id           = Guid.NewGuid(),
+            Name         = "Lojista",
+            Email        = "abas@softnerd.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Senha123!"),
+            Role         = UserRole.Admin,
+            IsActive     = true,
+        });
+        await db.SaveChangesAsync();
+        var service = CreateAuthService(db);
+
+        var login = await service.LoginAsync(new LoginRequest("abas@softnerd.com", "Senha123!"));
+
+        var primeiraAba = await service.RefreshTokenAsync(new RefreshTokenRequest(login.RefreshToken));
+        primeiraAba.RefreshToken.Should().NotBeNullOrEmpty();
+
+        // Mesma chamada, mesmo token — é a aba que perdeu a corrida.
+        var segundaAba = async () => await service.RefreshTokenAsync(new RefreshTokenRequest(login.RefreshToken));
+
+        await segundaAba.Should().NotThrowAsync(
+            "token recém-rotacionado vale dentro da janela de graça — sem isso a aba lenta desloga a sessão");
+    }
+
+    [Fact]
+    public async Task Logout_NaoDerrubaOsOutrosDispositivos()
+    {
+        var db = CreateSqliteDb();
+        var userId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id           = userId,
+            Name         = "Lojista",
+            Email        = "logout@softnerd.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Senha123!"),
+            Role         = UserRole.Admin,
+            IsActive     = true,
+        });
+        await db.SaveChangesAsync();
+        var service = CreateAuthService(db);
+
+        var pdv     = await service.LoginAsync(new LoginRequest("logout@softnerd.com", "Senha123!"));
+        var celular = await service.LoginAsync(new LoginRequest("logout@softnerd.com", "Senha123!"));
+
+        await service.LogoutAsync(userId, celular.RefreshToken);
+
+        var aindaVale = await service.RefreshTokenAsync(new RefreshTokenRequest(pdv.RefreshToken));
+        aindaVale.RefreshToken.Should().NotBeNullOrEmpty("sair no celular não pode deslogar o PDV");
+
+        var celularCaiu = async () => await service.RefreshTokenAsync(new RefreshTokenRequest(celular.RefreshToken));
+        await celularCaiu.Should().ThrowAsync<UnauthorizedAccessException>();
+    }
+
+    [Fact]
+    public async Task ResetPassword_DeveDerrubarAsSessoesDeTodosOsDispositivos()
+    {
+        const string resetToken = "token-reset-multi-dispositivo";
+        var db = CreateSqliteDb();
+        db.Users.Add(new User
+        {
+            Id                       = Guid.NewGuid(),
+            Name                     = "Cliente",
+            Email                    = "multi@softnerd.com",
+            PasswordHash             = BCrypt.Net.BCrypt.HashPassword("OldPass!"),
+            Role                     = UserRole.Customer,
+            IsActive                 = true,
+            PasswordResetToken       = resetToken,
+            PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(2),
+        });
+        await db.SaveChangesAsync();
+        var service = CreateAuthService(db);
+
+        var sessao = await service.LoginAsync(new LoginRequest("multi@softnerd.com", "OldPass!"));
+
+        await service.ResetPasswordAsync(new ResetPasswordRequest(resetToken, "NewPass123!"));
+
+        var act = async () => await service.RefreshTokenAsync(new RefreshTokenRequest(sessao.RefreshToken));
+        await act.Should().ThrowAsync<UnauthorizedAccessException>(
+            "trocar a senha tem que cortar os dispositivos já logados");
     }
 
     // ── ForgotPassword ────────────────────────────────────────────────────────

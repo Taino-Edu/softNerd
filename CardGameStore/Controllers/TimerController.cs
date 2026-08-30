@@ -8,7 +8,9 @@ namespace CardGameStore.Controllers;
 
 [ApiController]
 [Route("api/timers")]
-[Authorize(Roles = "Admin")]
+// Operador com permissão de campeonatos também roda a mesa: o widget lateral de
+// timer precisa funcionar pra ele, não só pro dono da loja.
+[Authorize(Roles = "Admin,Operator")]
 public class TimerController : ControllerBase
 {
     private readonly AppDbContext _db;
