@@ -9,7 +9,7 @@ import clsx from 'clsx'
 import {
   CheckCircle, XCircle, Settings, Loader2, RefreshCw,
   Upload, Info, AlertTriangle, ExternalLink, X, Save, Link2,
-  Search,
+  Search, Wallet,
 } from 'lucide-react'
 
 type IntegracaoStatus = {
@@ -57,7 +57,7 @@ const INTEGRACAO_INFO: Record<string, {
   inter: {
     label: 'Banco Inter PJ',
     icon:  '🏦',
-    desc:  'Puxa extrato, Pix recebidos e boletos automaticamente via API gratuita do Inter para conta PJ. A chave Pix é usada para gerar cobranças no Crediário.',
+    desc:  'Puxa extrato, saldo, Pix recebidos e boletos automaticamente a cada 15 minutos via API gratuita do Inter para conta PJ. A chave Pix é usada para gerar cobranças no Crediário — a baixa dos pagamentos é automática, sem conferência manual.',
     fields: ['clientId', 'clientSecret', 'pixKey'],
     docs: 'https://developers.bancointer.com.br',
   },
@@ -75,6 +75,9 @@ const INTEGRACAO_INFO: Record<string, {
     fields: ['cnpj'],
   },
 }
+
+const fmtMoeda = (v: number) =>
+  `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 function fmtDate(d?: string) {
   if (!d) return '—'
@@ -99,6 +102,10 @@ export default function IntegracoesPage() {
   const [saving,      setSaving]      = useState(false)
   const [ofxLoading,  setOfxLoading]  = useState(false)
   const [syncingInter, setSyncingInter] = useState(false)
+  /** Saldo e última sincronização lidos do Inter — a tela mostra sem ninguém conferir. */
+  const [interInfo, setInterInfo] = useState<{ saldo: number | null; lastSyncAt: string | null }>(
+    { saldo: null, lastSyncAt: null },
+  )
   const [syncingSefaz, setSyncingSefaz] = useState(false)
   const [tenantErp, setTenantErp] = useState<TenantErpStatus>({ enabled: false })
   const [tenantErpProbe, setTenantErpProbe] = useState<TenantErpProbe | null>(null)
@@ -132,7 +139,24 @@ export default function IntegracoesPage() {
     finally  { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  /** Lê saldo e data do último sync direto do Inter. Falha aqui só some com o saldo. */
+  async function carregarInfoInter() {
+    try {
+      const { data } = await api.get('/api/contas-receber/integracoes/inter/status?comSaldo=true')
+      if (data.configured) {
+        setInterInfo({ saldo: data.saldo ?? null, lastSyncAt: data.lastSyncAt ?? null })
+      }
+    } catch { /* sem saldo na tela, o resto continua */ }
+  }
+
+  useEffect(() => { load(); carregarInfoInter() }, [])
+
+  // O robô de sync roda a cada 15 min no servidor; a tela reflete isso sozinha
+  // enquanto estiver aberta, sem depender de alguém clicar em nada.
+  useEffect(() => {
+    const id = window.setInterval(() => { load(); carregarInfoInter() }, 5 * 60 * 1000)
+    return () => window.clearInterval(id)
+  }, [])
   useEffect(() => {
     const timer = window.setInterval(() => setAgora(Date.now()), 1000)
     return () => window.clearInterval(timer)
@@ -189,12 +213,29 @@ export default function IntegracoesPage() {
     finally { setSaving(false) }
   }
 
+  /**
+   * Puxa extrato + saldo do Inter e já reflete tudo na tela: lançamentos, saldo e
+   * data do sync vêm na mesma resposta. Antes só importava e era preciso ir
+   * conferir em Contas a Receber pra ver se tinha entrado alguma coisa.
+   */
   async function syncInterAgora() {
     setSyncingInter(true)
     try {
       const { data } = await api.post('/api/contas-receber/integracoes/inter/sync')
-      toast.success(`${data.imported} transação(ões) importada(s)${data.duplicates ? `, ${data.duplicates} já existiam` : ''}.`)
-      load()
+
+      setInterInfo({
+        saldo:      data.saldo ?? null,
+        lastSyncAt: data.lastSyncAt ?? new Date().toISOString(),
+      })
+
+      const saldoTxt = data.saldo != null ? ` Saldo: ${fmtMoeda(data.saldo)}.` : ''
+      toast.success(
+        `${data.imported} transação(ões) importada(s)` +
+        `${data.duplicates ? `, ${data.duplicates} já existiam` : ''}.${saldoTxt}`,
+        { duration: 6000 },
+      )
+
+      await load()
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Erro ao sincronizar — confira Client ID/Secret e certificado.')
     } finally {
@@ -388,7 +429,22 @@ export default function IntegracoesPage() {
 
                   <p className="text-sm text-gray-400 mt-1">{info.desc}</p>
 
-                  {int.lastSyncAt && (
+                  {int.source === 'inter' && isReady && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 text-xs">
+                        <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-gray-400">Saldo no banco:</span>
+                        <strong className="text-emerald-300">
+                          {interInfo.saldo != null ? fmtMoeda(interInfo.saldo) : '—'}
+                        </strong>
+                      </span>
+                      <span className="text-[11px] text-gray-500">
+                        Atualiza sozinho a cada 15 min
+                        {interInfo.lastSyncAt ? ` · última: ${fmtDate(interInfo.lastSyncAt)}` : ''}
+                      </span>
+                    </div>
+                  )}
+                  {int.lastSyncAt && int.source !== 'inter' && (
                     <p className="text-xs text-gray-500 mt-1">Última sincronização: {fmtDate(int.lastSyncAt)}</p>
                   )}
                   {int.cnpj && (
@@ -433,7 +489,7 @@ export default function IntegracoesPage() {
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30
                                    border border-brand-500/30 text-sm text-brand-300 transition-colors disabled:opacity-50">
                         {syncingInter ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                        {syncingInter ? 'Sincronizando…' : 'Sincronizar agora'}
+                        {syncingInter ? 'Sincronizando…' : 'Atualizar do banco agora'}
                       </button>
                     )}
                     {int.source === 'sefaz' && sefazOk && (

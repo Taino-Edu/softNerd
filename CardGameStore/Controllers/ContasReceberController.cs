@@ -382,20 +382,36 @@ public class ContasReceberController : ControllerBase
             return BadRequest(new { Message = result.Reason });
         if (result.Error is not null)
             return StatusCode(422, new { message = result.Error });
-        return Ok(new { result.Imported, result.Duplicates });
+
+        // Devolve saldo e data do sync junto do total importado: a tela monta o
+        // estado novo direto daqui, sem uma segunda ida ao servidor pra conferir.
+        return Ok(new
+        {
+            result.Imported,
+            result.Duplicates,
+            result.Saldo,
+            result.LastSyncAt,
+        });
     }
 
     // ── GET /api/contas-receber/integracoes/inter/status ──────────────────────
+    /// <param name="comSaldo">
+    /// Consulta o saldo no Inter junto do status. Fica fora do polling da tela —
+    /// é uma chamada autenticada a mais no banco a cada vez.
+    /// </param>
     [HttpGet("integracoes/inter/status")]
-    public async Task<IActionResult> InterStatus()
+    public async Task<IActionResult> InterStatus([FromQuery] bool comSaldo = false)
     {
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+        var cfg        = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+        var configured = cfg is not null && _inter.IsConfigured(cfg);
+
         return Ok(new
         {
-            configured      = cfg is not null && _inter.IsConfigured(cfg),
+            configured,
             certificateOk   = _inter.CertificateExists(),
             hasCredentials  = !string.IsNullOrWhiteSpace(cfg?.ClientId) && !string.IsNullOrWhiteSpace(cfg?.ClientSecret),
             lastSyncAt      = cfg?.LastSyncAt,
+            saldo           = comSaldo && configured ? await _inter.ConsultarSaldoAsync(cfg!) : null,
         });
     }
 

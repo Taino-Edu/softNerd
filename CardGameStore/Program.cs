@@ -1055,6 +1055,55 @@ using (var scope = app.Services.CreateScope())
                     updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
                 );
                 CREATE INDEX IF NOT EXISTS ix_liga_mensal_manual_entries_ano_mes ON liga_mensal_manual_entries (ano, mes);
+
+                -- Sessões de login: um refresh token por dispositivo. Antes o token morava
+                -- numa coluna única do usuário, então entrar no celular derrubava o PDV e
+                -- duas abas renovando juntas derrubavam as duas — era o logout automático.
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id      UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    token_hash   VARCHAR(64)  NOT NULL,
+                    expires_at   TIMESTAMPTZ  NOT NULL,
+                    rotated_at   TIMESTAMPTZ  NULL,
+                    revoked_at   TIMESTAMPTZ  NULL,
+                    user_agent   VARCHAR(300) NULL,
+                    ip_address   VARCHAR(45)  NULL,
+                    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                    last_used_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ix_user_sessions_token_hash ON user_sessions (token_hash);
+                CREATE INDEX IF NOT EXISTS ix_user_sessions_user             ON user_sessions (user_id);
+
+                -- Migra quem já estava logado: o token da coluna antiga vira a primeira
+                -- sessão, então ninguém precisa relogar por causa do deploy.
+                INSERT INTO user_sessions (user_id, token_hash, expires_at, created_at, last_used_at)
+                SELECT id, refresh_token, refresh_token_expiry, NOW(), NOW()
+                FROM users
+                WHERE refresh_token IS NOT NULL
+                  AND refresh_token_expiry IS NOT NULL
+                  AND refresh_token_expiry > NOW()
+                ON CONFLICT (token_hash) DO NOTHING;
+            ");
+        }
+        else
+        {
+            // SQLite (dev): EnsureCreated não mexe em banco já existente, então a
+            // tabela nova precisa do mesmo empurrão que o Postgres leva acima.
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    id           TEXT     NOT NULL PRIMARY KEY,
+                    user_id      TEXT     NOT NULL,
+                    token_hash   TEXT     NOT NULL,
+                    expires_at   TEXT     NOT NULL,
+                    rotated_at   TEXT     NULL,
+                    revoked_at   TEXT     NULL,
+                    user_agent   TEXT     NULL,
+                    ip_address   TEXT     NULL,
+                    created_at   TEXT     NOT NULL,
+                    last_used_at TEXT     NOT NULL
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ix_user_sessions_token_hash ON user_sessions (token_hash);
+                CREATE INDEX IF NOT EXISTS ix_user_sessions_user             ON user_sessions (user_id);
             ");
         }
 

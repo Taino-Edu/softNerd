@@ -41,20 +41,33 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
 
   useEffect(() => { carregar() }, [carregar])
 
-  async function verificar() {
-    setVerifying(true)
+  /** `silencioso` = veio do relógio, não do botão: não enche a tela de toast. */
+  const verificar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setVerifying(true)
     try {
       const { data } = await reservationApi.verificarPix(groupId)
       setPix(prev => prev ? { ...prev, status: data.status, pagoEm: data.pagoEm } : prev)
       if (data.status === 'CONCLUIDA') {
         toast.success('Pagamento confirmado!')
         onPago?.()
-      } else {
+      } else if (!silencioso) {
         toast('Ainda não identificamos o pagamento. Tenta de novo em alguns segundos.')
       }
-    } catch { toast.error('Erro ao verificar pagamento.') }
-    finally { setVerifying(false) }
-  }
+    } catch {
+      if (!silencioso) toast.error('Erro ao verificar pagamento.')
+    } finally {
+      if (!silencioso) setVerifying(false)
+    }
+  }, [groupId, onPago])
+
+  // Confirmação automática enquanto a janela está aberta — ninguém precisa clicar
+  // em "verificar": quando o Pix cai, o status muda sozinho. O botão fica só como
+  // saída manual pra quem não quer esperar os 5s.
+  useEffect(() => {
+    if (!pix || pix.status !== 'ATIVA') return
+    const id = setInterval(() => { verificar(true) }, 5000)
+    return () => clearInterval(id)
+  }, [pix, verificar])
 
   function copiar() {
     if (!pix?.pixCopiaCola) return
@@ -129,9 +142,9 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
               </p>
             )}
             <p className={clsx('text-center text-xs', dark ? 'text-gray-500' : 'text-gray-400')}>
-              Aguardando pagamento...
+              Aguardando pagamento — a confirmação é automática, não precisa clicar em nada.
             </p>
-            <button onClick={verificar} disabled={verifying}
+            <button onClick={() => verificar()} disabled={verifying}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all disabled:opacity-60"
               style={{ borderColor: '#7C3AED', color: '#7C3AED' }}>
               {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}

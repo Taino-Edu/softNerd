@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { authApi } from '@/lib/api'
-import { saveAuth } from '@/lib/auth'
+import Link from 'next/link'
+import { authApi, comandaApi } from '@/lib/api'
+import { saveAuth, isLoggedIn } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
 import {
   User, Hash, MessageCircle, Loader2,
-  X, Shield, ChevronRight, ArrowLeft
+  X, Shield, ChevronRight, ArrowLeft, Receipt
 } from 'lucide-react'
 
 const STORAGE_KEY = 'mesa-last-user'
@@ -70,6 +71,8 @@ export default function MesaPage() {
   const [whatsApp, setWhatsApp]     = useState('')
   const [consent, setConsent]       = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
+  /** Já tem comanda aberta nesta conta: dá pra ir direto, sem reidentificar. */
+  const [temComandaAberta, setTemComandaAberta] = useState(false)
 
   useEffect(() => {
     try {
@@ -82,6 +85,15 @@ export default function MesaPage() {
         }
       }
     } catch {}
+  }, [])
+
+  // Quem já está logado e com comanda aberta não precisa passar pelo formulário
+  // de novo — abrir outra comanda pela mesa seria repetir o que já existe.
+  useEffect(() => {
+    if (!isLoggedIn()) return
+    comandaApi.myComanda()
+      .then(() => setTemComandaAberta(true))
+      .catch(() => setTemComandaAberta(false))
   }, [])
 
   function formatCpf(v: string) {
@@ -167,6 +179,21 @@ export default function MesaPage() {
 
       {/* Card branco principal */}
       <div className="relative flex-1 bg-white rounded-t-[2.5rem] shadow-[0_-8px_40px_rgba(0,0,0,0.15)] px-6 pt-8 pb-12">
+
+        {/* Comanda já aberta: atalho direto, sem repetir a identificação */}
+        {temComandaAberta && step !== 'loading' && (
+          <Link href="/cliente"
+            className="mb-6 flex items-center gap-3 rounded-2xl bg-blue-50 border border-blue-100 p-4 max-w-sm mx-auto transition-all active:scale-95">
+            <div className="w-10 h-10 rounded-full bg-[#3EC2F2]/15 flex items-center justify-center shrink-0">
+              <Receipt className="w-5 h-5 text-[#3EC2F2]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 text-sm">Você já tem uma comanda aberta</p>
+              <p className="text-[11px] text-gray-500">Toque para abrir sem preencher nada</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+          </Link>
+        )}
 
         {/* Loading */}
         {step === 'loading' && (
@@ -300,6 +327,15 @@ export default function MesaPage() {
               </button>
             )}
           </div>
+        )}
+
+        {step !== 'loading' && (
+          <p className="text-center text-xs text-gray-400 mt-8">
+            Já tem conta com e-mail e senha?{' '}
+            <Link href="/entrar" className="text-[#3EC2F2] font-semibold underline underline-offset-2">
+              Entrar pela conta
+            </Link>
+          </p>
         )}
 
         <p className="text-center text-[10px] text-gray-300 mt-10 font-medium">

@@ -66,6 +66,7 @@ public class InterSyncService
             var inicio = fim.AddDays(-days);
 
             var transactions = await FetchExtratoCompletoAsync(token, inicio, fim);
+            var saldo        = await FetchSaldoAsync(token);
 
             int imported = 0, skipped = 0;
             foreach (var t in transactions)
@@ -106,7 +107,13 @@ public class InterSyncService
             cfg.UpdatedAt  = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            return new InterSyncResult { Imported = imported, Duplicates = skipped };
+            return new InterSyncResult
+            {
+                Imported   = imported,
+                Duplicates = skipped,
+                Saldo      = saldo,
+                LastSyncAt = cfg.LastSyncAt,
+            };
         }
         catch (Exception ex)
         {
@@ -319,6 +326,48 @@ public class InterSyncService
         return todas;
     }
 
+    // ── Saldo ─────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Saldo atual da conta PJ. Puxado junto do extrato pra tela mostrar o número do
+    /// banco na hora do sync, sem ninguém precisar conferir no app do Inter.
+    /// Falha aqui nunca derruba o sync: o extrato é o que importa, o saldo é enfeite.
+    /// </summary>
+    public async Task<decimal?> ConsultarSaldoAsync(IntegrationConfig cfg)
+    {
+        if (!IsConfigured(cfg)) return null;
+        try
+        {
+            var clientSecret = _enc.Decrypt(cfg.ClientSecret!);
+            var token        = await GetTokenAsync(cfg.ClientId!, clientSecret, "extrato.read");
+            return await FetchSaldoAsync(token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao consultar saldo do Inter");
+            return null;
+        }
+    }
+
+    private async Task<decimal?> FetchSaldoAsync(string token)
+    {
+        try
+        {
+            using var http = BuildMtlsClient();
+            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var resp = await http.GetAsync("https://cdpj.partners.bancointer.com.br/banking/v2/saldo");
+            if (!resp.IsSuccessStatusCode) return null;
+
+            var body = await resp.Content.ReadFromJsonAsync<InterSaldoResponse>(_json);
+            return body?.Disponivel;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao ler saldo do Inter — sync segue sem o saldo.");
+            return null;
+        }
+    }
+
     /// <summary>Datas do extrato vêm como "yyyy-MM-dd" — armazenadas como meia-noite UTC (data pura).</summary>
     private static DateTime? ParseData(string? s) =>
         DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture,
@@ -340,7 +389,10 @@ public class InterSyncService
     }
 }
 
-// ── Background service — sincroniza a cada hora ───────────────────────────────
+// ── Background service — sincroniza a cada 15 min ─────────────────────────────
+// Era de hora em hora, e o lojista via dado velho até mandar sincronizar na mão.
+// 15 min mantém o extrato perto do tempo real sem chegar perto do limite do Inter
+// (uma chamada de token + páginas de extrato por ciclo).
 public class InterSyncBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -377,7 +429,7 @@ public class InterSyncBackgroundService : BackgroundService
                 _logger.LogError(ex, "Erro no background sync do Inter");
             }
 
-            await Task.Delay(TimeSpan.FromHours(1), ct);
+            await Task.Delay(TimeSpan.FromMinutes(15), ct);
         }
     }
 }
@@ -386,6 +438,9 @@ public class InterSyncBackgroundService : BackgroundService
 internal record InterTokenResponse(
     [property: JsonPropertyName("access_token")] string AccessToken,
     [property: JsonPropertyName("expires_in")]   int    ExpiresIn);
+
+internal record InterSaldoResponse(
+    [property: JsonPropertyName("disponivel")] decimal? Disponivel);
 
 internal record InterExtratoResponse(
     [property: JsonPropertyName("transacoes")]   List<InterLancamento>? Transacoes,
@@ -411,6 +466,9 @@ public record InterSyncResult
     public int     Imported   { get; init; }
     public int     Duplicates { get; init; }
     public string? Error      { get; init; }
+    /// <summary>Saldo disponível lido no mesmo ciclo. Null = o Inter não respondeu.</summary>
+    public decimal?  Saldo      { get; init; }
+    public DateTime? LastSyncAt { get; init; }
 }
 
 // ── DTOs da API Pix (padrão Banco Central, usado pelo Inter) ──────────────────

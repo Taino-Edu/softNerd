@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     // -------------------------------------------------------------------------
 
     public DbSet<User>                    Users                    { get; set; }
+    public DbSet<UserSession>             UserSessions             { get; set; }
     public DbSet<Product>                 Products                 { get; set; }
     public DbSet<ProductCategory>         ProductCategories        { get; set; }
     public DbSet<Comanda>                 Comandas                 { get; set; }
@@ -410,6 +411,26 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(r => r.ReservationGroupId)
                   .HasDatabaseName("ix_product_reservations_group");
+        });
+
+        // =====================================================================
+        // USER SESSION (refresh token por dispositivo)
+        // =====================================================================
+        modelBuilder.Entity<UserSession>(entity =>
+        {
+            // O refresh chega só com o token: a busca é sempre por hash.
+            entity.HasIndex(s => s.TokenHash)
+                  .IsUnique()
+                  .HasDatabaseName("ix_user_sessions_token_hash");
+
+            // Listar/limpar as sessões de um usuário.
+            entity.HasIndex(s => s.UserId)
+                  .HasDatabaseName("ix_user_sessions_user");
+
+            entity.HasOne(s => s.User)
+                  .WithMany()
+                  .HasForeignKey(s => s.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // =====================================================================

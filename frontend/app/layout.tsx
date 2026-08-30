@@ -5,6 +5,7 @@ import PWAInstallButton from '@/components/PWAInstallButton'
 import CookieBanner from '@/components/CookieBanner'
 import Footer from '@/components/Footer'
 import VLibrasController from '@/components/VLibrasController'
+import TimerWidget from '@/components/TimerWidget'
 import ClientProviders from '@/components/ClientProviders'
 
 const nunito = Nunito({
@@ -77,6 +78,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
         <VLibrasController />
+        {/* Timer de torneio como widget lateral — acompanha o operador em todas as telas */}
+        <TimerWidget />
         {children}
         {/* Rodapé com links legais (LGPD) — não aparece no painel admin */}
         <Footer />

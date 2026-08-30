@@ -1,7 +1,7 @@
 'use client'
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { authApi } from '@/lib/api'
+import { authApi, comandaApi } from '@/lib/api'
 import { saveAuth } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
 import { Mail, KeyRound, Loader2, Gamepad2, ArrowLeft, UserPlus } from 'lucide-react'
@@ -18,10 +18,26 @@ export default function EntrarPage() {
 function EntrarForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const returnTo = searchParams.get('returnTo') || '/cliente/perfil'
+  /** Null = ninguém pediu destino; aí decidimos pela comanda aberta. */
+  const returnTo = searchParams.get('returnTo')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
+
+  /**
+   * Com comanda aberta, entrar pela conta cai direto na comanda. Antes ia sempre
+   * pro perfil, e o cliente tinha que reler o QR Code da mesa só pra achar o que
+   * já era dele.
+   */
+  async function destinoDepoisDoLogin(): Promise<string> {
+    if (returnTo) return returnTo
+    try {
+      await comandaApi.myComanda()
+      return '/cliente'
+    } catch {
+      return '/cliente/perfil'
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -30,7 +46,7 @@ function EntrarForm() {
       const { data } = await authApi.clientLogin(email, password)
       saveAuth(data)
       toast.success(`Bem-vindo, ${data.userName}!`)
-      router.push(returnTo)
+      router.push(await destinoDepoisDoLogin())
     } catch {
       toast.error('E-mail ou senha inválidos.')
     } finally {
@@ -57,7 +73,7 @@ function EntrarForm() {
             <Gamepad2 className="w-8 h-8 text-brand-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Minha Conta</h1>
-          <p className="text-gray-400 mt-1 text-sm">Entre para ver seus pontos e histórico</p>
+          <p className="text-gray-400 mt-1 text-sm">Entre para ver sua comanda, pontos e histórico</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-5">
@@ -93,7 +109,7 @@ function EntrarForm() {
 
           <div className="text-center text-sm text-gray-500">
             Ainda não é cliente?{' '}
-            <Link href={`/cadastro?returnTo=${encodeURIComponent(returnTo)}`} className="text-brand-400 hover:text-brand-300 font-medium transition">
+            <Link href={returnTo ? `/cadastro?returnTo=${encodeURIComponent(returnTo)}` : '/cadastro'} className="text-brand-400 hover:text-brand-300 font-medium transition">
               Criar conta
             </Link>
           </div>

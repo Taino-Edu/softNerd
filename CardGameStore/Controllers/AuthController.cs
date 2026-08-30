@@ -90,8 +90,18 @@ public class AuthController : ControllerBase
     /// <summary>Remove os cookies de autenticação no logout.</summary>
     private void ClearAuthCookies()
     {
-        Response.Cookies.Delete("accessToken");
-        Response.Cookies.Delete("refreshToken");
+        // Apagar cookie exige os MESMOS atributos usados pra gravar — com Secure/SameSite
+        // diferentes o browser ignora o Set-Cookie de remoção e a sessão "volta".
+        var options = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure   = !_env.IsDevelopment(),
+            SameSite = SameSiteMode.Lax,
+            Path     = "/",
+        };
+
+        Response.Cookies.Delete("accessToken",  options);
+        Response.Cookies.Delete("refreshToken", options);
     }
 
     // =========================================================================
@@ -399,7 +409,7 @@ public class AuthController : ControllerBase
         if (claim == null || !Guid.TryParse(claim.Value, out var userId))
             return Unauthorized();
 
-        await _authService.LogoutAsync(userId);
+        await _authService.LogoutAsync(userId, Request.Cookies["refreshToken"]);
         ClearAuthCookies();
         _logger.LogInformation("Logout realizado para usuário {UserId}", userId);
         return NoContent();

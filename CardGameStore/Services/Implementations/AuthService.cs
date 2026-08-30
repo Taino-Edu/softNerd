@@ -28,19 +28,22 @@ public class AuthService : IAuthService
     private readonly ILogger<AuthService>  _logger;
     private readonly IComandaService       _comandaService;
     private readonly IEmailService         _email;
+    private readonly IHttpContextAccessor  _http;
 
     public AuthService(
         AppDbContext db,
         IOptions<JwtSettings> jwt,
         ILogger<AuthService> logger,
         IComandaService comandaService,
-        IEmailService email)
+        IEmailService email,
+        IHttpContextAccessor http)
     {
         _db             = db;
         _jwt            = jwt.Value;
         _logger         = logger;
         _comandaService = comandaService;
         _email          = email;
+        _http           = http;
     }
 
     // =========================================================================
@@ -128,12 +131,61 @@ public class AuthService : IAuthService
     public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
     {
         var hashedToken = HashRefreshToken(request.RefreshToken);
-        var user = await _db.Users.FirstOrDefaultAsync(
-            u => u.RefreshToken == hashedToken && u.IsActive
-        );
+        var agora       = DateTime.UtcNow;
 
-        if (user == null || user.RefreshTokenExpiry < DateTime.UtcNow)
+        var session = await _db.UserSessions
+            .Include(s => s.User)
+            .FirstOrDefaultAsync(s => s.TokenHash == hashedToken);
+
+        // Sessão ainda não migrada: o token está na coluna antiga do usuário.
+        // Adota a sessão em vez de deslogar quem já estava logado antes do deploy.
+        if (session == null)
+        {
+            var legado = await _db.Users.FirstOrDefaultAsync(
+                u => u.RefreshToken == hashedToken && u.IsActive);
+
+            if (legado == null || legado.RefreshTokenExpiry == null || legado.RefreshTokenExpiry < agora)
+                throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+
+            session = new UserSession
+            {
+                UserId    = legado.Id,
+                TokenHash = hashedToken,
+                ExpiresAt = legado.RefreshTokenExpiry.Value,
+                User      = legado,
+            };
+            _db.UserSessions.Add(session);
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Outra aba migrou a mesma sessão no mesmo instante — reaproveita a dela.
+                _db.ChangeTracker.Clear();
+                session = await _db.UserSessions
+                    .Include(x => x.User)
+                    .FirstOrDefaultAsync(x => x.TokenHash == hashedToken);
+                if (session == null) throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+            }
+        }
+
+        var user = session.User ?? await _db.Users.FindAsync(session.UserId);
+
+        if (user is null || !user.IsActive || session.RevokedAt != null || session.ExpiresAt < agora)
             throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+
+        // Token já rotacionado: só vale dentro da janela de graça. É esse trecho que
+        // impede a segunda aba (que disparou o refresh junto com a primeira e chegou
+        // com o token velho) de derrubar a sessão inteira.
+        if (session.RotatedAt != null &&
+            session.RotatedAt.Value.AddSeconds(_jwt.RefreshTokenGraceSeconds) < agora)
+        {
+            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+        }
+
+        session.LastUsedAt = agora;
+        if (session.RotatedAt == null) session.RotatedAt = agora;
 
         return await GenerateAuthResponseAsync(user);
     }
@@ -141,16 +193,44 @@ public class AuthService : IAuthService
     // =========================================================================
     // LOGOUT
     // =========================================================================
-    public async Task LogoutAsync(Guid userId)
+    public async Task LogoutAsync(Guid userId, string? refreshToken = null)
     {
+        var agora = DateTime.UtcNow;
+
+        // Sair no celular não pode derrubar o PDV: revoga só a sessão deste
+        // dispositivo. Sem o token (chamada antiga) revoga todas, como antes.
+        if (!string.IsNullOrEmpty(refreshToken))
+        {
+            var hash    = HashRefreshToken(refreshToken);
+            var session = await _db.UserSessions
+                .FirstOrDefaultAsync(s => s.TokenHash == hash && s.UserId == userId);
+
+            if (session != null)
+            {
+                session.RevokedAt = agora;
+                await _db.SaveChangesAsync();
+            }
+
+            // A API sempre envia o cookie quando ele existe. Se essa sessão já
+            // expirou/foi limpa, não há nada a revogar — e principalmente não
+            // devemos derrubar os outros dispositivos como efeito colateral.
+            return;
+        }
+
+        var sessions = await _db.UserSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .ToListAsync();
+        foreach (var s in sessions) s.RevokedAt = agora;
+
         var user = await _db.Users.FindAsync(userId);
         if (user != null)
         {
             user.RefreshToken       = null;
             user.RefreshTokenExpiry = null;
-            user.UpdatedAt          = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            user.UpdatedAt          = agora;
         }
+
+        await _db.SaveChangesAsync();
     }
 
     // =========================================================================
@@ -173,16 +253,80 @@ public class AuthService : IAuthService
 
         var accessToken  = GenerateJwt(user, permissions);
         var refreshToken = GenerateRefreshToken();
-        var expiresAt    = DateTime.UtcNow.AddMinutes(_jwt.AccessTokenExpirationMinutes);
+        var agora        = DateTime.UtcNow;
+        var expiresAt    = agora.AddMinutes(_jwt.AccessTokenExpirationMinutes);
 
-        // Armazena somente o hash SHA-256 — o token bruto só sai no cookie HttpOnly.
-        // Se o banco for comprometido, os hashes não são diretamente utilizáveis.
-        user.RefreshToken       = HashRefreshToken(refreshToken);
-        user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(_jwt.RefreshTokenExpirationDays);
-        user.UpdatedAt          = DateTime.UtcNow;
+        // Cada login/refresh abre a SUA sessão. As outras continuam de pé — é o que
+        // deixa o lojista usar PDV, celular e tablet ao mesmo tempo sem se deslogar.
+        // Armazena somente o hash SHA-256: o token bruto só sai no cookie HttpOnly,
+        // então um vazamento do banco não entrega sessões utilizáveis.
+        _db.UserSessions.Add(new UserSession
+        {
+            UserId    = user.Id,
+            TokenHash = HashRefreshToken(refreshToken),
+            ExpiresAt = agora.AddDays(_jwt.RefreshTokenExpirationDays),
+            UserAgent = Truncate(_http.HttpContext?.Request.Headers.UserAgent.ToString(), 300),
+            IpAddress = Truncate(_http.HttpContext?.Connection.RemoteIpAddress?.ToString(), 45),
+        });
+
+        // A coluna antiga só continua preenchida pra não quebrar sessão de quem ainda
+        // não passou por um refresh depois do deploy; quem renova migra pra tabela.
+        user.RefreshToken       = null;
+        user.RefreshTokenExpiry = null;
+        user.UpdatedAt          = agora;
+
         await _db.SaveChangesAsync();
+        await LimparSessoesAsync(user.Id, agora);
 
         return new AuthResponse(accessToken, refreshToken, expiresAt, user.Role, user.Name, user.Id, comandaId, permissions);
+    }
+
+    /// <summary>
+    /// Derruba todos os dispositivos do usuário. Usado na troca de senha e na
+    /// anonimização LGPD — quem já estava logado tem que ser cortado junto.
+    /// Não salva: quem chama já faz o SaveChanges do próprio fluxo.
+    /// </summary>
+    private async Task RevogarTodasAsSessoesAsync(Guid userId)
+    {
+        var sessoes = await _db.UserSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .ToListAsync();
+
+        var agora = DateTime.UtcNow;
+        foreach (var s in sessoes) s.RevokedAt = agora;
+    }
+
+    private static string? Truncate(string? value, int max) =>
+        string.IsNullOrWhiteSpace(value) ? null
+        : value.Length <= max ? value
+        : value[..max];
+
+    /// <summary>
+    /// Descarta sessões expiradas, revogadas ou já fora da janela de graça e mantém
+    /// o teto por usuário — senão a tabela cresce sem parar com token de QR Code.
+    /// </summary>
+    private async Task LimparSessoesAsync(Guid userId, DateTime agora)
+    {
+        var limiteGraca = agora.AddSeconds(-_jwt.RefreshTokenGraceSeconds);
+
+        var mortas = await _db.UserSessions
+            .Where(s => s.UserId == userId &&
+                   (s.ExpiresAt < agora ||
+                    s.RevokedAt != null ||
+                    (s.RotatedAt != null && s.RotatedAt < limiteGraca)))
+            .ToListAsync();
+
+        if (mortas.Count > 0) _db.UserSessions.RemoveRange(mortas);
+
+        var vivas = await _db.UserSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null && s.ExpiresAt >= agora)
+            .OrderByDescending(s => s.LastUsedAt)
+            .Skip(_jwt.MaxSessionsPerUser)
+            .ToListAsync();
+
+        if (vivas.Count > 0) _db.UserSessions.RemoveRange(vivas);
+
+        if (mortas.Count > 0 || vivas.Count > 0) await _db.SaveChangesAsync();
     }
 
     private string GenerateJwt(User user, string[]? permissions = null)
@@ -404,6 +548,10 @@ public class AuthService : IAuthService
         user.RefreshToken             = null; // invalida sessões ativas
         user.RefreshTokenExpiry       = null;
         user.UpdatedAt                = DateTime.UtcNow;
+
+        // As sessões agora moram em user_sessions: limpar a coluna antiga sozinha
+        // deixaria os dispositivos já logados continuarem entrando com a senha velha.
+        await RevogarTodasAsSessoesAsync(user.Id);
 
         await _db.SaveChangesAsync();
         _logger.LogInformation("Senha redefinida para usuário {UserId}", user.Id);
