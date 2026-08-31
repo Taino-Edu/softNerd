@@ -121,6 +121,13 @@ SMTP_FROM_NAME=Santuário Nerd
 # --- Google Gemini IA ---
 GEMINI_API_KEY=PREENCHA_COM_SUA_CHAVE_GEMINI
 
+# --- WhatsApp comunitário (só usado com --profile whatsapp) ---
+EVOLUTION_API_KEY=
+EVOLUTION_INSTANCE_NAME=santuarionerd
+EVOLUTION_DATABASE_URI=
+WHATSAPP_AUTOMATION_API_KEY=
+N8N_ENCRYPTION_KEY=
+
 # --- TCG APIs ---
 POKEMON_API_KEY=
 

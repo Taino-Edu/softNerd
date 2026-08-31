@@ -212,6 +212,16 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueLimit           = 10;
     });
 
+    // Evolution/n8n fala com um único IP da rede Docker; bucket separado evita
+    // que um pico de mensagens consuma o limite dos clientes do site.
+    options.AddFixedWindowLimiter("automation", opt =>
+    {
+        opt.PermitLimit = 180;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 20;
+    });
+
     options.OnRejected = async (context, token) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -365,6 +375,8 @@ builder.Services.AddScoped<IVendaAvulsaService,  VendaAvulsaService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<IEmailService,        EmailService>();
 builder.Services.AddScoped<IPushService,         PushService>();
+builder.Services.AddScoped<IReservationPixService, ReservationPixService>();
+builder.Services.AddScoped<IWhatsAppAutomationService, WhatsAppAutomationService>();
 builder.Services.AddScoped<IAiChatService,       GeminiChatService>();
 builder.Services.AddSingleton<ITcgApiClient,     TcgApiClient>();
 builder.Services.AddSingleton<ITcgService,       TcgService>();
@@ -489,6 +501,11 @@ using (var scope = app.Services.CreateScope())
         if (!useSqlite)
         {
             await db.Database.ExecuteSqlRawAsync(@"
+                -- Schemas isolados para os serviços de automação que compartilham
+                -- o mesmo PostgreSQL sem misturar tabelas com o domínio do ERP.
+                CREATE SCHEMA IF NOT EXISTS n8n;
+                CREATE SCHEMA IF NOT EXISTS evolution_api;
+
                 CREATE TABLE IF NOT EXISTS perfis (
                     id                  UUID         NOT NULL DEFAULT gen_random_uuid(),
                     nome                VARCHAR(100) NOT NULL,
@@ -894,6 +911,32 @@ using (var scope = app.Services.CreateScope())
                     read_at    TIMESTAMPTZ NULL
                 );
                 CREATE INDEX IF NOT EXISTS ix_notifications_user ON notifications (user_id);
+
+                -- WhatsApp/Evolution: idempotência dos webhooks e auditoria mínima.
+                CREATE TABLE IF NOT EXISTS whatsapp_inbound_events (
+                    id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+                    external_message_id VARCHAR(200)  NOT NULL,
+                    phone               VARCHAR(20)   NOT NULL,
+                    message_text        VARCHAR(1000) NULL,
+                    response_json       TEXT          NULL,
+                    status              VARCHAR(20)   NOT NULL DEFAULT 'processing',
+                    received_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+                    processed_at        TIMESTAMPTZ   NULL
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ux_whatsapp_inbound_external_message_id
+                    ON whatsapp_inbound_events (external_message_id);
+                CREATE INDEX IF NOT EXISTS ix_whatsapp_inbound_phone
+                    ON whatsapp_inbound_events (phone);
+
+                CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+                    phone            VARCHAR(20) PRIMARY KEY,
+                    user_id          UUID         NULL REFERENCES users(id) ON DELETE SET NULL,
+                    bot_paused_until TIMESTAMPTZ  NULL,
+                    last_inbound_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS ix_whatsapp_conversations_user
+                    ON whatsapp_conversations (user_id);
 
                 -- Mensageria: imagem opcional na notificação (banner de campanha)
                 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS image_url VARCHAR(500) NULL;

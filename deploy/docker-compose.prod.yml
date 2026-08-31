@@ -111,6 +111,8 @@ services:
       SmtpSettings__AppUrl: "${APP_URL:-https://santuarionerd.com.br}"
       # Integrações
       GeminiSettings__ApiKey: "${GEMINI_API_KEY}"
+      # API interna consumida pelo workflow do n8n. Não reutilizar JWT/API key da Evolution.
+      WhatsAppAutomation__ApiKey: "${WHATSAPP_AUTOMATION_API_KEY:-}"
       TcgSettings__PokemonApiKey: "${POKEMON_API_KEY:-}"
       # Tenant-ERP — credencial tecnica criada no dominio da loja
       TenantErp__Enabled: "${TENANT_ERP_ENABLED:-false}"
@@ -210,6 +212,177 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ---------------------------------------------------------------------------
+  # REDIS — cache/sessão da Evolution API. Não fica exposto na VPS.
+  # ---------------------------------------------------------------------------
+  redis:
+    profiles: ["whatsapp"]
+    image: redis:7.4-alpine
+    container_name: santuarionerd_redis
+    command: redis-server --appendonly yes --maxmemory 96mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - cardgame_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # EVOLUTION API — ponte comunitária WhatsApp Web/Baileys.
+  # A API não é publicada pelo Nginx; só n8n e serviços da rede Docker acessam.
+  # ---------------------------------------------------------------------------
+  evolution-api:
+    profiles: ["whatsapp"]
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: santuarionerd_evolution
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SERVER_NAME: santuarionerd-evolution
+      SERVER_TYPE: http
+      SERVER_PORT: "8080"
+      SERVER_URL: http://evolution-api:8080
+      TELEMETRY_ENABLED: "false"
+      LOG_LEVEL: ERROR,WARN,INFO
+      LOG_BAILEYS: error
+      DEL_INSTANCE: "false"
+      DATABASE_PROVIDER: postgresql
+      # URI completa e URL-encoded, terminando com ?schema=evolution_api.
+      DATABASE_CONNECTION_URI: "${EVOLUTION_DATABASE_URI}"
+      DATABASE_CONNECTION_CLIENT_NAME: santuarionerd
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/1
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      AUTHENTICATION_API_KEY: "${EVOLUTION_API_KEY}"
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      CONFIG_SESSION_PHONE_CLIENT: Santuário Nerd
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: "30"
+      # Todo evento de mensagem chega no workflow visual do n8n.
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      # N8N_PATH também prefixa webhooks internos; por isso /automacao/ aparece aqui.
+      WEBHOOK_GLOBAL_URL: http://n8n:5678/automacao/webhook/evolution-whatsapp
+      WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: "false"
+      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+      WEBHOOK_EVENTS_MESSAGES_UPDATE: "true"
+      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
+      WEBHOOK_EVENTS_QRCODE_UPDATED: "false"
+      WEBHOOK_EVENTS_SEND_MESSAGE: "false"
+      WEBHOOK_RETRY_MAX_ATTEMPTS: "5"
+      WEBHOOK_RETRY_INITIAL_DELAY_SECONDS: "5"
+      WEBHOOK_RETRY_USE_EXPONENTIAL_BACKOFF: "true"
+      N8N_ENABLED: "false"
+      CHATWOOT_ENABLED: "false"
+      RABBITMQ_ENABLED: "false"
+      KAFKA_ENABLED: "false"
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cardgame_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # N8N — editor visual dos fluxos. UI em https://santuarionerd.com.br/automacao/
+  # Os webhooks e as chamadas internas continuam na rede Docker.
+  # ---------------------------------------------------------------------------
+  n8n:
+    profiles: ["whatsapp"]
+    image: n8nio/n8n:2.37.4
+    container_name: santuarionerd_n8n
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: "5432"
+      DB_POSTGRESDB_DATABASE: "${POSTGRES_DB:-cardgamestore}"
+      DB_POSTGRESDB_USER: "${POSTGRES_USER:-cardgame_user}"
+      DB_POSTGRESDB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_POSTGRESDB_SCHEMA: n8n
+      N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY}"
+      N8N_HOST: santuarionerd.com.br
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: https
+      N8N_PATH: /automacao/
+      N8N_EDITOR_BASE_URL: https://santuarionerd.com.br/automacao/
+      WEBHOOK_URL: https://santuarionerd.com.br/automacao/
+      N8N_PROXY_HOPS: "2"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "168"
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: none
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      TZ: America/Sao_Paulo
+      EVOLUTION_API_URL: http://evolution-api:8080
+      EVOLUTION_API_KEY: "${EVOLUTION_API_KEY}"
+      EVOLUTION_INSTANCE_NAME: "${EVOLUTION_INSTANCE_NAME:-santuarionerd}"
+      SOFTNERD_API_URL: http://api:5000
+      WHATSAPP_AUTOMATION_API_KEY: "${WHATSAPP_AUTOMATION_API_KEY}"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      evolution-api:
+        condition: service_started
+    networks:
+      - cardgame_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 # -----------------------------------------------------------------------------
 # Volumes persistentes (dados sobrevivem a reinicios e redeploys)
 # -----------------------------------------------------------------------------
@@ -217,6 +390,9 @@ volumes:
   postgres_data:
   mongo_data:
   api_uploads:
+  redis_data:
+  evolution_instances:
+  n8n_data:
 
 # -----------------------------------------------------------------------------
 # Rede interna Docker (containers se falam pelo nome do serviço)

@@ -36,7 +36,7 @@ public class ReservationController : ControllerBase
 {
     private readonly AppDbContext        _db;
     private readonly IVendaAvulsaService _vendaService;
-    private readonly InterSyncService    _inter;
+    private readonly IReservationPixService _reservationPix;
     private readonly IPixReconciliationService _pixReconciliation;
     private readonly IPushService        _push;
     private readonly IAuditService       _audit;
@@ -44,12 +44,12 @@ public class ReservationController : ControllerBase
 
     public ReservationController(
         AppDbContext db, IVendaAvulsaService vendaService,
-        InterSyncService inter, IPixReconciliationService pixReconciliation, IPushService push,
+        IReservationPixService reservationPix, IPixReconciliationService pixReconciliation, IPushService push,
         IAuditService audit, IHubContext<ComandaHub> hub)
     {
         _db                = db;
         _vendaService      = vendaService;
-        _inter             = inter;
+        _reservationPix    = reservationPix;
         _pixReconciliation = pixReconciliation;
         _push              = push;
         _audit             = audit;
@@ -922,72 +922,23 @@ public class ReservationController : ControllerBase
     public async Task<IActionResult> GerarPixReserva(Guid groupId)
     {
         var userId = GetUserId();
+        var result = await _reservationPix.GerarAsync(
+            groupId, userId, podeGerarParaTerceiros: User.IsInRole("Admin"));
 
-        var items = await _db.ProductReservations
-            .Include(r => r.Product)
-            .Include(r => r.Variant)
-            .Include(r => r.User)
-            .Where(r => r.ReservationGroupId == groupId)
-            .ToListAsync();
+        if (!result.Success || result.Pix is null)
+            return StatusCode(result.StatusCode, new { Message = result.Error });
 
-        if (items.Count == 0) return NotFound(new { Message = "Reserva não encontrada." });
-        // Dono gera o próprio Pix; admin gera pra enviar o código pelo WhatsApp/balcão.
-        if (items[0].UserId != userId && !User.IsInRole("Admin")) return Forbid();
-
-        var preVendas = items.Where(r => r.Kind == "pre_venda" && r.Status == "active").ToList();
-        if (preVendas.Count == 0)
-            return BadRequest(new { Message = "Itens de fila não cobram — o Pix é gerado quando o produto chegar." });
-        if (items.Any(r => r.Kind == "pre_venda" && r.Status != "active"))
-            return BadRequest(new { Message = "Só é possível gerar Pix para pré-vendas ativas." });
-
-        // Reaproveita cobrança ATIVA já existente pra este grupo em vez de gerar uma nova
-        // toda vez que o cliente reabre a tela do Pix (evita cobranças órfãs no Inter).
-        var pixAtivo = await _db.PixCobrancas
-            .Where(p => p.ReservationGroupId == groupId && p.Status == "ATIVA")
-            .OrderByDescending(p => p.CriadoEm)
-            .FirstOrDefaultAsync();
-        if (pixAtivo is not null)
-            return Ok(new { pixAtivo.TxId, pixAtivo.Status, pixAtivo.PixCopiaCola, pixAtivo.ImagemQrCode, pixAtivo.ExpiraEm, pixAtivo.ValorEmReais });
-
-        var valorEmCentavos = preVendas.Sum(r =>
+        var pix = result.Pix;
+        return Ok(new
         {
-            var precoUnit = r.Variant?.PriceInCents
-                ?? (r.Product.IsOnPromo ? r.Product.DiscountPriceInCents!.Value : r.Product.PriceInCents);
-            return precoUnit * r.Quantity;
+            pix.TxId,
+            pix.Status,
+            pix.PixCopiaCola,
+            pix.ImagemQrCode,
+            pix.ExpiraEm,
+            pix.ValorEmReais,
+            Reutilizada = result.Reused,
         });
-
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg is null)
-            return BadRequest(new { Message = "Pagamento Pix indisponível no momento — pague na retirada." });
-
-        var user = items[0].User;
-        var cpf  = user?.Cpf?.Length == 11 ? user.Cpf : null;
-        var result = await _inter.CriarCobrancaAsync(
-            cfg, valorEmCentavos, user?.Name, cpf, $"Pré-venda — {preVendas.Count} item(ns)");
-
-        if (result.Error is not null)
-            return StatusCode(422, new { message = result.Error });
-
-        var pix = new PixCobranca
-        {
-            Origem                 = PixCobrancaOrigem.Reserva,
-            ReservationGroupId     = groupId,
-            // Trava exatamente quais itens essa cobrança cobre — se o carrinho mudar depois
-            // (item cancelado, novo item adicionado ao grupo), a confirmação só baixa estes.
-            ReservationItemIdsJson = JsonSerializer.Serialize(preVendas.Select(r => r.Id)),
-            TxId                   = result.TxId!,
-            ValorEmCentavos        = valorEmCentavos,
-            Status                 = result.Status ?? "ATIVA",
-            PixCopiaCola           = result.PixCopiaCola,
-            ImagemQrCode           = result.ImagemQrCode,
-            NomeDevedor            = user?.Name,
-            CriadoPorAdminId       = userId, // gerada pelo próprio cliente
-            ExpiraEm               = result.ExpiraEm,
-        };
-        _db.PixCobrancas.Add(pix);
-        await _db.SaveChangesAsync();
-
-        return Ok(new { pix.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
     }
 
     /// <summary>Verifica no Inter se o Pix caiu; se sim, marca pago e as pré-vendas do

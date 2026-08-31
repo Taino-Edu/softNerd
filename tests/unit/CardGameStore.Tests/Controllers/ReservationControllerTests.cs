@@ -26,9 +26,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace CardGameStore.Tests.Controllers;
@@ -47,18 +44,6 @@ public class ReservationControllerTests
         var db = new AppDbContext(options);
         db.Database.EnsureCreated();
         return db;
-    }
-
-    private static InterSyncService CreateInterStub()
-    {
-        var env = new Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
-        env.Setup(e => e.EnvironmentName).Returns("Development");
-        var config = new ConfigurationBuilder().Build();
-        return new Mock<InterSyncService>(
-            new Mock<IServiceScopeFactory>().Object,
-            new EncryptionService(config, env.Object),
-            config,
-            NullLogger<InterSyncService>.Instance).Object;
     }
 
     private static IHubContext<ComandaHub> CreateHubMock()
@@ -82,7 +67,7 @@ public class ReservationControllerTests
         var controller = new ReservationController(
             db,
             vendaService ?? new Mock<IVendaAvulsaService>().Object,
-            CreateInterStub(),
+            new Mock<IReservationPixService>().Object,
             new Mock<IPixReconciliationService>().Object,
             new Mock<IPushService>().Object,
             new Mock<IAuditService>().Object,

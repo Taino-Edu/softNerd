@@ -1,0 +1,123 @@
+{
+  "name": "SoftNerd — Atendimento WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evolution-whatsapp",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "f4f59b58-1200-4e1a-9ca0-0c413408c8f3",
+      "name": "Evolution Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-620, 0],
+      "webhookId": "evolution-whatsapp"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst event = String(body.event ?? '').toLowerCase().replaceAll('_', '.');\nif (!event.includes('messages.upsert')) return [];\n\nconst data = body.data ?? {};\nconst key = data.key ?? {};\nif (key.fromMe === true) return [];\n\nconst primaryJid = String(key.remoteJid ?? '');\nconst alternateJid = String(key.remoteJidAlt ?? '');\nconst jid = alternateJid.endsWith('@s.whatsapp.net') ? alternateJid : primaryJid;\nif (!jid.endsWith('@s.whatsapp.net') || jid.includes('@g.us') || jid.includes('status@broadcast')) return [];\n\nconst message = data.message ?? {};\nconst text = message.conversation\n  ?? message.extendedTextMessage?.text\n  ?? message.imageMessage?.caption\n  ?? message.videoMessage?.caption\n  ?? message.buttonsResponseMessage?.selectedDisplayText\n  ?? message.listResponseMessage?.title\n  ?? message.ephemeralMessage?.message?.extendedTextMessage?.text\n  ?? '';\nif (!String(text).trim()) return [];\n\nreturn [{ json: {\n  messageId: String(key.id ?? ''),\n  phone: jid.split('@')[0],\n  text: String(text).trim(),\n  pushName: data.pushName ?? null\n} }];"
+      },
+      "id": "c7ef841d-ae76-483b-af0b-a6f176e51b26",
+      "name": "Normalizar e filtrar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-380, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SOFTNERD_API_URL + '/api/automation/whatsapp/message' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Automation-Key",
+              "value": "={{ $env.WHATSAPP_AUTOMATION_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { messageId: $json.messageId, phone: $json.phone, text: $json.text, pushName: $json.pushName } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c53e143b-086b-462a-b516-51bfeac1512a",
+      "name": "Consultar SoftNerd",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-120, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\nif (response.handled === false || !Array.isArray(response.replies)) return [];\nreturn response.replies\n  .filter(reply => reply?.type === 'text' && reply?.text)\n  .map((reply, index) => ({ json: {\n    phone: response.phone,\n    text: reply.text,\n    delay: Math.min(800 + (index * 500), 2500)\n  } }));"
+      },
+      "id": "4f4d16dd-e29a-4aba-980d-ad91e9ade25a",
+      "name": "Separar respostas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [140, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL + '/message/sendText/' + $env.EVOLUTION_INSTANCE_NAME }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { number: $json.phone, text: $json.text, delay: $json.delay, linkPreview: false } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "011e54ce-87c1-487a-a141-2fb82c65fe6d",
+      "name": "Responder no WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Evolution Webhook": {
+      "main": [[{"node": "Normalizar e filtrar", "type": "main", "index": 0}]]
+    },
+    "Normalizar e filtrar": {
+      "main": [[{"node": "Consultar SoftNerd", "type": "main", "index": 0}]]
+    },
+    "Consultar SoftNerd": {
+      "main": [[{"node": "Separar respostas", "type": "main", "index": 0}]]
+    },
+    "Separar respostas": {
+      "main": [[{"node": "Responder no WhatsApp", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3b8037d6-2cde-4415-aeac-0f0244cb8619",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
