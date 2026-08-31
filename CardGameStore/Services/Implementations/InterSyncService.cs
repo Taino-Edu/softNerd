@@ -1,6 +1,8 @@
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -13,7 +15,15 @@ public class InterSyncService
     private readonly IServiceScopeFactory     _scopeFactory;
     private readonly EncryptionService        _enc;
     private readonly IConfiguration           _config;
+    private readonly IMemoryCache              _cache;
     private readonly ILogger<InterSyncService> _logger;
+
+    // O botão manual e o serviço em background podem disparar ao mesmo tempo. O Inter
+    // limita tanto OAuth quanto extrato, então só uma sincronização roda por processo.
+    private static readonly SemaphoreSlim _syncGate = new(1, 1);
+    private static readonly SemaphoreSlim _tokenGate = new(1, 1);
+    private static DateTimeOffset? _cooldownUntil;
+    private static readonly TimeSpan _rateLimitCooldown = TimeSpan.FromMinutes(5);
 
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -26,10 +36,22 @@ public class InterSyncService
         EncryptionService enc,
         IConfiguration config,
         ILogger<InterSyncService> logger)
+        : this(scopeFactory, enc, config, logger, new MemoryCache(new MemoryCacheOptions()))
+    {
+    }
+
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+    public InterSyncService(
+        IServiceScopeFactory scopeFactory,
+        EncryptionService enc,
+        IConfiguration config,
+        ILogger<InterSyncService> logger,
+        IMemoryCache cache)
     {
         _scopeFactory = scopeFactory;
         _enc          = enc;
         _config       = config;
+        _cache        = cache;
         _logger       = logger;
     }
 
@@ -48,100 +70,155 @@ public class InterSyncService
     // ── Sincroniza extrato dos últimos N dias ─────────────────────────────────
     public async Task<InterSyncResult> SyncAsync(int days = 7)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var cfg = await db.IntegrationConfigs
-            .FirstOrDefaultAsync(c => c.Source == "inter");
-
-        if (cfg is null || !IsConfigured(cfg))
-            return new InterSyncResult { Skipped = true, Reason = "Inter não configurado (Client ID, Client Secret ou certificado ausente)." };
+        if (!await _syncGate.WaitAsync(0))
+            return new InterSyncResult
+            {
+                Skipped = true,
+                InProgress = true,
+                Reason = "Uma atualização do Banco Inter já está em andamento. Aguarde alguns segundos."
+            };
 
         try
         {
-            var clientSecret = _enc.Decrypt(cfg.ClientSecret!);
-            var token        = await GetTokenAsync(cfg.ClientId!, clientSecret, "extrato.read");
+            var now = DateTimeOffset.UtcNow;
+            if (_cooldownUntil is { } cooldown && cooldown > now)
+                return RateLimitedResult(cooldown);
 
-            var fim    = DateOnly.FromDateTime(DateTime.Now);
-            var inicio = fim.AddDays(-days);
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var transactions = await FetchExtratoCompletoAsync(token, inicio, fim);
-            var saldo        = await FetchSaldoAsync(token);
+            var cfg = await db.IntegrationConfigs
+                .FirstOrDefaultAsync(c => c.Source == "inter");
 
-            int imported = 0, skipped = 0;
-            foreach (var t in transactions)
+            if (cfg is null || !IsConfigured(cfg))
+                return new InterSyncResult { Skipped = true, Reason = "Inter não configurado (Client ID, Client Secret ou certificado ausente)." };
+
+            try
             {
-                // Sem idTransacao não há como deduplicar com segurança — pula em vez de
-                // importar algo que voltaria duplicado a cada sync.
-                if (string.IsNullOrWhiteSpace(t.IdTransacao)) { skipped++; continue; }
+                var clientSecret = _enc.Decrypt(cfg.ClientSecret!);
+                var token        = await GetTokenAsync(cfg.ClientId!, clientSecret, "extrato.read");
 
-                var exists = await db.ExternalTransactions
-                    .AnyAsync(x => x.Source == "inter" && x.ExternalId == t.IdTransacao);
+                var fim    = DateOnly.FromDateTime(DateTime.Now);
+                var inicio = fim.AddDays(-days);
 
-                if (exists) { skipped++; continue; }
+                var transactions = await FetchExtratoCompletoAsync(token, inicio, fim);
+                var saldo        = await FetchSaldoAsync(token);
 
-                var isIncome = t.TipoOperacao == "C"; // C = Crédito, D = Débito
-                var data     = ParseData(t.DataEntrada) ?? ParseData(t.DataTransacao) ?? DateTime.UtcNow;
-                var titulo   = string.IsNullOrWhiteSpace(t.Titulo) ? null : t.Titulo.Trim();
-                var detalhe  = string.IsNullOrWhiteSpace(t.Descricao) ? null : t.Descricao.Trim();
-
-                db.ExternalTransactions.Add(new ExternalTransaction
+                int imported = 0, skipped = 0;
+                foreach (var t in transactions)
                 {
-                    Source      = "inter",
-                    ExternalId  = t.IdTransacao,
-                    Type        = isIncome ? "income" : "expense",
-                    Amount      = Math.Abs(t.Valor),
-                    Description = titulo is not null && detalhe is not null ? $"{titulo} — {detalhe}"
-                                  : titulo ?? detalhe ?? t.TipoTransacao ?? "Transação Inter",
-                    DueDate     = data,
-                    PaidAt      = data, // extrato = transação já executada
-                    Status      = "paid",
-                    Category    = t.TipoTransacao,
-                });
-                imported++;
+                    // Sem idTransacao não há como deduplicar com segurança — pula em vez de
+                    // importar algo que voltaria duplicado a cada sync.
+                    if (string.IsNullOrWhiteSpace(t.IdTransacao)) { skipped++; continue; }
+
+                    var exists = await db.ExternalTransactions
+                        .AnyAsync(x => x.Source == "inter" && x.ExternalId == t.IdTransacao);
+
+                    if (exists) { skipped++; continue; }
+
+                    var isIncome = t.TipoOperacao == "C"; // C = Crédito, D = Débito
+                    var data     = ParseData(t.DataEntrada) ?? ParseData(t.DataTransacao) ?? DateTime.UtcNow;
+                    var titulo   = string.IsNullOrWhiteSpace(t.Titulo) ? null : t.Titulo.Trim();
+                    var detalhe  = string.IsNullOrWhiteSpace(t.Descricao) ? null : t.Descricao.Trim();
+
+                    db.ExternalTransactions.Add(new ExternalTransaction
+                    {
+                        Source      = "inter",
+                        ExternalId  = t.IdTransacao,
+                        Type        = isIncome ? "income" : "expense",
+                        Amount      = Math.Abs(t.Valor),
+                        Description = titulo is not null && detalhe is not null ? $"{titulo} — {detalhe}"
+                                      : titulo ?? detalhe ?? t.TipoTransacao ?? "Transação Inter",
+                        DueDate     = data,
+                        PaidAt      = data, // extrato = transação já executada
+                        Status      = "paid",
+                        Category    = t.TipoTransacao,
+                    });
+                    imported++;
+                }
+
+                await db.SaveChangesAsync();
+
+                cfg.LastSyncAt = DateTime.UtcNow;
+                cfg.UpdatedAt  = DateTime.UtcNow;
+                await db.SaveChangesAsync();
+
+                return new InterSyncResult
+                {
+                    Imported   = imported,
+                    Duplicates = skipped,
+                    Saldo      = saldo,
+                    LastSyncAt = cfg.LastSyncAt,
+                };
             }
-
-            await db.SaveChangesAsync();
-
-            cfg.LastSyncAt = DateTime.UtcNow;
-            cfg.UpdatedAt  = DateTime.UtcNow;
-            await db.SaveChangesAsync();
-
-            return new InterSyncResult
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                Imported   = imported,
-                Duplicates = skipped,
-                Saldo      = saldo,
-                LastSyncAt = cfg.LastSyncAt,
-            };
+                _cooldownUntil = DateTimeOffset.UtcNow.Add(_rateLimitCooldown);
+                _logger.LogWarning(ex, "Banco Inter limitou a sincronização; nova tentativa após {Cooldown}", _cooldownUntil);
+                return RateLimitedResult(_cooldownUntil.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao sincronizar extrato Inter");
+                return new InterSyncResult { Error = ex.Message };
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogError(ex, "Erro ao sincronizar extrato Inter");
-            return new InterSyncResult { Error = ex.Message };
+            _syncGate.Release();
         }
     }
+
+    private static InterSyncResult RateLimitedResult(DateTimeOffset retryAt) => new()
+    {
+        Skipped = true,
+        RateLimited = true,
+        RetryAt = retryAt,
+        Reason = "O Banco Inter limitou as consultas. Aguarde cerca de 5 minutos antes de atualizar novamente."
+    };
 
     // ── OAuth2 Client Credentials com mTLS ───────────────────────────────────
     private async Task<string> GetTokenAsync(string clientId, string clientSecret, string scope)
     {
-        using var http = BuildMtlsClient();
+        var cacheKey = $"inter-oauth:{clientId}:{scope}";
+        if (_cache.TryGetValue<string>(cacheKey, out var cachedToken) && !string.IsNullOrWhiteSpace(cachedToken))
+            return cachedToken;
 
-        var body = new FormUrlEncodedContent(new Dictionary<string, string>
+        await _tokenGate.WaitAsync();
+        try
         {
-            ["client_id"]     = clientId,
-            ["client_secret"] = clientSecret,
-            ["grant_type"]    = "client_credentials",
-            ["scope"]         = scope,
-        });
+            if (_cache.TryGetValue<string>(cacheKey, out cachedToken) && !string.IsNullOrWhiteSpace(cachedToken))
+                return cachedToken;
 
-        var resp = await http.PostAsync("https://cdpj.partners.bancointer.com.br/oauth/v2/token", body);
-        resp.EnsureSuccessStatusCode();
+            using var http = BuildMtlsClient();
 
-        var json = await resp.Content.ReadFromJsonAsync<InterTokenResponse>(_json)
-            ?? throw new InvalidOperationException("Resposta de token inválida.");
+            var body = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["client_id"]     = clientId,
+                ["client_secret"] = clientSecret,
+                ["grant_type"]    = "client_credentials",
+                ["scope"]         = scope,
+            });
 
-        return json.AccessToken;
+            var resp = await http.PostAsync("https://cdpj.partners.bancointer.com.br/oauth/v2/token", body);
+            resp.EnsureSuccessStatusCode();
+
+            var json = await resp.Content.ReadFromJsonAsync<InterTokenResponse>(_json)
+                ?? throw new InvalidOperationException("Resposta de token inválida.");
+
+            if (string.IsNullOrWhiteSpace(json.AccessToken))
+                throw new InvalidOperationException("O Banco Inter retornou um token vazio.");
+
+            // Renova um minuto antes do vencimento. Isso reduz drasticamente chamadas ao
+            // endpoint OAuth, inclusive entre extrato, geração e consulta de Pix.
+            var ttl = TimeSpan.FromSeconds(Math.Max(30, json.ExpiresIn - 60));
+            _cache.Set(cacheKey, json.AccessToken, ttl);
+            return json.AccessToken;
+        }
+        finally
+        {
+            _tokenGate.Release();
+        }
     }
 
     // ── Pix Cobrança Imediata — gera cobrança pra qualquer origem (Crediário,
@@ -462,6 +539,9 @@ internal record InterLancamento(
 public record InterSyncResult
 {
     public bool    Skipped    { get; init; }
+    public bool    InProgress { get; init; }
+    public bool    RateLimited { get; init; }
+    public DateTimeOffset? RetryAt { get; init; }
     public string? Reason     { get; init; }
     public int     Imported   { get; init; }
     public int     Duplicates { get; init; }

@@ -378,8 +378,16 @@ public class ContasReceberController : ControllerBase
     public async Task<IActionResult> InterSync([FromQuery] int days = 7)
     {
         var result = await _inter.SyncAsync(days);
+        if (result.RateLimited)
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+                message = result.Reason,
+                retryAt = result.RetryAt,
+            });
+        if (result.InProgress)
+            return StatusCode(StatusCodes.Status409Conflict, new { message = result.Reason });
         if (result.Skipped)
-            return BadRequest(new { Message = result.Reason });
+            return BadRequest(new { message = result.Reason });
         if (result.Error is not null)
             return StatusCode(422, new { message = result.Error });
 

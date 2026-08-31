@@ -17,15 +17,20 @@ import {
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+type ReservationCart = {
+  groupId: string
+  items: AdminReservation[]
+  representative: AdminReservation
+  isPreVenda: boolean
+  expiresAt: string | null
+  totalEmReais: number
 }
 
-type Lanes = { aPagar: AdminReservation[]; pago: AdminReservation[]; retirado: AdminReservation[]; cancelado: AdminReservation[] }
+type Lanes = { aPagar: ReservationCart[]; pago: ReservationCart[] }
 
 function Lane({ title, tint, items, renderCard, emptyText }: {
-  title: string; tint: string; items: AdminReservation[]
-  renderCard: (r: AdminReservation) => React.ReactNode; emptyText: string
+  title: string; tint: string; items: ReservationCart[]
+  renderCard: (cart: ReservationCart) => React.ReactNode; emptyText: string
 }) {
   return (
     <div>
@@ -41,12 +46,11 @@ function Lane({ title, tint, items, renderCard, emptyText }: {
   )
 }
 
-// ── Coluna do kanban (Vendas ou Pré-vendas): raias A pagar → Pago → Retirado, + Cancelados recolhível ──
-function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard, showCancel, setShowCancel }: {
+// ── Coluna operacional do kanban (Vendas ou Pré-vendas): A pagar → Pago ──
+function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard }: {
   title: string; subtitle: string; icon: React.ReactNode; tint: string
   lanesData: Lanes
-  renderCard: (r: AdminReservation) => React.ReactNode
-  showCancel: boolean; setShowCancel: (v: boolean) => void
+  renderCard: (cart: ReservationCart) => React.ReactNode
 }) {
   return (
     <div className={clsx('card !p-4 space-y-5 border', tint)}>
@@ -62,21 +66,6 @@ function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard, show
         emptyText="Nada aguardando pagamento." />
       <Lane title="Pago · aguardando retirada" tint="text-blue-400" items={lanesData.pago} renderCard={renderCard}
         emptyText="Nada pago aguardando retirada." />
-      <Lane title="Retirado" tint="text-green-400" items={lanesData.retirado} renderCard={renderCard}
-        emptyText="Nenhuma retirada ainda." />
-
-      {lanesData.cancelado.length > 0 && (
-        <div>
-          <button onClick={() => setShowCancel(!showCancel)}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors">
-            {showCancel ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            Cancelados ({lanesData.cancelado.length})
-          </button>
-          {showCancel && (
-            <div className="flex flex-col gap-2 mt-2">{lanesData.cancelado.map(renderCard)}</div>
-          )}
-        </div>
-      )}
     </div>
   )
 }
@@ -421,8 +410,6 @@ export default function ReservasPage() {
   // ── Pedidos (kanban Vendas × Pré-vendas) ──
   const [items,       setItems]       = useState<AdminReservation[]>([])
   const [loading,     setLoading]     = useState(true)
-  const [showCancelVendas, setShowCancelVendas] = useState(false)
-  const [showCancelPre,    setShowCancelPre]    = useState(false)
   const [pixByGroup,  setPixByGroup]  = useState<Record<string, ReservationPixStatus>>({})
 
   // Modal de homologação — sempre PDV (homologar por comanda misturava o valor
@@ -509,12 +496,12 @@ export default function ReservasPage() {
     } catch { toast.error('Erro ao remover') }
   }
 
-  // Kanban mostra tudo de uma vez (sem paginação) — pra loja de bairro o volume de pedidos
-  // "vivos" é pequeno; pageSize alto cobre até um histórico razoável de canceladas/retiradas.
+  // O kanban é operacional: finalizadas e canceladas continuam no histórico/banco,
+  // mas deixam de aparecer aqui assim que o carrinho é encerrado.
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await reservationApi.list({ kind: 'pre_venda', pageSize: 300 })
+      const { data } = await reservationApi.list({ kind: 'pre_venda', status: 'active', pageSize: 300 })
       setItems(data.items)
     } catch { toast.error('Erro ao carregar pedidos') }
     finally  { setLoading(false) }
@@ -538,32 +525,30 @@ export default function ReservasPage() {
     })
   }, [items, pixByGroup])
 
-  // Quantos itens cada carrinho de pré-venda tem — pra mostrar "carrinho de N itens" quando > 1
-  const groupCounts = items.reduce<Record<string, number>>((acc, r) => {
-    acc[r.reservationGroupId] = (acc[r.reservationGroupId] ?? 0) + 1
+  // Um reservationGroupId é um carrinho. A classificação é feita no carrinho inteiro;
+  // pedido misto fica em Vendas, igual à regra usada ao lançar a venda no financeiro.
+  const grouped = items.reduce<Record<string, AdminReservation[]>>((acc, item) => {
+    const cartItems = acc[item.reservationGroupId] ?? []
+    cartItems.push(item)
+    acc[item.reservationGroupId] = cartItems
     return acc
   }, {})
+  const carts: ReservationCart[] = Object.entries(grouped).map(([groupId, cartItems]) => ({
+    groupId,
+    items: cartItems,
+    representative: cartItems[0],
+    isPreVenda: cartItems.every(item => item.productIsPreVenda),
+    expiresAt: cartItems.find(item => item.expiresAt)?.expiresAt ?? null,
+    totalEmReais: cartItems.reduce((sum, item) => sum + (item.subtotalEmReais ?? 0), 0),
+  }))
 
-  // Total do pedido inteiro: cada item vira um card com o subtotal dele, e sem isto
-  // o balconista tinha que somar na mão pra saber quanto o cliente deve pelo pedido
-  // (foi o que levou o Maikon a lançar pré-venda no crediário só pra ver a soma).
-  const groupTotals = items.reduce<Record<string, number>>((acc, r) => {
-    acc[r.reservationGroupId] = (acc[r.reservationGroupId] ?? 0) + (r.subtotalEmReais ?? 0)
-    return acc
-  }, {})
+  const vendas    = carts.filter(cart => !cart.isPreVenda)
+  const preVendas = carts.filter(cart => cart.isPreVenda)
 
-  // ── Kanban: 2 colunas (Vendas × Pré-vendas, pela tag do produto) × raias de status ──
-  // "A pagar" = active com expiresAt (ainda não confirmou Pix nem foi marcado retirada-paga).
-  // "Pago" = active sem expiresAt (Pix confirmado). "Retirado" = fulfilled. "Cancelado" = cancelled.
-  const vendas    = items.filter(r => !r.productIsPreVenda)
-  const preVendas = items.filter(r => r.productIsPreVenda)
-
-  function lanes(list: AdminReservation[]) {
+  function lanes(list: ReservationCart[]) {
     return {
-      aPagar:    list.filter(r => r.status === 'active' && !!r.expiresAt),
-      pago:      list.filter(r => r.status === 'active' && !r.expiresAt),
-      retirado:  list.filter(r => r.status === 'fulfilled'),
-      cancelado: list.filter(r => r.status === 'cancelled'),
+      aPagar: list.filter(cart => !!cart.expiresAt),
+      pago:   list.filter(cart => !cart.expiresAt),
     }
   }
   const vendasLanes    = lanes(vendas)
@@ -572,10 +557,10 @@ export default function ReservasPage() {
   // ── Análises de valor (pedido do Maikon): quanto já entrou × quanto ainda falta
   // entrar. "A receber" junta quem ainda não pagou (Pix pendente ou combinou pagar
   // na retirada) com quem tá na fila esperando o produto chegar pra decidir.
-  const somaSubtotal = (list: AdminReservation[]) => list.reduce((sum, r) => sum + (r.subtotalEmReais ?? 0), 0)
+  const somaSubtotal = (list: ReservationCart[]) => list.reduce((sum, cart) => sum + cart.totalEmReais, 0)
   const jaPagoValor    = somaSubtotal([...vendasLanes.pago,   ...preVendasLanes.pago])
   const aPagarValor    = somaSubtotal([...vendasLanes.aPagar, ...preVendasLanes.aPagar])
-  const filaValor      = somaSubtotal(Object.values(wlData).flat())
+  const filaValor      = Object.values(wlData).flat().reduce((sum, item) => sum + (item.subtotalEmReais ?? 0), 0)
   const aReceberValor  = aPagarValor + filaValor
   const totalEmAberto  = vendasLanes.aPagar.length + vendasLanes.pago.length
                         + preVendasLanes.aPagar.length + preVendasLanes.pago.length
@@ -667,37 +652,56 @@ export default function ReservasPage() {
     } finally { setEditQtySaving(false) }
   }
 
-  // Card compacto de um pedido — usado em qualquer raia do kanban (A pagar/Pago/Retirado/Cancelado).
-  function renderCard(r: AdminReservation) {
-    const aguardandoPagamento = r.status === 'active' && !!r.expiresAt
-    const paga = r.status === 'active' && !r.expiresAt
+  // Um card por carrinho; editar quantidade/cancelar continuam sendo ações por item.
+  function renderCard(cart: ReservationCart) {
+    const r = cart.representative
+    const aguardandoPagamento = !!cart.expiresAt
+    const releaseDate = cart.items.find(item => item.preVendaReleaseDate)?.preVendaReleaseDate
     return (
-      <div key={r.id} className="card !p-3 flex gap-3 items-start">
-        <div className="w-12 h-12 rounded-lg bg-surface-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
-          {r.productImageUrl
-            ? <img src={r.productImageUrl} alt={r.productName} className="w-full h-full object-cover" />
-            : <Package className="w-5 h-5 text-surface-500" />}
-        </div>
-
+      <div key={cart.groupId} className="card !p-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="font-bold text-white text-xs truncate">{r.productName}</p>
-            {r.variantLabel && <span className="text-[11px] text-gray-400">· {r.variantLabel}</span>}
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-bold text-white text-xs">
+              {cart.items.length > 1 ? `Carrinho com ${cart.items.length} itens` : r.productName}
+            </p>
+            <strong className="text-emerald-400 text-xs whitespace-nowrap">
+              R$ {cart.totalEmReais.toFixed(2).replace('.', ',')}
+            </strong>
           </div>
 
-          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400 flex-wrap">
+          <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-400 flex-wrap">
             <span className="flex items-center gap-1"><UserIcon className="w-2.5 h-2.5" />{r.userName ?? 'Cliente'}</span>
-            <span>Qtd: <strong className="text-white">{r.quantity}</strong></span>
-            {r.subtotalEmReais != null && (
-              <strong className="text-emerald-400">R$ {r.subtotalEmReais.toFixed(2).replace('.', ',')}</strong>
-            )}
+          </div>
+
+          <div className="mt-2 space-y-1.5">
+            {cart.items.map(item => (
+              <div key={item.id} className="flex items-center gap-2 rounded-lg bg-surface-700/60 px-2 py-1.5">
+                <div className="w-8 h-8 rounded-md bg-surface-600 shrink-0 overflow-hidden flex items-center justify-center">
+                  {item.productImageUrl
+                    ? <img src={item.productImageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                    : <Package className="w-3.5 h-3.5 text-surface-500" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-gray-200 truncate">
+                    {item.productName}{item.variantLabel ? ` · ${item.variantLabel}` : ''}
+                  </p>
+                  <p className="text-[10px] text-gray-500">
+                    {item.quantity}×{item.subtotalEmReais != null ? ` · R$ ${item.subtotalEmReais.toFixed(2).replace('.', ',')}` : ''}
+                  </p>
+                </div>
+                <button onClick={() => openEditQty(item)} title="Corrigir quantidade"
+                  className="p-1 rounded text-brand-300 hover:bg-brand-500/15"><Pencil className="w-3 h-3" /></button>
+                <button onClick={() => handleCancel(item)} title="Cancelar este item"
+                  className="p-1 rounded text-red-400 hover:bg-red-500/15"><XCircle className="w-3 h-3" /></button>
+              </div>
+            ))}
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap mt-1">
-            {groupCounts[r.reservationGroupId] > 1 && (
+            {cart.items.length > 1 && (
               <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-300">
                 <Layers className="w-2.5 h-2.5" />
-                Carrinho de {groupCounts[r.reservationGroupId]} · pedido R$ {(groupTotals[r.reservationGroupId] ?? 0).toFixed(2).replace('.', ',')}
+                Mesmo pedido
               </span>
             )}
             {pixByGroup[r.reservationGroupId]?.hasPix && (
@@ -711,9 +715,9 @@ export default function ReservasPage() {
                 </span>
               )
             )}
-            {r.preVendaReleaseDate && (
+            {releaseDate && (
               <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-400">
-                Lançamento {new Date(r.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                Lançamento {new Date(releaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
               </span>
             )}
           </div>
@@ -723,31 +727,20 @@ export default function ReservasPage() {
               <TimerIcon className="w-2.5 h-2.5" />Aguardando pagamento
             </p>
           )}
-          {paga && (
+          {!aguardandoPagamento && (
             <p className="flex items-center gap-1 text-[11px] text-green-400 mt-1">
               <CheckCircle className="w-2.5 h-2.5" />Paga — aguardando retirada
             </p>
           )}
-          {r.status === 'fulfilled' && r.fulfilledAt && (
-            <p className="flex items-center gap-1 text-[11px] text-green-400 mt-1">
-              <CheckCircle className="w-2.5 h-2.5" />Retirado: {fmtDate(r.fulfilledAt)}
-            </p>
-          )}
-          {r.status === 'cancelled' && r.cancelledAt && (
-            <p className="flex items-center gap-1 text-[11px] text-red-400 mt-1">
-              <XCircle className="w-2.5 h-2.5" />Cancelado: {fmtDate(r.cancelledAt)}
-            </p>
-          )}
           {r.notes && <p className="text-[11px] text-gray-500 mt-1 italic truncate">"{r.notes}"</p>}
 
-          {r.status === 'active' && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               <button onClick={() => openHomModal(r)}
                 className="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30
                            hover:bg-green-500/30 text-[11px] font-semibold transition-colors flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" /> Homologar
               </button>
-              {r.expiresAt && (
+              {cart.expiresAt && (
                 <button onClick={() => setPixGroup(r)}
                   title="Gerar/copiar o código Pix pra mandar no WhatsApp"
                   className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25
@@ -755,19 +748,7 @@ export default function ReservasPage() {
                   <QrCode className="w-3 h-3" /> Pix
                 </button>
               )}
-              <button onClick={() => openEditQty(r)}
-                title="Corrigir a quantidade deste pedido"
-                className="px-2 py-1 rounded-lg bg-brand-500/10 text-brand-300 border border-brand-500/25
-                           hover:bg-brand-500/20 text-[11px] font-semibold transition-colors flex items-center gap-1">
-                <Pencil className="w-3 h-3" /> Qtd
-              </button>
-              <button onClick={() => handleCancel(r)}
-                className="px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20
-                           hover:bg-red-500/20 text-[11px] font-semibold transition-colors flex items-center gap-1">
-                <XCircle className="w-3 h-3" /> Cancelar
-              </button>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     )
@@ -829,13 +810,11 @@ export default function ReservasPage() {
             title="Vendas" subtitle="produto sem tag de pré-venda"
             icon={<ShoppingCart className="w-4 h-4 text-blue-400" />} tint="border-blue-500/20"
             lanesData={vendasLanes} renderCard={renderCard}
-            showCancel={showCancelVendas} setShowCancel={setShowCancelVendas}
           />
           <KanbanColumn
             title="Pré-vendas" subtitle="produto marcado como pré-venda"
             icon={<Trophy className="w-4 h-4 text-amber-400" />} tint="border-amber-500/20"
             lanesData={preVendasLanes} renderCard={renderCard}
-            showCancel={showCancelPre} setShowCancel={setShowCancelPre}
           />
         </div>
       )}
