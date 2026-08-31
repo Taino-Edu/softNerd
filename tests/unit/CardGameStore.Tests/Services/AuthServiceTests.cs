@@ -397,6 +397,33 @@ public class AuthServiceTests
         await act.Should().ThrowAsync<UnauthorizedAccessException>("token inexistente não deve ser aceito");
     }
 
+    [Fact]
+    public async Task RefreshToken_LegadoArmazenadoSemHash_DeveMigrarSemDeslogar()
+    {
+        var db       = CreateSqliteDb();
+        var rawToken = "token-legado-bruto-antes-do-deploy";
+        var user     = new User
+        {
+            Id                 = Guid.NewGuid(),
+            Name               = "Admin legado",
+            Email              = "legado@softnerd.com",
+            PasswordHash       = BCrypt.Net.BCrypt.HashPassword("Senha123!"),
+            Role               = UserRole.Admin,
+            IsActive           = true,
+            RefreshToken       = rawToken,
+            RefreshTokenExpiry = DateTime.UtcNow.AddDays(7),
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service  = CreateAuthService(db);
+        var renovado = await service.RefreshTokenAsync(new RefreshTokenRequest(rawToken));
+
+        renovado.RefreshToken.Should().NotBeNullOrEmpty();
+        renovado.UserId.Should().Be(user.Id);
+        (await db.UserSessions.CountAsync(s => s.UserId == user.Id)).Should().BeGreaterThan(0);
+    }
+
     // Regressão do logout automático: entrar no celular derrubava o PDV, porque o
     // refresh token vivia numa coluna única do usuário e cada login sobrescrevia o
     // anterior. Agora cada dispositivo tem a sua sessão.

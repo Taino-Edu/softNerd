@@ -141,8 +141,13 @@ public class AuthService : IAuthService
         // Adota a sessão em vez de deslogar quem já estava logado antes do deploy.
         if (session == null)
         {
+            // Versões antigas gravavam formatos diferentes na coluna users.refresh_token:
+            // algumas já guardavam SHA-256, outras guardavam o token bruto. A migração
+            // inicial copiou essa coluna sem normalizar, então comparar só com o hash
+            // derrubava todas as sessões antigas logo após o deploy.
+            var rawToken = request.RefreshToken;
             var legado = await _db.Users.FirstOrDefaultAsync(
-                u => u.RefreshToken == hashedToken && u.IsActive);
+                u => (u.RefreshToken == hashedToken || u.RefreshToken == rawToken) && u.IsActive);
 
             if (legado == null || legado.RefreshTokenExpiry == null || legado.RefreshTokenExpiry < agora)
                 throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
