@@ -29,6 +29,7 @@ public class WhatsAppAutomationServiceTests
             db,
             reservationPix?.Object ?? new Mock<IReservationPixService>().Object,
             new Mock<IPixReconciliationService>().Object,
+            new Mock<IWhatsAppPublicAiService>().Object,
             NullLogger<WhatsAppAutomationService>.Instance);
 
     [Fact]

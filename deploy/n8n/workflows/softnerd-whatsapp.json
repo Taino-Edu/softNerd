@@ -79,7 +79,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { number: $json.phone, text: $json.text, delay: $json.delay, linkPreview: false } }}",
+        "jsonBody": "={{ { number: $json.phone.startsWith('55') ? $json.phone : '55' + $json.phone, text: $json.text, delay: $json.delay, linkPreview: false } }}",
         "options": {
           "timeout": 30000
         }

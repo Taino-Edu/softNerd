@@ -20,6 +20,9 @@ public class WhatsAppConversation
     [Column("last_inbound_at")]
     public DateTime LastInboundAt { get; set; } = DateTime.UtcNow;
 
+    [Column("last_read_at")]
+    public DateTime? LastReadAt { get; set; }
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

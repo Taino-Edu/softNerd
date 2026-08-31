@@ -18,17 +18,20 @@ public sealed partial class WhatsAppAutomationService : IWhatsAppAutomationServi
     private readonly AppDbContext _db;
     private readonly IReservationPixService _reservationPix;
     private readonly IPixReconciliationService _pixReconciliation;
+    private readonly IWhatsAppPublicAiService _publicAi;
     private readonly ILogger<WhatsAppAutomationService> _logger;
 
     public WhatsAppAutomationService(
         AppDbContext db,
         IReservationPixService reservationPix,
         IPixReconciliationService pixReconciliation,
+        IWhatsAppPublicAiService publicAi,
         ILogger<WhatsAppAutomationService> logger)
     {
         _db = db;
         _reservationPix = reservationPix;
         _pixReconciliation = pixReconciliation;
+        _publicAi = publicAi;
         _logger = logger;
     }
 
@@ -192,8 +195,10 @@ public sealed partial class WhatsAppAutomationService : IWhatsAppAutomationServi
                 "Certo! Vou avisar o Maikon e vou ficar em silêncio por 4 horas para ele continuar o atendimento por aqui. 🙂\nSe quiser reativar antes, digite *BOT*.");
         }
 
-        return Reply(phone, user?.Id,
-            $"Não entendi *{rawText.Trim()}*.\n\n{Menu(user)}");
+        var aiReply = await _publicAi.ReplyAsync(rawText, cancellationToken);
+        return Reply(phone, user?.Id, string.IsNullOrWhiteSpace(aiReply)
+            ? $"Não entendi *{rawText.Trim()}*.\n\n{Menu(user)}"
+            : aiReply);
     }
 
     private async Task<WhatsAppAutomationResponse> ReservationListAsync(

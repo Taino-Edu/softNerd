@@ -347,6 +347,13 @@ builder.Services.AddHttpClient("gemini", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+builder.Services.AddHttpClient("evolution", (services, client) =>
+{
+    var configuration = services.GetRequiredService<IConfiguration>();
+    client.BaseAddress = new Uri(configuration["Evolution:BaseUrl"] ?? "http://evolution-api:8080/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
+
 builder.Services.AddHttpClient(TenantErpApiClient.HttpClientName, (services, client) =>
 {
     var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<TenantErpIntegrationOptions>>().Value;
@@ -377,6 +384,8 @@ builder.Services.AddScoped<IEmailService,        EmailService>();
 builder.Services.AddScoped<IPushService,         PushService>();
 builder.Services.AddScoped<IReservationPixService, ReservationPixService>();
 builder.Services.AddScoped<IWhatsAppAutomationService, WhatsAppAutomationService>();
+builder.Services.AddScoped<IWhatsAppGateway, EvolutionWhatsAppGateway>();
+builder.Services.AddScoped<IWhatsAppPublicAiService, WhatsAppPublicAiService>();
 builder.Services.AddScoped<IAiChatService,       GeminiChatService>();
 builder.Services.AddSingleton<ITcgApiClient,     TcgApiClient>();
 builder.Services.AddSingleton<ITcgService,       TcgService>();
@@ -935,8 +944,22 @@ using (var scope = app.Services.CreateScope())
                     last_inbound_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
                     updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
                 );
+                ALTER TABLE whatsapp_conversations
+                    ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMPTZ NULL;
                 CREATE INDEX IF NOT EXISTS ix_whatsapp_conversations_user
                     ON whatsapp_conversations (user_id);
+
+                CREATE TABLE IF NOT EXISTS whatsapp_outbound_messages (
+                    id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+                    phone               VARCHAR(20)   NOT NULL,
+                    message_text        VARCHAR(2000) NOT NULL,
+                    author              VARCHAR(20)   NOT NULL DEFAULT 'admin',
+                    external_message_id VARCHAR(200)  NULL,
+                    status              VARCHAR(20)   NOT NULL DEFAULT 'sent',
+                    sent_at             TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS ix_whatsapp_outbound_phone_sent_at
+                    ON whatsapp_outbound_messages (phone, sent_at);
 
                 -- Mensageria: imagem opcional na notificação (banner de campanha)
                 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS image_url VARCHAR(500) NULL;

@@ -1632,6 +1632,39 @@ export const mensageriaApi = {
   }) => api.post<{ message: string; inApp: number; emails: number; total: number }>('/api/admin/mensageria/send', body),
 }
 
+// ── WhatsApp — caixa de atendimento do admin ───────────────────────────────
+
+export interface WhatsAppStatus {
+  configured: boolean; connected: boolean; state: string; error?: string | null
+}
+
+export interface WhatsAppConversation {
+  phone: string; displayName: string; userId?: string | null; pointsBalance: number
+  profileImageUrl?: string | null; activeReservations: number
+  lastMessage?: string | null; lastMessageAt: string; unreadCount: number
+  humanMode: boolean; botPausedUntil?: string | null
+}
+
+export interface WhatsAppMessage {
+  id: string; direction: 'inbound' | 'outbound'; author: string
+  text: string; sentAt: string; status: string
+}
+
+export const whatsappAdminApi = {
+  status: () => api.get<WhatsAppStatus>('/api/admin/whatsapp/status'),
+  qrCode: () => api.get<{ success: boolean; base64?: string; pairingCode?: string; error?: string }>('/api/admin/whatsapp/qr-code'),
+  conversations: (search = '', unreadOnly = false) =>
+    api.get<WhatsAppConversation[]>('/api/admin/whatsapp/conversations', { params: { search, unreadOnly } }),
+  messages: (phone: string) =>
+    api.get<WhatsAppMessage[]>(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/messages`),
+  markRead: (phone: string) =>
+    api.post(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/read`),
+  setMode: (phone: string, botEnabled: boolean) =>
+    api.post(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/mode`, { botEnabled }),
+  send: (phone: string, text: string) =>
+    api.post(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/send`, { text }),
+}
+
 // ── Push notifications (browser) ──────────────────────────────────────────────
 
 export const pushApi = {

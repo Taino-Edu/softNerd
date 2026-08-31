@@ -113,6 +113,9 @@ services:
       GeminiSettings__ApiKey: "${GEMINI_API_KEY}"
       # API interna consumida pelo workflow do n8n. Não reutilizar JWT/API key da Evolution.
       WhatsAppAutomation__ApiKey: "${WHATSAPP_AUTOMATION_API_KEY:-}"
+      Evolution__BaseUrl: "http://evolution-api:8080/"
+      Evolution__ApiKey: "${EVOLUTION_API_KEY:-}"
+      Evolution__InstanceName: "${EVOLUTION_INSTANCE_NAME:-santuarionerd}"
       TcgSettings__PokemonApiKey: "${POKEMON_API_KEY:-}"
       # Tenant-ERP — credencial tecnica criada no dominio da loja
       TenantErp__Enabled: "${TENANT_ERP_ENABLED:-false}"

@@ -33,6 +33,12 @@
       "short_name": "Dashboard",
       "url": "/admin/dashboard",
       "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Atendimento WhatsApp",
+      "short_name": "WhatsApp",
+      "url": "/admin/whatsapp",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
     }
   ],
   "categories": ["business", "productivity"],

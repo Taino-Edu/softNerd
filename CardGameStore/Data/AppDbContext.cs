@@ -60,6 +60,7 @@ public class AppDbContext : DbContext
     public DbSet<Notification>     Notifications     { get; set; }
     public DbSet<WhatsAppInboundEvent> WhatsAppInboundEvents { get; set; }
     public DbSet<WhatsAppConversation> WhatsAppConversations { get; set; }
+    public DbSet<WhatsAppOutboundMessage> WhatsAppOutboundMessages { get; set; }
 
     // ── Push: subscrições de browser push (WebPush/VAPID) ────────────────────
     public DbSet<PushSubscription> PushSubscriptions { get; set; }
@@ -420,6 +421,12 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(e => e.UserId)
                   .HasDatabaseName("ix_whatsapp_conversations_user");
+        });
+
+        modelBuilder.Entity<WhatsAppOutboundMessage>(entity =>
+        {
+            entity.HasIndex(e => new { e.Phone, e.SentAt })
+                  .HasDatabaseName("ix_whatsapp_outbound_phone_sent_at");
         });
 
         // =====================================================================

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { clearAuth, getUserName, getRole, hasPermission } from '@/lib/auth'
-import { authApi, notificationsApi, fiscalApi } from '@/lib/api'
+import { authApi, notificationsApi, fiscalApi, whatsappAdminApi } from '@/lib/api'
 import {
   LayoutDashboard, Package, Trophy, Search, QrCode,
   LogOut, User, ShoppingBag, Users, Megaphone,
@@ -28,6 +28,7 @@ const sections = [
       { href: '/admin/dashboard',    label: 'Painel Geral',     icon: LayoutDashboard, badge: 'LIVE', perm: 'dashboard' },
       { href: '/admin/venda-avulsa', label: 'Frente de Caixa',  icon: ShoppingBag,                    perm: 'pdv' },
       { href: '/admin/reservas',     label: 'Pré-vendas',       icon: ClipboardList,                  perm: 'estoque' },
+      { href: '/admin/whatsapp',     label: 'WhatsApp',         icon: MessageSquare,                  perm: null },
       { href: '/admin/qrcodes',      label: 'Gatilhos QR Code', icon: QrCode,                         perm: 'qrcodes' },
     ],
   },
@@ -92,7 +93,7 @@ const sections = [
   },
 ]
 
-function NavItems({ pathname, onClose, unreadCount, fiscalAlerta, collapsed = false }: { pathname: string; onClose?: () => void; unreadCount: number; fiscalAlerta: boolean; collapsed?: boolean }) {
+function NavItems({ pathname, onClose, unreadCount, whatsappUnread, fiscalAlerta, collapsed = false }: { pathname: string; onClose?: () => void; unreadCount: number; whatsappUnread: number; fiscalAlerta: boolean; collapsed?: boolean }) {
   const role = getRole()
   const isAdmin = role === 'Admin'
 
@@ -117,6 +118,7 @@ function NavItems({ pathname, onClose, unreadCount, fiscalAlerta, collapsed = fa
               const active   = pathname.startsWith(href)
               const shortcut = SIDEBAR_SHORTCUT_KEYS[href]
               const hasDot   = (href === '/admin/mensageria' && unreadCount > 0)
+                             || (href === '/admin/whatsapp' && whatsappUnread > 0)
                              || (href === '/admin/fiscal' && fiscalAlerta)
               return (
                 <Link
@@ -167,6 +169,7 @@ export default function Sidebar() {
   const [loggingOut,   setLoggingOut]   = useState(false)
   const [mobileOpen,   setMobileOpen]   = useState(false)
   const [unreadCount,  setUnreadCount]  = useState(0)
+  const [whatsappUnread, setWhatsappUnread] = useState(0)
   const [fiscalAlerta, setFiscalAlerta] = useState(false)
   // Sempre começa expandida (igual no server e no primeiro render do client) — ler localStorage
   // direto no initializer causaria mismatch de hidratação sempre que o valor salvo fosse
@@ -177,6 +180,20 @@ export default function Sidebar() {
     try {
       if (localStorage.getItem('admin-sidebar-collapsed') === 'true') setCollapsed(true)
     } catch {}
+  }, [])
+
+  useEffect(() => {
+    if (getRole() !== 'Admin') return
+    let mounted = true
+    const poll = async () => {
+      try {
+        const { data } = await whatsappAdminApi.conversations('', true)
+        if (mounted) setWhatsappUnread(data.reduce((sum, item) => sum + item.unreadCount, 0))
+      } catch { }
+    }
+    poll()
+    const id = setInterval(poll, 15_000)
+    return () => { mounted = false; clearInterval(id) }
   }, [])
 
   function toggleCollapsed() {
@@ -334,7 +351,7 @@ export default function Sidebar() {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <NavItems pathname={pathname} onClose={() => setMobileOpen(false)} unreadCount={unreadCount} fiscalAlerta={fiscalAlerta} />
+        <NavItems pathname={pathname} onClose={() => setMobileOpen(false)} unreadCount={unreadCount} whatsappUnread={whatsappUnread} fiscalAlerta={fiscalAlerta} />
         {renderFooter(false)}
       </aside>
 
@@ -352,7 +369,7 @@ export default function Sidebar() {
             </div>
           )}
         </div>
-        <NavItems pathname={pathname} unreadCount={unreadCount} fiscalAlerta={fiscalAlerta} collapsed={collapsed} />
+        <NavItems pathname={pathname} unreadCount={unreadCount} whatsappUnread={whatsappUnread} fiscalAlerta={fiscalAlerta} collapsed={collapsed} />
         {renderFooter(collapsed)}
 
         {/* Botão de recolher/expandir — preso na borda direita, sempre visível independente

@@ -105,6 +105,19 @@ Ao receber `PAGO`, o SoftNerd consulta o Inter pelo mesmo
 
 ## Gestão do fluxo
 
+O atendimento diário fica em `Admin > WhatsApp` (`/admin/whatsapp`). A tela
+mostra conversas, histórico, pontos e pedidos ativos do cliente, permite que o
+Maikon assuma a conversa por quatro horas e envia mensagens pela Evolution API.
+O painel compacto permanece disponível nas outras páginas do admin: pode ser
+arrastado, redimensionado, encaixado nos cantos, ter o fundo ajustado e abrir em
+uma janela separada do PWA. Posição, tamanho e transparência ficam salvos no
+navegador.
+
+Perguntas livres passam por uma instância pública do Gemini que recebe somente
+informações públicas da loja, produtos publicados e próximos eventos. Ela não
+recebe dados de clientes nem contexto financeiro. Pix, reservas, pagamentos e
+pontos continuam obrigatoriamente nas regras do backend.
+
 O editor do n8n mostra quatro blocos:
 
 1. `Evolution Webhook` — entrada;

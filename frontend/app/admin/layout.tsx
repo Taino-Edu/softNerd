@@ -2,6 +2,7 @@
 import Sidebar from '@/components/admin/Sidebar'
 import AiChatWidget from '@/components/admin/AiChatWidget'
 import KeyboardShortcutsOverlay from '@/components/admin/KeyboardShortcutsOverlay'
+import WhatsAppFloatingPanel from '@/components/admin/whatsapp/WhatsAppFloatingPanel'
 import { Toaster } from 'react-hot-toast'
 
 // A renovação de sessão saiu daqui pro layout raiz (lib/sessionKeepAlive): antes só
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
       <AiChatWidget />
+      <WhatsAppFloatingPanel />
       <KeyboardShortcutsOverlay />
     </div>
   )
