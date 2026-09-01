@@ -24,9 +24,22 @@ public sealed class WhatsAppAdminController : ControllerBase
         _gateway = gateway;
     }
 
+    // O inbox enxerga só o que o n8n entrega — a Evolution não é consultada para
+    // listar conversa. Por isso a data do último evento recebido acompanha o
+    // status: sem nenhum evento, lista vazia quer dizer "fluxo desligado", não
+    // "ninguém falou com a loja". Sem esse dado a tela não sabe a diferença.
     [HttpGet("status")]
-    public async Task<IActionResult> Status(CancellationToken cancellationToken) =>
-        Ok(await _gateway.GetStatusAsync(cancellationToken));
+    public async Task<IActionResult> Status(CancellationToken cancellationToken)
+    {
+        var gateway = await _gateway.GetStatusAsync(cancellationToken);
+        var lastInboundAt = await _db.WhatsAppInboundEvents.AsNoTracking()
+            .OrderByDescending(e => e.ReceivedAt)
+            .Select(e => (DateTime?)e.ReceivedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return Ok(new WhatsAppStatusDto(
+            gateway.Configured, gateway.Connected, gateway.State, gateway.Error, lastInboundAt));
+    }
 
     [HttpGet("qr-code")]
     public async Task<IActionResult> QrCode(CancellationToken cancellationToken)
@@ -82,7 +95,7 @@ public sealed class WhatsAppAdminController : ControllerBase
                 c.Phone, user?.Name ?? c.Phone, user?.Id, user?.PointsBalance ?? 0,
                 user?.ProfileImageUrl, reservationCounts.GetValueOrDefault(user?.Id ?? Guid.Empty),
                 last?.MessageText, last?.ReceivedAt ?? c.LastInboundAt, count,
-                c.BotPausedUntil > DateTime.UtcNow, c.BotPausedUntil);
+                c.BotPausedUntil > DateTime.UtcNow, c.BotPausedUntil, c.BotDisabled);
         })
         .Where(c => !unreadOnly || c.UnreadCount > 0)
         .Where(c => string.IsNullOrWhiteSpace(normalizedSearch)
@@ -165,6 +178,22 @@ public sealed class WhatsAppAdminController : ControllerBase
         return Ok(new { botEnabled = request.BotEnabled, conversation.BotPausedUntil });
     }
 
+    // Marca permanente, separada do handoff de 4 horas do /mode: aqui o robô nunca
+    // responde este contato, e só o admin desfaz.
+    [HttpPost("conversations/{phone}/bot-disabled")]
+    public async Task<IActionResult> SetBotDisabled(
+        string phone, [FromBody] WhatsAppBotDisabledRequest request, CancellationToken cancellationToken)
+    {
+        var normalized = NormalizePhone(phone);
+        if (normalized is null) return BadRequest(new { Message = "Telefone inválido." });
+        var conversation = await _db.WhatsAppConversations.FirstOrDefaultAsync(c => c.Phone == normalized, cancellationToken);
+        if (conversation is null) return NotFound();
+        conversation.BotDisabled = request.BotDisabled;
+        conversation.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(new { botDisabled = conversation.BotDisabled });
+    }
+
     [HttpPost("conversations/{phone}/send")]
     public async Task<IActionResult> Send(
         string phone, [FromBody] WhatsAppSendRequest request, CancellationToken cancellationToken)
@@ -203,13 +232,17 @@ public sealed class WhatsAppAdminController : ControllerBase
     }
 }
 
+public sealed record WhatsAppStatusDto(
+    bool Configured, bool Connected, string State, string? Error, DateTime? LastInboundAt);
+
 public sealed record WhatsAppConversationDto(
     string Phone, string DisplayName, Guid? UserId, int PointsBalance, string? ProfileImageUrl,
     int ActiveReservations, string? LastMessage, DateTime LastMessageAt, int UnreadCount,
-    bool HumanMode, DateTime? BotPausedUntil);
+    bool HumanMode, DateTime? BotPausedUntil, bool BotDisabled);
 
 public sealed record WhatsAppMessageDto(
     string Id, string Direction, string Author, string Text, DateTime SentAt, string Status);
 
 public sealed class WhatsAppSendRequest { public string? Text { get; init; } }
 public sealed class WhatsAppModeRequest { public bool BotEnabled { get; init; } }
+public sealed class WhatsAppBotDisabledRequest { public bool BotDisabled { get; init; } }

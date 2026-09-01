@@ -49,7 +49,9 @@ Ao receber `PAGO`, o SoftNerd consulta o Inter pelo mesmo
 
 ## Primeiro deploy
 
-1. Preencher as novas variáveis em `/opt/santuarionerd/deploy/.env`:
+1. Preencher as novas variáveis em `/opt/santuarionerd/.env` — esse é o arquivo
+   de verdade. O `deploy/.env` é uma cópia que o `update.sh` reescreve a cada
+   deploy; editar só ele faz as chaves sumirem na próxima atualização.
 
    - `EVOLUTION_API_KEY`
    - `EVOLUTION_INSTANCE_NAME`

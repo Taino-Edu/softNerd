@@ -946,6 +946,8 @@ using (var scope = app.Services.CreateScope())
                 );
                 ALTER TABLE whatsapp_conversations
                     ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMPTZ NULL;
+                ALTER TABLE whatsapp_conversations
+                    ADD COLUMN IF NOT EXISTS bot_disabled BOOLEAN NOT NULL DEFAULT FALSE;
                 CREATE INDEX IF NOT EXISTS ix_whatsapp_conversations_user
                     ON whatsapp_conversations (user_id);
 

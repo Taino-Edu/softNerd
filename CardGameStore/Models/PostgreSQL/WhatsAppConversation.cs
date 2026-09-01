@@ -17,6 +17,14 @@ public class WhatsAppConversation
     [Column("bot_paused_until")]
     public DateTime? BotPausedUntil { get; set; }
 
+    /// <summary>
+    /// Contato marcado para o robô nunca responder. Diferente de <see cref="BotPausedUntil"/>,
+    /// que é handoff temporário de 4 horas: esta marca não expira e o cliente não a desfaz
+    /// digitando "bot". A mensagem continua sendo registrada e aparece no inbox.
+    /// </summary>
+    [Column("bot_disabled")]
+    public bool BotDisabled { get; set; }
+
     [Column("last_inbound_at")]
     public DateTime LastInboundAt { get; set; } = DateTime.UtcNow;
 

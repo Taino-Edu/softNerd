@@ -59,6 +59,52 @@ public class WhatsAppAutomationServiceTests
     }
 
     [Fact]
+    public async Task ContatoSilenciado_RegistraMensagemMasNaoResponde()
+    {
+        await using var db = CreateDb();
+        db.WhatsAppConversations.Add(new WhatsAppConversation
+        {
+            Phone = "17999990000",
+            BotDisabled = true,
+        });
+        await db.SaveChangesAsync();
+
+        var response = await CreateService(db).ProcessarAsync(new WhatsAppAutomationRequest
+        {
+            MessageId = "msg-silenciado-1",
+            Phone = "5517999990000",
+            Text = "PONTOS",
+        });
+
+        response.Handled.Should().BeFalse();
+        response.Replies.Should().BeEmpty();
+        // A mensagem precisa continuar visível no inbox: silenciar o bot não é ignorar o cliente.
+        (await db.WhatsAppInboundEvents.SingleAsync()).MessageText.Should().Be("PONTOS");
+    }
+
+    [Fact]
+    public async Task ContatoSilenciado_ComandoBotNaoDesfazAMarcaDoAdmin()
+    {
+        await using var db = CreateDb();
+        db.WhatsAppConversations.Add(new WhatsAppConversation
+        {
+            Phone = "17999990000",
+            BotDisabled = true,
+        });
+        await db.SaveChangesAsync();
+
+        var response = await CreateService(db).ProcessarAsync(new WhatsAppAutomationRequest
+        {
+            MessageId = "msg-silenciado-2",
+            Phone = "5517999990000",
+            Text = "BOT",
+        });
+
+        response.Replies.Should().BeEmpty();
+        (await db.WhatsAppConversations.SingleAsync()).BotDisabled.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Pix_EventoRepetidoReutilizaRespostaSemExecutarRegraNovamente()
     {
         await using var db = CreateDb();

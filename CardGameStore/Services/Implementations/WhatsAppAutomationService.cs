@@ -98,7 +98,14 @@ public sealed partial class WhatsAppAutomationService : IWhatsAppAutomationServi
             conversation.UpdatedAt = DateTime.UtcNow;
 
             var command = NormalizeCommand(request.Text);
-            if (command == "bot")
+            if (conversation.BotDisabled)
+            {
+                // Contato marcado pelo Maikon: a mensagem já foi gravada acima e aparece
+                // no inbox, mas nenhuma resposta automática sai. Vem antes do comando
+                // "bot" de propósito — quem está do outro lado não desfaz a marca.
+                response = new WhatsAppAutomationResponse { Handled = false, Phone = phone, UserId = user?.Id };
+            }
+            else if (command == "bot")
             {
                 conversation.BotPausedUntil = null;
                 response = Reply(phone, user?.Id, $"Atendimento automático reativado.\n\n{Menu(user)}");

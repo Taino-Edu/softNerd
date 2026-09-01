@@ -11,7 +11,8 @@ export default function Footer() {
   const pathname = usePathname()
 
   // Não exibe o footer no painel admin
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/login')) return null
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/login')
+    || pathname?.startsWith('/janela')) return null
 
   return (
     <footer className="bg-[#1a0a2e] text-gray-400 py-5 px-4 text-xs">

@@ -31,14 +31,14 @@ export default function WhatsAppPage() {
           <button onClick={loadQr} className="btn-secondary flex items-center gap-2" disabled={loadingQr}>
             {loadingQr ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />} Conectar número
           </button>
-          <button onClick={() => window.open('/admin/whatsapp', 'softnerd-whatsapp', 'popup,width=1180,height=760,resizable=yes')}
+          <button onClick={() => window.open('/janela/whatsapp', 'softnerd-whatsapp', 'popup,width=1180,height=760,resizable=yes')}
             className="btn-primary flex items-center gap-2">
             <ExternalLink className="w-4 h-4" /> Abrir em janela
           </button>
         </>}
       />
 
-      <WhatsAppInbox />
+      <WhatsAppInbox onConnect={loadQr} />
 
       {qr && (
         <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm grid place-items-center p-4" onClick={() => setQr(null)}>

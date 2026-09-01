@@ -1636,6 +1636,8 @@ export const mensageriaApi = {
 
 export interface WhatsAppStatus {
   configured: boolean; connected: boolean; state: string; error?: string | null
+  // null = o backend nunca recebeu evento do n8n; ver o estado vazio do inbox.
+  lastInboundAt?: string | null
 }
 
 export interface WhatsAppConversation {
@@ -1643,6 +1645,8 @@ export interface WhatsAppConversation {
   profileImageUrl?: string | null; activeReservations: number
   lastMessage?: string | null; lastMessageAt: string; unreadCount: number
   humanMode: boolean; botPausedUntil?: string | null
+  // Marca permanente: o bot nunca responde este contato. A mensagem continua chegando.
+  botDisabled: boolean
 }
 
 export interface WhatsAppMessage {
@@ -1661,6 +1665,8 @@ export const whatsappAdminApi = {
     api.post(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/read`),
   setMode: (phone: string, botEnabled: boolean) =>
     api.post(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/mode`, { botEnabled }),
+  setBotDisabled: (phone: string, botDisabled: boolean) =>
+    api.post(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/bot-disabled`, { botDisabled }),
   send: (phone: string, text: string) =>
     api.post(`/api/admin/whatsapp/conversations/${encodeURIComponent(phone)}/send`, { text }),
 }
