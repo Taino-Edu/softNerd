@@ -75,10 +75,19 @@ api.interceptors.response.use(
           refreshPromise = doRefresh().finally(() => { refreshPromise = null })
         }
         await refreshPromise
-        // Re-tenta a requisição original — o novo accessToken já está no cookie
-        return api(original)
-      } catch (refreshError) {
-        if (sessaoRealmenteExpirou(refreshError)) encerrarSessao()
+        // O `await` aqui não é enfeite. Sem ele a promise da repetição era
+        // devolvida crua, e a rejeição dela passava longe deste catch: quando a
+        // renovação dava certo mas a chamada repetida voltava 401 — sessão morta —
+        // ninguém encerrava nada. O erro ia pra tela e o F5 recomeçava o ciclo com
+        // o mesmo cookie podre, deixando o operador preso em "erro ao carregar"
+        // sem descobrir que só sair e entrar resolvia.
+        //
+        // Com o await, essa rejeição cai no catch abaixo e passa pela mesma régua
+        // do refresh: 401/403 encerra, timeout e 5xx não. Queda de rede na
+        // repetição continua sem deslogar ninguém.
+        return await api(original)
+      } catch (falha) {
+        if (sessaoRealmenteExpirou(falha)) encerrarSessao()
       }
     }
     return Promise.reject(error)
