@@ -214,7 +214,7 @@ public class AuthController : ControllerBase
     [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
     [ProducesResponseType(401)]
-    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest? request)
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenBody? request)
     {
         // Cookie HttpOnly tem prioridade; fallback para o body (compatibilidade)
         var refreshToken = Request.Cookies["refreshToken"]

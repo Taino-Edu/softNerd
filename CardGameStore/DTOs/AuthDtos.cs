@@ -53,9 +53,23 @@ public record QuickLoginRequest(
     [MaxLength(50)]             string? TableIdentifier = null
 );
 
-/// <summary>Renovação de token usando o Refresh Token.</summary>
+/// <summary>Renovação de token usando o Refresh Token. Contrato do AuthService.</summary>
 public record RefreshTokenRequest(
     [Required] string RefreshToken
+);
+
+/// <summary>
+/// Corpo do POST /auth/refresh. Tudo opcional de propósito: o token real vem do
+/// cookie HttpOnly e o frontend manda `{}`.
+///
+/// Enquanto este corpo era o próprio RefreshTokenRequest, com [Required], a
+/// validação automática do [ApiController] rodava antes da action e devolvia 400
+/// no corpo vazio — o trecho que lê o cookie nunca executava. Resultado: nenhuma
+/// renovação funcionava, o access token vencia em 60 min e o operador ficava preso
+/// com "erro ao carregar" até sair e entrar na mão.
+/// </summary>
+public record RefreshTokenBody(
+    string? RefreshToken = null
 );
 
 /// <summary>Busca cliente por CPF — primeiro acesso pelo site.</summary>

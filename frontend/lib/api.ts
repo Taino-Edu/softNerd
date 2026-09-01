@@ -34,11 +34,32 @@ async function doRefresh(): Promise<void> {
  * nesses casos era o que tirava o lojista do sistema no meio do atendimento.
  */
 function sessaoRealmenteExpirou(err: unknown): boolean {
-  const status = (err as { response?: { status?: number } })?.response?.status
+  const status = statusDe(err)
   if (status === 401 || status === 403) return true
   // Sem resposta, timeout e 5xx nunca provam que a sessão expirou. Manter os
   // dados locais permite que o usuário continue assim que a rede voltar.
   return false
+}
+
+function statusDe(err: unknown): number | undefined {
+  return (err as { response?: { status?: number } })?.response?.status
+}
+
+/**
+ * Régua específica da CHAMADA DE RENOVAÇÃO, mais larga que a de cima de propósito.
+ *
+ * Qualquer 4xx aqui significa que este cliente não consegue renovar: token ausente,
+ * inválido, corpo recusado. Nenhum F5 muda isso, então insistir só prende o operador
+ * numa tela de erro. Foi exatamente o que aconteceu — o endpoint devolvia 400 (corpo
+ * vazio barrado pela validação antes da action), 400 não era 401, ninguém encerrava
+ * nada, e a única saída era sair e entrar na mão.
+ *
+ * 5xx e queda de rede continuam de fora: esses são transitórios e derrubar a sessão
+ * neles é o que tirava o lojista do sistema no meio do atendimento.
+ */
+function renovacaoFalhouDeVez(err: unknown): boolean {
+  const status = statusDe(err)
+  return status !== undefined && status >= 400 && status < 500
 }
 
 function encerrarSessao() {
@@ -69,25 +90,27 @@ api.interceptors.response.use(
     const original = error.config
     if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true
+      // As duas falhas possíveis daqui pra frente pedem réguas diferentes, por isso
+      // os catches são separados.
       try {
         // Reutiliza o mesmo promise se já há um refresh em andamento
         if (!refreshPromise) {
           refreshPromise = doRefresh().finally(() => { refreshPromise = null })
         }
         await refreshPromise
-        // O `await` aqui não é enfeite. Sem ele a promise da repetição era
-        // devolvida crua, e a rejeição dela passava longe deste catch: quando a
-        // renovação dava certo mas a chamada repetida voltava 401 — sessão morta —
-        // ninguém encerrava nada. O erro ia pra tela e o F5 recomeçava o ciclo com
-        // o mesmo cookie podre, deixando o operador preso em "erro ao carregar"
-        // sem descobrir que só sair e entrar resolvia.
-        //
-        // Com o await, essa rejeição cai no catch abaixo e passa pela mesma régua
-        // do refresh: 401/403 encerra, timeout e 5xx não. Queda de rede na
-        // repetição continua sem deslogar ninguém.
+      } catch (falhaNaRenovacao) {
+        if (renovacaoFalhouDeVez(falhaNaRenovacao)) encerrarSessao()
+        return Promise.reject(error)
+      }
+
+      // Renovação deu certo: repete a original com o cookie novo. O `await` não é
+      // enfeite — sem ele a promise voltava crua e a rejeição dela passava longe
+      // de qualquer catch, então "renovou mas ainda dá 401" não encerrava nada.
+      try {
         return await api(original)
-      } catch (falha) {
-        if (sessaoRealmenteExpirou(falha)) encerrarSessao()
+      } catch (falhaNaRepeticao) {
+        if (sessaoRealmenteExpirou(falhaNaRepeticao)) encerrarSessao()
+        return Promise.reject(error)
       }
     }
     return Promise.reject(error)

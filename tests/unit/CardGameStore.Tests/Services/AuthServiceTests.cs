@@ -2,6 +2,7 @@
 // AuthServiceTests.cs — Testes unitários de Autenticação
 // Foco: lógica de login, quick-login e tokens
 // =============================================================================
+using System.ComponentModel.DataAnnotations;
 
 using CardGameStore.Configuration;
 using CardGameStore.Data;
@@ -792,5 +793,30 @@ public class AuthServiceTests
         user.Email.Should().Be("novo@teste.com");
         user.Cpf.Should().Be("52998224725", "guardar só dígitos é o que faz a próxima checagem bater");
         user.WhatsApp.Should().Be("17991122890");
+    }
+
+    /// <summary>
+    /// Regressão do 400 no /auth/refresh. O token vem do cookie HttpOnly e o
+    /// frontend manda `{}`; enquanto o corpo exigia [Required], a validação
+    /// automática do [ApiController] devolvia 400 antes de a action rodar, e o
+    /// trecho que lê o cookie nunca executava — nenhuma sessão renovava.
+    ///
+    /// Validator é a mesma engrenagem que o MVC usa pra montar o ModelState, então
+    /// este teste falha se alguém puser [Required] de volta. Teste de serviço não
+    /// pegaria: o defeito estava no model binding, antes do código de negócio.
+    /// </summary>
+    [Fact]
+    public void RefreshTokenBody_CorpoVazio_PassaNaValidacaoDoModelo()
+    {
+        var corpo    = new RefreshTokenBody();
+        var contexto = new ValidationContext(corpo);
+        var erros    = new List<ValidationResult>();
+
+        var valido = Validator.TryValidateObject(corpo, contexto, erros, validateAllProperties: true);
+
+        valido.Should().BeTrue(
+            "o corpo é opcional de propósito — exigir campo aqui devolve 400 e impede o " +
+            "controller de ler o cookie, que é de onde o token realmente vem");
+        erros.Should().BeEmpty();
     }
 }
