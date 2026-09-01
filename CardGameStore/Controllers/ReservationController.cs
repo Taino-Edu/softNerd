@@ -41,11 +41,14 @@ public class ReservationController : ControllerBase
     private readonly IPushService        _push;
     private readonly IAuditService       _audit;
     private readonly IHubContext<ComandaHub> _hub;
+    private readonly InterSyncService    _inter;
+    private readonly ILogger<ReservationController> _logger;
 
     public ReservationController(
         AppDbContext db, IVendaAvulsaService vendaService,
         IReservationPixService reservationPix, IPixReconciliationService pixReconciliation, IPushService push,
-        IAuditService audit, IHubContext<ComandaHub> hub)
+        IAuditService audit, IHubContext<ComandaHub> hub,
+        InterSyncService inter, ILogger<ReservationController> logger)
     {
         _db                = db;
         _vendaService      = vendaService;
@@ -54,6 +57,8 @@ public class ReservationController : ControllerBase
         _push              = push;
         _audit             = audit;
         _hub               = hub;
+        _inter             = inter;
+        _logger            = logger;
     }
 
     // Avisa o admin (grupo do hub) que o estoque mudou — a tela de estoque
@@ -695,14 +700,22 @@ public class ReservationController : ControllerBase
             return Ok(ToDto(res));
         }
 
-        // Pix já gerado trava o valor cobrado — mudar a quantidade agora deixaria a
+        // Pix ainda pagável trava o valor cobrado — mudar a quantidade agora deixaria a
         // cobrança desalinhada do novo total. Pede pra cancelar o Pix antes.
+        //
+        // A cláusula de expiração não é detalhe: nada marca cobrança vencida como vencida
+        // (o robô de reconciliação só olha as últimas 24h), então uma cobrança que o cliente
+        // nunca pagou — ou que pagou na chave normal, fora dela — ficava "ATIVA" pra sempre
+        // e travava a reserva de vez. Mesmo critério do ComandaController.
         if (res.Kind == "pre_venda")
         {
+            var agora = DateTime.UtcNow;
             var temPixAtivo = await _db.PixCobrancas.AnyAsync(p =>
-                p.ReservationGroupId == res.ReservationGroupId && p.Status == "ATIVA");
+                p.ReservationGroupId == res.ReservationGroupId &&
+                p.Status == "ATIVA" &&
+                (p.ExpiraEm == null || p.ExpiraEm > agora));
             if (temPixAtivo)
-                return Conflict(new { Message = "Esta reserva já tem um Pix ativo — cancele o Pix antes de mudar a quantidade." });
+                return Conflict(new { Message = "Esta reserva tem um Pix aberto — cancele o Pix antes de mudar a quantidade." });
         }
 
         var strategy = _db.Database.CreateExecutionStrategy();
@@ -965,6 +978,58 @@ public class ReservationController : ControllerBase
         if (result.Error is not null) return StatusCode(422, new { message = result.Error });
 
         return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
+    }
+
+    /// <summary>
+    /// Cancela a cobrança Pix aberta do grupo. Existe porque a mensagem de bloqueio da
+    /// edição de quantidade mandava "cancele o Pix antes" sem que houvesse qualquer
+    /// caminho pra isso — o caso real é o cliente pagar na chave normal da loja, deixando
+    /// uma cobrança órfã que o Inter nunca vai confirmar.
+    /// </summary>
+    [HttpDelete("group/{groupId:guid}/pix")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> CancelarPixReserva(Guid groupId)
+    {
+        var pix = await _db.PixCobrancas
+            .Where(p => p.ReservationGroupId == groupId && p.Origem == PixCobrancaOrigem.Reserva && p.Status == "ATIVA")
+            .OrderByDescending(p => p.CriadoEm)
+            .FirstOrDefaultAsync();
+        if (pix is null) return NotFound(new { Message = "Nenhuma cobrança Pix aberta para esta reserva." });
+
+        // Antes de cancelar, confere no Inter: se o cliente acabou de pagar POR ESTA
+        // cobrança, cancelar apagaria a única pista do pagamento. Nesse caso a
+        // reconciliação dá a baixa e o cancelamento é recusado.
+        var jaVenceu = pix.ExpiraEm is not null && pix.ExpiraEm <= DateTime.UtcNow;
+        if (!jaVenceu)
+        {
+            var conferida = await _pixReconciliation.ReconciliarAsync(pix);
+            if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
+                return Conflict(new { Message = "Esta cobrança acabou de ser paga pelo cliente e foi baixada agora — recarregue a tela." });
+        }
+
+        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+        var removida = cfg is null
+            ? new PixCobrancaResult { Error = "Integração com o Inter não configurada." }
+            : await _inter.RemoverCobrancaAsync(cfg, pix.TxId);
+
+        // Cobrança vencida não é mais pagável, então dá pra encerrar localmente mesmo se o
+        // Inter não responder. Se ainda está no prazo, recusar é obrigatório: encerrar só
+        // aqui deixaria o QR de pé no banco, aceitando um pagamento que ninguém concilia.
+        if (removida.Error is not null && !jaVenceu)
+            return StatusCode(502, new { Message = $"Não deu pra cancelar a cobrança no Inter: {removida.Error}" });
+
+        if (removida.Error is not null)
+            _logger.LogWarning("Cobrança {TxId} vencida encerrada localmente — o Inter recusou o PATCH: {Erro}",
+                pix.TxId, removida.Error);
+
+        pix.Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR";
+        await _db.SaveChangesAsync();
+
+        await _audit.LogAsync("CancelouPixReserva", "PixCobranca", pix.Id.ToString(),
+            details: $"{{\"groupId\":\"{groupId}\",\"txid\":\"{pix.TxId}\",\"vencida\":{jaVenceu.ToString().ToLowerInvariant()}}}",
+            httpContext: HttpContext);
+
+        return Ok(new { Message = "Cobrança Pix cancelada. Agora dá pra alterar a quantidade." });
     }
 
     // GET /api/reservations/group/{groupId}/pix — status atual do pagamento

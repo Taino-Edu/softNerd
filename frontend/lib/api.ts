@@ -1361,6 +1361,8 @@ export const reservationApi = {
   verificarPix: (groupId: string)                  =>
                api.post<{ status: string; pagoEm?: string }>(`/api/reservations/group/${groupId}/pix/verificar`),
   getPix:    (groupId: string)                     => api.get<ReservationPixStatus>(`/api/reservations/group/${groupId}/pix`),
+  /** Encerra a cobrança aberta (some com o QR no Inter também) — libera a edição de quantidade. */
+  cancelarPix: (groupId: string)                   => api.delete<{ message: string }>(`/api/reservations/group/${groupId}/pix`),
   cancel:    (id: string)                          => api.delete(`/api/reservations/${id}`),
   /** Homologa o carrinho INTEIRO de uma vez (uma venda com todos os itens do grupo).
    *  Reserva avulsa tem groupId = o próprio id, então serve pros dois casos. */
