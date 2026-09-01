@@ -28,10 +28,58 @@ type ReservationCart = {
 
 type Lanes = { aPagar: ReservationCart[]; pago: ReservationCart[] }
 
+type CustomerGroup = { userId: string; name: string; carts: ReservationCart[]; total: number }
+
+/**
+ * Reserva feita item a item vira um grupo de 1 (ReservationController: "avulsa = grupo
+ * de 1 item só"), então o mesmo cliente que compra em dias diferentes gera vários
+ * carrinhos soltos, embaralhados com os de todo mundo. Aqui eles ficam debaixo do nome
+ * dele. É só arrumação de tela: o carrinho continua sendo a unidade de Pix, entrega e
+ * homologação — nada é fundido.
+ */
+function groupByCustomer(items: ReservationCart[]): CustomerGroup[] {
+  const map = new Map<string, CustomerGroup>()
+  for (const cart of items) {
+    const { userId, userName } = cart.representative
+    const found = map.get(userId)
+    if (found) {
+      found.carts.push(cart)
+      found.total += cart.totalEmReais
+    } else {
+      map.set(userId, { userId, name: userName ?? 'Cliente', carts: [cart], total: cart.totalEmReais })
+    }
+  }
+  return [...map.values()]
+}
+
+/** Gaveta de um cliente com mais de um pedido na mesma raia. Abre por padrão: agrupar
+ *  é pra juntar o que é do mesmo dono, não pra esconder pedido do Maikon. */
+function CustomerGroupCard({ group, renderCard }: {
+  group: CustomerGroup; renderCard: (cart: ReservationCart) => React.ReactNode
+}) {
+  const [open, setOpen] = useState(true)
+  return (
+    <div className="rounded-xl border border-brand-500/25 bg-brand-500/5 overflow-hidden">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full px-2.5 py-2 flex items-center gap-2 text-left hover:bg-brand-500/10 transition-colors">
+        <UserIcon className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+        <span className="text-xs font-bold text-white truncate flex-1">{group.name}</span>
+        <span className="text-[10px] text-gray-400 shrink-0">
+          {group.carts.length} pedidos · R$ {group.total.toFixed(2).replace('.', ',')}
+        </span>
+        {open ? <ChevronUp className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+              : <ChevronDown className="w-3.5 h-3.5 text-gray-500 shrink-0" />}
+      </button>
+      {open && <div className="flex flex-col gap-2 p-2 pt-0">{group.carts.map(renderCard)}</div>}
+    </div>
+  )
+}
+
 function Lane({ title, tint, items, renderCard, emptyText }: {
   title: string; tint: string; items: ReservationCart[]
   renderCard: (cart: ReservationCart) => React.ReactNode; emptyText: string
 }) {
+  const groups = groupByCustomer(items)
   return (
     <div>
       <p className={clsx('text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5', tint)}>
@@ -40,7 +88,12 @@ function Lane({ title, tint, items, renderCard, emptyText }: {
       {items.length === 0 ? (
         <p className="text-[11px] text-gray-600 italic py-2">{emptyText}</p>
       ) : (
-        <div className="flex flex-col gap-2">{items.map(renderCard)}</div>
+        <div className="flex flex-col gap-2">
+          {groups.map(group => group.carts.length === 1
+            // Cliente com um pedido só continua exatamente como era — gaveta de 1 seria ruído.
+            ? <div key={group.userId}>{renderCard(group.carts[0])}</div>
+            : <CustomerGroupCard key={group.userId} group={group} renderCard={renderCard} />)}
+        </div>
       )}
     </div>
   )
