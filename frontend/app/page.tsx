@@ -808,12 +808,17 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* ── WHATSAPP FLUTUANTE ──────────────────────────────────────────── */}
+      {/* ── WHATSAPP FLUTUANTE ──────────────────────────────────────────────
+           bottom-20, não bottom-6: o botão do VLibras fica em bottom:10px com
+           40px de altura e z-index 2147483639, então em bottom-6 os dois se
+           cruzavam num quadrado de 26px e a mão cobria a ponta deste botão.
+           Quem sobe é este, não o VLibras: acessibilidade tem canto escolhido
+           pelo usuário nas preferências, e o plugin vive em Shadow DOM. */}
       <a
         href={`https://wa.me/${site.whatsappNumber}`}
         target="_blank"
         rel="noreferrer"
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 font-black text-sm px-4 py-3 rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95"
+        className="fixed bottom-20 right-6 z-50 flex items-center gap-2.5 font-black text-sm px-4 py-3 rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95"
         style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.4)' }}
       >
         <MessageCircle className="w-5 h-5" />
