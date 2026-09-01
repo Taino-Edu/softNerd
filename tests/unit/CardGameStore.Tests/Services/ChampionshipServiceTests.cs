@@ -228,4 +228,92 @@ public class ChampionshipServiceTests
         participants[0].PlayerNumber.Should().Be(1);
         participants[1].PlayerNumber.Should().Be(2);
     }
+
+    // ── Pagamento obrigatório na inscrição ──────────────────────────────────────
+    // Pedido do Maikon: a pessoa só está efetivamente inscrita depois de pagar. A vaga
+    // fica segurada por um prazo; vencido sem pagamento, ela volta pro público — mas a
+    // linha continua, pra loja conseguir cobrar em vez de simplesmente sumir com o cara.
+
+    [Fact]
+    public async Task RegisterParticipant_ComTaxa_SeguraAVagaPorPrazo()
+    {
+        var db      = CreateDb(nameof(RegisterParticipant_ComTaxa_SeguraAVagaPorPrazo));
+        var service = CreateService(db);
+        var ch      = MakeChampionship();
+        var user    = MakeUser();
+        db.Championships.Add(ch); db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var p = await service.RegisterParticipantAsync(ch.Id, user.Id);
+
+        p.InscricaoExpiraEm.Should().NotBeNull("campeonato pago segura a vaga só até o prazo");
+        p.InscricaoExpiraEm.Should().BeCloseTo(
+            DateTime.UtcNow.AddMinutes(ch.MinutosParaPagar), TimeSpan.FromMinutes(1));
+        p.VagaVale.Should().BeTrue("dentro do prazo a vaga continua valendo");
+    }
+
+    [Fact]
+    public async Task RegisterParticipant_Gratuito_EntraSemPrazo()
+    {
+        var db      = CreateDb(nameof(RegisterParticipant_Gratuito_EntraSemPrazo));
+        var service = CreateService(db);
+        var ch      = MakeChampionship();
+        ch.EntryFeeInCents = 0;
+        var user = MakeUser();
+        db.Championships.Add(ch); db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var p = await service.RegisterParticipantAsync(ch.Id, user.Id);
+
+        p.InscricaoExpiraEm.Should().BeNull("sem taxa não há o que pagar — a vaga é firme");
+        p.VagaVale.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RegisterParticipant_PeloBalcao_EntraSemPrazo()
+    {
+        var db      = CreateDb(nameof(RegisterParticipant_PeloBalcao_EntraSemPrazo));
+        var service = CreateService(db);
+        var ch      = MakeChampionship();
+        var user    = MakeUser();
+        db.Championships.Add(ch); db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var p = await service.RegisterParticipantAsync(ch.Id, user.Id, vagaFirme: true);
+
+        p.InscricaoExpiraEm.Should().BeNull("quem inscreve é o lojista, que já cobrou na hora");
+    }
+
+    [Fact]
+    public void VagaVale_InscricaoAntigaSemPrazo_ContinuaValendo()
+    {
+        // Quem já estava inscrito antes da regra tem InscricaoExpiraEm null: ninguém
+        // pode perder a vaga por causa do deploy. A loja cobra pelo botão "Cobrar".
+        var antiga = new ChampionshipParticipant { InscricaoExpiraEm = null, EntryFeePaidAt = null };
+        antiga.VagaVale.Should().BeTrue();
+    }
+
+    [Fact]
+    public void VagaVale_PrazoVencidoSemPagar_LiberaAVaga()
+    {
+        var vencida = new ChampionshipParticipant
+        {
+            EntryFeePaidAt    = null,
+            InscricaoExpiraEm = DateTime.UtcNow.AddMinutes(-1),
+        };
+        vencida.VagaVale.Should().BeFalse("passou do prazo sem pagar: a vaga volta pro público");
+    }
+
+    [Fact]
+    public void VagaVale_PagouDepoisDoPrazo_ContinuaValendo()
+    {
+        // O prazo velho não pode derrubar quem pagou — a baixa zera InscricaoExpiraEm,
+        // mas mesmo que sobre valor antigo, pagamento manda.
+        var paga = new ChampionshipParticipant
+        {
+            EntryFeePaidAt    = DateTime.UtcNow,
+            InscricaoExpiraEm = DateTime.UtcNow.AddMinutes(-10),
+        };
+        paga.VagaVale.Should().BeTrue();
+    }
 }

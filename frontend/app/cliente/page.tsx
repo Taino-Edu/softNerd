@@ -27,6 +27,8 @@ interface MyParticipation {
   registeredAt: string
   entryFeePaidAt?: string | null
   entryFeePaymentMethod?: string | null
+  /** Prazo pra pagar sem perder a vaga. Null = vaga firme (grátis, paga, ou antiga). */
+  inscricaoExpiraEm?: string | null
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
@@ -125,7 +127,17 @@ function MeusCampeonatos() {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => pagarInscricao(p.championshipId)}
+                <>
+                  {/* O jogador precisa saber que a vaga tem prazo — senão perde sem entender. */}
+                  {p.inscricaoExpiraEm && (
+                    <p className="mt-2 text-[11px] font-bold leading-snug"
+                      style={{ color: new Date(p.inscricaoExpiraEm) > new Date() ? '#B45309' : '#DC2626' }}>
+                      {new Date(p.inscricaoExpiraEm) > new Date()
+                        ? `Sua vaga está guardada até ${new Date(p.inscricaoExpiraEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} — pague pra confirmar.`
+                        : 'O prazo de pagamento venceu e a vaga voltou pro público. Pague pra tentar garantir de novo, ou fale com a loja.'}
+                    </p>
+                  )}
+                  <button onClick={() => pagarInscricao(p.championshipId)}
                   disabled={gerandoPix === p.championshipId}
                   className="mt-2 w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95"
                   style={{ backgroundColor: '#F0FDF4', color: '#16A34A', border: '1px solid #86EFAC' }}>
@@ -133,7 +145,8 @@ function MeusCampeonatos() {
                     ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     : <QrCode className="w-3.5 h-3.5" />}
                   Pagar inscrição via Pix — R$ {p.entryFeeInReais.toFixed(2).replace('.', ',')}
-                </button>
+                  </button>
+                </>
               )
             )}
           </div>

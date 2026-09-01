@@ -17,7 +17,8 @@ public interface IChampionshipService
     Task<Championship>              UpdateStatusAsync(Guid id, ChampionshipStatus newStatus);
     Task                            DeleteAsync(Guid id);
 
-    Task<ChampionshipParticipant>   RegisterParticipantAsync(Guid championshipId, Guid userId, string? deckName = null, Guid? deckId = null);
+    /// <param name="vagaFirme">Balcão ou campeonato gratuito: entra sem prazo de pagamento.</param>
+    Task<ChampionshipParticipant>   RegisterParticipantAsync(Guid championshipId, Guid userId, string? deckName = null, Guid? deckId = null, bool vagaFirme = false);
     Task                            LinkComandaToParticipantAsync(Guid participantId, Guid comandaId);
     Task<IEnumerable<ChampionshipParticipant>> GetParticipantsAsync(Guid championshipId);
     Task<IEnumerable<ChampionshipParticipant>> GetUserParticipationsAsync(Guid userId);

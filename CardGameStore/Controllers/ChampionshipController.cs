@@ -29,17 +29,19 @@ public class ChampionshipController : ControllerBase
     private readonly AppDbContext         _db;
     private readonly InterSyncService     _inter;
     private readonly IPixReconciliationService _pixReconciliation;
+    private readonly IPushService         _push;
     private readonly ILogger<ChampionshipController> _logger;
 
     public ChampionshipController(
         IChampionshipService service, AppDbContext db, InterSyncService inter,
-        IPixReconciliationService pixReconciliation,
+        IPixReconciliationService pixReconciliation, IPushService push,
         ILogger<ChampionshipController> logger)
     {
         _service           = service;
         _db                = db;
         _inter             = inter;
         _pixReconciliation = pixReconciliation;
+        _push              = push;
         _logger            = logger;
     }
 
@@ -121,6 +123,7 @@ public class ChampionshipController : ControllerBase
             RegisteredAt     = p.RegisteredAt,
             EntryFeePaidAt        = p.EntryFeePaidAt,
             EntryFeePaymentMethod = p.EntryFeePaymentMethod,
+            InscricaoExpiraEm     = p.InscricaoExpiraEm,
         }));
     }
 
@@ -143,6 +146,7 @@ public class ChampionshipController : ControllerBase
             RegisteredAt   = p.RegisteredAt,
             EntryFeePaidAt        = p.EntryFeePaidAt,
             EntryFeePaymentMethod = p.EntryFeePaymentMethod,
+            InscricaoExpiraEm     = p.InscricaoExpiraEm,
         }));
     }
 
@@ -241,7 +245,9 @@ public class ChampionshipController : ControllerBase
         if (ch.RegistrationDeadline.HasValue && ch.RegistrationDeadline.Value < DateTime.UtcNow)
             return BadRequest(new { Message = "O prazo de inscrição para este campeonato já encerrou." });
 
-        if (ch.MaxParticipants.HasValue && ch.Participants.Count >= ch.MaxParticipants.Value)
+        // Só conta quem realmente segura vaga: inscrição com taxa que venceu sem pagamento
+        // volta a liberar o lugar (a linha continua lá pro admin cobrar ou remover).
+        if (ch.MaxParticipants.HasValue && ch.Participants.Count(p => p.VagaVale) >= ch.MaxParticipants.Value)
             return BadRequest(new { Message = "O campeonato atingiu o número máximo de participantes." });
 
         ChampionshipParticipant participant;
@@ -271,7 +277,8 @@ public class ChampionshipController : ControllerBase
     // PAGAMENTO DA INSCRIÇÃO — Pix (cliente) ou balcão (admin marca manual)
     // -------------------------------------------------------------------------
 
-    /// <summary>Gera cobrança Pix da taxa de inscrição do próprio usuário. Pagamento é opcional — a vaga já vale.</summary>
+    /// <summary>Gera cobrança Pix da taxa de inscrição do próprio usuário. Enquanto não pagar,
+/// a vaga fica segurada só até <c>InscricaoExpiraEm</c>.</summary>
     [HttpPost("{id:guid}/my-inscription/pix")]
     [Authorize]
     public async Task<IActionResult> GerarPixInscricao(Guid id)
@@ -296,13 +303,35 @@ public class ChampionshipController : ControllerBase
         if (cfg is null)
             return BadRequest(new { Message = "Pagamento Pix indisponível no momento — pague no balcão." });
 
+        var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(participant, valorEmCentavos, cfg, userId);
+        if (erro is not null) return StatusCode(422, new { message = erro });
+
+        return Ok(new { pix!.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
+    }
+
+    /// <summary>
+    /// Cobrança da inscrição: reaproveita a que já existe se ainda estiver no prazo, senão
+    /// pede uma nova ao Inter. Sem isso, cada clique em "cobrar" geraria um QR diferente e
+    /// o jogador ficaria com vários códigos válidos pra mesma inscrição.
+    /// </summary>
+    private async Task<(PixCobranca? Pix, string? Erro)> CriarOuReaproveitarCobrancaAsync(
+        ChampionshipParticipant participant, int valorEmCentavos, IntegrationConfig cfg, Guid criadaPor)
+    {
+        var agora = DateTime.UtcNow;
+        var viva = await _db.PixCobrancas
+            .Where(p => p.ChampionshipParticipantId == participant.Id
+                     && p.Status == "ATIVA"
+                     && (p.ExpiraEm == null || p.ExpiraEm > agora))
+            .OrderByDescending(p => p.CriadoEm)
+            .FirstOrDefaultAsync();
+        if (viva is not null) return (viva, null);
+
         var cpf    = participant.User?.Cpf?.Length == 11 ? participant.User.Cpf : null;
         var result = await _inter.CriarCobrancaAsync(
             cfg, valorEmCentavos, participant.User?.Name, cpf,
             $"Inscrição — {participant.Championship.Name}");
 
-        if (result.Error is not null)
-            return StatusCode(422, new { message = result.Error });
+        if (result.Error is not null) return (null, result.Error);
 
         var pix = new PixCobranca
         {
@@ -314,13 +343,70 @@ public class ChampionshipController : ControllerBase
             PixCopiaCola              = result.PixCopiaCola,
             ImagemQrCode              = result.ImagemQrCode,
             NomeDevedor               = participant.User?.Name,
-            CriadoPorAdminId          = userId, // gerada pelo próprio jogador
+            CriadoPorAdminId          = criadaPor,
             ExpiraEm                  = result.ExpiraEm,
         };
         _db.PixCobrancas.Add(pix);
         await _db.SaveChangesAsync();
+        return (pix, null);
+    }
 
-        return Ok(new { pix.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
+    /// <summary>
+    /// Admin cobra a inscrição de um participante: gera a cobrança, deixa ela visível na
+    /// conta do jogador e avisa por notificação. É o caminho pra quem já estava inscrito
+    /// antes do pagamento virar obrigatório — ninguém perde a vaga, mas dá pra cobrar.
+    /// </summary>
+    [HttpPost("participants/{participantId:guid}/cobrar")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> CobrarInscricao(Guid participantId)
+    {
+        var participant = await _db.ChampionshipParticipants
+            .Include(p => p.Championship)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == participantId);
+        if (participant is null)
+            return NotFound(new { Message = "Participante não encontrado." });
+
+        if (participant.EntryFeePaidAt is not null)
+            return BadRequest(new { Message = "A inscrição deste jogador já está paga." });
+
+        var valorEmCentavos = participant.Championship.EntryFeeInCents;
+        if (valorEmCentavos <= 0)
+            return BadRequest(new { Message = "Este campeonato não tem taxa de inscrição." });
+
+        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+        if (cfg is null)
+            return BadRequest(new { Message = "Pagamento Pix indisponível no momento — cobre no balcão." });
+
+        var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(
+            participant, valorEmCentavos, cfg, GetUserId());
+        if (erro is not null) return StatusCode(422, new { message = erro });
+
+        // Cobrar não encurta a vaga de quem já estava dentro: se a inscrição não tinha
+        // prazo, continua sem prazo. O jogador vê a cobrança e paga quando puder.
+        var valor = $"R$ {(valorEmCentavos / 100m):0.00}".Replace(".", ",");
+        var titulo = $"Inscrição pendente — {participant.Championship.Name}";
+        var corpo  = $"Falta pagar {valor} da sua inscrição. Dá pra pagar por Pix aqui mesmo, na sua conta.";
+
+        _db.Notifications.Add(new Notification
+        {
+            UserId    = participant.UserId,
+            Title     = titulo,
+            Body      = corpo,
+            Link      = "/cliente",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        await _push.SendAsync(participant.UserId, titulo, corpo, "/cliente");
+
+        _logger.LogInformation("Admin cobrou a inscrição {ParticipantId} ({Valor})", participant.Id, valor);
+
+        return Ok(new
+        {
+            pix!.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais,
+            Message = "Cobrança enviada — o jogador foi notificado e vê o Pix na conta dele.",
+        });
     }
 
     /// <summary>Verifica no Inter se a taxa de inscrição caiu; se sim, marca a inscrição como paga (Pix).</summary>
@@ -366,6 +452,7 @@ public class ChampionshipController : ControllerBase
         {
             participant.EntryFeePaidAt        = DateTime.UtcNow;
             participant.EntryFeePaymentMethod = "Balcao";
+            participant.InscricaoExpiraEm     = null; // pagou: vaga firme, não expira mais
         }
         else
         {
@@ -402,7 +489,9 @@ public class ChampionshipController : ControllerBase
         ChampionshipParticipant participant;
         try
         {
-            participant = await _service.RegisterParticipantAsync(id, request.UserId, request.DeckName, request.DeckId);
+            // Inscrição pelo balcão entra firme: quem cadastra é o lojista, que cobra na hora.
+            participant = await _service.RegisterParticipantAsync(
+                id, request.UserId, request.DeckName, request.DeckId, vagaFirme: true);
         }
         catch (InvalidOperationException ex)
         {
@@ -691,6 +780,8 @@ public class MyParticipationDto
     public DateTime  RegisteredAt     { get; init; }
     public DateTime? EntryFeePaidAt        { get; init; }
     public string?   EntryFeePaymentMethod { get; init; }
+    /// <summary>Até quando a vaga fica segurada esperando pagamento. Null = vaga firme.</summary>
+    public DateTime? InscricaoExpiraEm     { get; init; }
 }
 
 /// <summary>DTO de participante em um campeonato.</summary>
@@ -706,6 +797,8 @@ public class ParticipantDto
     public DateTime  RegisteredAt { get; init; }
     public DateTime? EntryFeePaidAt        { get; init; }
     public string?   EntryFeePaymentMethod { get; init; }
+    /// <summary>Até quando a vaga fica segurada esperando pagamento. Null = vaga firme.</summary>
+    public DateTime? InscricaoExpiraEm     { get; init; }
 }
 
 /// <summary>Request do admin para marcar/desmarcar pagamento da inscrição no balcão.</summary>
