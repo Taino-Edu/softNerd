@@ -4,6 +4,17 @@
 #
 # USO:
 #   bash /opt/santuarionerd/deploy/update.sh
+#
+# PELO CONSOLE WEB DA HOSTINGER, prefira soltar do terminal:
+#   cd /opt/santuarionerd && nohup bash deploy/update.sh > /tmp/deploy.log 2>&1 &
+#   tail -f /tmp/deploy.log
+#
+# O build passa de 3 minutos e o console web cai sozinho. Preso ao terminal, a
+# queda manda SIGHUP e o script morre onde estiver — dá pra terminar com a imagem
+# nova pronta e o `up -d` nunca executado, ou seja, container antigo no ar com
+# cara de deploy concluído. Solto, o deploy segue no servidor e a queda só custa
+# reabrir o tail. Se cair mesmo assim, rodar de novo é seguro: o script é
+# idempotente e o cache do build deixa a segunda volta bem mais rápida.
 # =============================================================================
 
 set -e
