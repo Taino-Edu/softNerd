@@ -71,7 +71,9 @@ public class ChampionshipService : IChampionshipService
         return ch;
     }
 
-    public async Task<ChampionshipParticipant> RegisterParticipantAsync(Guid championshipId, Guid userId, string? deckName = null, Guid? deckId = null)
+    public async Task<ChampionshipParticipant> RegisterParticipantAsync(
+        Guid championshipId, Guid userId, string? deckName = null, Guid? deckId = null,
+        bool vagaFirme = false)
     {
         // Verifica se o usuário já está inscrito para evitar duplicata
         var jaInscrito = await _db.ChampionshipParticipants
@@ -95,13 +97,24 @@ public class ChampionshipService : IChampionshipService
             .Select(p => (int?)p.PlayerNumber)
             .MaxAsync();
 
+        // Campeonato com taxa: a inscrição segura a vaga só até o prazo de pagamento.
+        // Gratuito, ou inscrição feita pelo balcão (o admin já recebeu), entra firme.
+        var campeonato = await _db.Championships
+            .Select(c => new { c.Id, c.EntryFeeInCents, c.MinutosParaPagar })
+            .FirstOrDefaultAsync(c => c.Id == championshipId);
+
+        DateTime? expiraEm = null;
+        if (!vagaFirme && campeonato is not null && campeonato.EntryFeeInCents > 0)
+            expiraEm = DateTime.UtcNow.AddMinutes(Math.Max(1, campeonato.MinutosParaPagar));
+
         var participant = new ChampionshipParticipant
         {
-            ChampionshipId = championshipId,
-            UserId         = userId,
-            DeckName       = deckName,
-            DeckId         = deckId,
-            PlayerNumber   = (ultimoNumero ?? 0) + 1
+            ChampionshipId    = championshipId,
+            UserId            = userId,
+            DeckName          = deckName,
+            DeckId            = deckId,
+            PlayerNumber      = (ultimoNumero ?? 0) + 1,
+            InscricaoExpiraEm = expiraEm,
         };
         _db.ChampionshipParticipants.Add(participant);
         await _db.SaveChangesAsync();

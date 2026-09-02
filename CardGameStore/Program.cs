@@ -1124,6 +1124,13 @@ using (var scope = app.Services.CreateScope())
                 );
                 CREATE INDEX IF NOT EXISTS ix_liga_mensal_manual_entries_ano_mes ON liga_mensal_manual_entries (ano, mes);
 
+                -- Campeonato: pagamento da inscrição segura a vaga por um prazo. Vencido o
+                -- prazo sem pagar, a linha continua (o admin ainda cobra ou remove) mas
+                -- deixa de ocupar vaga. Null em inscricao_expira_em = vaga firme, o que
+                -- mantém válidas todas as inscrições feitas antes desta regra.
+                ALTER TABLE championships             ADD COLUMN IF NOT EXISTS minutos_para_pagar  INTEGER     NOT NULL DEFAULT 30;
+                ALTER TABLE championship_participants ADD COLUMN IF NOT EXISTS inscricao_expira_em TIMESTAMPTZ NULL;
+
                 -- Sessões de login: um refresh token por dispositivo. Antes o token morava
                 -- numa coluna única do usuário, então entrar no celular derrubava o PDV e
                 -- duas abas renovando juntas derrubavam as duas — era o logout automático.
@@ -1173,6 +1180,19 @@ using (var scope = app.Services.CreateScope())
                 CREATE UNIQUE INDEX IF NOT EXISTS ix_user_sessions_token_hash ON user_sessions (token_hash);
                 CREATE INDEX IF NOT EXISTS ix_user_sessions_user             ON user_sessions (user_id);
             ");
+
+            // SQLite não tem ADD COLUMN IF NOT EXISTS: rodar de novo num banco que já tem
+            // a coluna estoura "duplicate column name". Cada uma vai isolada e o erro
+            // esperado é engolido — mesmo efeito do IF NOT EXISTS do Postgres.
+            foreach (var ddl in new[]
+            {
+                "ALTER TABLE championships ADD COLUMN minutos_para_pagar INTEGER NOT NULL DEFAULT 30;",
+                "ALTER TABLE championship_participants ADD COLUMN inscricao_expira_em TEXT NULL;",
+            })
+            {
+                try { await db.Database.ExecuteSqlRawAsync(ddl); }
+                catch (Exception ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+            }
         }
 
         // Seed: cria o admin se não existir

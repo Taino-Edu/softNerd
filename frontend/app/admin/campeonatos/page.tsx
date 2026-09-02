@@ -7,6 +7,15 @@ import {
   Trophy, Plus, Users, Swords, X, Check, Loader2,
   ChevronDown, ChevronUp, UserPlus, Trash2, Medal, Search, ImagePlus, Edit2, MessageCircle, Award, Link2, Eye,
 } from 'lucide-react'
+
+/**
+ * Vaga que passou do prazo de pagamento. A inscrição não some — ela só deixa de
+ * ocupar lugar, e a loja ainda consegue cobrar ou marcar como paga no balcão.
+ */
+function vagaExpirada(p: { entryFeePaidAt?: string | null; inscricaoExpiraEm?: string | null }) {
+  if (p.entryFeePaidAt || !p.inscricaoExpiraEm) return false
+  return new Date(p.inscricaoExpiraEm).getTime() <= Date.now()
+}
 import clsx from 'clsx'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -511,6 +520,7 @@ function ChampionshipCard({
   }
   const [podioNames, setPodioNames]   = useState<[string, string, string]>(parsedPodio)
   const [savingPodio, setSavingPodio] = useState(false)
+  const [cobrandoId, setCobrandoId] = useState<string | null>(null)
 
   const loadAll = useCallback(async () => {
     setLoadingP(true)
@@ -564,6 +574,17 @@ function ChampionshipCard({
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Erro ao atualizar pagamento')
     }
+  }
+
+  /** Gera a cobrança do jogador, que passa a ver o Pix na conta dele e recebe notificação. */
+  async function handleCobrar(p: ChampionshipParticipant) {
+    setCobrandoId(p.id)
+    try {
+      const { data } = await championshipApi.cobrarInscricao(p.id)
+      toast.success(data.message ?? `${p.userName} foi notificado da cobrança.`, { duration: 5000 })
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Não deu pra cobrar a inscrição')
+    } finally { setCobrandoId(null) }
   }
 
   async function handleSavePodio() {
@@ -756,13 +777,28 @@ function ChampionshipCard({
                                 ✓ {p.entryFeePaymentMethod === 'Pix' ? 'Pix' : 'Balcão'}
                               </button>
                             ) : (
-                              <button
-                                onClick={() => handleTogglePagamento(p, true)}
-                                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0
-                                           bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
-                                title="Inscrição não paga — clique para marcar como paga no balcão">
-                                Pendente
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleTogglePagamento(p, true)}
+                                  className={clsx('text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0',
+                                    vagaExpirada(p)
+                                      ? 'bg-red-500/15 text-red-400 border-red-500/30 hover:bg-red-500/25'
+                                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25')}
+                                  title={vagaExpirada(p)
+                                    ? 'Prazo de pagamento venceu — a vaga voltou pro público. Clique para marcar como paga no balcão'
+                                    : 'Inscrição não paga — clique para marcar como paga no balcão'}>
+                                  {vagaExpirada(p) ? 'Venceu' : 'Pendente'}
+                                </button>
+                                <button
+                                  onClick={() => handleCobrar(p)}
+                                  disabled={cobrandoId === p.id}
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0
+                                             bg-brand-500/15 text-brand-300 border-brand-500/30
+                                             hover:bg-brand-500/25 disabled:opacity-40"
+                                  title="Gera o Pix, mostra na conta do jogador e manda notificação pra ele">
+                                  {cobrandoId === p.id ? 'Cobrando…' : 'Cobrar'}
+                                </button>
+                              </>
                             )
                           )}
                           {p.placement && (

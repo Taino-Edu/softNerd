@@ -315,6 +315,8 @@ export interface ChampionshipParticipant {
   id: string; userId: string; userName: string; playerNumber: number
   deckName?: string | null; deckId?: string | null; placement?: number | null; registeredAt: string
   entryFeePaidAt?: string | null; entryFeePaymentMethod?: string | null
+  /** Até quando a vaga fica segurada esperando pagamento. Null = vaga firme. */
+  inscricaoExpiraEm?: string | null
 }
 
 export interface UserSummary {
@@ -912,6 +914,9 @@ export interface MyParticipation {
   championshipName: string; game: string; startDate: string; status: string
   entryFeeInReais: number; playerNumber: number; deckName: string | null
   placement: number | null; registeredAt: string
+  entryFeePaidAt?: string | null; entryFeePaymentMethod?: string | null
+  /** Prazo pra pagar e não perder a vaga. Null = vaga firme (grátis, paga ou antiga). */
+  inscricaoExpiraEm?: string | null
 }
 
 export const championshipApi = {
@@ -943,6 +948,9 @@ export const championshipApi = {
     api.put(`/api/championship/${id}/participants/${participantId}/placement`, { placement }),
   marcarPagamento:  (participantId: string, pago: boolean) =>
     api.put(`/api/championship/participants/${participantId}/pagamento`, { pago }),
+  /** Gera a cobrança da inscrição, mostra na conta do jogador e manda notificação. */
+  cobrarInscricao:  (participantId: string) =>
+    api.post<PixCobrancaDto & { message: string }>(`/api/championship/participants/${participantId}/cobrar`),
   setImage:         (id: string, imageUrl: string | null) =>
     api.put<Championship>(`/api/championship/${id}/image`, { imageUrl }),
   addPreInscricao:  (id: string, nome: string, whatsApp: string, deckId?: string, deckName?: string) =>

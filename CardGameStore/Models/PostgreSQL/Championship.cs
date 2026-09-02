@@ -62,6 +62,14 @@ public class Championship
     [Column("entry_fee_in_cents")]
     public int EntryFeeInCents { get; set; }
 
+    /// <summary>
+    /// Minutos que a vaga fica segurada esperando o pagamento da inscrição. Passado o
+    /// prazo sem pagar, a vaga volta a valer pra outra pessoa (a linha do participante
+    /// continua lá, só não ocupa mais vaga). Só vale quando há taxa.
+    /// </summary>
+    [Column("minutos_para_pagar")]
+    public int MinutosParaPagar { get; set; } = 30;
+
     [Column("status")]
     public ChampionshipStatus Status { get; set; } = ChampionshipStatus.Planejado;
 
@@ -172,9 +180,25 @@ public class ChampionshipParticipant
     [Column("registered_at")]
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
-    /// <summary>Quando a taxa de inscrição foi paga — null = pendente (pagamento não bloqueia a vaga).</summary>
+    /// <summary>Quando a taxa de inscrição foi paga — null = ainda não pagou.</summary>
     [Column("entry_fee_paid_at")]
     public DateTime? EntryFeePaidAt { get; set; }
+
+    /// <summary>
+    /// Até quando esta inscrição segura a vaga esperando pagamento.
+    /// Null = vaga firme, não expira: inscrição gratuita, já paga, ou feita antes de
+    /// o pagamento passar a ser obrigatório (ninguém perde vaga por causa do deploy).
+    /// Passado o prazo a linha não some — ela deixa de contar como vaga ocupada, e o
+    /// admin ainda consegue cobrar ou remover. Sem robô: quem lê é que desconsidera.
+    /// </summary>
+    [Column("inscricao_expira_em")]
+    public DateTime? InscricaoExpiraEm { get; set; }
+
+    /// <summary>Inscrição em pé: pagou, ou o prazo pra pagar ainda não venceu.</summary>
+    [NotMapped]
+    public bool VagaVale => EntryFeePaidAt is not null
+                         || InscricaoExpiraEm is null
+                         || InscricaoExpiraEm > DateTime.UtcNow;
 
     /// <summary>"Pix" (confirmado pelo Inter) ou "Balcao" (marcado manualmente pelo admin).</summary>
     [MaxLength(20)]

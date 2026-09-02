@@ -208,6 +208,7 @@ public class PixReconciliationService : IPixReconciliationService
 
         participant.EntryFeePaidAt        = DateTime.UtcNow;
         participant.EntryFeePaymentMethod = "Pix";
+        participant.InscricaoExpiraEm     = null; // pagou: a vaga deixa de ter prazo
         _logger.LogInformation("Inscrição {ParticipantId} paga via Pix (tx {TxId}).", participant.Id, pix.TxId);
     }
 
