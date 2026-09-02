@@ -1,4 +1,5 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { usePreferences } from '@/hooks/usePreferences'
 import { BrainCircuit, Bell, Tag, Check, Loader2, Accessibility, LayoutDashboard, RotateCcw, Timer } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -51,10 +52,33 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 
 export default function ConfiguracoesPage() {
   const { prefs, loading, saving, update } = usePreferences()
+  const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>('default')
+
+  useEffect(() => {
+    setBrowserPermission('Notification' in window ? Notification.permission : 'unsupported')
+  }, [])
 
   function set<K extends keyof UserPreferences>(section: K, patch: Partial<UserPreferences[K]>) {
     update({ ...prefs, [section]: { ...prefs[section], ...patch } })
     toast.success('Salvo!', { duration: 1500 })
+  }
+
+  async function setBrowserNotifications(enabled: boolean) {
+    if (!enabled) {
+      set('notifications', { browserEnabled: false })
+      return
+    }
+    if (!('Notification' in window)) {
+      toast.error('Este navegador não oferece notificações.')
+      return
+    }
+    const permission = await Notification.requestPermission()
+    setBrowserPermission(permission)
+    if (permission !== 'granted') {
+      toast.error('Autorize as notificações nas configurações do navegador.')
+      return
+    }
+    set('notifications', { browserEnabled: true })
   }
 
   if (loading) {
@@ -179,7 +203,10 @@ export default function ConfiguracoesPage() {
           <Toggle value={prefs.notifications.soundEnabled} onChange={v => set('notifications', { soundEnabled: v })} />
         </Row>
         <Row label="Notificações do navegador" desc="Permite notificações push mesmo com a aba em segundo plano">
-          <Toggle value={prefs.notifications.browserEnabled} onChange={v => set('notifications', { browserEnabled: v })} />
+          <Toggle
+            value={prefs.notifications.browserEnabled && browserPermission === 'granted'}
+            onChange={setBrowserNotifications}
+          />
         </Row>
       </Section>
 

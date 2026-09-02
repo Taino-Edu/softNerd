@@ -56,27 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ClientProviders>
-        {/* Script VLibras — Acessibilidade (atributos customizados via spread para evitar erro TS) */}
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <div {...({ vw: 'true' } as any)} className="enabled">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <div {...({ 'vw-access-button': 'true' } as any)} className="active"></div>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <div {...({ 'vw-plugin-wrapper': 'true' } as any)}>
-            <div className="vw-plugin-top-wrapper"></div>
-          </div>
-        </div>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.VLibras = window.VLibras || {};
-              var script = document.createElement('script');
-              script.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
-              script.onload = function() { new window.VLibras.Widget('https://vlibras.gov.br/app'); };
-              document.body.appendChild(script);
-            `
-          }}
-        />
+        {/* Carrega e controla o widget somente depois de conhecer as preferências do usuário. */}
         <VLibrasController />
         {/* Timer de torneio como widget lateral — acompanha o operador em todas as telas */}
         <TimerWidget />

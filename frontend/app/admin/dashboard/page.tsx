@@ -1475,6 +1475,11 @@ function EditarComandaModal({
 export default function DashboardPage() {
   const { prefs } = usePreferences()
   const dp = prefs.dashboard
+  const notificationPrefsRef = useRef(prefs.notifications)
+
+  useEffect(() => {
+    notificationPrefsRef.current = prefs.notifications
+  }, [prefs.notifications])
   const [tab, setTab]             = useState<'ativas' | 'historico' | 'analises'>('ativas')
   const [comandas, setComandas]   = useState<ComandaDto[]>([])
   const [history, setHistory]     = useState<ComandaDto[]>([])
@@ -1606,7 +1611,7 @@ export default function DashboardPage() {
     fetchComandas()
     let hub: Awaited<ReturnType<typeof startHub>>
 
-    pedirPermissaoNotificacao()
+    if (notificationPrefsRef.current.browserEnabled) pedirPermissaoNotificacao()
 
     startHub().then(h => {
       hub = h
@@ -1616,9 +1621,11 @@ export default function DashboardPage() {
         setNewIds(s => new Set(s).add(event.comandaId))
         setTimeout(() => setNewIds(s => { const n = new Set(s); n.delete(event.comandaId); return n }), 3000)
         fetchComandas()
-        tocarSom('nova')
+        if (notificationPrefsRef.current.soundEnabled) tocarSom('nova')
         incrementBadge()
-        notificarBrowser('Nova atividade — Santuário Nerd', `${event.userName}: +${event.lastItemAdded ?? 'item'}`)
+        if (notificationPrefsRef.current.browserEnabled) {
+          notificarBrowser('Nova atividade — Santuário Nerd', `${event.userName}: +${event.lastItemAdded ?? 'item'}`)
+        }
         toast(`📋 ${event.userName}: +${event.lastItemAdded ?? 'item'}`, {
           icon: '🃏',
           style: { background: '#1A1A1F', color: '#fff', border: '1px solid #42B6EE', borderRadius: '12px' }
@@ -1632,7 +1639,7 @@ export default function DashboardPage() {
       hub.on('ComandaClosed', () => {
         fetchComandas()
         fetchHistory(histData)
-        tocarSom('fechada')
+        if (notificationPrefsRef.current.soundEnabled) tocarSom('fechada')
       })
       hub.onclose(() => setConnected(false))
       hub.onreconnecting(() => setConnected(false))

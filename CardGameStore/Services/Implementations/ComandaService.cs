@@ -464,6 +464,17 @@ public class ComandaService : IComandaService
     public async Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = "Dinheiro", string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false,
         DateTime? crediarioVencimento = null)
     {
+        // Mesma validação que a venda avulsa já fazia: sem isto a comanda gravava
+        // qualquer string como forma de pagamento, e o que não estivesse na lista
+        // sumia dos relatórios e do filtro do histórico do cliente.
+        if (!Models.MongoDB.PaymentMethod.IsValid(paymentMethod))
+            throw new InvalidOperationException(
+                $"Forma de pagamento inválida: '{paymentMethod}'. Use: {string.Join(", ", Models.MongoDB.PaymentMethod.All)}.");
+
+        if (!string.IsNullOrEmpty(secondPaymentMethod) && !Models.MongoDB.PaymentMethod.IsValid(secondPaymentMethod))
+            throw new InvalidOperationException(
+                $"Forma do segundo pagamento inválida: '{secondPaymentMethod}'. Use: {string.Join(", ", Models.MongoDB.PaymentMethod.All)}.");
+
         var comanda = await _db.Comandas
             .Include(c => c.Items)
             .Include(c => c.User)
@@ -1098,12 +1109,23 @@ public class ComandaService : IComandaService
         if (comanda.Status != ComandaStatus.Fechada)
             throw new InvalidOperationException("Somente comandas com status 'Fechada' podem ser editadas.");
 
-        // 1. Forma de pagamento
+        // 1. Forma de pagamento — mesma validação do fechamento; string vazia no
+        //    segundo método continua significando "limpar".
         if (request.PaymentMethod != null)
+        {
+            if (!Models.MongoDB.PaymentMethod.IsValid(request.PaymentMethod))
+                throw new InvalidOperationException(
+                    $"Forma de pagamento inválida: '{request.PaymentMethod}'. Use: {string.Join(", ", Models.MongoDB.PaymentMethod.All)}.");
             comanda.PaymentMethod = request.PaymentMethod;
+        }
 
         if (request.SecondPaymentMethod != null)
+        {
+            if (request.SecondPaymentMethod != "" && !Models.MongoDB.PaymentMethod.IsValid(request.SecondPaymentMethod))
+                throw new InvalidOperationException(
+                    $"Forma do segundo pagamento inválida: '{request.SecondPaymentMethod}'. Use: {string.Join(", ", Models.MongoDB.PaymentMethod.All)}.");
             comanda.SecondPaymentMethod = request.SecondPaymentMethod == "" ? null : request.SecondPaymentMethod;
+        }
 
         if (request.SecondPaymentAmountInCents.HasValue)
             comanda.SecondPaymentAmountInCents = request.SecondPaymentAmountInCents.Value;

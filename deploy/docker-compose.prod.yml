@@ -111,6 +111,9 @@ services:
       SmtpSettings__AppUrl: "${APP_URL:-https://santuarionerd.com.br}"
       # Integrações
       GeminiSettings__ApiKey: "${GEMINI_API_KEY}"
+      Vapid__PublicKey: "${VAPID_PUBLIC_KEY:-}"
+      Vapid__PrivateKey: "${VAPID_PRIVATE_KEY:-}"
+      Vapid__Subject: "${VAPID_SUBJECT:-mailto:contato@santuarionerd.com.br}"
       # API interna consumida pelo workflow do n8n. Não reutilizar JWT/API key da Evolution.
       WhatsAppAutomation__ApiKey: "${WHATSAPP_AUTOMATION_API_KEY:-}"
       Evolution__BaseUrl: "http://evolution-api:8080/"

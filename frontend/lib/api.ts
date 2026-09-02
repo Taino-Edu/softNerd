@@ -1525,6 +1525,8 @@ export interface MinhaCompraDto {
   totalInReais: number
   discountInReais: number
   items: MinhaCompraItemDto[]
+  /** "Balcao" | "Site" | "PreVenda" — mesma divisão que o Financeiro usa. */
+  origem: string
   /** Compra desfeita pela loja — vem na lista marcada, não some. */
   estornada: boolean
   estornadaEm: string | null

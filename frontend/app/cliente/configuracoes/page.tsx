@@ -1,4 +1,5 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { usePreferences } from '@/hooks/usePreferences'
 import { Bell, Check, Loader2, ArrowLeft, Accessibility } from 'lucide-react'
 import clsx from 'clsx'
@@ -36,10 +37,33 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 
 export default function ClienteConfiguracoesPage() {
   const { prefs, loading, saving, update } = usePreferences()
+  const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>('default')
+
+  useEffect(() => {
+    setBrowserPermission('Notification' in window ? Notification.permission : 'unsupported')
+  }, [])
 
   function set<K extends keyof UserPreferences>(section: K, patch: Partial<UserPreferences[K]>) {
     update({ ...prefs, [section]: { ...prefs[section], ...patch } })
     toast.success('Salvo!', { duration: 1500 })
+  }
+
+  async function setBrowserNotifications(enabled: boolean) {
+    if (!enabled) {
+      set('notifications', { browserEnabled: false })
+      return
+    }
+    if (!('Notification' in window)) {
+      toast.error('Este navegador não oferece notificações.')
+      return
+    }
+    const permission = await Notification.requestPermission()
+    setBrowserPermission(permission)
+    if (permission !== 'granted') {
+      toast.error('Autorize as notificações nas configurações do navegador.')
+      return
+    }
+    set('notifications', { browserEnabled: true })
   }
 
   return (
@@ -124,7 +148,14 @@ export default function ClienteConfiguracoesPage() {
                   <p className="text-sm font-bold" style={{ color: C.navy }}>{label}</p>
                   <p className="text-xs mt-0.5" style={{ color: C.muted }}>{desc}</p>
                 </div>
-                <Toggle value={prefs.notifications[key]} onChange={v => set('notifications', { [key]: v })} />
+                <Toggle
+                  value={key === 'browserEnabled'
+                    ? prefs.notifications.browserEnabled && browserPermission === 'granted'
+                    : prefs.notifications.soundEnabled}
+                  onChange={key === 'browserEnabled'
+                    ? setBrowserNotifications
+                    : v => set('notifications', { soundEnabled: v })}
+                />
               </div>
             ))}
           </div>

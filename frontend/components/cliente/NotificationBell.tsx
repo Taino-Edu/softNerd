@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { notificationsApi, pushApi, AppNotification } from '@/lib/api'
 import { Bell, X, CheckCheck, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { usePreferences } from '@/hooks/usePreferences'
 
 const NAVY   = '#0C3D5A'
 const BLUE   = '#3EC2F2'
@@ -16,6 +17,7 @@ function urlBase64ToUint8Array(b64: string) {
 }
 
 export default function NotificationBell() {
+  const { prefs, loading } = usePreferences()
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [open,   setOpen]   = useState(false)
   const [unread, setUnread] = useState(0)
@@ -28,8 +30,13 @@ export default function NotificationBell() {
     return () => clearInterval(id)
   }, [])
 
-  // Registra Service Worker e subscreve push na primeira vez
-  useEffect(() => { registerPush() }, [])
+  // A preferência agora é efetiva: liga a subscrição apenas com permissão já
+  // concedida e remove a subscrição quando o usuário desliga a opção.
+  useEffect(() => {
+    if (loading) return
+    if (prefs.notifications.browserEnabled) registerPush()
+    else unregisterPush()
+  }, [loading, prefs.notifications.browserEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fecha dropdown ao clicar fora
   useEffect(() => {
@@ -81,8 +88,7 @@ export default function NotificationBell() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     try {
       const reg  = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      const perm = await Notification.requestPermission()
-      if (perm !== 'granted') return
+      if (!('Notification' in window) || Notification.permission !== 'granted') return
       const { data } = await pushApi.publicKey()
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -96,6 +102,19 @@ export default function NotificationBell() {
       })
     } catch {
       // Push não disponível ou negado pelo usuário — sem impacto
+    }
+  }
+
+  async function unregisterPush() {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/')
+      const sub = await reg?.pushManager.getSubscription()
+      if (!sub) return
+      await pushApi.unsubscribe(sub.endpoint).catch(() => {})
+      await sub.unsubscribe()
+    } catch {
+      // Preferência já foi salva; uma subscrição inexistente não deve quebrar a tela.
     }
   }
 
