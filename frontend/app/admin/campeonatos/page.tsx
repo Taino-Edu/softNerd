@@ -156,6 +156,19 @@ function NewChampionshipModal({ onClose, onSave }: {
                 onChange={e => set('maxParticipants', e.target.value ? parseInt(e.target.value) : null)} />
             </div>
           </div>
+
+          {/* Só faz sentido com taxa: sem cobrança a vaga já é firme na hora. */}
+          {(form.entryFeeInCents ?? 0) > 0 && (
+            <div>
+              <label className="label">Prazo pra pagar (min)</label>
+              <input className="input" type="number" min="1" max="1440"
+                value={form.minutosParaPagar ?? 30}
+                onChange={e => set('minutosParaPagar', e.target.value ? parseInt(e.target.value) : 30)} />
+              <p className="text-[11px] text-gray-500 mt-1">
+                A vaga fica segurada esse tempo esperando o Pix. Passou disso, ela volta pra fila.
+              </p>
+            </div>
+          )}
           <div>
             <label className="label">Descrição / Regras</label>
             <textarea className="input resize-none h-20"
@@ -295,6 +308,19 @@ function EditChampionshipModal({ championship, onClose, onSave }: {
                 onChange={e => set('maxParticipants', e.target.value ? parseInt(e.target.value) : null)} />
             </div>
           </div>
+
+          {/* Só faz sentido com taxa: sem cobrança a vaga já é firme na hora. */}
+          {(form.entryFeeInCents ?? 0) > 0 && (
+            <div>
+              <label className="label">Prazo pra pagar (min)</label>
+              <input className="input" type="number" min="1" max="1440"
+                value={form.minutosParaPagar ?? 30}
+                onChange={e => set('minutosParaPagar', e.target.value ? parseInt(e.target.value) : 30)} />
+              <p className="text-[11px] text-gray-500 mt-1">
+                A vaga fica segurada esse tempo esperando o Pix. Passou disso, ela volta pra fila.
+              </p>
+            </div>
+          )}
           <div>
             <label className="label">Descrição / Regras</label>
             <textarea className="input resize-none h-20"
