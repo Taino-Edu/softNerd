@@ -4,7 +4,7 @@
 // GET  /api/championship/{id}         → detalhes de um campeonato
 // GET  /api/championship/{id}/participants → lista participantes
 // POST /api/championship              → cria campeonato (Admin)
-// POST /api/championship/{id}/register → inscreve usuário logado
+// POST /api/championship/{id}/register → usuário se inscreve e recebe o Pix imediatamente
 // PUT  /api/championship/{id}         → edita campeonato (Admin)
 // PUT  /api/championship/{id}/status  → muda status (Admin)
 // PUT  /api/championship/{id}/participants/{pid}/placement → define colocação (Admin)
@@ -221,10 +221,10 @@ public class ChampionshipController : ControllerBase
     }
 
     // -------------------------------------------------------------------------
-    // INSCRIÇÃO — qualquer usuário autenticado
+    // INSCRIÇÃO DO CLIENTE — Pix imediato, sem opção de pagar depois
     // -------------------------------------------------------------------------
 
-    /// <summary>Inscreve o usuário autenticado em um campeonato.</summary>
+    /// <summary>Inscreve o usuário autenticado e, quando há taxa, já cria o Pix obrigatório.</summary>
     [HttpPost("{id:guid}/register")]
     [Authorize]
     [ProducesResponseType(typeof(ParticipantDto), 201)]
@@ -233,43 +233,96 @@ public class ChampionshipController : ControllerBase
     public async Task<IActionResult> Register(Guid id, [FromBody] RegisterChampionshipRequest? request)
     {
         var userId = GetUserId();
-
-        // Verifica se o campeonato existe e aceita inscrições
         var ch = await _service.GetByIdAsync(id);
-        if (ch == null)
+        if (ch is null)
             return NotFound(new { Message = "Campeonato não encontrado." });
-
         if (ch.Status != ChampionshipStatus.Inscricoes)
             return BadRequest(new { Message = "As inscrições para este campeonato não estão abertas." });
-
         if (ch.RegistrationDeadline.HasValue && ch.RegistrationDeadline.Value < DateTime.UtcNow)
             return BadRequest(new { Message = "O prazo de inscrição para este campeonato já encerrou." });
+        IntegrationConfig? cfg = null;
+        if (ch.EntryFeeInCents > 0)
+        {
+            cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+            if (cfg is null)
+                return BadRequest(new { Message = "O Pix está indisponível. A inscrição não foi criada; fale com o Maikon." });
+        }
 
-        // Só conta quem realmente segura vaga: inscrição com taxa que venceu sem pagamento
-        // volta a liberar o lugar (a linha continua lá pro admin cobrar ou remover).
-        if (ch.MaxParticipants.HasValue && ch.Participants.Count(p => p.VagaVale) >= ch.MaxParticipants.Value)
+        var participant = await _db.ChampionshipParticipants
+            .Include(p => p.Championship)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.ChampionshipId == id && p.UserId == userId);
+        var criouAgora = participant is null;
+
+        if (participant?.EntryFeePaidAt is not null)
+            return BadRequest(new { Message = "Sua inscrição neste campeonato já está confirmada." });
+
+        // Quem já estava segurando uma vaga pode retomar o Pix mesmo se as demais vagas
+        // encheram. Inscrição nova (ou vencida) precisa disputar a capacidade atual.
+        if ((participant is null || !participant.VagaVale)
+            && ch.MaxParticipants.HasValue
+            && ch.Participants.Count(p => p.VagaVale) >= ch.MaxParticipants.Value)
             return BadRequest(new { Message = "O campeonato atingiu o número máximo de participantes." });
 
-        ChampionshipParticipant participant;
-        try
+        if (participant is not null && !participant.VagaVale)
         {
-            participant = await _service.RegisterParticipantAsync(id, userId, request?.DeckName, request?.DeckId);
+            participant.InscricaoExpiraEm = DateTime.UtcNow.AddMinutes(Math.Max(1, ch.MinutosParaPagar));
+            await _db.SaveChangesAsync();
         }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
-        _logger.LogInformation("Usuário {UserId} inscrito no campeonato {ChampionshipId}", userId, id);
 
-        return StatusCode(201, new ParticipantDto
+        if (participant is null)
         {
-            Id           = participant.Id,
-            UserId       = participant.UserId,
-            UserName     = string.Empty,   // sem eager load aqui
-            PlayerNumber = participant.PlayerNumber,
-            DeckName     = participant.DeckName,
-            DeckId       = participant.DeckId,
-            RegisteredAt = participant.RegisteredAt
+            try
+            {
+                await _service.RegisterParticipantAsync(
+                    id, userId, request?.DeckName, request?.DeckId, vagaFirme: ch.EntryFeeInCents <= 0);
+                participant = await _db.ChampionshipParticipants
+                    .Include(p => p.Championship)
+                    .Include(p => p.User)
+                    .FirstAsync(p => p.ChampionshipId == id && p.UserId == userId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        object? pixDto = null;
+        if (ch.EntryFeeInCents > 0)
+        {
+            var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(
+                participant, ch.EntryFeeInCents, cfg!, userId);
+            if (erro is not null)
+            {
+                if (criouAgora)
+                {
+                    _db.ChampionshipParticipants.Remove(participant);
+                    await _db.SaveChangesAsync();
+                }
+                var prefixo = criouAgora
+                    ? "Não foi possível gerar o Pix; a inscrição não foi criada."
+                    : "Não foi possível retomar o Pix da sua inscrição.";
+                return StatusCode(422, new { Message = $"{prefixo} {erro}" });
+            }
+
+            pixDto = new { pix!.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais };
+        }
+
+        _logger.LogInformation("Usuário {UserId} iniciou inscrição no campeonato {ChampionshipId}", userId, id);
+        return StatusCode(criouAgora ? StatusCodes.Status201Created : StatusCodes.Status200OK, new
+        {
+            Participant = new ParticipantDto
+            {
+                Id = participant.Id,
+                UserId = participant.UserId,
+                UserName = string.Empty,
+                PlayerNumber = participant.PlayerNumber,
+                DeckName = participant.DeckName,
+                DeckId = participant.DeckId,
+                RegisteredAt = participant.RegisteredAt,
+                InscricaoExpiraEm = participant.InscricaoExpiraEm,
+            },
+            Pix = pixDto,
         });
     }
 
@@ -301,7 +354,7 @@ public class ChampionshipController : ControllerBase
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
         if (cfg is null)
-            return BadRequest(new { Message = "Pagamento Pix indisponível no momento — pague no balcão." });
+            return BadRequest(new { Message = "Pagamento Pix indisponível no momento. Fale com o Maikon; pagamento na chegada não é aceito." });
 
         var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(participant, valorEmCentavos, cfg, userId);
         if (erro is not null) return StatusCode(422, new { message = erro });
@@ -357,7 +410,7 @@ public class ChampionshipController : ControllerBase
     /// antes do pagamento virar obrigatório — ninguém perde a vaga, mas dá pra cobrar.
     /// </summary>
     [HttpPost("participants/{participantId:guid}/cobrar")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "OwnerOnly")]
     public async Task<IActionResult> CobrarInscricao(Guid participantId)
     {
         var participant = await _db.ChampionshipParticipants
@@ -376,29 +429,15 @@ public class ChampionshipController : ControllerBase
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
         if (cfg is null)
-            return BadRequest(new { Message = "Pagamento Pix indisponível no momento — cobre no balcão." });
+            return BadRequest(new { Message = "Pagamento Pix indisponível no momento. Configure o Pix antes de incluir ou cobrar participantes." });
 
         var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(
             participant, valorEmCentavos, cfg, GetUserId());
         if (erro is not null) return StatusCode(422, new { message = erro });
 
-        // Cobrar não encurta a vaga de quem já estava dentro: se a inscrição não tinha
-        // prazo, continua sem prazo. O jogador vê a cobrança e paga quando puder.
+        await NotificarCobrancaAsync(participant, valorEmCentavos);
+
         var valor = $"R$ {(valorEmCentavos / 100m):0.00}".Replace(".", ",");
-        var titulo = $"Inscrição pendente — {participant.Championship.Name}";
-        var corpo  = $"Falta pagar {valor} da sua inscrição. Dá pra pagar por Pix aqui mesmo, na sua conta.";
-
-        _db.Notifications.Add(new Notification
-        {
-            UserId    = participant.UserId,
-            Title     = titulo,
-            Body      = corpo,
-            Link      = "/cliente",
-            CreatedAt = DateTime.UtcNow,
-        });
-        await _db.SaveChangesAsync();
-
-        await _push.SendAsync(participant.UserId, titulo, corpo, "/cliente");
 
         _logger.LogInformation("Admin cobrou a inscrição {ParticipantId} ({Valor})", participant.Id, valor);
 
@@ -439,7 +478,7 @@ public class ChampionshipController : ControllerBase
         return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
     }
 
-    /// <summary>Admin marca/desmarca a taxa de inscrição como paga no balcão.</summary>
+    /// <summary>Rota legada. Campeonatos pagos aceitam exclusivamente confirmação automática via Pix.</summary>
     [HttpPut("participants/{participantId:guid}/pagamento")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> MarcarPagamentoInscricao(Guid participantId, [FromBody] MarcarPagamentoRequest req)
@@ -450,9 +489,7 @@ public class ChampionshipController : ControllerBase
 
         if (req.Pago)
         {
-            participant.EntryFeePaidAt        = DateTime.UtcNow;
-            participant.EntryFeePaymentMethod = "Balcao";
-            participant.InscricaoExpiraEm     = null; // pagou: vaga firme, não expira mais
+            return BadRequest(new { Message = "Pagamento no balcão foi desativado para campeonatos. Envie a cobrança Pix antecipada." });
         }
         else
         {
@@ -471,9 +508,9 @@ public class ChampionshipController : ControllerBase
     // INSCRIÇÃO MANUAL — Admin adiciona/remove participante
     // -------------------------------------------------------------------------
 
-    /// <summary>Admin inscreve qualquer usuário em um campeonato.</summary>
+    /// <summary>Maikon inscreve um usuário. Em campeonato pago, o Pix é criado e enviado imediatamente.</summary>
     [HttpPost("{id:guid}/admin-register")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "OwnerOnly")]
     [ProducesResponseType(typeof(ParticipantDto), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
@@ -483,22 +520,48 @@ public class ChampionshipController : ControllerBase
         if (ch == null)
             return NotFound(new { Message = "Campeonato não encontrado." });
 
-        if (ch.MaxParticipants.HasValue && ch.Participants.Count >= ch.MaxParticipants.Value)
+        if (ch.MaxParticipants.HasValue && ch.Participants.Count(p => p.VagaVale) >= ch.MaxParticipants.Value)
             return BadRequest(new { Message = "O campeonato atingiu o número máximo de participantes." });
+
+        IntegrationConfig? cfg = null;
+        if (ch.EntryFeeInCents > 0)
+        {
+            cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+            if (cfg is null)
+                return BadRequest(new { Message = "Pagamento Pix indisponível. Configure a integração antes de adicionar participantes." });
+        }
 
         ChampionshipParticipant participant;
         try
         {
-            // Inscrição pelo balcão entra firme: quem cadastra é o lojista, que cobra na hora.
+            // Campeonato pago só confirma a vaga quando o Pix cair. Gratuito entra firme.
             participant = await _service.RegisterParticipantAsync(
-                id, request.UserId, request.DeckName, request.DeckId, vagaFirme: true);
+                id, request.UserId, request.DeckName, request.DeckId, vagaFirme: ch.EntryFeeInCents <= 0);
         }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { Message = ex.Message });
         }
 
-        _logger.LogInformation("Admin inscreveu usuário {UserId} no campeonato {ChampionshipId}", request.UserId, id);
+        if (ch.EntryFeeInCents > 0)
+        {
+            var completo = await _db.ChampionshipParticipants
+                .Include(p => p.Championship)
+                .Include(p => p.User)
+                .FirstAsync(p => p.Id == participant.Id);
+            var (_, erro) = await CriarOuReaproveitarCobrancaAsync(
+                completo, ch.EntryFeeInCents, cfg!, GetUserId());
+            if (erro is not null)
+            {
+                _db.ChampionshipParticipants.Remove(completo);
+                await _db.SaveChangesAsync();
+                return StatusCode(422, new { Message = $"Não foi possível criar o Pix; o participante não foi incluído. {erro}" });
+            }
+
+            await NotificarCobrancaAsync(completo, ch.EntryFeeInCents);
+        }
+
+        _logger.LogInformation("Maikon inscreveu usuário {UserId} no campeonato {ChampionshipId}", request.UserId, id);
 
         // Busca o nome do usuário para retornar no DTO
         var user = await _service.GetParticipantsAsync(id);
@@ -512,8 +575,27 @@ public class ChampionshipController : ControllerBase
             PlayerNumber = participant.PlayerNumber,
             DeckName     = participant.DeckName,
             DeckId       = participant.DeckId,
-            RegisteredAt = participant.RegisteredAt
+            RegisteredAt = participant.RegisteredAt,
+            InscricaoExpiraEm = participant.InscricaoExpiraEm,
         });
+    }
+
+    private async Task NotificarCobrancaAsync(ChampionshipParticipant participant, int valorEmCentavos)
+    {
+        var valor  = $"R$ {(valorEmCentavos / 100m):0.00}".Replace(".", ",");
+        var titulo = $"Pix da inscrição — {participant.Championship.Name}";
+        var corpo  = $"O Maikon adicionou você ao campeonato. Pague {valor} antecipadamente por Pix para confirmar sua vaga.";
+
+        _db.Notifications.Add(new Notification
+        {
+            UserId    = participant.UserId,
+            Title     = titulo,
+            Body      = corpo,
+            Link      = "/cliente",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        await _push.SendAsync(participant.UserId, titulo, corpo, "/cliente");
     }
 
     /// <summary>Admin remove participante de um campeonato.</summary>

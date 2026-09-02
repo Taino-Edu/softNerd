@@ -72,7 +72,7 @@ function CadastroForm() {
             <Gamepad2 className="w-8 h-8 text-brand-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Criar Conta</h1>
-          <p className="text-gray-400 mt-1 text-sm">Cadastre-se pra se inscrever em campeonatos e acompanhar seus pontos</p>
+          <p className="text-gray-400 mt-1 text-sm">Cadastre-se para acompanhar campeonatos, pagamentos e seus pontos</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-5">

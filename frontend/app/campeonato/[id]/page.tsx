@@ -4,12 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import {
   Trophy, Swords, Calendar, Users, Clock, CheckCircle2,
-  AlertCircle, Loader2, ChevronRight, ArrowLeft, LogIn,
+  AlertCircle, Loader2, ChevronRight, ArrowLeft, MessageCircle,
 } from 'lucide-react'
 import Link from 'next/link'
-import { isLoggedIn } from '@/lib/auth'
-
-interface DeckOption { id: string; name: string; game: string }
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -78,48 +75,6 @@ export default function ChampionshipPublicPage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult]     = useState<{ ok: boolean; listaEspera?: boolean; msg: string } | null>(null)
 
-  // ── Inscrição autenticada (quando inscrições já estão abertas) ────────────
-  const [loggedIn, setLoggedIn]         = useState(false)
-  const [decks, setDecks]               = useState<DeckOption[]>([])
-  const [selectedDeckId, setSelectedDeckId] = useState('')
-  const [registering, setRegistering]   = useState(false)
-  const [registerResult, setRegisterResult] = useState<{ ok: boolean; msg: string } | null>(null)
-
-  useEffect(() => {
-    setLoggedIn(isLoggedIn())
-  }, [])
-
-  useEffect(() => {
-    if (!loggedIn || !ch || ch.status !== 'Inscricoes') return
-    fetch(`${BASE}/api/deck?game=${encodeURIComponent(ch.game)}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: DeckOption[]) => setDecks(data))
-      .catch(() => {})
-  }, [loggedIn, ch])
-
-  async function handleRegister(e: React.FormEvent) {
-    e.preventDefault()
-    setRegistering(true)
-    try {
-      const r = await fetch(`${BASE}/api/championship/${id}/register`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deckId: selectedDeckId || null }),
-      })
-      const data = await r.json().catch(() => ({}))
-      if (!r.ok) {
-        setRegisterResult({ ok: false, msg: data.message || 'Erro ao se inscrever. Tente novamente.' })
-      } else {
-        setRegisterResult({ ok: true, msg: 'Inscrição confirmada! Nos vemos no torneio.' })
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      }
-    } catch {
-      setRegisterResult({ ok: false, msg: 'Erro de conexão. Verifique sua internet e tente novamente.' })
-    } finally {
-      setRegistering(false)
-    }
-  }
 
   useEffect(() => {
     if (!id) return
@@ -342,101 +297,21 @@ export default function ChampionshipPublicPage() {
           </div>
         )}
 
-        {/* Resultado de inscrição autenticada bem-sucedida */}
-        {registerResult?.ok && (
-          <div className="rounded-xl p-5 border text-center space-y-3 bg-green-500/10 border-green-500/30">
-            <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto" />
-            <p className="font-semibold text-green-300">Inscrição confirmada!</p>
-            <p className="text-sm text-gray-300 leading-relaxed">{registerResult.msg}</p>
-            <Link
-              href="/"
-              className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-400 hover:text-brand-300 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" /> Voltar ao início
+        {/* Inscrições oficiais são incluídas exclusivamente pelo Maikon. */}
+        {canRegister && ch.status === 'Inscricoes' && (
+          <div className="bg-surface-800 rounded-xl p-5 border border-brand-500/30 text-center space-y-3">
+            <MessageCircle className="w-8 h-8 text-brand-400 mx-auto" />
+            <p className="font-semibold text-white">Faça sua inscrição</p>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Entre na sua conta, confirme seus dados e pague o Pix para garantir a vaga.
+              A inclusão manual continua disponível somente para o Maikon.
+            </p>
+            <Link href={`/?campeonato=${id}`}
+              className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold px-5 py-3 rounded-xl transition-colors text-sm">
+              Continuar inscrição <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
         )}
-
-        {/* Inscrições oficialmente abertas — exige login, deck opcional */}
-        {!registerResult?.ok && canRegister && ch.status === 'Inscricoes' && (
-          loggedIn ? (
-            <div className="bg-surface-800 rounded-xl p-5 border border-surface-500 space-y-4">
-              <div>
-                <h2 className="font-bold text-white text-lg">Confirmar inscrição</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {isFull
-                    ? 'As vagas estão preenchidas. Você entrará na lista de espera.'
-                    : 'Escolha um deck salvo (opcional) e confirme sua vaga.'}
-                </p>
-              </div>
-
-              <form onSubmit={handleRegister} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">
-                    Deck <span className="text-gray-500 font-normal">(opcional)</span>
-                  </label>
-                  <select
-                    className="w-full bg-surface-700 border border-surface-500 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-500 transition-colors"
-                    value={selectedDeckId}
-                    onChange={e => setSelectedDeckId(e.target.value)}
-                  >
-                    <option value="">Não tenho deck / decidir depois</option>
-                    {decks.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                  {decks.length === 0 && (
-                    <p className="text-xs text-gray-500 mt-1.5">
-                      Nenhum deck salvo pra {ch.game}. Pode se inscrever sem deck e cadastrar depois em Meus Decks.
-                    </p>
-                  )}
-                </div>
-
-                {registerResult && !registerResult.ok && (
-                  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-xs text-red-300">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    {registerResult.msg}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={registering}
-                  className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
-                >
-                  {registering
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <ChevronRight className="w-4 h-4" />
-                  }
-                  {isFull ? 'Entrar na lista de espera' : 'Confirmar inscrição'}
-                </button>
-              </form>
-            </div>
-          ) : (
-            <div className="bg-surface-800 rounded-xl p-5 border border-surface-500 text-center space-y-3">
-              <LogIn className="w-8 h-8 text-brand-400 mx-auto" />
-              <p className="font-semibold text-white">Faça login pra se inscrever</p>
-              <p className="text-sm text-gray-400">
-                As inscrições estão abertas — você precisa de uma conta pra confirmar sua vaga.
-              </p>
-              <div className="flex gap-3 justify-center pt-1">
-                <Link
-                  href={`/entrar?returnTo=/campeonato/${id}`}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-surface-700 text-white hover:bg-surface-500 transition-colors"
-                >
-                  Entrar
-                </Link>
-                <Link
-                  href={`/cadastro?returnTo=/campeonato/${id}`}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white transition-colors"
-                >
-                  Criar conta
-                </Link>
-              </div>
-            </div>
-          )
-        )}
-
         {/* Formulário de pré-inscrição (antes das inscrições abrirem oficialmente) */}
         {!result?.ok && ch.status !== 'Inscricoes' && (
           canRegister ? (

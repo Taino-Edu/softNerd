@@ -190,7 +190,8 @@ export default function LandingPage() {
     const saved = localStorage.getItem('landing-theme')
     if (saved === 'dark') setIsDark(true)
 
-    if (getRole() === 'Customer') {
+    const returningToChampionship = new URLSearchParams(window.location.search).has('campeonato')
+    if (getRole() === 'Customer' && !returningToChampionship) {
       router.replace('/cliente')
       return
     }
@@ -209,6 +210,20 @@ export default function LandingPage() {
       categoryApi.list().then(r => setCategorias(r.data)).catch(() => {}),
     ]).finally(() => setLoading(false))
   }, [router])
+
+  // Depois do login/cadastro, reabre exatamente o campeonato que iniciou o fluxo.
+  // Sem isso o cliente caía no menu da conta e perdia a inscrição que estava fazendo.
+  useEffect(() => {
+    if (!championships.length) return
+    const params = new URLSearchParams(window.location.search)
+    const championshipId = params.get('campeonato')
+    if (!championshipId) return
+    const championship = championships.find(c => c.id === championshipId)
+    if (championship) setRegisterModal(championship)
+    params.delete('campeonato')
+    const query = params.toString()
+    window.history.replaceState(null, '', query ? `/?${query}` : '/')
+  }, [championships])
 
   const radius = RADIUS_PRESETS[site.borderRadiusStyle] ?? RADIUS_PRESETS.Padrao
 
@@ -1300,7 +1315,7 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
   const [selectedDeck, setSelectedDeck] = useState<string>('')
   const [loading,      setLoading]      = useState(false)
   const [erro,         setErro]         = useState<string | null>(null)
-  // 'form' → escolhe deck | 'pagar' → já inscrito, oferece Pix | 'pix' → QR na tela
+  // 'form' → escolhe deck | 'pagar' → campeonato gratuito confirmado | 'pix' → QR obrigatório
   const [etapa,        setEtapa]        = useState<'form' | 'pagar' | 'pix'>('form')
   const [pix,          setPix]          = useState<PixCobrancaDto | null>(null)
   const [copiado,      setCopiado]      = useState(false)
@@ -1314,35 +1329,25 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
     deckApi.list(championship.game).then(r => setDecks(r.data)).catch(() => {})
   }, [isLoggedIn, championship.game])
 
-  // A vaga é garantida AQUI — o backend valida prazo, status e lotação. O pagamento vem
-  // depois e é opcional. Nunca o contrário: pagar primeiro permitiria o campeonato lotar
-  // no meio do caminho, e aí a loja teria que estornar na mão.
+  // Uma única chamada cria a inscrição e o Pix. Assim não existe estado intermediário
+  // com vaga criada e botão de "pagar depois".
   async function handleInscrever(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setErro(null)
     const deck = decks.find(d => d.id === selectedDeck)
     try {
-      await championshipApi.selfRegister(championship.id, deck?.name, deck?.id)
-      setEtapa('pagar')
+      const { data } = await championshipApi.selfRegister(championship.id, deck?.name, deck?.id)
+      if (temTaxa) {
+        if (!data.pix) throw new Error('Pix obrigatório não retornado pelo servidor.')
+        setPix(data.pix)
+        setEtapa('pix')
+      } else {
+        setEtapa('pagar')
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setErro(msg ?? 'Não foi possível concluir a inscrição. Tente novamente.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handlePagarAgora() {
-    setLoading(true)
-    setErro(null)
-    try {
-      const { data } = await championshipApi.pixInscricao(championship.id)
-      setPix(data)
-      setEtapa('pix')
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setErro(msg ?? 'Não foi possível gerar o Pix agora. Sua vaga continua garantida — dá pra pagar na chegada ou pela sua área de cliente.')
     } finally {
       setLoading(false)
     }
@@ -1391,12 +1396,12 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
               no seu nome e seu histórico de torneios fica salvo.
               {temTaxa ? <> A taxa é de <strong>{taxaFmt}</strong>.</> : null}
             </div>
-            <a href="/entrar"
+            <a href={`/entrar?returnTo=${encodeURIComponent(`/?campeonato=${championship.id}`)}`}
               className="w-full flex items-center justify-center gap-2 font-black py-3.5 rounded-xl transition-all active:scale-95"
               style={btn}>
               Entrar e me inscrever
             </a>
-            <a href="/cadastro"
+            <a href={`/cadastro?returnTo=${encodeURIComponent(`/?campeonato=${championship.id}`)}`}
               className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl border transition-all active:scale-95"
               style={{ color: C.navy, borderColor: C.border }}>
               Criar conta
@@ -1452,33 +1457,11 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
               </p>
             </div>
 
-            {temTaxa ? (
-              <>
-                <div className="text-sm px-4 py-3 rounded-xl border text-center"
-                  style={{ color: C.blue, borderColor: `${C.blue}30`, backgroundColor: `${C.blue}08` }}>
-                  Deseja já pagar a taxa de <strong>{taxaFmt}</strong> agora?
-                </div>
-                <button onClick={handlePagarAgora} disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 font-black py-3.5 rounded-xl transition-all active:scale-95 disabled:opacity-60"
-                  style={btn}>
-                  {loading
-                    ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 62.8" /></svg>
-                    : null}
-                  {loading ? 'Gerando Pix...' : 'Pagar agora com Pix'}
-                </button>
-                <button onClick={onClose}
-                  className="w-full py-2.5 text-sm rounded-xl border transition-colors"
-                  style={{ color: C.text, borderColor: C.border }}>
-                  Pagar na chegada
-                </button>
-              </>
-            ) : (
-              <button onClick={onClose}
-                className="w-full font-black py-3.5 rounded-xl transition-all active:scale-95"
-                style={btn}>
-                Fechar
-              </button>
-            )}
+            <button onClick={onClose}
+              className="w-full font-black py-3.5 rounded-xl transition-all active:scale-95"
+              style={btn}>
+              Fechar
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -1501,7 +1484,7 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
               </>
             )}
             <p className="text-xs text-center leading-relaxed" style={{ color: C.text }}>
-              A confirmação é automática. Sua vaga já está garantida mesmo antes de o pagamento cair.
+              A confirmação é automática. A vaga será confirmada assim que o pagamento cair.
             </p>
             <button onClick={onClose}
               className="w-full py-2.5 text-sm rounded-xl border transition-colors"

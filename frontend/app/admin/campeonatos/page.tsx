@@ -7,6 +7,7 @@ import {
   Trophy, Plus, Users, Swords, X, Check, Loader2,
   ChevronDown, ChevronUp, UserPlus, Trash2, Medal, Search, ImagePlus, Edit2, MessageCircle, Award, Link2, Eye,
 } from 'lucide-react'
+import { getRole } from '@/lib/auth'
 
 /**
  * Vaga que passou do prazo de pagamento. A inscrição não some — ela só deixa de
@@ -315,9 +316,10 @@ function EditChampionshipModal({ championship, onClose, onSave }: {
 }
 
 // ── Modal: Adicionar Participante ─────────────────────────────────────────────
-function AddParticipantModal({ championshipId, game, onClose, onAdded, initialName, initialDeckName, onConfirmedPreInscricao }: {
+function AddParticipantModal({ championshipId, game, entryFeeInCents, onClose, onAdded, initialName, initialDeckName, onConfirmedPreInscricao }: {
   championshipId: string
   game: string
+  entryFeeInCents: number
   onClose: () => void
   onAdded: () => void
   initialName?: string
@@ -376,7 +378,9 @@ function AddParticipantModal({ championshipId, game, onClose, onAdded, initialNa
     try {
       await championshipApi.adminRegister(championshipId, selected.id, deckName || undefined, selectedDeckId || undefined)
       if (onConfirmedPreInscricao) await onConfirmedPreInscricao()
-      toast.success(`${selected.name} inscrito com sucesso!`)
+      toast.success(entryFeeInCents > 0
+        ? `${selected.name} adicionado! A cobrança Pix foi enviada para confirmar a vaga.`
+        : `${selected.name} adicionado com sucesso!`)
       onAdded()
       onClose()
     } catch (err: unknown) {
@@ -564,18 +568,6 @@ function ChampionshipCard({
     }
   }
 
-  async function handleTogglePagamento(p: ChampionshipParticipant, pago: boolean) {
-    try {
-      await championshipApi.marcarPagamento(p.id, pago)
-      setParticipants(prev => prev.map(x => x.id === p.id
-        ? { ...x, entryFeePaidAt: pago ? new Date().toISOString() : null, entryFeePaymentMethod: pago ? 'Balcao' : null }
-        : x))
-      toast.success(pago ? `Inscrição de ${p.userName} marcada como paga (balcão).` : 'Pagamento desmarcado.')
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Erro ao atualizar pagamento')
-    }
-  }
-
   /** Gera a cobrança do jogador, que passa a ver o Pix na conta dele e recebe notificação. */
   async function handleCobrar(p: ChampionshipParticipant) {
     setCobrandoId(p.id)
@@ -602,7 +594,7 @@ function ChampionshipCard({
     }
   }
 
-  const canAddParticipants  = c.status === 'Inscricoes' || c.status === 'EmAndamento'
+  const canAddParticipants  = getRole() === 'Admin' && (c.status === 'Inscricoes' || c.status === 'EmAndamento')
   const canDelete           = c.status === 'Finalizado' || c.status === 'Cancelado'
   const canPodio            = c.status === 'EmAndamento' || c.status === 'Finalizado'
 
@@ -615,6 +607,7 @@ function ChampionshipCard({
         <AddParticipantModal
           championshipId={c.id}
           game={c.game}
+          entryFeeInCents={c.entryFeeInCents}
           onClose={() => setShowAdd(false)}
           onAdded={() => { loadAll(); onParticipantChange() }}
         />
@@ -623,6 +616,7 @@ function ChampionshipCard({
         <AddParticipantModal
           championshipId={c.id}
           game={c.game}
+          entryFeeInCents={c.entryFeeInCents}
           initialName={confirmingPI.nome}
           initialDeckName={confirmingPI.deckName}
           onClose={() => setConfirmingPI(null)}
@@ -766,29 +760,24 @@ function ChampionshipCard({
                           {/* Pagamento da inscrição (só quando o campeonato tem taxa) */}
                           {(c.entryFeeInCents ?? 0) > 0 && (
                             p.entryFeePaidAt ? (
-                              <button
-                                onClick={() => p.entryFeePaymentMethod !== 'Pix' && handleTogglePagamento(p, false)}
+                              <span
                                 className={clsx('text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0',
-                                  'bg-green-500/15 text-green-400 border-green-500/30',
-                                  p.entryFeePaymentMethod !== 'Pix' && 'hover:bg-green-500/25')}
-                                title={p.entryFeePaymentMethod === 'Pix'
-                                  ? 'Pago via Pix (confirmado pelo banco)'
-                                  : 'Pago no balcão — clique para desmarcar'}>
-                                ✓ {p.entryFeePaymentMethod === 'Pix' ? 'Pix' : 'Balcão'}
-                              </button>
+                                  'bg-green-500/15 text-green-400 border-green-500/30')}
+                                title="Pago via Pix e confirmado automaticamente pelo banco">
+                                ✓ Pix
+                              </span>
                             ) : (
                               <>
-                                <button
-                                  onClick={() => handleTogglePagamento(p, true)}
+                                <span
                                   className={clsx('text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0',
                                     vagaExpirada(p)
-                                      ? 'bg-red-500/15 text-red-400 border-red-500/30 hover:bg-red-500/25'
-                                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25')}
+                                      ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30')}
                                   title={vagaExpirada(p)
-                                    ? 'Prazo de pagamento venceu — a vaga voltou pro público. Clique para marcar como paga no balcão'
-                                    : 'Inscrição não paga — clique para marcar como paga no balcão'}>
+                                    ? 'O Pix não foi pago no prazo e a vaga voltou ao público'
+                                    : 'Aguardando confirmação automática do Pix'}>
                                   {vagaExpirada(p) ? 'Venceu' : 'Pendente'}
-                                </button>
+                                </span>
                                 <button
                                   onClick={() => handleCobrar(p)}
                                   disabled={cobrandoId === p.id}

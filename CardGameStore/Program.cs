@@ -162,6 +162,9 @@ builder.Services.AddAuthorization(options =>
 {
     // AdminOnly: Admin e Operator passam — OperatorPermissionMiddleware cuida do controle granular por rota.
     options.AddPolicy("AdminOnly",       policy => policy.RequireRole("Admin", "Operator"));
+    // OwnerOnly: ações exclusivas do Maikon. Operadores continuam administrando os
+    // módulos permitidos, mas não conseguem incluir/cobrar participantes de campeonato.
+    options.AddPolicy("OwnerOnly",       policy => policy.RequireRole("Admin"));
     options.AddPolicy("CustomerOrAdmin", policy => policy.RequireRole("Admin", "Customer", "Operator"));
 });
 

@@ -153,14 +153,14 @@ const SECOES: Secao[] = [
     itens: [
       { t: 'Criar campeonato', d: 'Vá em Campeonatos → Novo. Informe nome, jogo (Pokémon, Magic, etc.), data, taxa de inscrição e número máximo de participantes.' },
       { t: 'Status do campeonato', d: '"Planejado" → "Inscrições Abertas" → "Em Andamento" → "Finalizado". Mude o status conforme o evento avança.' },
-      { t: 'Inscrever participantes', d: 'No painel do campeonato, adicione participantes manualmente ou deixe que eles se inscrevam pela landing page pública.' },
+      { t: 'Inscrever participantes', d: 'Clientes podem se inscrever pelo site. No painel, somente o Maikon pode fazer uma inclusão manual.' },
       { t: 'Pré-inscrições da landing page', d: 'Clientes sem conta podem se pré-inscrever pelo link público. Você aprova ou rejeita as pré-inscrições no painel.' },
-      { t: 'Pix na inscrição (opcional)', d: 'O jogador pode pagar a taxa de inscrição na hora via Pix — botão "Pagar inscrição via Pix" em Meus Campeonatos, com QR Code/copia-e-cola e confirmação automática. A vaga já vale mesmo sem pagar, então pagamento no balcão continua funcionando normalmente.' },
-      { t: 'Acompanhar pagamentos', d: 'Na lista de participantes, veja quem já pagou (Pix ou balcão) e marque manualmente o pagamento de quem pagar no balcão.' },
+      { t: 'Pix antecipado obrigatório', d: 'Ao adicionar alguém em um campeonato pago, o sistema gera e envia a cobrança Pix. A vaga é confirmada quando o banco confirma o pagamento; não existe pagamento na chegada.' },
+      { t: 'Acompanhar pagamentos', d: 'Na lista de participantes, veja quem está pendente, quem venceu o prazo e quem teve o Pix confirmado automaticamente.' },
       { t: 'Definir colocações', d: 'Após o campeonato, clique no participante e informe o lugar (1º, 2º, 3º...). O sistema monta o pódio automaticamente.' },
     ],
     dicas: [
-      'A taxa de inscrição paga no balcão é registrada manualmente — só o Pix confirma sozinho.',
+      'Campeonatos pagos são quitados somente pelo Pix enviado antecipadamente.',
       'Use "Cancelado" para campeonatos que não aconteceram para manter o histórico limpo.',
     ],
   },
