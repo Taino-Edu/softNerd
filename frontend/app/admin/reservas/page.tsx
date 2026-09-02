@@ -13,6 +13,7 @@ import {
   LayoutList, RefreshCw, Loader2,
   TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
   QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil, Tag, Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 
 const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
@@ -487,6 +488,9 @@ export default function ReservasPage() {
   const [editQty,        setEditQty]        = useState<AdminReservation | null>(null)
   const [editQtyValue,   setEditQtyValue]   = useState(1)
   const [editQtySaving,  setEditQtySaving]  = useState(false)
+  /** 409 do backend: existe cobrança Pix aberta travando a edição. */
+  const [pixTravando,    setPixTravando]    = useState(false)
+  const [cancelandoPix,  setCancelandoPix]  = useState(false)
 
   // ── Fila (item que ainda não chegou) — seção dobrável dentro da mesma tela ──
   const [showFila,    setShowFila]    = useState(false)
@@ -690,6 +694,7 @@ export default function ReservasPage() {
   function openEditQty(r: AdminReservation) {
     setEditQty(r)
     setEditQtyValue(r.quantity)
+    setPixTravando(false)
   }
 
   async function handleSaveQty() {
@@ -701,8 +706,24 @@ export default function ReservasPage() {
       setEditQty(null)
       load()
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? 'Erro ao alterar quantidade')
+      // 409 = cobrança Pix aberta. Em vez de só repetir a mensagem, mostra o botão
+      // que resolve — antes o aviso mandava cancelar o Pix sem existir onde cancelar.
+      if (e?.response?.status === 409) setPixTravando(true)
+      else toast.error(e?.response?.data?.message ?? 'Erro ao alterar quantidade')
     } finally { setEditQtySaving(false) }
+  }
+
+  /** Encerra a cobrança aberta do pedido e libera a edição da quantidade. */
+  async function handleCancelarPix() {
+    if (!editQty) return
+    setCancelandoPix(true)
+    try {
+      await reservationApi.cancelarPix(editQty.reservationGroupId)
+      toast.success('Cobrança Pix cancelada — pode salvar a nova quantidade')
+      setPixTravando(false)
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Não deu pra cancelar a cobrança')
+    } finally { setCancelandoPix(false) }
   }
 
   // Um card por carrinho; editar quantidade/cancelar continuam sendo ações por item.
@@ -1195,6 +1216,25 @@ export default function ReservasPage() {
                 +
               </button>
             </div>
+
+            {pixTravando && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 flex flex-col gap-2.5">
+                <div className="flex gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-200 leading-relaxed">
+                    Este pedido tem uma cobrança Pix aberta. Mudar a quantidade agora deixaria
+                    o valor cobrado errado. Se o cliente pagou por fora (chave da loja) ou
+                    desistiu do Pix, cancele a cobrança e salve de novo.
+                  </p>
+                </div>
+                <button onClick={handleCancelarPix} disabled={cancelandoPix}
+                  className="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40
+                             text-surface-900 text-xs font-black transition-colors flex items-center justify-center gap-2">
+                  {cancelandoPix ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                  Cancelar cobrança Pix
+                </button>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-1">
               <button onClick={() => setEditQty(null)} disabled={editQtySaving}

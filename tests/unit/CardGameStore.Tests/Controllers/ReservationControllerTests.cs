@@ -21,11 +21,15 @@ using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace CardGameStore.Tests.Controllers;
@@ -61,17 +65,37 @@ public class ReservationControllerTests
         return mockHub.Object;
     }
 
+    /// <summary>
+    /// InterSyncService é classe concreta; o mock só precisa existir porque o controller
+    /// o recebe. Os métodos usados no cancelamento de cobrança são virtuais.
+    /// </summary>
+    private static InterSyncService CreateInterMock()
+    {
+        var env = new Mock<IWebHostEnvironment>();
+        env.Setup(e => e.EnvironmentName).Returns("Development");
+        var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
+
+        return new Mock<InterSyncService>(
+            new Mock<IServiceScopeFactory>().Object,
+            new EncryptionService(config, env.Object),
+            config,
+            NullLogger<InterSyncService>.Instance).Object;
+    }
+
     private static ReservationController CreateController(
-        AppDbContext db, Guid? loggedUserId = null, IVendaAvulsaService? vendaService = null)
+        AppDbContext db, Guid? loggedUserId = null, IVendaAvulsaService? vendaService = null,
+        IPixReconciliationService? pixReconciliation = null)
     {
         var controller = new ReservationController(
             db,
             vendaService ?? new Mock<IVendaAvulsaService>().Object,
             new Mock<IReservationPixService>().Object,
-            new Mock<IPixReconciliationService>().Object,
+            pixReconciliation ?? new Mock<IPixReconciliationService>().Object,
             new Mock<IPushService>().Object,
             new Mock<IAuditService>().Object,
-            CreateHubMock());
+            CreateHubMock(),
+            CreateInterMock(),
+            NullLogger<ReservationController>.Instance);
 
         var claims = new List<Claim>();
         if (loggedUserId.HasValue) claims.Add(new Claim("sub", loggedUserId.Value.ToString()));
@@ -420,6 +444,110 @@ public class ReservationControllerTests
 
         result.Should().BeOfType<NotFoundObjectResult>();
         capturadas.Should().BeEmpty("nada pra homologar não pode virar venda de R$ 0 no caixa");
+    }
+
+    // ── Pix travando a edição de quantidade ─────────────────────────────────────
+    // Reportado pelo Maikon: cliente pagou na chave normal da loja, fora da cobrança
+    // gerada pelo site. O Inter nunca confirma aquele txid, a cobrança fica "ATIVA"
+    // pra sempre e a reserva não aceitava mais mudar de quantidade — com a mensagem
+    // mandando cancelar um Pix que não tinha onde ser cancelado.
+
+    private static async Task<ProductReservation> SeedPreVendaComPixAsync(
+        AppDbContext db, DateTime? pixExpiraEm, string pixStatus = "ATIVA")
+    {
+        var user    = await SeedUserAsync(db);
+        var product = await SeedProductAsync(db, stock: 20, isPreVenda: true);
+        var groupId = Guid.NewGuid();
+
+        var reserva = new ProductReservation
+        {
+            Id = Guid.NewGuid(), ReservationGroupId = groupId,
+            UserId = user.Id, ProductId = product.Id,
+            Quantity = 2, Kind = "pre_venda", Status = "active",
+        };
+        db.ProductReservations.Add(reserva);
+        db.PixCobrancas.Add(new PixCobranca
+        {
+            Id = Guid.NewGuid(), Origem = PixCobrancaOrigem.Reserva,
+            ReservationGroupId = groupId, TxId = Guid.NewGuid().ToString("N"),
+            ValorEmCentavos = 3000, Status = pixStatus,
+            CriadoEm = DateTime.UtcNow.AddHours(-30), ExpiraEm = pixExpiraEm,
+            CriadoPorAdminId = Guid.NewGuid(),
+        });
+        await db.SaveChangesAsync();
+        return reserva;
+    }
+
+    [Fact]
+    public async Task UpdateQuantity_ComPixVencido_DeveDeixarAlterar()
+    {
+        var db      = CreateDb(nameof(ReservationControllerTests));
+        var reserva = await SeedPreVendaComPixAsync(db, pixExpiraEm: DateTime.UtcNow.AddHours(-29));
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.UpdateQuantity(reserva.Id,
+            new UpdateReservationQuantityRequest { Quantity = 5 });
+
+        result.Should().NotBeOfType<ConflictObjectResult>(
+            "cobrança vencida não é mais pagável — travar a reserva por causa dela é travar pra sempre");
+        (await db.ProductReservations.FindAsync(reserva.Id))!.Quantity.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task UpdateQuantity_ComPixAindaNoPrazo_DeveBloquear()
+    {
+        var db      = CreateDb(nameof(ReservationControllerTests));
+        var reserva = await SeedPreVendaComPixAsync(db, pixExpiraEm: DateTime.UtcNow.AddMinutes(30));
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.UpdateQuantity(reserva.Id,
+            new UpdateReservationQuantityRequest { Quantity = 5 });
+
+        result.Should().BeOfType<ConflictObjectResult>(
+            "cobrança viva ainda pode ser paga — mudar a quantidade desalinharia o valor");
+        (await db.ProductReservations.FindAsync(reserva.Id))!.Quantity.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CancelarPixReserva_ComCobrancaVencida_EncerraMesmoSemOInter()
+    {
+        // Sem integração configurada o PATCH no Inter falha. Cobrança vencida não pode
+        // mais receber pagamento, então encerrar localmente é seguro — é o que tira o
+        // lojista do beco quando o cliente pagou por fora.
+        var db      = CreateDb(nameof(ReservationControllerTests));
+        var reserva = await SeedPreVendaComPixAsync(db, pixExpiraEm: DateTime.UtcNow.AddHours(-29));
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.CancelarPixReserva(reserva.ReservationGroupId);
+
+        result.Should().BeOfType<OkObjectResult>();
+        var pix = await db.PixCobrancas.FirstAsync(p => p.ReservationGroupId == reserva.ReservationGroupId);
+        pix.Status.Should().Be("REMOVIDA_PELO_USUARIO_RECEBEDOR");
+    }
+
+    [Fact]
+    public async Task CancelarPixReserva_ComCobrancaViva_NaoEncerraSeOInterRecusar()
+    {
+        // Encerrar só no nosso banco deixaria o QR de pé no PSP: o cliente ainda
+        // pagaria uma cobrança que pra loja não existe mais.
+        var db      = CreateDb(nameof(ReservationControllerTests));
+        var reserva = await SeedPreVendaComPixAsync(db, pixExpiraEm: DateTime.UtcNow.AddMinutes(30));
+
+        // Cobrança no prazo é conferida no Inter antes de cancelar (pra não apagar a
+        // pista de um pagamento recém-caído); aqui ela volta em aberto.
+        var reconciliacao = new Mock<IPixReconciliationService>();
+        reconciliacao
+            .Setup(r => r.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()))
+            .ReturnsAsync(new PixReconciliationResult { Status = "ATIVA" });
+
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(),
+            pixReconciliation: reconciliacao.Object);
+
+        var result = await controller.CancelarPixReserva(reserva.ReservationGroupId);
+
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(502);
+        var pix = await db.PixCobrancas.FirstAsync(p => p.ReservationGroupId == reserva.ReservationGroupId);
+        pix.Status.Should().Be("ATIVA");
     }
 
     // ── Timer de expiração removido ─────────────────────────────────────────────

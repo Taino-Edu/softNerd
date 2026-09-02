@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -327,6 +328,49 @@ public class InterSyncService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao consultar cobrança Pix via Inter (txid={TxId})", txid);
+            return new PixCobrancaResult { Error = ex.Message };
+        }
+    }
+
+    // ── Remove uma cobrança no PSP ────────────────────────────────────────────
+    /// <summary>
+    /// Marca a cobrança como removida pelo recebedor no Inter (PATCH da API Pix do BCB).
+    /// Sem isso, "cancelar" só no nosso banco deixaria o QR Code vivo no PSP: o cliente
+    /// ainda conseguiria pagar uma cobrança que pra loja não existe mais, e o dinheiro
+    /// cairia sem nada pra reconciliar.
+    /// </summary>
+    public virtual async Task<PixCobrancaResult> RemoverCobrancaAsync(IntegrationConfig cfg, string txid)
+    {
+        if (!IsConfigured(cfg))
+            return new PixCobrancaResult { Error = "Inter não configurado." };
+
+        try
+        {
+            var clientSecret = _enc.Decrypt(cfg.ClientSecret!);
+            var token        = await GetTokenAsync(cfg.ClientId!, clientSecret, "cob.write");
+
+            using var http = BuildMtlsClient();
+            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var body = new StringContent(
+                """{"status":"REMOVIDA_PELO_USUARIO_RECEBEDOR"}""",
+                Encoding.UTF8, "application/json");
+
+            var resp = await http.PatchAsync($"https://cdpj.partners.bancointer.com.br/pix/v2/cob/{txid}", body);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var detalhe = await resp.Content.ReadAsStringAsync();
+                _logger.LogWarning("Inter recusou remover a cobrança {TxId} ({Status}): {Detalhe}",
+                    txid, (int)resp.StatusCode, detalhe);
+                return new PixCobrancaResult { Error = $"O Inter recusou remover a cobrança ({(int)resp.StatusCode})." };
+            }
+
+            var cob = await resp.Content.ReadFromJsonAsync<InterCobResponse>(_json);
+            return new PixCobrancaResult { TxId = txid, Status = cob?.Status ?? "REMOVIDA_PELO_USUARIO_RECEBEDOR" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao remover cobrança Pix via Inter (txid={TxId})", txid);
             return new PixCobrancaResult { Error = ex.Message };
         }
     }
