@@ -5,6 +5,7 @@ import { getRole } from '@/lib/auth'
 import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, categoryApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto, ProductCategory, PixCobrancaDto } from '@/lib/api'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { mixHex } from '@/lib/colors'
+import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
 import {
   Trophy, ShoppingBag, Star, Calendar, Users,
@@ -140,7 +141,7 @@ export default function LandingPage() {
   function toggleDark() {
     const next = !isDark
     setIsDark(next)
-    localStorage.setItem('landing-theme', next ? 'dark' : 'light')
+    setOptionalItem('landing-theme', next ? 'dark' : 'light')
   }
 
   useEffect(() => {

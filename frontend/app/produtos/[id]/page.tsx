@@ -5,6 +5,7 @@ import { productApi, authApi, userApi, siteConfigApi, categoryApi, Product, User
 import { saveAuth, isLoggedIn, getUserName } from '@/lib/auth'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
+import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
 import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus } from 'lucide-react'
 
@@ -169,7 +170,7 @@ export default function ProductPage() {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold truncate" style={{ color: '#fff' }}>{product.name}</p>
         </div>
-        <button onClick={() => { const n = !isDark; setIsDark(n); localStorage.setItem('landing-theme', n ? 'dark' : 'light') }}
+        <button onClick={() => { const n = !isDark; setIsDark(n); setOptionalItem('landing-theme', n ? 'dark' : 'light') }}
           className="p-2 rounded-lg hover:bg-white/10 transition-colors" style={{ color: '#fff' }}>
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>

@@ -6,6 +6,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import CookieSettingsButton from '@/components/CookieSettingsButton'
 
 export default function Footer() {
   const pathname = usePathname()
@@ -24,6 +25,8 @@ export default function Footer() {
           <Link href="/termos" className="hover:text-white transition-colors">Termos de Uso</Link>
           <span className="text-gray-700">|</span>
           <Link href="/lgpd" className="hover:text-white transition-colors">Seus Direitos (LGPD)</Link>
+          <span className="text-gray-700">|</span>
+          <CookieSettingsButton />
           <span className="text-gray-700">|</span>
           <a href="mailto:contato@santuarionerd.com.br" className="hover:text-white transition-colors">
             contato@santuarionerd.com.br

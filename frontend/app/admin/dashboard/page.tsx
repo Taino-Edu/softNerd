@@ -1285,8 +1285,8 @@ function EditarComandaModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    // Clique fora nao fecha: itens, desconto e pagamento sao editados aqui.
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-lg bg-surface-800 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
 
         {/* Header */}
@@ -2583,10 +2583,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Modal de estorno de comanda fechada */}
+      {/* Modal de estorno de comanda fechada — clique fora nao fecha, o motivo
+          do estorno e digitado aqui dentro e some junto se fechar sem querer. */}
       {estornoComanda && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-          onClick={e => { if (e.target === e.currentTarget) setEstornoComanda(null) }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
             <div>
               <h3 className="font-bold text-white flex items-center gap-2">

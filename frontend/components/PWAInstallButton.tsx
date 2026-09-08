@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Download, X } from 'lucide-react'
+import { setOptionalItem } from '@/lib/cookieConsent'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -56,7 +57,7 @@ export default function PWAInstallButton() {
     setVisible(false)
     setTimeout(() => {
       setDismissed(true)
-      try { localStorage.setItem('pwa-dismissed', '1') } catch {}
+      setOptionalItem('pwa-dismissed', '1')
     }, 350)
   }
 

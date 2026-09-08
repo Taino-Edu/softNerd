@@ -272,10 +272,8 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
+    // Clique fora nao fecha: a edicao de pagamento acontece aqui dentro.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
 
         <div className="flex items-start justify-between px-5 py-4 border-b border-surface-500">
@@ -790,10 +788,9 @@ function VendaWizard({
 
   return (
     <>
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
+    {/* Clique fora nao fecha: a venda em andamento so some pelo X, senao o caixa
+        perde o carrinho inteiro por um clique torto. */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className={clsx(
         "bg-surface-800 border border-surface-500 rounded-2xl w-full flex flex-col shadow-2xl animate-fade-in",
         step === 2 ? "max-w-3xl max-h-[92vh]" : "max-w-md max-h-[92vh]"
