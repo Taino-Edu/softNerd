@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { PreferencesProvider } from '@/contexts/PreferencesContext'
-import { TimerProvider } from '@/contexts/TimerContext'
 import { iniciarKeepAlive } from '@/lib/sessionKeepAlive'
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
@@ -11,8 +10,6 @@ export default function ClientProviders({ children }: { children: React.ReactNod
   useEffect(() => iniciarKeepAlive(), [])
 
   return (
-    <PreferencesProvider>
-      <TimerProvider>{children}</TimerProvider>
-    </PreferencesProvider>
+    <PreferencesProvider>{children}</PreferencesProvider>
   )
 }
