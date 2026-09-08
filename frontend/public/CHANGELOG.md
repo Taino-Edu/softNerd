@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.30.0] — 2026-09-08
+
+### Adicionado
+- **Contagem regressiva da vaga na inscrição**: campeonato com taxa segura a vaga por 30 minutos (ou o prazo configurado), mas o jogador não via isso em lugar nenhum — pagava atrasado sem saber que existia prazo. Agora, junto do QR do Pix, aparece **"Sua vaga está guardada por 29:47"** correndo em tempo real, e quando o tempo acaba a mensagem explica que a vaga voltou pro público e que pagar ainda vale se o campeonato não tiver lotado. A contagem também aparece no painel do cliente, em Meus Campeonatos, enquanto o Pix está aberto
+- **Botão "Já paguei"**: pergunta na hora ao banco se a taxa caiu, em vez de esperar o robô de conciliação, que só roda de 5 em 5 minutos. Se ainda não caiu, avisa sem drama e continua esperando
+- **Confirmação automática na própria tela da inscrição**: enquanto o QR está aberto, a tela confere sozinha a cada 6 segundos e troca para "Pagamento confirmado!" assim que o Pix cai — antes a pessoa ficava olhando um QR sem retorno nenhum. O painel do cliente já fazia isso; agora a inscrição feita direto da vitrine também faz
+
 ## [v1.29.2] — 2026-09-08
 
 ### Corrigido
