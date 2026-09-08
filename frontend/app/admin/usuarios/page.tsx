@@ -1,10 +1,11 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { userApi, crediarioApi, analyticsApi, perfisApi, CrediariosDto, UserSummary, PerfilDto, ClienteInsightDto, ClienteHistoricoDto, PAYMENT_METHODS } from '@/lib/api'
+import { userApi, crediarioApi, analyticsApi, perfisApi, deckApi, CrediariosDto, UserSummary, PerfilDto, ClienteInsightDto, ClienteHistoricoDto, DeckListDto, PAYMENT_METHODS } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wallet, Minus, UserPlus, KeyRound, X, UserX, History, ShoppingBag, ShoppingCart, Trophy, ChevronDown, ChevronUp, ChevronLeft, TrendingUp, UserCog, Shield, Pencil, BarChart2 } from 'lucide-react'
+import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wallet, Minus, UserPlus, KeyRound, X, UserX, History, ShoppingBag, ShoppingCart, Trophy, ChevronDown, ChevronUp, ChevronLeft, TrendingUp, UserCog, Shield, Pencil, BarChart2, Layers, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { Badge, BadgeTone } from '@/components/ui/Badge'
+import DeckViewerModal from '@/components/admin/DeckViewerModal'
 
 // ── Modal: Novo Cliente ───────────────────────────────────────────────────────
 function NovoClienteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (u: UserSummary) => void }) {
@@ -437,7 +438,13 @@ const pmLabel = (v: string | null) =>
 function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; onClose: () => void; onAnonimized: () => void }) {
   const [data, setData]         = useState<ClienteHistoricoDto | null>(null)
   const [loading, setLoading]   = useState(true)
-  const [tab, setTab]           = useState<'comandas' | 'pdv' | 'crediarios' | 'campeonatos'>('comandas')
+  const [tab, setTab]           = useState<'comandas' | 'pdv' | 'crediarios' | 'campeonatos' | 'decks'>('comandas')
+  // Decks vêm de outra rota e só interessam quando o Maikon abre a aba —
+  // carregar junto do histórico faria toda visita pagar por uma consulta que
+  // quase ninguém usa.
+  const [decks, setDecks]             = useState<DeckListDto[] | null>(null)
+  const [decksLoading, setDecksLoading] = useState(false)
+  const [deckAberto, setDeckAberto]   = useState<DeckListDto | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [confirmAnon, setConfirmAnon] = useState(false)
   const [anonimizing, setAnonimizing] = useState(false)
@@ -449,6 +456,18 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
       .catch(() => toast.error('Erro ao carregar histórico'))
       .finally(() => setLoading(false))
   }, [user.id])
+
+  useEffect(() => {
+    if (tab !== 'decks' || decks !== null || decksLoading) return
+    setDecksLoading(true)
+    deckApi.getByUser(user.id)
+      .then(r => setDecks(r.data.map(d => ({
+        id: d.id, name: d.name, game: d.game, format: d.format,
+        isPublic: d.isPublic, cardCount: d.cardCount, updatedAt: d.updatedAt,
+      }))))
+      .catch(() => { toast.error('Erro ao carregar decks'); setDecks([]) })
+      .finally(() => setDecksLoading(false))
+  }, [tab, decks, decksLoading, user.id])
 
   function toggle(id: string) {
     setExpanded(prev => {
@@ -575,6 +594,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                 { key: 'pdv',         label: 'Caixa (PDV)', icon: <ShoppingCart className="w-3.5 h-3.5" />, count: data.vendasAvulsas.length },
                 { key: 'crediarios',  label: 'Crediário',  icon: <CreditCard className="w-3.5 h-3.5" />, count: data.crediarios.length },
                 { key: 'campeonatos', label: 'Campeonatos', icon: <Trophy className="w-3.5 h-3.5" />, count: data.campeonatos.length },
+                { key: 'decks',       label: 'Decks',       icon: <Layers className="w-3.5 h-3.5" />, count: decks?.length ?? 0 },
               ] as const).map(t => (
                 <button
                   key={t.key}
@@ -717,10 +737,54 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                   ))
               )}
 
+              {/* Decks — conferência dos decks registrados pelo cliente */}
+              {tab === 'decks' && (
+                decksLoading ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="w-6 h-6 animate-spin text-brand-400" aria-label="Carregando decks" />
+                  </div>
+                ) : !decks || decks.length === 0 ? (
+                  <Empty text="Nenhum deck cadastrado" sub="O cliente ainda não montou deck no sistema" />
+                ) : (
+                  <ul className="space-y-2" aria-label={`Decks de ${user.name}`}>
+                    {decks.map(d => (
+                      <li key={d.id}>
+                        <button
+                          onClick={() => setDeckAberto(d)}
+                          className="w-full card text-sm flex items-center gap-3 text-left transition-colors
+                                     hover:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                          aria-label={`Ver deck ${d.name}, carta por carta`}
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-brand-500/15 flex items-center justify-center shrink-0">
+                            <Layers className="w-4 h-4 text-brand-400" aria-hidden="true" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-white truncate">{d.name}</p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {d.game}{d.format ? ` · ${d.format}` : ''} · {d.cardCount} cartas
+                              {d.isPublic ? ' · público' : ''}
+                            </p>
+                          </div>
+                          <Eye className="w-4 h-4 text-gray-400 shrink-0" aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              )}
+
             </div>
           </>
         )}
       </div>
+
+      {deckAberto && (
+        <DeckViewerModal
+          deckId={deckAberto.id}
+          jogador={user.name}
+          onClose={() => setDeckAberto(null)}
+        />
+      )}
     </div>
   )
 }

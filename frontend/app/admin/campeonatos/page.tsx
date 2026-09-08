@@ -6,7 +6,10 @@ import { Badge, BadgeTone } from '@/components/ui/Badge'
 import {
   Trophy, Plus, Users, Swords, X, Check, Loader2,
   ChevronDown, ChevronUp, UserPlus, Trash2, Medal, Search, ImagePlus, Edit2, MessageCircle, Award, Link2, Eye,
+  ClipboardCheck,
 } from 'lucide-react'
+import ConferenciaDecksModal from '@/components/admin/ConferenciaDecksModal'
+import DeckViewerModal from '@/components/admin/DeckViewerModal'
 import { getRole } from '@/lib/auth'
 
 /**
@@ -514,6 +517,9 @@ function ChampionshipCard({
   const [loadingP, setLoadingP]           = useState(false)
   const [showAdd, setShowAdd]             = useState(false)
   const [confirmingPI, setConfirmingPI]   = useState<ChampionshipPreInscricao | null>(null)
+  // Conferência de decks: a lista inteira, ou o deck de um participante só.
+  const [conferindoDecks, setConferindoDecks] = useState(false)
+  const [deckAberto, setDeckAberto]           = useState<ChampionshipParticipant | null>(null)
 
   // Pódio
   const parsedPodio = (): [string, string, string] => {
@@ -734,6 +740,16 @@ function ChampionshipCard({
                 {/* Aba: Participantes */}
                 {activeTab === 'participantes' && (
                   <div className="space-y-1.5">
+                    {participants.length > 0 && (
+                      <button
+                        onClick={() => setConferindoDecks(true)}
+                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg
+                                   text-brand-300 border border-brand-500/40 hover:bg-brand-500/10 transition-colors
+                                   focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      >
+                        <ClipboardCheck className="w-3.5 h-3.5" /> Conferir decks do campeonato
+                      </button>
+                    )}
                     {participants.length === 0 ? (
                       <p className="text-center text-sm text-gray-400 py-4">Nenhum participante ainda</p>
                     ) : (
@@ -747,15 +763,25 @@ function ChampionshipCard({
                             <p className="text-sm font-medium text-white truncate">{p.userName}</p>
                             {p.deckName && <p className="text-xs text-gray-500 truncate">{p.deckName}</p>}
                           </div>
-                          {p.deckId && (
-                            <a
-                              href={`/cliente/decks/${p.deckId}`}
-                              target="_blank" rel="noreferrer"
-                              className="text-gray-400 hover:text-brand-400 transition-colors shrink-0"
-                              title="Ver deck completo"
+                          {/* Antes era um olhinho de 14px com tooltip: existia, mas ninguem
+                              achava. Quem nao registrou deck agora aparece dito com todas
+                              as letras, em vez de simplesmente nao ter botao. */}
+                          {p.deckId ? (
+                            <button
+                              onClick={() => setDeckAberto(p)}
+                              className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full shrink-0
+                                         text-brand-300 border border-brand-500/40 hover:bg-brand-500/15 transition-colors
+                                         focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              aria-label={`Ver deck de ${p.userName || 'participante'}, carta por carta`}
                             >
-                              <Eye className="w-3.5 h-3.5" />
-                            </a>
+                              <Eye className="w-3 h-3" aria-hidden="true" /> Ver deck
+                            </button>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0
+                                             text-gray-400 border border-surface-500"
+                              title="O jogador não escolheu um deck cadastrado na inscrição">
+                              Sem deck
+                            </span>
                           )}
                           {/* Pagamento da inscrição (só quando o campeonato tem taxa) */}
                           {(c.entryFeeInCents ?? 0) > 0 && (
@@ -974,6 +1000,23 @@ function ChampionshipCard({
         </div>
         </div>{/* fim padding */}
       </div>
+
+      {conferindoDecks && (
+        <ConferenciaDecksModal
+          championshipName={c.name}
+          participants={participants}
+          onClose={() => setConferindoDecks(false)}
+        />
+      )}
+
+      {deckAberto?.deckId && (
+        <DeckViewerModal
+          deckId={deckAberto.deckId}
+          jogador={deckAberto.userName || 'Sem nome'}
+          numeroJogador={deckAberto.playerNumber}
+          onClose={() => setDeckAberto(null)}
+        />
+      )}
     </>
   )
 }
