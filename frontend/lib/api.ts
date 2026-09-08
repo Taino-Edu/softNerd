@@ -939,6 +939,11 @@ export const championshipApi = {
   /** Gera a cobrança Pix da taxa de inscrição do próprio usuário. Só funciona depois de inscrito. */
   pixInscricao:     (id: string) =>
     api.post<PixCobrancaDto>(`/api/championship/${id}/my-inscription/pix`),
+  /** Pergunta ao Inter se a taxa caiu e, se caiu, confirma a inscrição na hora.
+   *  Mesmo caminho de baixa do robô de conciliação — só que sem esperar o ciclo dele. */
+  verificarPixInscricao: (id: string) =>
+    api.post<{ status: string; pagoEm?: string | null }>(
+      `/api/championship/${id}/my-inscription/pix/verificar`),
   adminRegister:    (id: string, userId: string, deckName?: string, deckId?: string) =>
     api.post<ChampionshipParticipant>(`/api/championship/${id}/admin-register`, { userId, deckName, deckId }),
   participants:     (id: string) =>

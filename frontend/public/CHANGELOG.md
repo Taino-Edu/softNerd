@@ -1,5 +1,29 @@
 # Changelog — Santuário Nerd
 
+## [v1.32.0] — 2026-09-08
+
+### Adicionado
+- **Conferência de decks do campeonato**: botão novo na aba de participantes que abre a lista inteira de uma vez — quantos registraram deck, quantos estão com alguma irregularidade e quantos não registraram nada. Cada jogador mostra o deck, o total de cartas e o resumo da conferência; clicando, o deck abre **carta por carta**, com quantidade, coleção e número. As regras conferidas são as mesmas que o cliente vê ao montar o deck: tamanho do formato (60 cartas no Pokémon e Magic, 50 no One Piece e Riftbound) e limite de cópias (energia do Pokémon não conta, por regra oficial)
+- **Folha de conferência impressa**: um deck ou o campeonato inteiro, um jogador por página, com caixinha pra riscar carta a carta, os alertas do deck no topo e espaço pra assinatura do juiz e do jogador. É o papel que vai pra mesa
+- **Decks no histórico do cliente**: nova aba **Decks** ao lado de Campeonatos, em Clientes → Ver Histórico. Lista os decks que a pessoa montou no sistema (jogo, formato, número de cartas) e abre cada um carta por carta, na mesma tela de conferência. Serve pra conferir sem depender de o cliente estar inscrito em algum campeonato
+
+### Mudado
+- **"Ver deck" no lugar do olhinho**: na lista de participantes o acesso ao deck era um ícone de 14 pixels que ninguém achava. Agora é um botão escrito, e quem **não** registrou deck aparece marcado com "Sem deck" em vez de simplesmente não ter botão — antes não dava pra diferenciar quem não informou de quem não tinha onde clicar
+
+## [v1.31.0] — 2026-09-08
+
+### Adicionado
+- **A cobrança da inscrição agora diz de quem ela é**: em cima do QR aparece "Inscrição de **Fulano** · jogador **#7**". Antes o jogador via só um QR e um valor — pagava sem nenhuma pista de que aquilo estava amarrado à conta dele, e ficava a dúvida de como a loja saberia quem pagou
+- **Confirmação com identificação e caminho**: a tela de "Pagamento confirmado!" repete o nome e o número do jogador e aponta para **Meus Campeonatos**, onde a inscrição fica registrada com o selo de paga
+- **Aviso quando o pagamento é confirmado**: quem pagou e fechou a tela não ficava sabendo de nada — a confirmação acontecia calada no servidor. Agora chega notificação no sininho e push: "Inscrição confirmada — pagamento recebido, sua vaga está garantida e você é o jogador #7". Vale também quando quem confirma é o robô, minutos depois
+
+## [v1.30.0] — 2026-09-08
+
+### Adicionado
+- **Contagem regressiva da vaga na inscrição**: campeonato com taxa segura a vaga por 30 minutos (ou o prazo configurado), mas o jogador não via isso em lugar nenhum — pagava atrasado sem saber que existia prazo. Agora, junto do QR do Pix, aparece **"Sua vaga está guardada por 29:47"** correndo em tempo real, e quando o tempo acaba a mensagem explica que a vaga voltou pro público e que pagar ainda vale se o campeonato não tiver lotado. A contagem também aparece no painel do cliente, em Meus Campeonatos, enquanto o Pix está aberto
+- **Botão "Já paguei"**: pergunta na hora ao banco se a taxa caiu, em vez de esperar o robô de conciliação, que só roda de 5 em 5 minutos. Se ainda não caiu, avisa sem drama e continua esperando
+- **Confirmação automática na própria tela da inscrição**: enquanto o QR está aberto, a tela confere sozinha a cada 6 segundos e troca para "Pagamento confirmado!" assim que o Pix cai — antes a pessoa ficava olhando um QR sem retorno nenhum. O painel do cliente já fazia isso; agora a inscrição feita direto da vitrine também faz
+
 ## [v1.29.2] — 2026-09-08
 
 ### Corrigido

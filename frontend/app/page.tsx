@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { getRole } from '@/lib/auth'
+import { getRole, getUserName } from '@/lib/auth'
 import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, categoryApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto, ProductCategory, PixCobrancaDto } from '@/lib/api'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
+import { fmtRestante } from '@/lib/prazo'
 import { mixHex } from '@/lib/colors'
 import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
@@ -1320,10 +1321,19 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
   const [selectedDeck, setSelectedDeck] = useState<string>('')
   const [loading,      setLoading]      = useState(false)
   const [erro,         setErro]         = useState<string | null>(null)
-  // 'form' → escolhe deck | 'pagar' → campeonato gratuito confirmado | 'pix' → QR obrigatório
+  // 'form' → escolhe deck | 'pagar' → vaga firme (gratuito ou Pix confirmado) | 'pix' → QR obrigatório
   const [etapa,        setEtapa]        = useState<'form' | 'pagar' | 'pix'>('form')
   const [pix,          setPix]          = useState<PixCobrancaDto | null>(null)
   const [copiado,      setCopiado]      = useState(false)
+  // Prazo da vaga e relógio de 1s: sem ver a contagem, o jogador não sabe que a
+  // reserva tem hora pra vencer e some da lista sem entender o motivo.
+  const [expiraEm,     setExpiraEm]     = useState<string | null>(null)
+  const [agora,        setAgora]        = useState(() => Date.now())
+  const [conferindo,   setConferindo]   = useState(false)
+  const [aviso,        setAviso]        = useState<string | null>(null)
+  const [pago,         setPago]         = useState(false)
+  // Numero do jogador: e a prova, pro cliente, de que a cobranca esta no nome dele.
+  const [numeroJogador, setNumeroJogador] = useState<number | null>(null)
 
   const isLoggedIn = getRole() === 'Customer' || getRole() === 'Admin'
   const temTaxa    = championship.entryFeeInCents > 0
@@ -1333,6 +1343,46 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
     if (!isLoggedIn || !championship.game) return
     deckApi.list(championship.game).then(r => setDecks(r.data)).catch(() => {})
   }, [isLoggedIn, championship.game])
+
+  const restante = expiraEm ? new Date(expiraEm).getTime() - agora : null
+  const venceu   = restante !== null && restante <= 0
+
+  // Relógio da contagem. Só corre na etapa do Pix e enquanto sobra tempo.
+  useEffect(() => {
+    if (etapa !== 'pix' || !expiraEm || venceu) return
+    const id = setInterval(() => setAgora(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [etapa, expiraEm, venceu])
+
+  /** Pergunta ao banco se a taxa caiu. `manual` = veio do botão "Já paguei". */
+  const conferirPagamento = useCallback(async (manual: boolean) => {
+    if (manual) { setConferindo(true); setAviso(null) }
+    try {
+      const { data } = await championshipApi.verificarPixInscricao(championship.id)
+      if (data.status === 'CONCLUIDA') {
+        setPago(true)
+        setEtapa('pagar')
+        return true
+      }
+      if (manual) setAviso('O pagamento ainda não apareceu no banco. Se você acabou de pagar, aguarde alguns segundos — a confirmação também chega sozinha.')
+    } catch (err: unknown) {
+      if (manual) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        setAviso(msg ?? 'Não deu pra conferir agora. Tente de novo em instantes.')
+      }
+    } finally {
+      if (manual) setConferindo(false)
+    }
+    return false
+  }, [championship.id])
+
+  // Enquanto o QR está na tela, confere sozinho a cada 6s — o robô do servidor só
+  // roda de 5 em 5 minutos, e ninguém fica olhando um QR por 5 minutos.
+  useEffect(() => {
+    if (etapa !== 'pix') return
+    const id = setInterval(() => { conferirPagamento(false) }, 6000)
+    return () => clearInterval(id)
+  }, [etapa, conferirPagamento])
 
   // Uma única chamada cria a inscrição e o Pix. Assim não existe estado intermediário
   // com vaga criada e botão de "pagar depois".
@@ -1346,6 +1396,9 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
       if (temTaxa) {
         if (!data.pix) throw new Error('Pix obrigatório não retornado pelo servidor.')
         setPix(data.pix)
+        setExpiraEm(data.participant?.inscricaoExpiraEm ?? null)
+        setNumeroJogador(data.participant?.playerNumber ?? null)
+        setAgora(Date.now())
         setEtapa('pix')
       } else {
         setEtapa('pagar')
@@ -1456,9 +1509,20 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
                 style={{ backgroundColor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}>
                 <CheckCircle className="w-7 h-7 text-green-500" />
               </div>
-              <p className="font-black mb-1" style={{ color: C.navy }}>Vaga garantida!</p>
+              <p className="font-black mb-1" style={{ color: C.navy }}>
+                {pago ? 'Pagamento confirmado!' : 'Vaga garantida!'}
+              </p>
               <p className="text-sm leading-relaxed" style={{ color: C.text }}>
-                Você já está inscrito em <strong>{championship.name}</strong>.
+                {pago
+                  ? <>Sua inscrição em <strong>{championship.name}</strong> está confirmada — a vaga é sua.</>
+                  : <>Você já está inscrito em <strong>{championship.name}</strong>.</>}
+              </p>
+              <p className="text-sm mt-2 font-bold" style={{ color: C.navy }}>
+                {getUserName() || 'Sua conta'}
+                {numeroJogador !== null && <> · jogador <span style={{ color: C.blue }}>#{numeroJogador}</span></>}
+              </p>
+              <p className="text-xs mt-2 leading-relaxed" style={{ color: C.text }}>
+                Confira quando quiser em <a href="/cliente" className="underline font-bold">Meus Campeonatos</a>.
               </p>
             </div>
 
@@ -1470,6 +1534,20 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Quem paga precisa ver que a cobranca esta no nome dele — sem isso a
+                sensacao e de ter mandado um Pix solto pra loja. */}
+            <div className="rounded-xl px-4 py-3 border text-center"
+              style={{ borderColor: C.border, backgroundColor: C.cardAlt }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.text }}>
+                Inscrição de
+              </p>
+              <p className="font-black text-sm mt-0.5" style={{ color: C.navy }}>
+                {getUserName() || 'sua conta'}
+                {numeroJogador !== null && (
+                  <span style={{ color: C.blue }}> · jogador #{numeroJogador}</span>
+                )}
+              </p>
+            </div>
             <p className="text-center font-black text-lg" style={{ color: C.navy }}>{taxaFmt}</p>
             {pix?.imagemQrCode && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -1488,8 +1566,47 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
                 </button>
               </>
             )}
+            {restante !== null && (
+              <div className="rounded-xl px-4 py-3 text-center border"
+                style={venceu
+                  ? { color: '#b91c1c', borderColor: 'rgba(185,28,28,0.25)', backgroundColor: 'rgba(185,28,28,0.06)' }
+                  : { color: '#B45309', borderColor: 'rgba(180,83,9,0.25)',  backgroundColor: 'rgba(180,83,9,0.06)' }}>
+                {venceu ? (
+                  <p className="text-xs font-bold leading-relaxed">
+                    O prazo acabou e a vaga voltou pro público. Pagar ainda vale a inscrição
+                    se o campeonato não tiver lotado — na dúvida, fale com {contactPersonName}.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-[11px] font-bold uppercase tracking-wide opacity-80">Sua vaga está guardada por</p>
+                    <p className="text-2xl font-black tabular-nums leading-tight my-0.5">{fmtRestante(restante)}</p>
+                    <p className="text-[11px] font-medium">
+                      Pague dentro do prazo pra confirmar. Depois disso a vaga volta pro público.
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {aviso && (
+              <p className="text-xs text-center leading-relaxed px-3 py-2 rounded-xl border"
+                style={{ color: C.text, borderColor: C.border, backgroundColor: C.cardAlt }}>
+                {aviso}
+              </p>
+            )}
+
+            <button onClick={() => conferirPagamento(true)} disabled={conferindo}
+              className="w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl border transition-all active:scale-95 disabled:opacity-60"
+              style={{ color: C.navy, borderColor: C.border }}>
+              {conferindo
+                ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 62.8" /></svg>
+                : <CheckCircle className="w-4 h-4" />
+              }
+              {conferindo ? 'Conferindo com o banco...' : 'Já paguei'}
+            </button>
+
             <p className="text-xs text-center leading-relaxed" style={{ color: C.text }}>
-              A confirmação é automática. A vaga será confirmada assim que o pagamento cair.
+              Não precisa apertar nada: esta tela confere sozinha e avisa quando o pagamento cair.
             </p>
             <button onClick={onClose}
               className="w-full py-2.5 text-sm rounded-xl border transition-colors"

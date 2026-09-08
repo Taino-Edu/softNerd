@@ -53,9 +53,11 @@ public class PixReconciliationServiceTests
     }
 
     private static PixReconciliationService CreateService(
-        AppDbContext db, InterSyncService inter, IComandaService comanda, IEmailService? email = null) =>
+        AppDbContext db, InterSyncService inter, IComandaService comanda,
+        IEmailService? email = null, IPushService? push = null) =>
         new(db, inter, comanda,
             email ?? new Mock<IEmailService>().Object,
+            push ?? new Mock<IPushService>().Object,
             NullLogger<PixReconciliationService>.Instance);
 
     private static async Task<User> SeedBaseAsync(AppDbContext db)
@@ -248,6 +250,45 @@ public class PixReconciliationServiceTests
         var pagoEmOriginal = participant.EntryFeePaidAt;
         await service.ReconciliarAsync(pix);
         participant.EntryFeePaidAt.Should().Be(pagoEmOriginal);
+    }
+
+    [Fact]
+    public async Task Reconciliar_InscricaoPaga_AvisaOJogador()
+    {
+        var db   = CreateDb(nameof(Reconciliar_InscricaoPaga_AvisaOJogador));
+        var user = await SeedBaseAsync(db);
+
+        var championship = new Championship { Name = "Torneio Teste", Game = "Magic", EntryFeeInCents = 5000 };
+        db.Championships.Add(championship);
+        var participant = new ChampionshipParticipant
+        {
+            ChampionshipId = championship.Id,
+            UserId         = user.Id,
+            PlayerNumber   = 7,
+        };
+        db.ChampionshipParticipants.Add(participant);
+        var pix = NovaCobranca(PixCobrancaOrigem.Campeonato, 5000);
+        pix.ChampionshipParticipantId = participant.Id;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+
+        var push    = new Mock<IPushService>();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object,
+            new Mock<IComandaService>().Object, push: push.Object);
+
+        await service.ReconciliarAsync(pix);
+
+        // Sininho: quem fechou a tela antes da baixa precisa achar o aviso depois.
+        var aviso = db.Notifications.Single(n => n.UserId == user.Id);
+        aviso.Title.Should().Contain("Torneio Teste");
+        aviso.Body.Should().Contain("#7");
+
+        push.Verify(p => p.SendAsync(user.Id, It.IsAny<string>(), It.IsAny<string>(),
+            "/cliente", It.IsAny<string?>()), Times.Once);
+
+        // Segunda passada não avisa de novo — o claim atômico barra antes da baixa.
+        await service.ReconciliarAsync(pix);
+        db.Notifications.Count(n => n.UserId == user.Id).Should().Be(1);
     }
 
     // ── Reserva (pré-venda) ───────────────────────────────────────────────────

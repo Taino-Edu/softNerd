@@ -237,6 +237,17 @@ html.light {
   }
 }
 
+/* ── Textos de veredito (conferência de decks) ─────────────────────────────
+   Amarelo/verde/vermelho claros funcionam no tema escuro e somem no branco do
+   tema claro. Como aqui o texto É a informação — "esse deck está irregular" —
+   ele precisa de contraste nos dois temas, então cada um tem seu tom.        */
+.txt-alerta { color: #FCD34D; }
+.txt-ok     { color: #86EFAC; }
+.txt-erro   { color: #FCA5A5; }
+html.light .txt-alerta { color: #92400E; }
+html.light .txt-ok     { color: #166534; }
+html.light .txt-erro   { color: #B91C1C; }
+
 /* ── text-accent-gold: branco neutro no dark, escuro no light ─────────────── */
 /* bg-accent-gold (botões da landing) permanece amarelo — só o texto muda     */
 .text-accent-gold { color: #F3F4F6 !important; }

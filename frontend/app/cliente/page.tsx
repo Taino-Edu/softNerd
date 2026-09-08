@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation } from '@/lib/api'
 import { getUserName } from '@/lib/auth'
+import { fmtRestante } from '@/lib/prazo'
 import NotificationBell from '@/components/cliente/NotificationBell'
 import { startHub, stopHub, ComandaOpenedEvent } from '@/lib/signalr'
 import toast, { Toaster } from 'react-hot-toast'
@@ -38,6 +39,30 @@ function PlacementBadge({ place }: { place: number }) {
   if (place === 2) return <span className="text-xl">🥈</span>
   if (place === 3) return <span className="text-xl">🥉</span>
   return <span className="text-sm font-black" style={{ color: '#4D8FAC' }}>{place}º</span>
+}
+
+/** Conta o tempo que falta pra vaga vencer. Sem prazo (vaga firme), não renderiza. */
+function ContagemDaVaga({ expiraEm }: { expiraEm?: string | null }) {
+  const [agora, setAgora] = useState(() => Date.now())
+  const restante = expiraEm ? new Date(expiraEm).getTime() - agora : null
+
+  useEffect(() => {
+    if (!expiraEm || (restante !== null && restante <= 0)) return
+    const id = setInterval(() => setAgora(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [expiraEm, restante])
+
+  if (restante === null) return null
+
+  return restante > 0 ? (
+    <p className="text-[11px] font-bold text-center" style={{ color: '#B45309' }}>
+      Vaga guardada por <span className="tabular-nums">{fmtRestante(restante)}</span>
+    </p>
+  ) : (
+    <p className="text-[11px] font-bold text-center" style={{ color: '#DC2626' }}>
+      O prazo venceu — a vaga voltou pro público. Pagar ainda vale se não tiver lotado.
+    </p>
+  )
 }
 
 function MeusCampeonatos() {
@@ -120,6 +145,9 @@ function MeusCampeonatos() {
                 </span>
               ) : pixInscricao?.championshipId === p.championshipId ? (
                 <div className="mt-3 space-y-2">
+                  {/* A contagem continua na tela com o QR aberto: é justamente
+                      enquanto ele paga que saber o tempo restante importa. */}
+                  <ContagemDaVaga expiraEm={p.inscricaoExpiraEm} />
                   <PixPagamentoCard pix={pixInscricao.pix} />
                   <button onClick={() => setPixInscricao(null)}
                     className="w-full text-center text-xs font-bold py-1" style={{ color: C.muted }}>
