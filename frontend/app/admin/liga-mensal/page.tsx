@@ -148,8 +148,9 @@ function ManualEntryModal({ ano, mes, entry, onClose, onSaved }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="card w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+    // Clique fora nao fecha: o lancamento manual e digitado aqui.
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="card w-full max-w-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-white flex items-center gap-2">
             <PenLine className="w-4 h-4 text-brand-400" /> {entry ? 'Editar lançamento' : 'Lançamento manual'}

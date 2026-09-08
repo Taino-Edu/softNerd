@@ -17,6 +17,8 @@ export default function WhatsAppFloatingPanel() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [unread, setUnread] = useState(0)
   const [panel, setPanel] = useState<PanelState>(DEFAULT)
+  // null = ainda perguntando ao servidor; nesse meio tempo nada aparece.
+  const [configurado, setConfigurado] = useState<boolean | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
@@ -27,7 +29,28 @@ export default function WhatsAppFloatingPanel() {
     } catch { }
   }, [])
 
+  // Loja sem WhatsApp ligado não precisa do botão flutuante ocupando a tela —
+  // ele piscava um balão de não-lidas que nunca ia chegar. O estado é
+  // reconsultado de minuto em minuto porque a integração pode ser ligada com o
+  // painel aberto, e aí o botão aparece sozinho.
   useEffect(() => {
+    let mounted = true
+    const conferir = async () => {
+      try {
+        const { data } = await whatsappAdminApi.status()
+        if (mounted) setConfigurado(data.configured)
+      } catch {
+        // 401/403 ou API fora: some, em vez de mostrar um atendimento que não abre.
+        if (mounted) setConfigurado(false)
+      }
+    }
+    conferir()
+    const timer = window.setInterval(conferir, 60_000)
+    return () => { mounted = false; window.clearInterval(timer) }
+  }, [])
+
+  useEffect(() => {
+    if (!configurado) return
     let mounted = true
     const poll = async () => {
       try {
@@ -38,7 +61,7 @@ export default function WhatsAppFloatingPanel() {
     poll()
     const timer = window.setInterval(poll, 15_000)
     return () => { mounted = false; window.clearInterval(timer) }
-  }, [])
+  }, [configurado])
 
   useEffect(() => {
     if (!open || !panelRef.current || typeof ResizeObserver === 'undefined') return
@@ -93,6 +116,8 @@ export default function WhatsAppFloatingPanel() {
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
   }
+
+  if (!configurado) return null
 
   if (!open) return (
     <button onClick={() => setOpen(true)} aria-label="Abrir atendimento do WhatsApp"

@@ -3,11 +3,13 @@ import Sidebar from '@/components/admin/Sidebar'
 import AiChatWidget from '@/components/admin/AiChatWidget'
 import KeyboardShortcutsOverlay from '@/components/admin/KeyboardShortcutsOverlay'
 import WhatsAppFloatingPanel from '@/components/admin/whatsapp/WhatsAppFloatingPanel'
+import TimerWidget from '@/components/TimerWidget'
 import { Toaster } from 'react-hot-toast'
 
 // A renovação de sessão saiu daqui pro layout raiz (lib/sessionKeepAlive): antes só
-// o painel renovava, então a área do cliente caía sozinha. O alarme dos timers
-// também saiu — quem toca agora é o TimerWidget, presente no sistema inteiro.
+// o painel renovava, então a área do cliente caía sozinha. O TimerWidget voltou pro
+// painel: montado no layout raiz, ele aparecia na vitrine e na tela da mesa sempre
+// que o admin estava logado no mesmo navegador.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-surface-900">
@@ -25,6 +27,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </main>
       <AiChatWidget />
       <WhatsAppFloatingPanel />
+      {/* Timer de torneio: acompanha o operador nas telas do painel. Fora daqui
+          ele aparecia na vitrine pro cliente quando o admin estava logado. */}
+      <TimerWidget />
       <KeyboardShortcutsOverlay />
     </div>
   )

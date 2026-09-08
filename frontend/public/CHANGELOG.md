@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.29.1] — 2026-09-08
+
+### Corrigido
+- **Comanda ainda fechava sozinha com clique fora**: a correção da v1.29.0 pegou só parte das janelas. Faltavam justamente as da comanda — **Abrir comanda** (perdia o cliente escolhido e a mesa digitada), **Adicionar produto à comanda** (perdia a busca e a quantidade) e **Fechar comanda** (perdia forma de pagamento, desconto, pontos aplicados e a marcação de emitir nota, no meio do fechamento). Agora as três só fecham no X ou no botão de cancelar. Mesma correção no lançamento manual da Liga Mensal, na nova pré-venda e no cadastro de timer
+- **Timer aparecia na vitrine do cliente**: a aba lateral do timer de torneio estava montada na base do site inteiro, então quando o dono estava logado no mesmo navegador ela aparecia por cima da loja e da tela de mesa do cliente. Voltou a ser coisa do painel — segue em todas as telas do admin, some do que o cliente vê
+- **Botão de WhatsApp no painel sem a integração ligada**: o balão verde de atendimento ficava na tela mesmo sem o WhatsApp configurado, piscando contador de não-lidas que nunca ia chegar, e ainda consultava o servidor a cada 15 segundos. Agora ele só existe quando a integração está configurada, e aparece sozinho assim que ela for ligada
+- **Botão "Falar com..." da vitrine sem número cadastrado**: se a loja apagasse o WhatsApp nas configurações do site, o botão flutuante continuava lá e levava pra um link vazio. Sem número, ele e o contato do rodapé simplesmente não aparecem
+
 ## [v1.29.0] — 2026-09-08
 
 ### Corrigido
