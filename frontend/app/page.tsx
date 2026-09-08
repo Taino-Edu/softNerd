@@ -786,6 +786,7 @@ export default function LandingPage() {
 
             {/* Contato */}
             <div className="flex flex-wrap items-center justify-center gap-4">
+              {site.whatsappNumber?.trim() && (
               <a href={`https://wa.me/${site.whatsappNumber}`} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-70"
                 style={{ color: '#25D366' }}>
@@ -794,6 +795,7 @@ export default function LandingPage() {
                 </svg>
                 {formatWhatsapp(site.whatsappNumber)}
               </a>
+              )}
 
               <a href={`mailto:${site.contactEmail}`}
                 className="flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-70"
@@ -830,16 +832,18 @@ export default function LandingPage() {
            cruzavam num quadrado de 26px e a mão cobria a ponta deste botão.
            Quem sobe é este, não o VLibras: acessibilidade tem canto escolhido
            pelo usuário nas preferências, e o plugin vive em Shadow DOM. */}
-      <a
-        href={`https://wa.me/${site.whatsappNumber}`}
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-20 right-6 z-50 flex items-center gap-2.5 font-black text-sm px-4 py-3 rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95"
-        style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.4)' }}
-      >
-        <MessageCircle className="w-5 h-5" />
-        Falar com {site.contactPersonName}
-      </a>
+      {site.whatsappNumber?.trim() && (
+        <a
+          href={`https://wa.me/${site.whatsappNumber}`}
+          target="_blank"
+          rel="noreferrer"
+          className="fixed bottom-20 right-6 z-50 flex items-center gap-2.5 font-black text-sm px-4 py-3 rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95"
+          style={{ backgroundColor: '#25D366', color: '#fff', boxShadow: '0 8px 24px rgba(37,211,102,0.4)' }}
+        >
+          <MessageCircle className="w-5 h-5" />
+          Falar com {site.contactPersonName}
+        </a>
+      )}
 
       {/* ── MODAIS ──────────────────────────────────────────────────────── */}
       {annModal      && <AnnouncementModal ann={annModal}               onClose={() => setAnnModal(null)}      C={C} />}

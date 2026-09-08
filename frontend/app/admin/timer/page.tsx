@@ -205,8 +205,8 @@ export default function TimerPage() {
 
       {/* Modal novo timer */}
       {showNew && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
-          <div className="card w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-sm space-y-4">
             <h2 className="font-bold text-white">Novo Timer</h2>
             <div>
               <label className="text-xs text-gray-400">Nome</label>

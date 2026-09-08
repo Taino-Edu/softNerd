@@ -17,6 +17,8 @@ export default function WhatsAppFloatingPanel() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [unread, setUnread] = useState(0)
   const [panel, setPanel] = useState<PanelState>(DEFAULT)
+  // null = ainda perguntando ao servidor; nesse meio tempo nada aparece.
+  const [ativo, setAtivo] = useState<boolean | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
@@ -27,7 +29,31 @@ export default function WhatsAppFloatingPanel() {
     } catch { }
   }, [])
 
+  // O botão só existe quando dá pra atender de verdade: `configured` sozinho não
+  // serve, porque a chave e o nome da instância vêm do compose e ficam
+  // preenchidos mesmo numa loja que nunca leu o QR Code — era por isso que o
+  // balão continuava na tela com o WhatsApp desligado. `connected` é o estado
+  // "open" da instância na Evolution, ou seja, celular pareado.
+  // Reconsultado de minuto em minuto: parear ou cair reflete sozinho na tela,
+  // sem precisar recarregar o painel.
   useEffect(() => {
+    let mounted = true
+    const conferir = async () => {
+      try {
+        const { data } = await whatsappAdminApi.status()
+        if (mounted) setAtivo(data.configured && data.connected)
+      } catch {
+        // 401/403 ou API fora: some, em vez de mostrar um atendimento que não abre.
+        if (mounted) setAtivo(false)
+      }
+    }
+    conferir()
+    const timer = window.setInterval(conferir, 60_000)
+    return () => { mounted = false; window.clearInterval(timer) }
+  }, [])
+
+  useEffect(() => {
+    if (!ativo) return
     let mounted = true
     const poll = async () => {
       try {
@@ -38,7 +64,7 @@ export default function WhatsAppFloatingPanel() {
     poll()
     const timer = window.setInterval(poll, 15_000)
     return () => { mounted = false; window.clearInterval(timer) }
-  }, [])
+  }, [ativo])
 
   useEffect(() => {
     if (!open || !panelRef.current || typeof ResizeObserver === 'undefined') return
@@ -93,6 +119,8 @@ export default function WhatsAppFloatingPanel() {
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
   }
+
+  if (!ativo) return null
 
   if (!open) return (
     <button onClick={() => setOpen(true)} aria-label="Abrir atendimento do WhatsApp"

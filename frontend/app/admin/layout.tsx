@@ -10,10 +10,10 @@ import { Toaster } from 'react-hot-toast'
 // A renovação de sessão saiu daqui pro layout raiz (lib/sessionKeepAlive): antes só
 // o painel renovava, então a área do cliente caía sozinha.
 //
-// O timer mora AQUI, e não no layout raiz: no raiz ele aparecia também no site do
-// cliente e nas páginas públicas — lugar nenhum pra relógio de torneio. Montado no
-// admin, continua em toda tela do painel (PDV, comanda, estoque) e some do lado do
-// cliente; o polling nem chega a começar fora daqui.
+// O timer faz o caminho contrário: mora AQUI, e não no raiz. Montado no raiz ele
+// aparecia na vitrine e na tela da mesa sempre que o admin estava logado no mesmo
+// navegador. O provider vem junto de propósito — deixá-lo no raiz mantinha o
+// polling e o alarme rodando fora do painel, mesmo sem o botão à vista.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <TimerProvider>
@@ -32,8 +32,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
         <AiChatWidget />
         <WhatsAppFloatingPanel />
-        <KeyboardShortcutsOverlay />
         <TimerWidget />
+        <KeyboardShortcutsOverlay />
       </div>
     </TimerProvider>
   )

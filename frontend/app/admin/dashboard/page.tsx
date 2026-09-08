@@ -230,8 +230,9 @@ function AddItemModal({
         onClose={() => setCameraOpen(false)}
       />
     )}
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-md max-h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    {/* Clique fora nao fecha: a busca e a quantidade digitadas iriam junto. */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-md max-h-[75vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-surface-500">
           <h3 className="font-semibold text-white">Adicionar produto à comanda</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
@@ -392,8 +393,9 @@ function AdminOpenModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onCancel}>
-      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+    // Clique fora nao fecha: o cliente escolhido e a mesa digitada sumiam junto.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm flex flex-col max-h-[80vh]">
         <div className="flex items-center justify-between p-4 border-b border-surface-500">
           <h3 className="font-semibold text-white flex items-center gap-2">
             <FolderOpen className="w-4 h-4 text-brand-400" /> Abrir Comanda
@@ -546,8 +548,10 @@ function CloseComandaModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onCancel}>
-      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    // Clique fora nao fecha: pagamento, desconto, pontos e a nota ja marcados
+    // sumiam no meio do fechamento.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div>
           <h3 className="font-semibold text-white text-lg">Fechar comanda</h3>
           <p className="text-gray-400 text-sm mt-1">

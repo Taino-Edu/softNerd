@@ -470,8 +470,12 @@ Todas as páginas ficam em `frontend/app/admin/`. A autenticação é verificada
 - **Modal com campo para preencher** (venda, edição de comanda, estorno, pagamento): fecha só no **X**
   ou no botão de cancelar. Clique fora **não** fecha — o operador perdia o carrinho inteiro num clique torto.
 - **Modal só de leitura** (gráfico, resumo do dia, atalhos de teclado): pode fechar clicando fora.
-- Na prática: não adicione `onClick={e => { if (e.target === e.currentTarget) onClose() }}` no backdrop
-  de um modal que tem `input`, `select` ou `textarea` dentro.
+- Na prática: não adicione `onClick={e => { if (e.target === e.currentTarget) onClose() }}` **nem**
+  `onClick={onClose}` (com `stopPropagation` no card) no backdrop de um modal que tem `input`, `select`
+  ou `textarea` dentro. As duas formas existiam no código e as duas fechavam a janela do mesmo jeito.
+- Quem segue fechando com clique fora, porque não há nada digitado pra perder: gráfico e resumo do dia
+  do financeiro, atalhos de teclado, preview de carta, gaveta de detalhes do produto, QR do WhatsApp,
+  confirmação de sim/não e o Pix da pré-venda.
 
 ### Comunicação com a API
 

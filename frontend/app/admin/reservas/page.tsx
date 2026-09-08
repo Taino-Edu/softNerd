@@ -255,9 +255,9 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-surface-700 border border-surface-500 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500'
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}>
+    // Clique fora nao fecha: a pre-venda inteira e preenchida aqui dentro.
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-surface-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
         <div>
           <h2 className="text-lg font-black text-white">Nova pré-venda para cliente</h2>
           <p className="text-xs text-gray-500 mt-0.5">
