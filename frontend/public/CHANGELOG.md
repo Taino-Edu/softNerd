@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.29.2] — 2026-09-08
+
+### Corrigido
+- **Balão do WhatsApp continuava no painel mesmo com o atendimento desligado**: a correção da v1.29.1 escondia o botão só quando a integração não estava "configurada" — e ela conta como configurada assim que o servidor sobe, porque a chave e o nome da instância vêm da configuração do próprio servidor, mesmo numa loja que nunca leu o QR Code. Agora o botão exige **celular pareado**: aparece quando o WhatsApp está de fato conectado e some quando não está, seja porque nunca foi ligado, porque a sessão caiu ou porque o serviço está fora do ar. O estado é reconferido a cada minuto, então ler o QR Code faz o botão aparecer sozinho, sem recarregar o painel. O atendimento completo continua no menu lateral, em Atendimento → WhatsApp
+
 ## [v1.29.1] — 2026-09-08
 
 ### Corrigido

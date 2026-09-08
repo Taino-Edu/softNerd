@@ -18,7 +18,7 @@ export default function WhatsAppFloatingPanel() {
   const [unread, setUnread] = useState(0)
   const [panel, setPanel] = useState<PanelState>(DEFAULT)
   // null = ainda perguntando ao servidor; nesse meio tempo nada aparece.
-  const [configurado, setConfigurado] = useState<boolean | null>(null)
+  const [ativo, setAtivo] = useState<boolean | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
@@ -29,19 +29,22 @@ export default function WhatsAppFloatingPanel() {
     } catch { }
   }, [])
 
-  // Loja sem WhatsApp ligado não precisa do botão flutuante ocupando a tela —
-  // ele piscava um balão de não-lidas que nunca ia chegar. O estado é
-  // reconsultado de minuto em minuto porque a integração pode ser ligada com o
-  // painel aberto, e aí o botão aparece sozinho.
+  // O botão só existe quando dá pra atender de verdade: `configured` sozinho não
+  // serve, porque a chave e o nome da instância vêm do compose e ficam
+  // preenchidos mesmo numa loja que nunca leu o QR Code — era por isso que o
+  // balão continuava na tela com o WhatsApp desligado. `connected` é o estado
+  // "open" da instância na Evolution, ou seja, celular pareado.
+  // Reconsultado de minuto em minuto: parear ou cair reflete sozinho na tela,
+  // sem precisar recarregar o painel.
   useEffect(() => {
     let mounted = true
     const conferir = async () => {
       try {
         const { data } = await whatsappAdminApi.status()
-        if (mounted) setConfigurado(data.configured)
+        if (mounted) setAtivo(data.configured && data.connected)
       } catch {
         // 401/403 ou API fora: some, em vez de mostrar um atendimento que não abre.
-        if (mounted) setConfigurado(false)
+        if (mounted) setAtivo(false)
       }
     }
     conferir()
@@ -50,7 +53,7 @@ export default function WhatsAppFloatingPanel() {
   }, [])
 
   useEffect(() => {
-    if (!configurado) return
+    if (!ativo) return
     let mounted = true
     const poll = async () => {
       try {
@@ -61,7 +64,7 @@ export default function WhatsAppFloatingPanel() {
     poll()
     const timer = window.setInterval(poll, 15_000)
     return () => { mounted = false; window.clearInterval(timer) }
-  }, [configurado])
+  }, [ativo])
 
   useEffect(() => {
     if (!open || !panelRef.current || typeof ResizeObserver === 'undefined') return
@@ -117,7 +120,7 @@ export default function WhatsAppFloatingPanel() {
     window.addEventListener('pointerup', up)
   }
 
-  if (!configurado) return null
+  if (!ativo) return null
 
   if (!open) return (
     <button onClick={() => setOpen(true)} aria-label="Abrir atendimento do WhatsApp"
