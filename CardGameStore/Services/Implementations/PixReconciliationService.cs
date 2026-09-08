@@ -27,18 +27,25 @@ public class PixReconciliationService : IPixReconciliationService
     private readonly InterSyncService _inter;
     private readonly IComandaService  _comanda;
     private readonly IEmailService    _email;
+    private readonly IPushService     _push;
     private readonly ILogger<PixReconciliationService> _logger;
 
     public PixReconciliationService(
         AppDbContext db, InterSyncService inter, IComandaService comanda,
-        IEmailService email, ILogger<PixReconciliationService> logger)
+        IEmailService email, IPushService push, ILogger<PixReconciliationService> logger)
     {
         _db      = db;
         _inter   = inter;
         _comanda = comanda;
         _email   = email;
+        _push    = push;
         _logger  = logger;
     }
+
+    /// <summary>Push que só pode sair depois do commit — dentro da transação, um
+    /// envio lento seguraria o lock, e um rollback avisaria de um pagamento que
+    /// não foi confirmado.</summary>
+    private sealed record AvisoPendente(Guid UserId, string Titulo, string Corpo, string Link);
 
     public async Task<PixReconciliationResult> ReconciliarAsync(PixCobranca pix, Guid? adminId = null)
     {
@@ -63,6 +70,7 @@ public class PixReconciliationService : IPixReconciliationService
         }
 
         ComandaDto? comandaFechada = null;
+        AvisoPendente? aviso = null;
         var baixaEfetuada = false;
 
         // Transação manual precisa rodar dentro da execution strategy
@@ -102,7 +110,7 @@ public class PixReconciliationService : IPixReconciliationService
                     await BaixarCrediarioAsync(pix, adminEfetivo);
                     break;
                 case PixCobrancaOrigem.Campeonato:
-                    await BaixarCampeonatoAsync(pix);
+                    aviso = await BaixarCampeonatoAsync(pix);
                     break;
                 case PixCobrancaOrigem.Reserva:
                     await BaixarReservaAsync(pix);
@@ -122,6 +130,13 @@ public class PixReconciliationService : IPixReconciliationService
             // Outro fluxo ganhou o claim — relê pra devolver o estado real gravado por ele.
             await _db.Entry(pix).ReloadAsync();
             return new PixReconciliationResult { Status = pix.Status, PagoEm = pix.PagoEm };
+        }
+
+        if (aviso is not null)
+        {
+            // Falha de push não desfaz pagamento: o aviso no sininho já está gravado.
+            try { await _push.SendAsync(aviso.UserId, aviso.Titulo, aviso.Corpo, aviso.Link); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Push da inscrição paga não saiu (tx {TxId}).", pix.TxId); }
         }
 
         _logger.LogInformation("Cobrança Pix {TxId} ({Origem}) paga — baixa efetuada.", pix.TxId, pix.Origem);
@@ -199,17 +214,35 @@ public class PixReconciliationService : IPixReconciliationService
     }
 
     // ── Campeonato: paga → marca a inscrição como paga (Pix) ──────────────────
-    private async Task BaixarCampeonatoAsync(PixCobranca pix)
+    // Devolve o aviso a enviar depois do commit: quem pagou e fechou a tela não
+    // ficava sabendo que a vaga foi confirmada — a baixa acontecia calada aqui.
+    private async Task<AvisoPendente?> BaixarCampeonatoAsync(PixCobranca pix)
     {
         var participant = await _db.ChampionshipParticipants
+            .Include(p => p.Championship)
             .FirstOrDefaultAsync(p => p.Id == pix.ChampionshipParticipantId);
 
-        if (participant is null || participant.EntryFeePaidAt is not null) return;
+        if (participant is null || participant.EntryFeePaidAt is not null) return null;
 
         participant.EntryFeePaidAt        = DateTime.UtcNow;
         participant.EntryFeePaymentMethod = "Pix";
         participant.InscricaoExpiraEm     = null; // pagou: a vaga deixa de ter prazo
         _logger.LogInformation("Inscrição {ParticipantId} paga via Pix (tx {TxId}).", participant.Id, pix.TxId);
+
+        var campeonato = participant.Championship?.Name ?? "campeonato";
+        var titulo = $"Inscrição confirmada — {campeonato}";
+        var corpo  = $"Pagamento recebido. Sua vaga está garantida e você é o jogador #{participant.PlayerNumber}.";
+
+        _db.Notifications.Add(new Notification
+        {
+            UserId    = participant.UserId,
+            Title     = titulo,
+            Body      = corpo,
+            Link      = "/cliente",
+            CreatedAt = DateTime.UtcNow,
+        });
+
+        return new AvisoPendente(participant.UserId, titulo, corpo, "/cliente");
     }
 
     // ── Reserva: paga → quita SÓ os itens do snapshot da cobrança ─────────────

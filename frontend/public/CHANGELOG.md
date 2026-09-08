@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.31.0] — 2026-09-08
+
+### Adicionado
+- **A cobrança da inscrição agora diz de quem ela é**: em cima do QR aparece "Inscrição de **Fulano** · jogador **#7**". Antes o jogador via só um QR e um valor — pagava sem nenhuma pista de que aquilo estava amarrado à conta dele, e ficava a dúvida de como a loja saberia quem pagou
+- **Confirmação com identificação e caminho**: a tela de "Pagamento confirmado!" repete o nome e o número do jogador e aponta para **Meus Campeonatos**, onde a inscrição fica registrada com o selo de paga
+- **Aviso quando o pagamento é confirmado**: quem pagou e fechou a tela não ficava sabendo de nada — a confirmação acontecia calada no servidor. Agora chega notificação no sininho e push: "Inscrição confirmada — pagamento recebido, sua vaga está garantida e você é o jogador #7". Vale também quando quem confirma é o robô, minutos depois
+
 ## [v1.30.0] — 2026-09-08
 
 ### Adicionado

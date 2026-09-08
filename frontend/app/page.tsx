@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { getRole } from '@/lib/auth'
+import { getRole, getUserName } from '@/lib/auth'
 import { championshipApi, productApi, announcementApi, deckApi, siteConfigApi, categoryApi, Championship, Product, AnnouncementDto, DeckListDto, SiteConfigDto, ProductCategory, PixCobrancaDto } from '@/lib/api'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { fmtRestante } from '@/lib/prazo'
@@ -1332,6 +1332,8 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
   const [conferindo,   setConferindo]   = useState(false)
   const [aviso,        setAviso]        = useState<string | null>(null)
   const [pago,         setPago]         = useState(false)
+  // Numero do jogador: e a prova, pro cliente, de que a cobranca esta no nome dele.
+  const [numeroJogador, setNumeroJogador] = useState<number | null>(null)
 
   const isLoggedIn = getRole() === 'Customer' || getRole() === 'Admin'
   const temTaxa    = championship.entryFeeInCents > 0
@@ -1395,6 +1397,7 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
         if (!data.pix) throw new Error('Pix obrigatório não retornado pelo servidor.')
         setPix(data.pix)
         setExpiraEm(data.participant?.inscricaoExpiraEm ?? null)
+        setNumeroJogador(data.participant?.playerNumber ?? null)
         setAgora(Date.now())
         setEtapa('pix')
       } else {
@@ -1514,6 +1517,13 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
                   ? <>Sua inscrição em <strong>{championship.name}</strong> está confirmada — a vaga é sua.</>
                   : <>Você já está inscrito em <strong>{championship.name}</strong>.</>}
               </p>
+              <p className="text-sm mt-2 font-bold" style={{ color: C.navy }}>
+                {getUserName() || 'Sua conta'}
+                {numeroJogador !== null && <> · jogador <span style={{ color: C.blue }}>#{numeroJogador}</span></>}
+              </p>
+              <p className="text-xs mt-2 leading-relaxed" style={{ color: C.text }}>
+                Confira quando quiser em <a href="/cliente" className="underline font-bold">Meus Campeonatos</a>.
+              </p>
             </div>
 
             <button onClick={onClose}
@@ -1524,6 +1534,20 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Quem paga precisa ver que a cobranca esta no nome dele — sem isso a
+                sensacao e de ter mandado um Pix solto pra loja. */}
+            <div className="rounded-xl px-4 py-3 border text-center"
+              style={{ borderColor: C.border, backgroundColor: C.cardAlt }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.text }}>
+                Inscrição de
+              </p>
+              <p className="font-black text-sm mt-0.5" style={{ color: C.navy }}>
+                {getUserName() || 'sua conta'}
+                {numeroJogador !== null && (
+                  <span style={{ color: C.blue }}> · jogador #{numeroJogador}</span>
+                )}
+              </p>
+            </div>
             <p className="text-center font-black text-lg" style={{ color: C.navy }}>{taxaFmt}</p>
             {pix?.imagemQrCode && (
               // eslint-disable-next-line @next/next/no-img-element
