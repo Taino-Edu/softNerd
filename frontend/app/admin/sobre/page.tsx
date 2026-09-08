@@ -235,7 +235,7 @@ const MANUAL: ManualSection[] = [
     steps: [
       { title: 'Criar campeonato', desc: 'Vá em Campeonatos → Novo. Informe nome, jogo (Pokémon, Magic, etc.), data, taxa de inscrição e número máximo de participantes.' },
       { title: 'Status do campeonato', desc: '"Planejado" → "Inscrições Abertas" → "Em Andamento" → "Finalizado". Mude o status conforme o evento avança.' },
-      { title: 'Inscrever participantes', desc: 'No painel do campeonato, adicione participantes manualmente ou deixe que eles se inscrevam pela landing page pública.' },
+      { title: 'Inscrever participantes', desc: 'Clientes podem se inscrever pelo site. A inclusão manual pelo painel é exclusiva do Maikon. Em campeonato pago, o Pix é obrigatório e não há pagamento na chegada.' },
       { title: 'Pré-inscrições da landing page', desc: 'Clientes sem conta podem se pré-inscrever pelo link público do campeonato. Você aprova ou rejeita as pré-inscrições no painel.' },
       { title: 'Definir colocações', desc: 'Após o campeonato, clique no participante e informe o lugar (1º, 2º, 3º...). O sistema monta o pódio automaticamente.' },
       { title: 'Pódio público', desc: 'O resultado final aparece na página pública do campeonato para todos verem.' },

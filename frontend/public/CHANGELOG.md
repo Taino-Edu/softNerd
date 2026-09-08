@@ -1,5 +1,17 @@
 # Changelog — Santuário Nerd
 
+## [v1.29.0] — 2026-09-08
+
+### Corrigido
+- **Venda em andamento não some mais com um clique fora**: no modal de "Nova Venda" da frente de caixa, qualquer clique no fundo escurecido fechava a janela e levava junto o cliente escolhido, o carrinho e a forma de pagamento — sem aviso e sem como voltar. Agora a venda só é descartada no **X** (ou no "Cancelar" da primeira etapa). Mesma correção no modal de detalhe da venda, onde a forma de pagamento é editada, na edição de comanda e no estorno de comanda, que perdia o motivo digitado
+- **Banner de cookies pedindo autorização de novo toda hora**: a escolha era guardada só no armazenamento do navegador, que é separado por endereço — quem entrava por `www.santuarionerd.com.br` depois de aceitar em `santuarionerd.com.br` respondia tudo outra vez. Agora a decisão também vai para um cookie válido no domínio inteiro, com validade de um ano, e vale nos dois endereços
+
+### Mudado
+- **Banner de cookies refeito**: card com visual do site (acompanha tema claro e escuro), em vez da faixa cinza colada no rodapé. Diz o que é guardado e para quê, com um botão **Personalizar** que abre as categorias: **Necessários** (login, sessão, segurança e a comanda da mesa — sempre ativos) e **Preferências** (tema da tela e a dispensa do convite de instalação do app, opcionais). Também deixa explícito que o site não usa rastreamento, publicidade nem venda de dados — não existem porque o sistema realmente não carrega nada de terceiros
+- **Dá para mudar de ideia sobre os cookies**: novo link **"Preferências de cookies"** no rodapé reabre o banner já nas categorias. Recusar as opcionais agora apaga de verdade o que estava guardado (tema e dispensa do app), em vez de valer só dali pra frente
+- **Banner não aparece mais no painel e no login**: ali é ferramenta de trabalho autenticada, e o card ficava por cima da frente de caixa. Segue aparecendo em toda a parte pública, inclusive na tela de mesa do cliente
+- **Regra de modal padronizada**: janela com campo pra preencher fecha só no X ou no cancelar; janela só de leitura (gráfico, resumo do dia, atalhos de teclado) continua fechando com clique fora
+
 ## [v1.28.0] — 2026-08-24
 
 ### Adicionado

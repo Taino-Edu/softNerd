@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { productApi, siteConfigApi, categoryApi, Product, ProductCategory, SiteConfigDto } from '@/lib/api'
 import { resolvePixPercent, calcPrecoVitrine } from '@/lib/precoVitrine'
+import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
 import {
   Package, ShoppingBag, ChevronLeft,
@@ -153,7 +154,7 @@ export default function ProdutosPage() {
         <button onClick={() => {
           const next = !isDark
           setIsDark(next)
-          localStorage.setItem('landing-theme', next ? 'dark' : 'light')
+          setOptionalItem('landing-theme', next ? 'dark' : 'light')
         }} className="p-2 rounded-xl hover:bg-white/10 transition-colors" style={{ color: '#ffffff' }}>
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>

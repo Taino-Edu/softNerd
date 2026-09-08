@@ -194,6 +194,11 @@ public class MinhaCompraDto
     public decimal  DiscountInReais            { get; set; }
     public List<MinhaCompraItemDto> Items      { get; set; } = new();
 
+    /// <summary>De onde veio a compra: "Balcao", "Site" ou "PreVenda" — mesma divisão que o
+    /// Financeiro usa (Origem == "Reserva" separado por ProductIsPreVenda). Sem isto o pedido
+    /// feito pelo site aparecia pro cliente como compra de balcão.</summary>
+    public string   Origem                     { get; set; } = "Balcao";
+
     /// <summary>Compra desfeita pela loja. Continua na lista, marcada — some da lista seria
     /// exatamente o oposto do que o histórico serve pra provar.</summary>
     public bool      Estornada          { get; set; }

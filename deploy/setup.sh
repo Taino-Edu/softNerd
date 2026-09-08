@@ -121,6 +121,11 @@ SMTP_FROM_NAME=Santuário Nerd
 # --- Google Gemini IA ---
 GEMINI_API_KEY=PREENCHA_COM_SUA_CHAVE_GEMINI
 
+# --- Web Push (gere com: dotnet run --project CardGameStore -- gen-vapid) ---
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:contato@santuarionerd.com.br
+
 # --- WhatsApp comunitário (só usado com --profile whatsapp) ---
 EVOLUTION_API_KEY=
 EVOLUTION_INSTANCE_NAME=santuarionerd

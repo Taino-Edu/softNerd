@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Sun, Moon } from 'lucide-react'
+import { setOptionalItem } from '@/lib/cookieConsent'
 
 export default function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [light, setLight] = useState(false)
@@ -17,7 +18,8 @@ export default function ThemeToggle({ compact = false }: { compact?: boolean }) 
     const next = !light
     setLight(next)
     document.documentElement.classList.toggle('light', next)
-    localStorage.setItem('theme', next ? 'light' : 'dark')
+    // Preferencia cosmetica: so persiste se o visitante liberou a categoria.
+    setOptionalItem('theme', next ? 'light' : 'dark')
   }
 
   if (compact) {

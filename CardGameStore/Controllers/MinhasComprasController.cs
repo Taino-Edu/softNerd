@@ -46,6 +46,9 @@ public class MinhasComprasController : ControllerBase
             SecondPaymentAmountInCents = v.SecondPaymentAmountInCents,
             TotalInReais               = v.TotalInReais,
             DiscountInReais            = v.DiscountInReais,
+            Origem                     = v.Origem != "Reserva" ? "Balcao"
+                                       : v.ProductIsPreVenda  ? "PreVenda"
+                                                              : "Site",
             Estornada                  = v.Cancelada,
             EstornadaEm                = v.CanceladaEm,
             MotivoEstorno              = v.MotivoCancelamento,

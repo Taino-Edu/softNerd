@@ -446,10 +446,32 @@ Todas as páginas ficam em `frontend/app/admin/`. A autenticação é verificada
 
 ### Componentes globais
 
-- **CookieBanner.tsx** — banner LGPD/GDPR com accept/decline, persiste escolha via cookie
+- **CookieBanner.tsx** — consentimento LGPD com categorias (Necessários fixos + Preferências opcionais),
+  links para as políticas e registro de aceite/recusa no backend. Não aparece em `/admin`, `/login` e
+  `/janela` — mesma regra do rodapé. Estado em `lib/cookieConsent.ts`
+- **CookieSettingsButton.tsx** — reabre o banner pelo rodapé (evento `sn:open-cookie-settings`)
 - **ThemeToggle.tsx** — toggle dark/light mode, disponível em todas as páginas incluindo públicas
 - **AiChatWidget.tsx** — chat flutuante no canto inferior direito do painel admin
 - **ImageUpload.tsx** — drag-and-drop com preview, alternativa de URL manual
+
+### Consentimento de cookies
+
+- A escolha é gravada em **cookie de primeira parte** (`sn_cookie_consent`, `Domain=.santuarionerd.com.br`,
+  1 ano) **e** no localStorage. O cookie é o que faz a decisão valer no apex e no `www` ao mesmo tempo —
+  com só localStorage, quem entrava pelo `www` via o banner de novo.
+- Categorias reais do sistema: **Necessários** (sessão, login, segurança, comanda) e **Preferências**
+  (tema, dispensa do convite de PWA). Não há analytics de terceiros nem pixel de publicidade — por isso
+  não existe toggle para eles.
+- Preferência cosmética se grava com `setOptionalItem()` de `lib/cookieConsent.ts`, nunca com
+  `localStorage.setItem` direto: ele respeita a recusa. Ao recusar, as chaves já gravadas são apagadas.
+
+### Padrão de modais
+
+- **Modal com campo para preencher** (venda, edição de comanda, estorno, pagamento): fecha só no **X**
+  ou no botão de cancelar. Clique fora **não** fecha — o operador perdia o carrinho inteiro num clique torto.
+- **Modal só de leitura** (gráfico, resumo do dia, atalhos de teclado): pode fechar clicando fora.
+- Na prática: não adicione `onClick={e => { if (e.target === e.currentTarget) onClose() }}` no backdrop
+  de um modal que tem `input`, `select` ou `textarea` dentro.
 
 ### Comunicação com a API
 

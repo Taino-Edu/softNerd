@@ -22,6 +22,22 @@ import toast, { Toaster } from 'react-hot-toast'
 
 const fmtBRL = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
 
+/** Data com hora — "12/08/2026 às 14:32". Sem a hora, duas compras no mesmo dia
+ *  ficam indistinguíveis pra quem quer conferir o que pagou e quando. */
+const fmtDataHora = (iso: string) => {
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+// Origem da compra de balcão, na mesma divisão do Financeiro: pedido do site e
+// pré-venda entram como venda avulsa, e chamar os dois de "balcão" seria mentira.
+const ORIGEM_LABEL: Record<string, string> = {
+  Balcao:   'Compra no balcão',
+  Site:     'Pedido pelo site',
+  PreVenda: 'Pré-venda',
+}
+const origemLabel = (origem: string) => ORIGEM_LABEL[origem] ?? 'Compra no balcão'
+
 // ── Forma de pagamento ────────────────────────────────────────────────────────
 // Rótulos curtos para caber no card do histórico; cai no rótulo do admin se
 // aparecer um método novo que ainda não estiver mapeado aqui.
@@ -697,11 +713,11 @@ export default function PerfilPage() {
                     const c      = h.kind === 'comanda' ? h.comanda : null
                     const v      = h.kind === 'balcao'  ? h.compra  : null
                     const titulo = c
-                      ? `Comanda ${c.closedAt ? new Date(c.closedAt).toLocaleDateString('pt-BR') : 'Ativa'}`
-                      : `Balcão ${new Date(v!.soldAt).toLocaleDateString('pt-BR')}`
+                      ? `Comanda ${c.closedAt ? fmtDataHora(c.closedAt) : 'Ativa'}`
+                      : fmtDataHora(v!.soldAt)
                     const legenda = c
                       ? `${c.items.length} itens • ${c.status}`
-                      : `${v!.items.length} itens • Compra no balcão`
+                      : `${v!.items.length} itens • ${origemLabel(v!.origem)}`
                     const total = c ? c.totalInReais : v!.totalInReais
 
                     // Compra desfeita continua na lista, riscada: o registro de que ela
@@ -723,8 +739,10 @@ export default function PerfilPage() {
                                         : c ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100',
                             )}>
                               {c
-                                ? <Receipt   className={clsx('w-5 h-5', estornada ? 'text-gray-400' : 'text-[#42B6EE]')} />
-                                : <ShoppingBag className={clsx('w-5 h-5', estornada ? 'text-gray-400' : 'text-amber-500')} />}
+                                ? <Receipt className={clsx('w-5 h-5', estornada ? 'text-gray-400' : 'text-[#42B6EE]')} />
+                                : v!.origem === 'Balcao'
+                                  ? <ShoppingBag className={clsx('w-5 h-5', estornada ? 'text-gray-400' : 'text-amber-500')} />
+                                  : <Package     className={clsx('w-5 h-5', estornada ? 'text-gray-400' : 'text-amber-500')} />}
                             </div>
                             <div>
                               <p className={clsx(

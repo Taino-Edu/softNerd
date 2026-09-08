@@ -932,9 +932,10 @@ export const championshipApi = {
   register:         (id: string, userId: string, deckName?: string) =>
     api.post(`/api/championship/${id}/register`, { userId, deckName }),
   /** Inscreve o PRÓPRIO usuário logado (o backend usa o token, não confia em userId do corpo).
-   *  Valida vaga, prazo e status das inscrições — a vaga é garantida antes de qualquer pagamento. */
+   *  Em campeonato pago, o backend já devolve o Pix obrigatório na mesma operação. */
   selfRegister:     (id: string, deckName?: string, deckId?: string) =>
-    api.post(`/api/championship/${id}/register`, { deckName, deckId }),
+    api.post<{ participant: ChampionshipParticipant; pix: PixCobrancaDto | null }>(
+      `/api/championship/${id}/register`, { deckName, deckId }),
   /** Gera a cobrança Pix da taxa de inscrição do próprio usuário. Só funciona depois de inscrito. */
   pixInscricao:     (id: string) =>
     api.post<PixCobrancaDto>(`/api/championship/${id}/my-inscription/pix`),
@@ -948,8 +949,6 @@ export const championshipApi = {
     api.put(`/api/championship/${id}/status`, { status }),
   setPlacement:     (id: string, participantId: string, placement: number) =>
     api.put(`/api/championship/${id}/participants/${participantId}/placement`, { placement }),
-  marcarPagamento:  (participantId: string, pago: boolean) =>
-    api.put(`/api/championship/participants/${participantId}/pagamento`, { pago }),
   /** Gera a cobrança da inscrição, mostra na conta do jogador e manda notificação. */
   cobrarInscricao:  (participantId: string) =>
     api.post<PixCobrancaDto & { message: string }>(`/api/championship/participants/${participantId}/cobrar`),
@@ -1528,6 +1527,8 @@ export interface MinhaCompraDto {
   totalInReais: number
   discountInReais: number
   items: MinhaCompraItemDto[]
+  /** "Balcao" | "Site" | "PreVenda" — mesma divisão que o Financeiro usa. */
+  origem: string
   /** Compra desfeita pela loja — vem na lista marcada, não some. */
   estornada: boolean
   estornadaEm: string | null
