@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.32.1] — 2026-09-14
+
+### Adicionado
+- **Prazo pra pagar a inscrição editável na tela**: o tempo que a vaga fica guardada esperando o Pix (padrão de 30 minutos) só dava pra mudar direto no banco. Agora é um campo nos modais de novo campeonato e de edição, que só aparece quando o campeonato tem taxa — sem cobrança a vaga já é firme na hora. Aceita de 1 a 1440 minutos, e a contagem regressiva que o jogador vê passa a seguir o prazo configurado
+
+### Corrigido
+- **Timer de torneio ainda rodava fora do painel**: a v1.29.1 tirou o botão do timer da vitrine, mas o relógio por trás dele continuava ligado — com o dono logado no mesmo navegador, a consulta e o alarme seguiam rodando na loja e na tela da mesa. Agora o timer inteiro vive só no painel do admin
+
 ## [v1.32.0] — 2026-09-08
 
 ### Adicionado
