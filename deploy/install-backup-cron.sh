@@ -5,7 +5,7 @@
 # - Agenda: todo dia às 03:47 (horário da VPS)
 # - Idempotente: pode rodar quantas vezes quiser, não duplica a entrada
 # - IMPORTANTE: rode com o MESMO usuário que configurou o rclone
-#   (a config do rclone fica no home de cada usuário — ver deploy/BACKUP.md)
+#   (a config do rclone fica no home de cada usuário — ver docs/operacao/BACKUP.md)
 #
 # USO:
 #   sudo bash /opt/santuarionerd/deploy/install-backup-cron.sh
@@ -56,7 +56,7 @@ echo "  $(dirname "$SCRIPT_DIR")/backups/backup-drive.log"
 echo ""
 echo "Antes da primeira execução, confirme que o rclone está configurado"
 echo "para ESTE usuário ($(whoami)):  rclone listremotes   (deve mostrar gcrypt:)"
-echo "Guia de setup: deploy/BACKUP.md"
+echo "Guia de setup: docs/operacao/BACKUP.md"
 echo ""
 echo "Verificar se está instalado:"
 echo "  crontab -l"

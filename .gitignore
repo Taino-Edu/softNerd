@@ -101,7 +101,6 @@ publish/
 
 # Logs e resultados de testes locais
 *.txt
-!GUIA-DE-TESTES.txt
 PUSH-GITHUB.bat
 
 # Frontend de demonstracao (nao vai ao git)

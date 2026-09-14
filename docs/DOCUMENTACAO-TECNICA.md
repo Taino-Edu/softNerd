@@ -1,6 +1,6 @@
 # softNerd — Documentação Técnica
 
-> Referência técnica para desenvolvedores. Atualizada em 15/05/2026 — v3.0
+> Referência técnica para desenvolvedores. O que mudou em cada versão fica em [`frontend/public/CHANGELOG.md`](../frontend/public/CHANGELOG.md).
 
 ---
 

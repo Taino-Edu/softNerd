@@ -13,7 +13,7 @@
 #   4. Apaga do Drive arquivos com mais de 30 dias
 #
 # PRÉ-REQUISITO: rclone instalado e remote gcrypt: configurado.
-#   Guia completo de setup e restauração: deploy/BACKUP.md
+#   Guia completo de setup e restauração: docs/operacao/BACKUP.md
 #
 # USO MANUAL:
 #   cd /opt/santuarionerd && bash deploy/backup-drive.sh
@@ -60,11 +60,11 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] === Iniciando backup para o Google Drive ==
 
 # ── Checagens de pré-requisito ───────────────────────────────────────────────
 command -v docker >/dev/null 2>&1 || die "docker não encontrado no PATH."
-command -v rclone >/dev/null 2>&1 || die "rclone não está instalado. Instale e configure seguindo o guia: deploy/BACKUP.md (seção 'Setup único do rclone')."
+command -v rclone >/dev/null 2>&1 || die "rclone não está instalado. Instale e configure seguindo o guia: docs/operacao/BACKUP.md (seção 'Setup único do rclone')."
 
 REMOTE_NAME="${REMOTE%%:*}"
 rclone listremotes 2>/dev/null | grep -qx "${REMOTE_NAME}:" \
-  || die "remote rclone '${REMOTE_NAME}:' não está configurado. Configure seguindo o guia: deploy/BACKUP.md (seção 'Setup único do rclone')."
+  || die "remote rclone '${REMOTE_NAME}:' não está configurado. Configure seguindo o guia: docs/operacao/BACKUP.md (seção 'Setup único do rclone')."
 
 # ── 1. Backup local (dumps PostgreSQL + MongoDB) ─────────────────────────────
 echo "[$(date '+%H:%M:%S')] Etapa 1/4 — dumps locais via backup.sh..."

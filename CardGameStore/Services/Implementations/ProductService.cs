@@ -340,7 +340,7 @@ public class ProductService : IProductService
     }
 
     // -------------------------------------------------------------------------
-    // Validação e normalização (portadas do Tenant-ERP_Model — ver FISCAL-CHANGELOG.md)
+    // Validação e normalização (portadas do Tenant-ERP_Model — ver docs/fiscal/CORRECOES-NFCE-2026-07.md)
     // -------------------------------------------------------------------------
 
     /// <summary>

@@ -167,6 +167,8 @@ softNerd/
 │   ├── api/                    # Testes de endpoints (.http — REST Client)
 │   └── unit/                   # Testes unitários xUnit (10 serviços)
 │
+├── docs/                       # Documentação (ver índice em docs/README.md)
+│
 ├── deploy/
 │   ├── docker-compose.prod.yml # Stack de produção completa
 │   ├── nginx/nginx.conf        # Configuração do proxy reverso
@@ -175,9 +177,23 @@ softNerd/
 │   └── cleanup.sh              # Limpeza segura de espaço em disco
 │
 ├── softNerd.sln                # Solução Visual Studio
-├── run-tests.ps1               # Runner de testes unitários
 └── .gitignore
 ```
+
+---
+
+## Documentação
+
+Tudo em [`docs/`](docs/README.md):
+
+- [Documentação técnica](docs/DOCUMENTACAO-TECNICA.md) — arquitetura, endpoints, regras de negócio, variáveis de ambiente
+- [Backup e restauração](docs/operacao/BACKUP.md)
+- [Automação do WhatsApp](docs/WHATSAPP-AUTOMACAO.md)
+- [Integração Tenant-ERP](docs/integracoes/TENANT-ERP.md) e [motor fiscal](docs/integracoes/MOTOR-FISCAL-TENANT-ERP.md)
+- [Correções do motor fiscal NFC-e](docs/fiscal/CORRECOES-NFCE-2026-07.md)
+- [Backlog de pendências](docs/planejamento/BACKLOG.md)
+
+O histórico de versões fica em [`frontend/public/CHANGELOG.md`](frontend/public/CHANGELOG.md) (também exibido em Admin → Sobre).
 
 ---
 

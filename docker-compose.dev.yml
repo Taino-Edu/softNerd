@@ -10,7 +10,7 @@
 #   docker compose -f docker-compose.dev.yml down        (mantém os dados)
 #   docker compose -f docker-compose.dev.yml down -v     (apaga os dados)
 #
-# Credenciais batem com o que já estava documentado em GUIA-DE-TESTES.md.
+# Credenciais batem com as de desenvolvimento em docs/DOCUMENTACAO-TECNICA.md (seção "Como rodar").
 # =============================================================================
 
 services:
