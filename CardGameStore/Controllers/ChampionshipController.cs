@@ -176,6 +176,7 @@ public class ChampionshipController : ControllerBase
             RegistrationDeadline = request.RegistrationDeadline,
             MaxParticipants      = request.MaxParticipants,
             EntryFeeInCents      = request.EntryFeeInCents,
+            MinutosParaPagar     = Math.Clamp(request.MinutosParaPagar ?? 30, 1, 1440),
             ImageUrl             = request.ImageUrl,
             Status               = ChampionshipStatus.Planejado,
             CreatedByAdminId     = adminId
@@ -214,6 +215,9 @@ public class ChampionshipController : ControllerBase
         ch.MaxParticipants      = request.MaxParticipants;
         ch.EntryFeeInCents      = request.EntryFeeInCents;
         ch.ImageUrl             = request.ImageUrl;
+        // Só sobrescreve se veio no corpo — assim uma tela antiga não zera o prazo.
+        if (request.MinutosParaPagar is int minutos)
+            ch.MinutosParaPagar = Math.Clamp(minutos, 1, 1440);
 
         var updated = await _service.UpdateAsync(ch);
         _logger.LogInformation("Campeonato {Id} editado pelo admin", id);
@@ -788,6 +792,7 @@ public class ChampionshipController : ControllerBase
         MaxParticipants      = ch.MaxParticipants,
         EntryFeeInCents      = ch.EntryFeeInCents,
         EntryFeeInReais      = ch.EntryFeeInCents / 100m,
+        MinutosParaPagar     = ch.MinutosParaPagar,
         Status               = ch.Status.ToString(),
         ParticipantCount     = ch.Participants?.Count ?? 0,
         PreInscricaoCount    = ch.PreInscricoes?.Count(p => !p.IsListaEspera)  ?? 0,
@@ -822,6 +827,12 @@ public class UpdateChampionshipRequest
     public int?      MaxParticipants      { get; init; }
     public int       EntryFeeInCents      { get; init; }
     public string?   ImageUrl             { get; init; }
+
+    /// <summary>
+    /// Minutos que a vaga fica segurada esperando o pagamento. Null = mantém o
+    /// que já está gravado (cliente antigo que não manda o campo não zera nada).
+    /// </summary>
+    public int?      MinutosParaPagar     { get; init; }
 }
 
 /// <summary>DTO de resposta de campeonato (sem circular reference).</summary>
@@ -837,6 +848,8 @@ public class ChampionshipDto
     public int?      MaxParticipants      { get; init; }
     public int       EntryFeeInCents      { get; init; }
     public decimal   EntryFeeInReais      { get; init; }
+    /// <summary>Minutos que a vaga fica segurada esperando pagamento.</summary>
+    public int       MinutosParaPagar     { get; init; }
     public string    Status               { get; init; } = string.Empty;
     public int       ParticipantCount     { get; init; }
     public int       PreInscricaoCount    { get; init; }
@@ -909,6 +922,12 @@ public class CreateChampionshipRequest
     public int?      MaxParticipants      { get; init; }
     public int       EntryFeeInCents      { get; init; }
     public string?   ImageUrl             { get; init; }
+
+    /// <summary>
+    /// Minutos que a vaga fica segurada esperando o pagamento. Null = mantém o
+    /// que já está gravado (cliente antigo que não manda o campo não zera nada).
+    /// </summary>
+    public int?      MinutosParaPagar     { get; init; }
 }
 
 /// <summary>Request para alterar status do campeonato.</summary>

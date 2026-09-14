@@ -291,6 +291,8 @@ export interface DeckListDto {
 export interface Championship {
   id: string; name: string; game: string; status: string
   startDate: string; entryFeeInCents: number; entryFeeInReais: number; maxParticipants: number | null
+  /** Minutos que a vaga fica segurada esperando o pagamento da inscrição. */
+  minutosParaPagar?: number
   description?: string | null; participantCount?: number
   preInscricaoCount?: number; listaEsperaCount?: number
   registrationDeadline?: string | null; endDate?: string | null
