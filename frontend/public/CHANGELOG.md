@@ -1,5 +1,18 @@
 # Changelog — Santuário Nerd
 
+## [v1.33.1] — 2026-10-01
+
+### Corrigido
+- **Cliente via só uma das dívidas**: quem tem mais de uma conta de crediário aberta (cada uma com seu prazo) via no perfil só a primeira. Agora a aba Dívida mostra o total devido e cada conta separada, com saldo, vencimento, aviso de vencida e o que foi comprado em cada dia
+- **Conta vencida um dia antes**: o vencimento escolhido como data era gravado à meia-noite UTC — 21h da véspera no horário de Brasília — e a conta aparecia vencida na noite anterior. Agora vale até o fim do dia escolhido. As contas abertas que já existiam são corrigidas sozinhas no deploy
+- **Contas vencidas fora do "valor em aberto"**: no filtro "Todos" da tela do crediário, as contas vencidas não entravam na contagem de abertas nem no saldo restante
+- **Dois pagamentos ao mesmo tempo**: caixa e conferência automática do Pix lançando na mesma conta ao mesmo tempo podiam apagar um pagamento do outro. Agora a soma é feita direto no banco e, se a conta mudou no meio, o segundo lançamento é recusado com aviso pra recarregar
+- **Quitar dívida com pontos ou cashback**: a tela não oferecia, mas o sistema aceitava Pontos, Cashback e até "Crediário" como forma de pagar a conta, sem descontar nada do cliente. Agora só Dinheiro, Pix e cartões
+- **Quitação sem registro de pagamento**: existia um caminho antigo (sem uso na tela) que marcava a conta como paga sem lançar o pagamento — o dinheiro não aparecia no extrato. Foi removido
+
+### Adicionado
+- **Histórico de alterações do crediário**: editar o valor, o vencimento ou os itens de uma conta, e excluir uma conta, agora fica registrado na auditoria — quem fez, quando e qual era o valor antes
+
 ## [v1.33.0] — 2026-09-30
 
 ### Mudado

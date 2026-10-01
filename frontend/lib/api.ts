@@ -637,9 +637,6 @@ export const crediarioApi = {
     api.get<CrediariosDto[]>('/api/crediarios', { params: { status } }),
   byUser:      (userId: string) =>
     api.get<CrediariosDto[]>(`/api/crediarios/usuario/${userId}`),
-  meu:         () => api.get<CrediariosDto>('/api/crediarios/meu'),
-  marcarPago:  (id: string, observacao?: string) =>
-    api.put<CrediariosDto>(`/api/crediarios/${id}/pagar`, { observacao }),
   registrarPagamento: (id: string, req: { valorEmCentavos: number; formaPagamento: string; secondFormaPagamento?: string; secondValorEmCentavos?: number; observacao?: string }) =>
     api.post<CrediariosDto>(`/api/crediarios/${id}/pagamento`, req),
   criarManual: (req: CriarCrediarioManualRequest) =>

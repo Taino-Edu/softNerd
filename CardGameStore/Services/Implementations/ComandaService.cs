@@ -568,7 +568,7 @@ public class ComandaService : IComandaService
             {
                 // Conta nova: vencimento escolhido no fechamento (o produto da pré-venda pode
                 // chegar depois) ou os 30 dias de sempre quando ninguém escolheu.
-                var vencimento = crediarioVencimento?.Date.ToUniversalTime() ?? DateTime.UtcNow.AddDays(30);
+                var vencimento = CrediarioLancamentos.VencimentoPadrao(crediarioVencimento);
                 var crediario  = new Crediario
                 {
                     UserId           = comanda.UserId,

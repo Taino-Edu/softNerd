@@ -585,6 +585,7 @@ public class VendaAvulsaServiceTests
 
         db.ChangeTracker.Clear();
         var conta = await db.Crediarios.SingleAsync(c => c.UserId == user.Id);
-        conta.DataVencimento.Date.Should().Be(vencimentoEscolhido.Date);
+        // Vale até o fim do dia escolhido no horário de Brasília
+        conta.DataVencimento.Should().Be(CrediarioLancamentos.VencimentoFimDoDia(vencimentoEscolhido));
     }
 }

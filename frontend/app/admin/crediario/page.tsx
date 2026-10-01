@@ -356,7 +356,9 @@ interface EditarModalProps {
 function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProps) {
   const [valor, setValor]     = useState(crediario.valorEmReais.toFixed(2).replace('.', ','))
   const [obs, setObs]         = useState(crediario.observacao ?? '')
-  const [venc, setVenc]       = useState(crediario.dataVencimento.slice(0, 10))
+  // Data no fuso de Brasília: o vencimento é guardado no fim do dia daqui, que em UTC já é o dia seguinte
+  const [venc, setVenc]       = useState(
+    new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(crediario.dataVencimento)))
   const [loading, setLoading] = useState(false)
 
   // Editor de itens
@@ -1269,11 +1271,11 @@ export default function CrediarioPage() {
     pagos:       0,
     valorAberto: totaisAbertos.saldo,
   } : {
-    abertos:     crediarios.filter(c => c.status === 'Aberto').length,
+    abertos:     crediarios.filter(c => c.status !== 'Pago').length,
     vencidos:    crediarios.filter(c => c.vencido).length,
     pagos:       crediarios.filter(c => c.status === 'Pago').length,
     valorAberto: crediarios
-      .filter(c => c.status === 'Aberto')
+      .filter(c => c.status !== 'Pago')
       .reduce((s, c) => s + c.saldoRestanteEmReais, 0),
   }
 

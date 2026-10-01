@@ -5,7 +5,6 @@
 // GET  /api/crediarios                     → Admin: lista todos (filtro por status)
 // GET  /api/crediarios/usuario/{userId}    → Admin: crediários de um cliente
 // GET  /api/crediarios/meu                 → Cliente: seu crediário ativo
-// PUT  /api/crediarios/{id}/pagar          → Admin: quita 100% (legado)
 // POST /api/crediarios/{id}/pagamento      → Admin: registra pagamento parcial ou total
 //
 // Cada compra da conta é um CrediarioLancamento — o DTO devolve as compras
@@ -34,15 +33,17 @@ public class CrediariosController : ControllerBase
     private readonly IEmailService   _email;
     private readonly InterSyncService _inter;
     private readonly IPixReconciliationService _pixReconciliation;
+    private readonly IAuditService   _audit;
     private readonly ILogger<CrediariosController> _logger;
 
     public CrediariosController(AppDbContext db, IEmailService email, InterSyncService inter,
-        IPixReconciliationService pixReconciliation, ILogger<CrediariosController> logger)
+        IPixReconciliationService pixReconciliation, IAuditService audit, ILogger<CrediariosController> logger)
     {
         _db                = db;
         _email             = email;
         _inter             = inter;
         _pixReconciliation = pixReconciliation;
+        _audit             = audit;
         _logger            = logger;
     }
 
@@ -76,7 +77,7 @@ public class CrediariosController : ControllerBase
             ValorEmCentavos  = request.ValorEmCentavos,
             DataAbertura     = dataAbert,
             DataVencimento   = request.DataVencimento.HasValue
-                                   ? request.DataVencimento.Value.ToUniversalTime()
+                                   ? CrediarioLancamentos.VencimentoFimDoDia(request.DataVencimento.Value)
                                    : dataAbert.AddDays(30),
             Status           = CrediariosStatus.Aberto,
             Observacao       = string.IsNullOrWhiteSpace(request.Observacao)
@@ -234,50 +235,6 @@ public class CrediariosController : ControllerBase
     }
 
     // -------------------------------------------------------------------------
-    // PUT /api/crediarios/{id}/pagar
-    // -------------------------------------------------------------------------
-    [HttpPut("{id:guid}/pagar")]
-    [Authorize(Policy = "AdminOnly")]
-    public async Task<ActionResult<CrediariosDto>> MarcarPago(Guid id, [FromBody] MarcarPagoRequest? request)
-    {
-        var adminId   = GetUserId();
-        var crediario = await _db.Crediarios
-            .Include(c => c.User)
-            .Include(c => c.Pagamentos)
-            .Include(c => c.Lancamentos)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (crediario == null)
-            return NotFound(new { Message = "Crediário não encontrado." });
-
-        if (crediario.Status == CrediariosStatus.Pago)
-            return BadRequest(new { Message = "Crediário já está quitado." });
-
-        // Garante que ValorPago reflita a quitação total
-        crediario.ValorPagoEmCentavos = crediario.ValorEmCentavos;
-        crediario.Status        = CrediariosStatus.Pago;
-        crediario.DataPagamento = DateTime.UtcNow;
-        crediario.PagoPorAdminId = adminId;
-
-        if (!string.IsNullOrWhiteSpace(request?.Observacao))
-            crediario.Observacao = (crediario.Observacao != null
-                ? crediario.Observacao + " | " : "") + request.Observacao;
-
-        await _db.SaveChangesAsync();
-
-        _logger.LogInformation(
-            "Crediário {Id} quitado pelo admin {AdminId} — R$ {Valor:N2}",
-            id, adminId, crediario.ValorEmReais);
-
-        // Envia email de confirmação (não bloqueia)
-        if (!string.IsNullOrWhiteSpace(crediario.User?.Email))
-            _ = _email.SendCrediarioPagoAsync(
-                crediario.User.Email, crediario.User.Name, crediario.ValorEmReais);
-
-        return Ok(MapToDto(crediario));
-    }
-
-    // -------------------------------------------------------------------------
     // PATCH /api/crediarios/{id} — editar valor, observação ou vencimento
     // -------------------------------------------------------------------------
     [HttpPatch("{id:guid}")]
@@ -299,6 +256,8 @@ public class CrediariosController : ControllerBase
         if (crediario.Status == CrediariosStatus.Pago)
             return BadRequest(new { Message = "Não é possível editar um crediário já quitado." });
 
+        var antes = new { crediario.ValorEmCentavos, crediario.DataVencimento, crediario.Observacao };
+
         if (request.ValorEmCentavos.HasValue)
         {
             if (request.ValorEmCentavos.Value < crediario.ValorPagoEmCentavos)
@@ -314,9 +273,9 @@ public class CrediariosController : ControllerBase
 
         if (request.DataVencimento.HasValue)
         {
-            if (request.DataVencimento.Value.ToUniversalTime().Date < DateTime.UtcNow.Date)
+            if (request.DataVencimento.Value.Date < CrediarioLancamentos.HojeBrasil())
                 return BadRequest(new { Message = "A data de vencimento não pode ser no passado." });
-            crediario.DataVencimento = request.DataVencimento.Value.ToUniversalTime();
+            crediario.DataVencimento = CrediarioLancamentos.VencimentoFimDoDia(request.DataVencimento.Value);
         }
 
         // Cada item volta pra compra de onde veio (LancamentoId); item novo, sem compra,
@@ -356,6 +315,12 @@ public class CrediariosController : ControllerBase
         _logger.LogInformation(
             "Crediário {Id} editado pelo admin {AdminId}", id, GetUserId());
 
+        // Mexer no valor de uma dívida precisa deixar rastro de quem mudou e de quanto era.
+        var depois = new { crediario.ValorEmCentavos, crediario.DataVencimento, crediario.Observacao };
+        await _audit.LogAsync("EditouCrediario", "Crediario", id.ToString(),
+            details: JsonSerializer.Serialize(new { antes, depois, itensEditados = request.Itens != null }),
+            httpContext: HttpContext);
+
         return Ok(MapToDto(crediario));
     }
 
@@ -373,16 +338,19 @@ public class CrediariosController : ControllerBase
         // A venda avulsa já validava a forma de pagamento contra PaymentMethod.All, mas
         // aqui qualquer string entrava e virava uma linha fantasma no relatório financeiro
         // agrupado por forma de pagamento.
-        if (!PaymentMethod.IsValid(request.FormaPagamento))
+        // Pontos, Cashback e "Crediário" passavam aqui sem descontar nada do cliente —
+        // quitar dívida com eles era dinheiro de mentira entrando no extrato.
+        var formas = CrediarioLancamentos.FormasDePagamento;
+        if (!formas.Contains(request.FormaPagamento))
             return BadRequest(new
             {
-                Message = $"Forma de pagamento inválida. Use: {string.Join(", ", PaymentMethod.All)}"
+                Message = $"Forma de pagamento inválida. Use: {string.Join(", ", formas)}"
             });
         if (!string.IsNullOrWhiteSpace(request.SecondFormaPagamento) &&
-            !PaymentMethod.IsValid(request.SecondFormaPagamento))
+            !formas.Contains(request.SecondFormaPagamento))
             return BadRequest(new
             {
-                Message = $"Segunda forma de pagamento inválida. Use: {string.Join(", ", PaymentMethod.All)}"
+                Message = $"Segunda forma de pagamento inválida. Use: {string.Join(", ", formas)}"
             });
 
         var adminId   = GetUserId();
@@ -417,40 +385,70 @@ public class CrediariosController : ControllerBase
         if (pixPago is not null)
             return Conflict(new { Message = pixPago });
 
-        // Registra o pagamento parcial (método principal)
-        var pagamento = new PagamentoCrediario
+        // Soma no banco, não na memória: caixa e robô do Pix lançando ao mesmo tempo
+        // liam o mesmo ValorPago e um sobrescrevia o outro. A condição de saldo vai junto,
+        // então dois pagamentos simultâneos também não passam do valor da conta.
+        var conflito = false;
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            CrediarioId     = id,
-            ValorEmCentavos = request.ValorEmCentavos,
-            FormaPagamento  = request.FormaPagamento,
-            Observacao      = request.Observacao,
-            AdminId         = adminId,
-        };
-        _db.PagamentosCrediario.Add(pagamento);
-        crediario.ValorPagoEmCentavos += request.ValorEmCentavos;
+            await using var tx = await _db.Database.BeginTransactionAsync();
 
-        // Segundo método (split) — registra como entrada separada
-        if (temSegundo)
-        {
-            var pagamento2 = new PagamentoCrediario
+            var total = (int)totalPago;
+            var rows = await _db.Crediarios
+                .Where(c => c.Id == id
+                         && c.Status == CrediariosStatus.Aberto
+                         && c.ValorEmCentavos - c.ValorPagoEmCentavos >= total)
+                .ExecuteUpdateAsync(u => u.SetProperty(c => c.ValorPagoEmCentavos, c => c.ValorPagoEmCentavos + total));
+            if (rows == 0)
+            {
+                conflito = true;
+                await tx.RollbackAsync();
+                return;
+            }
+            await _db.Entry(crediario).ReloadAsync();
+
+            _db.PagamentosCrediario.Add(new PagamentoCrediario
             {
                 CrediarioId     = id,
-                ValorEmCentavos = request.SecondValorEmCentavos,
-                FormaPagamento  = request.SecondFormaPagamento!,
+                ValorEmCentavos = request.ValorEmCentavos,
+                FormaPagamento  = request.FormaPagamento,
                 Observacao      = request.Observacao,
                 AdminId         = adminId,
-            };
-            _db.PagamentosCrediario.Add(pagamento2);
-            crediario.ValorPagoEmCentavos += request.SecondValorEmCentavos;
-        }
+            });
 
-        // Quita automaticamente se saldo chegou a zero (tolerância de 1 centavo para arredondamentos)
-        if (crediario.SaldoRestanteEmCentavos <= 1)
+            // Segundo método (split) — registra como entrada separada
+            if (temSegundo)
+            {
+                _db.PagamentosCrediario.Add(new PagamentoCrediario
+                {
+                    CrediarioId     = id,
+                    ValorEmCentavos = request.SecondValorEmCentavos,
+                    FormaPagamento  = request.SecondFormaPagamento!,
+                    Observacao      = request.Observacao,
+                    AdminId         = adminId,
+                });
+            }
+
+            // Quita automaticamente se saldo chegou a zero (tolerância de 1 centavo para arredondamentos)
+            if (crediario.SaldoRestanteEmCentavos <= 1)
+            {
+                crediario.Status         = CrediariosStatus.Pago;
+                crediario.DataPagamento  = DateTime.UtcNow;
+                crediario.PagoPorAdminId = adminId;
+            }
+
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+        });
+
+        if (conflito)
+            return Conflict(new { Message = "O saldo desta conta mudou enquanto o pagamento era lançado. Recarregue a tela e confira antes de lançar de novo." });
+
+        await _db.Entry(crediario).Collection(c => c.Pagamentos).LoadAsync();
+
+        if (crediario.Status == CrediariosStatus.Pago)
         {
-            crediario.Status         = CrediariosStatus.Pago;
-            crediario.DataPagamento  = DateTime.UtcNow;
-            crediario.PagoPorAdminId = adminId;
-
             _logger.LogInformation(
                 "Crediário {Id} quitado via pagamento parcial pelo admin {AdminId} — R$ {Valor:N2}",
                 id, adminId, crediario.ValorEmReais);
@@ -462,11 +460,10 @@ public class CrediariosController : ControllerBase
         else
         {
             _logger.LogInformation(
-                "Crediário {Id}: pagamento parcial de R$ {Valor:N2} registrado pelo admin {AdminId}. Saldo restante: R$ {Saldo:N2}",
-                id, request.ValorEmCentavos / 100m, adminId, crediario.SaldoRestanteEmReais);
+                "Crediário {Id}: pagamento de R$ {Valor:N2} registrado pelo admin {AdminId}. Saldo restante: R$ {Saldo:N2}",
+                id, totalPago / 100m, adminId, crediario.SaldoRestanteEmReais);
         }
 
-        await _db.SaveChangesAsync();
         return Ok(MapToDto(crediario));
     }
 
@@ -587,6 +584,12 @@ public class CrediariosController : ControllerBase
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Crediário {Id} excluído pelo admin {AdminId}", id, GetUserId());
+        await _audit.LogAsync("ExcluiuCrediario", "Crediario", id.ToString(),
+            details: JsonSerializer.Serialize(new
+            {
+                crediario.UserId, crediario.ValorEmCentavos, crediario.DataAbertura, crediario.Observacao,
+            }),
+            httpContext: HttpContext);
         return NoContent();
     }
 

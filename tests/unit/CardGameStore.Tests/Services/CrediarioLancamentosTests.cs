@@ -64,4 +64,13 @@ public class CrediarioLancamentosTests
         lancManual.Origem.Should().Be(CrediarioLancamentoOrigem.Manual);
         lancManual.Descricao.Should().Be("Dívida de torneio");
     }
+
+    [Fact]
+    public void VencimentoFimDoDia_ValeODiaInteiroNoHorarioDeBrasilia()
+    {
+        // 15/10 escolhido = até 15/10 23:59:59 em Brasília = 16/10 02:59:59 UTC
+        var venc = CrediarioLancamentos.VencimentoFimDoDia(new DateTime(2026, 10, 15));
+
+        venc.Should().Be(new DateTime(2026, 10, 16, 2, 59, 59, DateTimeKind.Utc));
+    }
 }

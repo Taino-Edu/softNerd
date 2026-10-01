@@ -318,7 +318,11 @@ export default function PerfilPage() {
     } catch { toast.error('Erro ao cancelar pré-venda.') }
   }
 
-  const crediario = crediarios.find(c => c.status === 'Aberto' || c.status === 'Vencido') ?? null
+  // O cliente pode ter várias contas abertas, cada uma com seu prazo — mostra todas.
+  const dividasAbertas = crediarios
+    .filter(c => c.status !== 'Pago')
+    .sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento))
+  const totalDevido = dividasAbertas.reduce((s, c) => s + c.saldoRestanteEmReais, 0)
 
   const agora = new Date()
   const doMesAtual = (iso: string) => {
@@ -958,7 +962,7 @@ export default function PerfilPage() {
             {/* ── TAB: CREDIÁRIO ── */}
             {tab === 'crediario' && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {!crediario ? (
+                {dividasAbertas.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-sm space-y-4">
                     <div className="w-16 h-16 bg-emerald-50 border border-emerald-100 rounded-full flex items-center justify-center mx-auto">
                       <ShieldCheck className="w-8 h-8 text-emerald-500" />
@@ -969,25 +973,62 @@ export default function PerfilPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white border border-red-100 rounded-2xl p-8 text-center shadow-sm space-y-5">
-                    <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-full flex items-center justify-center mx-auto animate-pulse">
-                      <Wallet className="w-8 h-8 text-red-500" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-black text-red-500 uppercase tracking-widest">Dívida Pendente</p>
+                  <div className="space-y-3">
+                    <div className="bg-white border border-red-100 rounded-2xl p-6 text-center shadow-sm space-y-1">
+                      <div className="w-14 h-14 bg-red-50 border border-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Wallet className="w-7 h-7 text-red-500" />
+                      </div>
+                      <p className="text-xs font-black text-red-500 uppercase tracking-widest">
+                        {dividasAbertas.length > 1 ? `${dividasAbertas.length} dívidas pendentes` : 'Dívida pendente'}
+                      </p>
                       <p className="text-4xl font-black text-gray-900">
-                        R$ {crediario.saldoRestanteEmReais.toFixed(2).replace('.', ',')}
+                        R$ {totalDevido.toFixed(2).replace('.', ',')}
                       </p>
                     </div>
-                    <div className="p-4 bg-red-50 rounded-2xl">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500 font-bold uppercase">Vencimento</span>
-                        <span className="text-red-500 font-bold">
-                          {new Date(crediario.dataVencimento).toLocaleDateString('pt-BR')}
-                        </span>
+
+                    {dividasAbertas.map(c => (
+                      <div key={c.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-black text-gray-900">
+                              R$ {c.saldoRestanteEmReais.toFixed(2).replace('.', ',')}
+                            </p>
+                            {c.valorPagoEmReais > 0 && (
+                              <p className="text-[11px] text-gray-400">
+                                já pago R$ {c.valorPagoEmReais.toFixed(2).replace('.', ',')} de R$ {c.valorEmReais.toFixed(2).replace('.', ',')}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[10px] text-gray-400 font-bold uppercase">Vencimento</p>
+                            <p className={c.vencido ? 'text-sm font-bold text-red-500' : 'text-sm font-bold text-gray-700'}>
+                              {new Date(c.dataVencimento).toLocaleDateString('pt-BR')}
+                            </p>
+                            {c.vencido && (
+                              <span className="text-[10px] font-black uppercase text-red-500">vencida</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {c.lancamentos.filter(l => !l.estornadoEm && l.itens.length > 0).length > 0 && (
+                          <div className="border-t border-gray-100 pt-2 space-y-2">
+                            {c.lancamentos.filter(l => !l.estornadoEm && l.itens.length > 0).map(l => (
+                              <div key={l.id}>
+                                <p className="text-[11px] font-bold text-gray-500">
+                                  {new Date(l.createdAt).toLocaleDateString('pt-BR')}
+                                  {l.valorEmReais > 0 && <> · R$ {l.valorEmReais.toFixed(2).replace('.', ',')}</>}
+                                </p>
+                                <p className="text-[11px] text-gray-400">
+                                  {l.itens.map(i => `${i.quantity}× ${i.itemName}`).join(', ')}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <p className="text-[10px] text-gray-400 italic">
+                    ))}
+
+                    <p className="text-[10px] text-gray-400 italic text-center">
                       * Compareça ao balcão para quitar sua dívida com o Maikon.
                     </p>
                   </div>

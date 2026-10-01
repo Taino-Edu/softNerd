@@ -284,8 +284,7 @@ public class VendaAvulsaService : IVendaAvulsaService
 
                 // Vencimento escolhido pelo caixa (o produto chega dia 16, então a conta não
                 // pode vencer dia 11) — sem escolha, mantém os 30 dias de sempre.
-                var vencimento = request.CrediarioVencimento?.Date.ToUniversalTime()
-                                 ?? DateTime.UtcNow.AddDays(30);
+                var vencimento = CrediarioLancamentos.VencimentoPadrao(request.CrediarioVencimento);
 
                 // Snapshot dos itens desta venda para registrar no crediário
                 var novosItens = vendaItems.Select(i => new ItemCrediarioDto

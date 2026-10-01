@@ -194,9 +194,17 @@ public class PixReconciliationService : IPixReconciliationService
             return;
         }
 
-        var jaQuitado = crediario.Status == CrediariosStatus.Pago;
-        var aplicado  = jaQuitado ? 0 : Math.Min(pix.ValorEmCentavos, crediario.SaldoRestanteEmCentavos);
-        var excedente = pix.ValorEmCentavos - aplicado;
+        // Soma no banco (não na memória) pra não perder pagamento lançado no caixa ao
+        // mesmo tempo; o excedente é calculado depois, já com o valor real da conta.
+        await _db.Crediarios
+            .Where(c => c.Id == crediario.Id)
+            .ExecuteUpdateAsync(u => u.SetProperty(c => c.ValorPagoEmCentavos, c => c.ValorPagoEmCentavos + pix.ValorEmCentavos));
+        await _db.Entry(crediario).ReloadAsync();
+
+        var jaQuitado      = crediario.Status == CrediariosStatus.Pago;
+        var excessoDepois  = Math.Max(0, crediario.ValorPagoEmCentavos - crediario.ValorEmCentavos);
+        var excessoAntes   = Math.Max(0, crediario.ValorPagoEmCentavos - pix.ValorEmCentavos - crediario.ValorEmCentavos);
+        var excedente      = jaQuitado ? pix.ValorEmCentavos : excessoDepois - excessoAntes;
 
         _db.PagamentosCrediario.Add(new PagamentoCrediario
         {
@@ -208,8 +216,6 @@ public class PixReconciliationService : IPixReconciliationService
                 : $"Cobrança Pix automática (txid {pix.TxId})",
             AdminId         = adminId,
         });
-        crediario.ValorPagoEmCentavos += pix.ValorEmCentavos;
-
         if (excedente > 0 && crediario.User is not null)
         {
             crediario.User.BalanceInCents += excedente;

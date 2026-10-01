@@ -895,6 +895,22 @@ using (var scope = app.Services.CreateScope())
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_comanda   ON crediario_lancamentos (comanda_id);
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_venda     ON crediario_lancamentos (venda_avulsa_id);
 
+                -- Vencimento escolhido como data era gravado à meia-noite UTC (21h da véspera
+                -- em Brasília) e a conta aparecia vencida um dia antes. Passa as contas
+                -- abertas pro fim do dia escolhido, no horário de Brasília. Uma vez só.
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM app_migrations WHERE key = 'crediario_vencimento_fim_do_dia') THEN
+                        UPDATE crediarios
+                        SET data_vencimento =
+                            (((data_vencimento AT TIME ZONE 'UTC')::date + 1)::timestamp AT TIME ZONE 'America/Sao_Paulo')
+                            - INTERVAL '1 second'
+                        WHERE status = 'Aberto'
+                          AND (data_vencimento AT TIME ZONE 'UTC')::time = '00:00:00';
+                        INSERT INTO app_migrations (key) VALUES ('crediario_vencimento_fim_do_dia');
+                    END IF;
+                END $$;
+
                 -- Financeiro: tabelas que dependiam só do EnsureCreated (no-op em banco já existente)
                 CREATE TABLE IF NOT EXISTS external_transactions (
                     id          UUID            PRIMARY KEY DEFAULT gen_random_uuid(),

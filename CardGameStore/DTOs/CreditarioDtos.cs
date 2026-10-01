@@ -99,13 +99,6 @@ public class CrediariosClienteDto
     public List<CrediariosDto> Dividas { get; set; } = new();
 }
 
-/// <summary>Body do endpoint PUT /api/crediarios/{id}/pagar (quitação total).</summary>
-public class MarcarPagoRequest
-{
-    /// <summary>Observação opcional (ex: "Pago em dinheiro no balcão").</summary>
-    public string? Observacao { get; set; }
-}
-
 /// <summary>Body do endpoint POST /api/crediarios (criação manual — dívidas anteriores ao sistema).</summary>
 public class CriarCrediarioManualRequest
 {
@@ -165,7 +158,7 @@ public class RegistrarPagamentoRequest
     [Range(1, int.MaxValue, ErrorMessage = "O valor do pagamento deve ser maior que zero.")]
     public int ValorEmCentavos { get; set; }
 
-    /// <summary>Forma de pagamento usada (Dinheiro, Pix, CartaoCredito, CartaoDebito, Pontos, Cashback).</summary>
+    /// <summary>Forma de pagamento usada (Dinheiro, Pix, CartaoCredito, CartaoDebito).</summary>
     [MaxLength(50)]
     public string FormaPagamento { get; set; } = "Dinheiro";
 

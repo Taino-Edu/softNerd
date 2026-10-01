@@ -15,6 +15,35 @@ namespace CardGameStore.Services.Implementations;
 
 public static class CrediarioLancamentos
 {
+    private static readonly TimeZoneInfo BrazilZone = GetBrazilZone();
+    private static TimeZoneInfo GetBrazilZone()
+    {
+        try   { return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
+        catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
+    }
+
+    /// <summary>Formas aceitas pra pagar uma conta de crediário (dinheiro de verdade entrando).</summary>
+    public static readonly string[] FormasDePagamento =
+        ["Dinheiro", "Pix", "CartaoCredito", "CartaoDebito"];
+
+    public static DateTime HojeBrasil() =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BrazilZone).Date;
+
+    /// <summary>
+    /// Vencimento escolhido como data vale o dia inteiro no horário de Brasília. Antes a
+    /// data virava meia-noite UTC — 21h do dia ANTERIOR aqui — e a conta aparecia vencida
+    /// na véspera.
+    /// </summary>
+    public static DateTime VencimentoFimDoDia(DateTime data)
+    {
+        var diaSeguinte = DateTime.SpecifyKind(data.Date.AddDays(1), DateTimeKind.Unspecified);
+        return TimeZoneInfo.ConvertTimeToUtc(diaSeguinte, BrazilZone).AddSeconds(-1);
+    }
+
+    /// <summary>Vencimento de conta nova: a data escolhida ou 30 dias a partir de hoje.</summary>
+    public static DateTime VencimentoPadrao(DateTime? escolhido) =>
+        VencimentoFimDoDia(escolhido ?? HojeBrasil().AddDays(30));
+
     public static string? SerializarItens(IEnumerable<ItemCrediarioDto> itens)
     {
         // LancamentoId não vai pro JSON: dentro do lançamento ele é redundante.
