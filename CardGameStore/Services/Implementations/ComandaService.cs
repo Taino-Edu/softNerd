@@ -535,7 +535,6 @@ public class ComandaService : IComandaService
             {
                 // Admin escolheu acumular em uma conta já aberta — sem renovar prazo
                 var existente = await _db.Crediarios
-                    .Include(cr => cr.Comanda).ThenInclude(cmd => cmd!.Items)
                     .FirstOrDefaultAsync(cr => cr.Id == crediarioExistenteId.Value)
                     ?? throw new InvalidOperationException("Crediário selecionado não encontrado.");
 
@@ -549,44 +548,17 @@ public class ComandaService : IComandaService
                 if (!string.IsNullOrWhiteSpace(observacao))
                     existente.Observacao = observacao;
 
-                // Serializa os itens da nova comanda em ItensJson para que o MapToDto
-                // os exiba corretamente sem depender de date-range.
-                // Na primeira acumulação: se a conta original tinha ComandaId, migra
-                // os itens da comanda original para ItensJson primeiro.
-                var novosItens = comanda.Items
-                    .OrderBy(i => i.AddedAt)
-                    .Select(i => new ItemCrediarioDto
-                    {
-                        ItemName         = i.ItemNameSnapshot,
-                        Quantity         = i.Quantity,
-                        UnitPriceInReais = i.UnitPriceInCents / 100m,
-                        SubtotalInReais  = i.SubtotalInCents  / 100m,
-                    }).ToList();
-
-                List<ItemCrediarioDto> itensAcumulados;
-                if (string.IsNullOrWhiteSpace(existente.ItensJson))
+                // A compra entra como lançamento próprio, vinculado à comanda: é o que
+                // separa os itens por compra na tela e deixa o estorno achar a conta.
+                _db.CrediarioLancamentos.Add(new CrediarioLancamento
                 {
-                    // Primeira acumulação — migra itens da comanda original (se houver)
-                    var originais = existente.Comanda?.Items
-                        .OrderBy(i => i.AddedAt)
-                        .Select(i => new ItemCrediarioDto
-                        {
-                            ItemName         = i.ItemNameSnapshot,
-                            Quantity         = i.Quantity,
-                            UnitPriceInReais = i.UnitPriceInCents / 100m,
-                            SubtotalInReais  = i.SubtotalInCents  / 100m,
-                        }) ?? Enumerable.Empty<ItemCrediarioDto>();
-
-                    itensAcumulados = originais.Concat(novosItens).ToList();
-                }
-                else
-                {
-                    itensAcumulados = JsonSerializer.Deserialize<List<ItemCrediarioDto>>(existente.ItensJson)
-                        ?? new List<ItemCrediarioDto>();
-                    itensAcumulados.AddRange(novosItens);
-                }
-
-                existente.ItensJson = JsonSerializer.Serialize(itensAcumulados);
+                    CrediarioId     = existente.Id,
+                    Origem          = CrediarioLancamentoOrigem.Comanda,
+                    ComandaId       = comanda.Id,
+                    ValorEmCentavos = primaryAmt,
+                    ItensJson       = CrediarioLancamentos.SerializarItens(CrediarioLancamentos.ItensDaComanda(comanda)),
+                    Descricao       = observacao,
+                });
 
                 _logger.LogInformation(
                     "Comanda {CmdId} acumulada no crediário {CredId} do usuário {UserId} — +R$ {Valor:N2}, novo total R$ {Total:N2}",
@@ -608,6 +580,15 @@ public class ComandaService : IComandaService
                     AbertoPorAdminId = adminId,
                     Observacao       = observacao,
                 };
+                crediario.Lancamentos.Add(new CrediarioLancamento
+                {
+                    CrediarioId     = crediario.Id,
+                    Origem          = CrediarioLancamentoOrigem.Comanda,
+                    ComandaId       = comanda.Id,
+                    ValorEmCentavos = primaryAmt,
+                    ItensJson       = CrediarioLancamentos.SerializarItens(CrediarioLancamentos.ItensDaComanda(comanda)),
+                    Descricao       = observacao,
+                });
 
                 _db.Crediarios.Add(crediario);
                 _logger.LogInformation(
@@ -821,12 +802,33 @@ public class ComandaService : IComandaService
             throw new InvalidOperationException(
                 "Esta comanda tem NFC-e autorizada. Cancele a nota em Admin > Fiscal primeiro.");
 
-        // Crediário gerado por esta comanda: só desfaz se ninguém pagou nada ainda.
-        var crediario = await _db.Crediarios.FirstOrDefaultAsync(c => c.ComandaId == comandaId);
-        if (crediario is not null && crediario.ValorPagoEmCentavos > 0)
-            throw new InvalidOperationException(
-                $"O crediário desta comanda já tem R$ {crediario.ValorPagoEmCentavos / 100m:N2} pagos. " +
-                "Acerte o crediário do cliente antes de estornar.");
+        // Crediário onde esta comanda entrou. O lançamento acha a conta mesmo quando a
+        // comanda foi acumulada numa conta aberta por outra compra — antes só a comanda
+        // que ABRIU a conta era encontrada e a dívida das acumuladas ficava cobrando.
+        var lancamento = await _db.CrediarioLancamentos
+            .Include(l => l.Crediario)
+            .FirstOrDefaultAsync(l => l.ComandaId == comandaId && l.EstornadoEm == null);
+
+        Crediario? crediario;
+        int valorCrediario;
+        if (lancamento is not null)
+        {
+            crediario      = lancamento.Crediario;
+            valorCrediario = lancamento.ValorEmCentavos;
+        }
+        else
+        {
+            // Conta antiga convertida em bloco único: só a comanda de origem é conhecida.
+            // O valor é o que foi pro crediário (líquido de pontos, desconto e split).
+            crediario = comanda.PaymentMethod == PaymentCrediario
+                ? await _db.Crediarios.FirstOrDefaultAsync(c => c.ComandaId == comandaId)
+                : null;
+            valorCrediario = Math.Max(0, comanda.TotalInCents - comanda.PointsApplied
+                - comanda.DiscountInCents - comanda.SecondPaymentAmountInCents);
+        }
+
+        if (crediario is not null)
+            CrediarioLancamentos.ValidarEstorno(crediario, valorCrediario);
 
         foreach (var item in comanda.Items.Where(i => i.ProductId.HasValue))
         {
@@ -849,11 +851,7 @@ public class ComandaService : IComandaService
         }
 
         if (crediario is not null)
-        {
-            crediario.ValorEmCentavos = Math.Max(0, crediario.ValorEmCentavos - comanda.TotalInCents);
-            if (crediario.ValorEmCentavos == 0)
-                _db.Crediarios.Remove(crediario);
-        }
+            CrediarioLancamentos.AplicarEstorno(_db, crediario, lancamento, valorCrediario, adminId);
 
         comanda.Status              = ComandaStatus.Estornada;
         comanda.EstornadaEm         = DateTime.UtcNow;

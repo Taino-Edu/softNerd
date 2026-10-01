@@ -32,13 +32,43 @@ public class CrediariosDto
     /// <summary>Histórico de pagamentos parciais registrados.</summary>
     public List<PagamentoCrediarioDto> Pagamentos { get; set; } = new();
 
-    /// <summary>Itens da comanda de origem (null = dívida manual sem comanda).</summary>
+    /// <summary>
+    /// Quanto foi pago ACIMA do valor da conta — acontece quando um Pix antigo é pago
+    /// depois de a conta já ter sido acertada por outro meio. O excedente vira crédito
+    /// (cashback) do cliente.
+    /// </summary>
+    public decimal ValorExcedenteEmReais { get; set; }
+
+    /// <summary>Compras que entraram na conta, mais antiga primeiro (inclui as estornadas).</summary>
+    public List<LancamentoCrediarioDto> Lancamentos { get; set; } = new();
+
+    /// <summary>Todos os itens das compras não estornadas, em lista corrida (impressão e edição).</summary>
     public List<ItemCrediarioDto> ItensComanda { get; set; } = new();
 }
 
-/// <summary>Item da comanda vinculada ao crediário (somente leitura).</summary>
+/// <summary>Uma compra dentro da conta de crediário.</summary>
+public class LancamentoCrediarioDto
+{
+    public Guid      Id            { get; set; }
+    /// <summary>Comanda | VendaAvulsa | Manual | Ajuste | Legado</summary>
+    public string    Origem        { get; set; } = string.Empty;
+    public Guid?     ComandaId     { get; set; }
+    public string?   VendaAvulsaId { get; set; }
+    public string?   Descricao     { get; set; }
+    public decimal   ValorEmReais  { get; set; }
+    public DateTime  CreatedAt     { get; set; }
+    public DateTime? EstornadoEm   { get; set; }
+    public List<ItemCrediarioDto> Itens { get; set; } = new();
+}
+
+/// <summary>Item de uma compra do crediário.</summary>
 public class ItemCrediarioDto
 {
+    /// <summary>
+    /// Compra a que o item pertence. Na edição, é o que diz em qual compra o item fica;
+    /// item novo (null) vai pra um bloco de ajuste manual.
+    /// </summary>
+    public Guid?   LancamentoId    { get; set; }
     public string  ItemName        { get; set; } = string.Empty;
     public int     Quantity        { get; set; }
     public decimal UnitPriceInReais { get; set; }
@@ -100,7 +130,7 @@ public class CriarCrediarioManualRequest
 
     /// <summary>
     /// Lista de itens que compõem a dívida (opcional).
-    /// Serializada como JSON no campo ItensJson da entidade.
+    /// Vira o lançamento manual que abre a conta.
     /// </summary>
     public List<ItemCrediarioDto>? Itens { get; set; }
 }
@@ -120,14 +150,9 @@ public class EditarCrediarioRequest
     public DateTime? DataVencimento { get; set; }
 
     /// <summary>
-    /// Quando true, limpa o ItensJson forçando o MapToDto a rebuscar os itens
-    /// das comandas via date-range (útil para corrigir dados incompletos de migrações antigas).
-    /// </summary>
-    public bool LimparItens { get; set; } = false;
-
-    /// <summary>
-    /// Lista de itens editada manualmente pelo admin. Quando não-null, substitui o ItensJson inteiro.
-    /// Lista vazia [] = remove todos os itens. Null = não altera itens.
+    /// Lista de itens editada manualmente pelo admin. Quando não-null, substitui os itens
+    /// de cada compra pelos itens que chegaram com o LancamentoId dela; itens sem
+    /// LancamentoId vão pro bloco de ajuste manual. Null = não altera itens.
     /// </summary>
     public List<ItemCrediarioDto>? Itens { get; set; }
 }

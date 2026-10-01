@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<Announcement>            Announcements            { get; set; }
     public DbSet<Crediario>               Crediarios               { get; set; }
     public DbSet<PagamentoCrediario>      PagamentosCrediario      { get; set; }
+    public DbSet<CrediarioLancamento>     CrediarioLancamentos     { get; set; }
     public DbSet<PixCobranca>             PixCobrancas             { get; set; }
     public DbSet<Perfil>                  Perfis                   { get; set; }
     public DbSet<Deck>                    Decks                    { get; set; }
@@ -372,6 +373,28 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(p => p.CreatedAt)
                   .HasDatabaseName("ix_pagamentos_crediario_created_at");
+        });
+
+        // =====================================================================
+        // CREDIARIO LANCAMENTO
+        // =====================================================================
+        modelBuilder.Entity<CrediarioLancamento>(entity =>
+        {
+            entity.Property(l => l.Origem)
+                  .HasConversion<string>()
+                  .HasMaxLength(20);
+
+            entity.HasOne(l => l.Crediario)
+                  .WithMany(c => c.Lancamentos)
+                  .HasForeignKey(l => l.CrediarioId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(l => l.CrediarioId)
+                  .HasDatabaseName("ix_crediario_lancamentos_crediario");
+            entity.HasIndex(l => l.ComandaId)
+                  .HasDatabaseName("ix_crediario_lancamentos_comanda");
+            entity.HasIndex(l => l.VendaAvulsaId)
+                  .HasDatabaseName("ix_crediario_lancamentos_venda");
         });
 
         // =====================================================================

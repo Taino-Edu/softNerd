@@ -548,6 +548,8 @@ export interface PagamentoCrediarioDto {
 }
 
 export interface ItemCrediarioDto {
+  /** Compra a que o item pertence; null = item novo, vai pro bloco de ajuste manual. */
+  lancamentoId?: string | null
   itemName: string
   quantity: number
   unitPriceInReais: number
@@ -570,8 +572,27 @@ export interface CrediariosDto {
   observacao: string | null
   vencido: boolean
   diasRestantes: number
+  /** Pago acima do valor da conta (Pix antigo pago depois do acerto) — virou crédito do cliente. */
+  valorExcedenteEmReais: number
   pagamentos: PagamentoCrediarioDto[]
+  /** Compras que entraram na conta, mais antiga primeiro (inclui estornadas). */
+  lancamentos: LancamentoCrediarioDto[]
+  /** Itens de todas as compras não estornadas, em lista corrida (impressão/edição). */
   itensComanda: ItemCrediarioDto[]
+}
+
+export type OrigemLancamentoCrediario = 'Comanda' | 'VendaAvulsa' | 'Manual' | 'Ajuste' | 'Legado'
+
+export interface LancamentoCrediarioDto {
+  id: string
+  origem: OrigemLancamentoCrediario
+  comandaId: string | null
+  vendaAvulsaId: string | null
+  descricao: string | null
+  valorEmReais: number
+  createdAt: string
+  estornadoEm: string | null
+  itens: ItemCrediarioDto[]
 }
 
 export const FORMAS_PAGAMENTO_CREDIARIO = [
@@ -623,7 +644,7 @@ export const crediarioApi = {
     api.post<CrediariosDto>(`/api/crediarios/${id}/pagamento`, req),
   criarManual: (req: CriarCrediarioManualRequest) =>
     api.post<CrediariosDto>('/api/crediarios', req),
-  editar: (id: string, req: { valorEmCentavos?: number; observacao?: string; dataVencimento?: string; limparItens?: boolean; itens?: ItemCrediarioDto[] }) =>
+  editar: (id: string, req: { valorEmCentavos?: number; observacao?: string; dataVencimento?: string; itens?: ItemCrediarioDto[] }) =>
     api.patch<CrediariosDto>(`/api/crediarios/${id}`, req),
   deletar: (id: string) =>
     api.delete(`/api/crediarios/${id}`),

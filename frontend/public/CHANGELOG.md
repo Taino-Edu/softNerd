@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.33.0] — 2026-09-30
+
+### Mudado
+- **Crediário separado por compra**: a conta de crediário juntava os itens de todas as compras numa lista corrida só — numa conta que acumulava comanda, venda no balcão e mais comanda, ninguém sabia o que era de qual dia. Agora cada compra aparece numa linha própria, com data, origem (comanda, venda no balcão, lançamento manual) e valor, e os itens ficam fechados dentro dela. Compra estornada continua visível, riscada e marcada como estornada. Quando o valor da conta foi editado à mão e não bate com a soma das compras, a diferença aparece como "ajuste manual". A impressão e a edição de itens seguem o mesmo agrupamento. Contas antigas são convertidas sozinhas no primeiro start: o que já estava acumulado vira um bloco "Compras anteriores"
+
+### Corrigido
+- **Pagamento dividido passava do saldo**: no pagamento em dois métodos só o primeiro era comparado com o saldo — um Pix de R$ 50 + R$ 30 em dinheiro numa dívida de R$ 50 era aceito e registrava R$ 80 recebidos. Agora a soma dos dois é conferida
+- **Pix pago depois do acerto sumia**: se a conta era acertada por outro meio com uma cobrança Pix ainda aberta e o cliente pagasse o Pix depois, o dinheiro caía no banco sem aparecer em lugar nenhum. Agora, ao lançar pagamento ou excluir a conta, as cobranças Pix abertas dela são canceladas no Inter (se o cliente tiver acabado de pagar, o sistema avisa e não lança duas vezes). E se mesmo assim um Pix for pago além do saldo, o pagamento é registrado inteiro e o que passou vira crédito no saldo do cliente
+- **Estorno de compra acumulada não baixava a dívida**: estornar uma comanda que tinha sido somada numa conta já aberta devolvia o estoque mas deixava a dívida cobrando — o estorno só achava a comanda que abriu a conta. Agora cada compra é encontrada e só o valor dela sai da conta. Junto disso, o estorno deixou de ser travado por qualquer pagamento anterior na conta: só é recusado quando o que o cliente já pagou fica maior que o que sobra (aí tem devolução a acertar). E o valor baixado é o que de fato foi pro crediário, sem contar pontos, desconto e a parte paga em outro método
+
 ## [v1.32.1] — 2026-09-14
 
 ### Adicionado

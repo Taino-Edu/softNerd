@@ -126,6 +126,65 @@ public class PixReconciliationServiceTests
     }
 
     [Fact]
+    public async Task Reconciliar_CrediarioJaQuitadoPorOutroMeio_RegistraPixEViraCredito()
+    {
+        var db   = CreateDb(nameof(Reconciliar_CrediarioJaQuitadoPorOutroMeio_RegistraPixEViraCredito));
+        var user = await SeedBaseAsync(db);
+
+        // QR gerado, cliente acertou em dinheiro no balcão e depois pagou o Pix também
+        var crediario = new Crediario
+        {
+            UserId              = user.Id,
+            ValorEmCentavos     = 10000,
+            ValorPagoEmCentavos = 10000,
+            Status              = CrediariosStatus.Pago,
+            DataVencimento      = DateTime.UtcNow.AddDays(30),
+        };
+        db.Crediarios.Add(crediario);
+        var pix = NovaCobranca(PixCobrancaOrigem.Crediario);
+        pix.CrediarioId = crediario.Id;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+        await service.ReconciliarAsync(pix);
+
+        var pagamentos = await db.PagamentosCrediario.Where(p => p.CrediarioId == crediario.Id).ToListAsync();
+        pagamentos.Should().ContainSingle(p => p.ValorEmCentavos == 10000,
+            "o dinheiro caiu no Inter — tem que aparecer no extrato");
+        (await db.Users.FindAsync(user.Id))!.BalanceInCents.Should().Be(10000,
+            "o que passou do saldo vira crédito do cliente");
+    }
+
+    [Fact]
+    public async Task Reconciliar_PixMaiorQueSaldo_QuitaEExcedenteViraCredito()
+    {
+        var db   = CreateDb(nameof(Reconciliar_PixMaiorQueSaldo_QuitaEExcedenteViraCredito));
+        var user = await SeedBaseAsync(db);
+
+        // QR de R$ 100 gerado; depois o cliente pagou R$ 30 em dinheiro e só então pagou o Pix
+        var crediario = new Crediario
+        {
+            UserId              = user.Id,
+            ValorEmCentavos     = 10000,
+            ValorPagoEmCentavos = 3000,
+            DataVencimento      = DateTime.UtcNow.AddDays(30),
+        };
+        db.Crediarios.Add(crediario);
+        var pix = NovaCobranca(PixCobrancaOrigem.Crediario);
+        pix.CrediarioId = crediario.Id;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+        await service.ReconciliarAsync(pix);
+
+        crediario.Status.Should().Be(CrediariosStatus.Pago);
+        crediario.ValorPagoEmCentavos.Should().Be(13000);
+        (await db.Users.FindAsync(user.Id))!.BalanceInCents.Should().Be(3000);
+    }
+
+    [Fact]
     public async Task Reconciliar_Crediario_SegundaChamadaNaoDuplicaPagamento()
     {
         var db   = CreateDb(nameof(Reconciliar_Crediario_SegundaChamadaNaoDuplicaPagamento));

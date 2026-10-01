@@ -1,7 +1,8 @@
 // =============================================================================
 // Crediario.cs — Entidade de Crediário (PostgreSQL)
-// Criado automaticamente quando o Admin fecha uma comanda com pagamento
-// no crediário. Um cliente só pode ter UM crediário aberto por vez.
+// Uma conta de dívida do cliente. Nasce no fechamento de comanda, na venda do
+// balcão ou no cadastro manual; o cliente pode ter várias contas abertas, cada
+// uma com seu prazo. As compras que entram nela ficam em CrediarioLancamento.
 // =============================================================================
 
 using System.ComponentModel.DataAnnotations;
@@ -75,17 +76,20 @@ public class Crediario
     [Column("pago_por_admin_id")]
     public Guid? PagoPorAdminId { get; set; }
 
-    // ── Itens de venda avulsa (JSON snapshot) ─────────────────────────────────
+    // ── Itens (legado) ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// JSON serializado dos itens quando o crediário é originado de uma venda avulsa
-    /// (ComandaId == null). Cada acumulação acrescenta novos lançamentos ao array.
-    /// Null quando não há itens registrados (crediário manual ou comanda vinculada).
+    /// LEGADO — lista corrida de itens de todas as compras da conta. Não é mais
+    /// escrito: os itens moram em cada CrediarioLancamento. Só é lido pela migração
+    /// que converte as contas antigas em lançamentos.
     /// </summary>
     [Column("itens_json", TypeName = "text")]
     public string? ItensJson { get; set; }
 
-    // ── Pagamentos parciais ───────────────────────────────────────────────────
+    // ── Compras e pagamentos ──────────────────────────────────────────────────
+
+    /// <summary>Cada compra que entrou nesta conta (ver CrediarioLancamento).</summary>
+    public ICollection<CrediarioLancamento> Lancamentos { get; set; } = new List<CrediarioLancamento>();
 
     public ICollection<PagamentoCrediario> Pagamentos { get; set; } = new List<PagamentoCrediario>();
 

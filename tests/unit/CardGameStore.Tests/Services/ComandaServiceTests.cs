@@ -531,11 +531,73 @@ public class ComandaServiceTests
 
         var act = async () => await service.EstornarComandaFechadaAsync(comanda.Id, Guid.NewGuid(), "erro de lançamento");
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*já tem R$*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*já pagou R$*");
 
         db.ChangeTracker.Clear();
         (await db.Products.FindAsync(product.Id))!.StockQuantity.Should().Be(8,
             "estorno recusado não pode mexer no estoque");
+    }
+
+    [Fact]
+    public async Task EstornarComandaFechada_AcumuladaEmContaExistente_DeveBaixarSoAquelaCompra()
+    {
+        var db      = CreateDb(nameof(EstornarComandaFechada_AcumuladaEmContaExistente_DeveBaixarSoAquelaCompra));
+        var service = CreateService(db);
+        var (user, product, _) = await SeedAsync(db);
+
+        // 1ª compra abre a conta (R$ 10), 2ª é acumulada nela (R$ 5)
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 2 });
+        var primeira = await db.Comandas.FirstAsync(c => c.UserId == user.Id && c.Status != ComandaStatus.Fechada);
+        await service.CloseComandaAsync(primeira.Id, Guid.NewGuid(), "Crediario");
+        var conta = await db.Crediarios.FirstAsync(c => c.UserId == user.Id);
+
+        await service.OpenComandaAsync(user.Id);
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 1 });
+        var segunda = await db.Comandas.FirstAsync(c => c.UserId == user.Id && c.Status != ComandaStatus.Fechada);
+        await service.CloseComandaAsync(segunda.Id, Guid.NewGuid(), "Crediario", crediarioExistenteId: conta.Id);
+
+        db.ChangeTracker.Clear();
+        (await db.CrediarioLancamentos.CountAsync(l => l.CrediarioId == conta.Id)).Should().Be(2,
+            "cada compra acumulada vira um lançamento próprio");
+
+        await service.EstornarComandaFechadaAsync(segunda.Id, Guid.NewGuid(), "lançada errado");
+
+        db.ChangeTracker.Clear();
+        var depois = await db.Crediarios.Include(c => c.Lancamentos).FirstAsync(c => c.Id == conta.Id);
+        depois.ValorEmCentavos.Should().Be(1000, "só a compra estornada sai da dívida");
+        depois.Lancamentos.Single(l => l.ComandaId == segunda.Id).EstornadoEm.Should().NotBeNull();
+        depois.Lancamentos.Single(l => l.ComandaId == primeira.Id).EstornadoEm.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task EstornarComandaFechada_PagamentoAnteriorCobertoPeloRestante_DevePermitir()
+    {
+        var db      = CreateDb(nameof(EstornarComandaFechada_PagamentoAnteriorCobertoPeloRestante_DevePermitir));
+        var service = CreateService(db);
+        var (user, product, _) = await SeedAsync(db);
+
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 2 });
+        var primeira = await db.Comandas.FirstAsync(c => c.UserId == user.Id && c.Status != ComandaStatus.Fechada);
+        await service.CloseComandaAsync(primeira.Id, Guid.NewGuid(), "Crediario");
+        var conta = await db.Crediarios.FirstAsync(c => c.UserId == user.Id);
+
+        await service.OpenComandaAsync(user.Id);
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 1 });
+        var segunda = await db.Comandas.FirstAsync(c => c.UserId == user.Id && c.Status != ComandaStatus.Fechada);
+        await service.CloseComandaAsync(segunda.Id, Guid.NewGuid(), "Crediario", crediarioExistenteId: conta.Id);
+
+        // Cliente pagou R$ 8 dos R$ 15 — sem a 2ª compra a dívida (R$ 10) ainda cobre o pago
+        conta = await db.Crediarios.FirstAsync(c => c.Id == conta.Id);
+        conta.ValorPagoEmCentavos = 800;
+        await db.SaveChangesAsync();
+
+        await service.EstornarComandaFechadaAsync(segunda.Id, Guid.NewGuid(), "lançada errado");
+
+        db.ChangeTracker.Clear();
+        var depois = await db.Crediarios.FirstAsync(c => c.Id == conta.Id);
+        depois.ValorEmCentavos.Should().Be(1000);
+        depois.SaldoRestanteEmCentavos.Should().Be(200);
+        depois.Status.Should().Be(CrediariosStatus.Aberto);
     }
 
     [Fact]

@@ -876,6 +876,25 @@ using (var scope = app.Services.CreateScope())
                 CREATE INDEX IF NOT EXISTS ix_pix_cobrancas_crediario      ON pix_cobrancas (crediario_id);
                 CREATE INDEX IF NOT EXISTS ix_pix_cobrancas_comanda        ON pix_cobrancas (comanda_id);
 
+                -- Crediário: cada compra que entra numa conta vira um lançamento próprio
+                -- (antes os itens de todas as compras viravam uma lista corrida só).
+                CREATE TABLE IF NOT EXISTS crediario_lancamentos (
+                    id                UUID         NOT NULL DEFAULT gen_random_uuid(),
+                    crediario_id      UUID         NOT NULL REFERENCES crediarios(id) ON DELETE CASCADE,
+                    origem            VARCHAR(20)  NOT NULL,
+                    comanda_id        UUID         NULL,
+                    venda_avulsa_id   VARCHAR(50)  NULL,
+                    valor_em_centavos INTEGER      NOT NULL DEFAULT 0,
+                    itens_json        TEXT         NULL,
+                    descricao         VARCHAR(500) NULL,
+                    created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                    estornado_em      TIMESTAMPTZ  NULL,
+                    CONSTRAINT pk_crediario_lancamentos PRIMARY KEY (id)
+                );
+                CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_crediario ON crediario_lancamentos (crediario_id);
+                CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_comanda   ON crediario_lancamentos (comanda_id);
+                CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_venda     ON crediario_lancamentos (venda_avulsa_id);
+
                 -- Financeiro: tabelas que dependiam só do EnsureCreated (no-op em banco já existente)
                 CREATE TABLE IF NOT EXISTS external_transactions (
                     id          UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1182,6 +1201,22 @@ using (var scope = app.Services.CreateScope())
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS ix_user_sessions_token_hash ON user_sessions (token_hash);
                 CREATE INDEX IF NOT EXISTS ix_user_sessions_user             ON user_sessions (user_id);
+
+                CREATE TABLE IF NOT EXISTS crediario_lancamentos (
+                    id                TEXT    NOT NULL PRIMARY KEY,
+                    crediario_id      TEXT    NOT NULL REFERENCES crediarios(id) ON DELETE CASCADE,
+                    origem            TEXT    NOT NULL,
+                    comanda_id        TEXT    NULL,
+                    venda_avulsa_id   TEXT    NULL,
+                    valor_em_centavos INTEGER NOT NULL DEFAULT 0,
+                    itens_json        TEXT    NULL,
+                    descricao         TEXT    NULL,
+                    created_at        TEXT    NOT NULL,
+                    estornado_em      TEXT    NULL
+                );
+                CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_crediario ON crediario_lancamentos (crediario_id);
+                CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_comanda   ON crediario_lancamentos (comanda_id);
+                CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_venda     ON crediario_lancamentos (venda_avulsa_id);
             ");
 
             // SQLite não tem ADD COLUMN IF NOT EXISTS: rodar de novo num banco que já tem
@@ -1196,6 +1231,21 @@ using (var scope = app.Services.CreateScope())
                 try { await db.Database.ExecuteSqlRawAsync(ddl); }
                 catch (Exception ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
             }
+        }
+
+        // Crediário: contas de antes da separação por compra ganham seus lançamentos.
+        // Falha aqui não derruba a API — a conta só fica sem a lista de compras até o
+        // próximo startup tentar de novo.
+        try
+        {
+            var convertidas = await CardGameStore.Services.Implementations.CrediarioLancamentos
+                .ConverterContasAntigasAsync(db);
+            if (convertidas > 0)
+                logger.LogInformation("Crediário: {Qtd} conta(s) antiga(s) convertidas em lançamentos por compra.", convertidas);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Crediário: falha ao converter contas antigas em lançamentos.");
         }
 
         // Seed: cria o admin se não existir

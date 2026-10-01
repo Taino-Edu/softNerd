@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { Fragment, useEffect, useState, useCallback } from 'react'
 import {
   crediarioApi, userApi, CrediariosDto, CrediariosClienteDto, PagamentoCrediarioDto,
-  FORMAS_PAGAMENTO_CREDIARIO, UserSummary,
+  FORMAS_PAGAMENTO_CREDIARIO, UserSummary, LancamentoCrediarioDto, OrigemLancamentoCrediario,
 } from '@/lib/api'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Badge } from '@/components/ui/Badge'
@@ -23,6 +23,25 @@ const fmtDateHour = (d: string) =>
   new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 type FilterStatus = 'todos' | 'Aberto' | 'Pago'
+
+const ORIGEM_LABEL: Record<OrigemLancamentoCrediario, string> = {
+  Comanda:     'Comanda',
+  VendaAvulsa: 'Venda no balcão',
+  Manual:      'Lançamento manual',
+  Ajuste:      'Itens adicionados na edição',
+  Legado:      'Compras anteriores',
+}
+
+// Conta sem lançamento só aparece se a conversão das contas antigas falhou no startup:
+// mostra os itens soltos como um bloco só, igual era antes.
+function comprasDa(c: CrediariosDto): LancamentoCrediarioDto[] {
+  if (c.lancamentos.length > 0) return c.lancamentos
+  if (c.itensComanda.length === 0) return []
+  return [{
+    id: 'legado', origem: 'Legado', comandaId: null, vendaAvulsaId: null, descricao: null,
+    valorEmReais: c.valorEmReais, createdAt: c.dataAbertura, estornadoEm: null, itens: c.itensComanda,
+  }]
+}
 
 // ── Modal de nova dívida manual ───────────────────────────────────────────────
 
@@ -395,6 +414,12 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
 
   const totalItens = itens.reduce((s, i) => s + i.subtotalInReais, 0)
 
+  // Os itens chegam agrupados por compra; item novo (sem compra) fica no fim.
+  function nomeCompra(id?: string | null) {
+    const l = crediario.lancamentos.find(x => x.id === id)
+    return l ? `${fmtDate(l.createdAt)} · ${ORIGEM_LABEL[l.origem] ?? l.origem}` : 'Itens novos'
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div className="bg-surface-800 border border-surface-500 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
@@ -467,9 +492,15 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
 
               {/* Lista de itens existentes */}
               {itens.length > 0 ? (
-                <div className="bg-surface-900 rounded-xl border border-surface-500 divide-y divide-surface-700 mb-3 max-h-40 overflow-y-auto">
+                <div className="bg-surface-900 rounded-xl border border-surface-500 divide-y divide-surface-700 mb-3 max-h-56 overflow-y-auto">
                   {itens.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 px-3 py-2">
+                    <Fragment key={idx}>
+                    {(idx === 0 || itens[idx - 1].lancamentoId !== item.lancamentoId) && (
+                      <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-gray-400 bg-surface-800">
+                        {nomeCompra(item.lancamentoId)}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 px-3 py-2">
                       <span className="text-xs text-gray-400 flex-1 truncate">
                         {item.quantity}× {item.itemName}
                       </span>
@@ -484,6 +515,7 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
+                    </Fragment>
                   ))}
                 </div>
               ) : (
@@ -748,13 +780,23 @@ function imprimirItens(c: CrediariosDto) {
   const w = window.open('', '_blank', 'width=480,height=640')
   if (!w) { alert('Permita pop-ups para imprimir'); return }
   const data = new Date(c.dataAbertura).toLocaleDateString('pt-BR')
-  const linhas = c.itensComanda.map(i =>
-    `<tr>
-      <td>${i.quantity}× ${i.itemName}</td>
-      <td style="text-align:right">R$ ${i.unitPriceInReais.toFixed(2).replace('.', ',')}</td>
-      <td style="text-align:right">R$ ${i.subtotalInReais.toFixed(2).replace('.', ',')}</td>
-    </tr>`
-  ).join('')
+  const brl  = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
+  const linhas = comprasDa(c)
+    .filter(l => !l.estornadoEm)
+    .map(l => {
+      const cabecalho = `<tr class="grupo">
+        <td colspan="2">${fmtDate(l.createdAt)} — ${ORIGEM_LABEL[l.origem] ?? l.origem}</td>
+        <td style="text-align:right">${l.valorEmReais > 0 ? brl(l.valorEmReais) : ''}</td>
+      </tr>`
+      const itens = l.itens.map(i =>
+        `<tr>
+          <td>${i.quantity}× ${i.itemName}</td>
+          <td style="text-align:right">${brl(i.unitPriceInReais)}</td>
+          <td style="text-align:right">${brl(i.subtotalInReais)}</td>
+        </tr>`
+      ).join('')
+      return cabecalho + itens
+    }).join('')
   w.document.write(`<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Crediário — ${c.userName}</title>
@@ -766,6 +808,7 @@ function imprimirItens(c: CrediariosDto) {
   table { width: 100%; border-collapse: collapse; margin-top: 8px; }
   th { text-align: left; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #ccc; padding: 4px 2px; }
   td { padding: 5px 2px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr.grupo td { font-weight: bold; background: #f3f3f3; border-bottom: 1px solid #ccc; padding-top: 8px; }
   .total { font-weight: bold; font-size: 14px; margin-top: 12px; text-align: right; }
   .footer { margin-top: 20px; font-size: 10px; color: #888; border-top: 1px dashed #ccc; padding-top: 8px; }
   @media print { button { display: none; } }
@@ -784,6 +827,111 @@ function imprimirItens(c: CrediariosDto) {
   w.document.close()
 }
 
+// ── Compras dentro da conta ───────────────────────────────────────────────────
+// Cada compra (comanda, venda do balcão, lançamento manual) vira uma linha com
+// data e valor; os itens ficam dentro, fechados — antes todos os itens de todas
+// as compras apareciam numa lista corrida só.
+
+function CompraRow({ l, inicialAberta }: { l: LancamentoCrediarioDto; inicialAberta: boolean }) {
+  const [aberta, setAberta] = useState(inicialAberta)
+  const estornada = !!l.estornadoEm
+  const temItens  = l.itens.length > 0
+
+  return (
+    <div className={clsx('bg-surface-700 rounded-lg', estornada && 'opacity-60')}>
+      <button
+        type="button"
+        onClick={() => temItens && setAberta(v => !v)}
+        className={clsx('w-full flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg', temItens && 'hover:bg-surface-600')}
+      >
+        {temItens
+          ? (aberta
+              ? <ChevronUp className="w-3 h-3 text-gray-400 shrink-0" />
+              : <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />)
+          : <span className="w-3 shrink-0" />}
+        <span className="text-gray-400 shrink-0">{fmtDate(l.createdAt)}</span>
+        <span className="text-gray-200 font-medium truncate">{ORIGEM_LABEL[l.origem] ?? l.origem}</span>
+        {l.descricao && l.origem !== 'Ajuste' && (
+          <span className="text-gray-400 truncate hidden sm:inline">— {l.descricao}</span>
+        )}
+        {estornada && (
+          <span className="text-[10px] uppercase tracking-wide text-red-400 border border-red-500/30 rounded px-1.5 shrink-0">
+            estornada
+          </span>
+        )}
+        <span className="ml-auto text-gray-400 shrink-0">
+          {l.itens.length} {l.itens.length === 1 ? 'item' : 'itens'}
+        </span>
+        {l.valorEmReais > 0 && (
+          <span className={clsx('font-mono shrink-0 w-20 text-right', estornada ? 'line-through text-gray-400' : 'text-accent-gold')}>
+            {fmt(l.valorEmReais)}
+          </span>
+        )}
+      </button>
+      {aberta && temItens && (
+        <div className="border-t border-surface-600 px-3 py-1.5 space-y-0.5">
+          {l.itens.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between text-xs py-1 pl-5">
+              <span className="text-gray-300 truncate">{item.quantity}× {item.itemName}</span>
+              <span className="text-gray-400 font-mono ml-2 shrink-0">{fmt(item.subtotalInReais)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ComprasDaConta({ c, inicialAberto }: { c: CrediariosDto; inicialAberto: boolean }) {
+  const [aberto, setAberto] = useState(inicialAberto)
+  const compras = comprasDa(c)
+  if (compras.length === 0) return null
+
+  const ativas      = compras.filter(l => !l.estornadoEm)
+  const somaCompras = ativas.reduce((s, l) => s + l.valorEmReais, 0)
+  // Valor da conta editado à mão não bate com a soma das compras — mostra a diferença.
+  const ajusteValor = c.lancamentos.length > 0 ? c.valorEmReais - somaCompras : 0
+  const totalItens  = ativas.reduce((s, l) => s + l.itens.length, 0)
+  const qtdCompras  = ativas.filter(l => l.origem !== 'Ajuste').length
+
+  return (
+    <div className="mt-3 border-t border-surface-500 pt-3">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={() => setAberto(v => !v)}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          <Package className="w-3.5 h-3.5" />
+          {qtdCompras} compra{qtdCompras !== 1 ? 's' : ''} · {totalItens} {totalItens === 1 ? 'item' : 'itens'}
+          {aberto ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+        </button>
+        {totalItens > 0 && (
+          <button
+            onClick={() => imprimirItens(c)}
+            className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+            title="Imprimir lista de produtos"
+          >
+            <Printer className="w-3.5 h-3.5" /> Imprimir
+          </button>
+        )}
+      </div>
+      {aberto && (
+        <div className="space-y-1.5">
+          {compras.map(l => (
+            <CompraRow key={l.id} l={l} inicialAberta={compras.length === 1} />
+          ))}
+          {Math.abs(ajusteValor) >= 0.01 && (
+            <div className="flex items-center justify-between px-3 py-2 text-xs rounded-lg border border-dashed border-surface-500">
+              <span className="text-gray-400 pl-5">Ajuste manual no valor da conta</span>
+              <span className="font-mono text-gray-300">{ajusteValor > 0 ? '+' : '−'} {fmt(Math.abs(ajusteValor))}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CrediarioCard({
   c,
   compact = false,
@@ -800,7 +948,6 @@ function CrediarioCard({
   onCobrancaPix: (c: CrediariosDto) => void
 }) {
   const [expandido,   setExpandido]   = useState(false)
-  const [expandItens, setExpandItens] = useState(compact) // auto-expande itens dentro do card de pessoa
 
   const progresso = c.valorEmReais > 0
     ? Math.min(100, (c.valorPagoEmReais / c.valorEmReais) * 100)
@@ -921,41 +1068,13 @@ function CrediarioCard({
         </div>
       )}
 
-      {/* Itens da comanda de origem */}
-      {c.itensComanda.length > 0 && (
-        <div className="mt-3 border-t border-surface-500 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => setExpandItens(v => !v)}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
-            >
-              <Package className="w-3.5 h-3.5" />
-              {c.itensComanda.length} produto{c.itensComanda.length !== 1 ? 's' : ''} na comanda
-              {expandItens ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
-            </button>
-            <button
-              onClick={() => imprimirItens(c)}
-              className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
-              title="Imprimir lista de produtos"
-            >
-              <Printer className="w-3.5 h-3.5" /> Imprimir
-            </button>
-          </div>
-          {expandItens && (
-            <div className="space-y-1">
-              {c.itensComanda.map((item: ItemCrediarioDto, idx: number) => (
-                <div key={idx} className="flex items-center justify-between bg-surface-700 rounded-lg px-3 py-2 text-xs">
-                  <span className="text-gray-300 flex-1 truncate">
-                    {item.quantity}× {item.itemName}
-                  </span>
-                  <span className="text-accent-gold font-mono ml-2 shrink-0">
-                    R$ {item.subtotalInReais.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Compras que entraram na conta, cada uma com seus itens */}
+      <ComprasDaConta c={c} inicialAberto={compact} />
+
+      {c.valorExcedenteEmReais > 0 && (
+        <p className="mt-3 text-xs text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
+          {fmt(c.valorExcedenteEmReais)} pagos a mais (Pix pago depois do acerto) — o valor virou crédito no saldo do cliente.
+        </p>
       )}
 
       {/* Histórico de pagamentos */}

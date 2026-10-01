@@ -7,6 +7,9 @@
 // GET  /api/crediarios/meu                 → Cliente: seu crediário ativo
 // PUT  /api/crediarios/{id}/pagar          → Admin: quita 100% (legado)
 // POST /api/crediarios/{id}/pagamento      → Admin: registra pagamento parcial ou total
+//
+// Cada compra da conta é um CrediarioLancamento — o DTO devolve as compras
+// separadas (Lancamentos) e a lista corrida (ItensComanda) pra impressão.
 // =============================================================================
 
 using System.Text.Json;
@@ -66,11 +69,6 @@ public class CrediariosController : ControllerBase
                              ? request.DataAbertura.Value.ToUniversalTime()
                              : agora;
 
-        // Serializa lista de itens se informada
-        string? itensJson = null;
-        if (request.Itens != null && request.Itens.Count > 0)
-            itensJson = JsonSerializer.Serialize(request.Itens);
-
         var crediario = new Crediario
         {
             UserId           = request.UserId,
@@ -85,8 +83,16 @@ public class CrediariosController : ControllerBase
                                    ? "Dívida anterior ao sistema"
                                    : request.Observacao,
             AbertoPorAdminId = adminId,
-            ItensJson        = itensJson,
         };
+        crediario.Lancamentos.Add(new CrediarioLancamento
+        {
+            CrediarioId     = crediario.Id,
+            Origem          = CrediarioLancamentoOrigem.Manual,
+            ValorEmCentavos = request.ValorEmCentavos,
+            ItensJson       = CrediarioLancamentos.SerializarItens(request.Itens ?? new List<ItemCrediarioDto>()),
+            Descricao       = crediario.Observacao,
+            CreatedAt       = dataAbert,
+        });
 
         _db.Crediarios.Add(crediario);
         await _db.SaveChangesAsync();
@@ -95,7 +101,7 @@ public class CrediariosController : ControllerBase
         var saved = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
-            .Include(c => c.Comanda).ThenInclude(cmd => cmd!.Items)
+            .Include(c => c.Lancamentos)
             .FirstAsync(c => c.Id == crediario.Id);
 
         _logger.LogInformation(
@@ -115,22 +121,17 @@ public class CrediariosController : ControllerBase
         var crediarios = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
-            .Include(c => c.Comanda).ThenInclude(cmd => cmd!.Items)
+            .Include(c => c.Lancamentos)
             .Where(c => c.Status == CrediariosStatus.Aberto)
             .OrderBy(c => c.DataVencimento)
             .ToListAsync();
-
-        // Carrega comandas de crediário de todos os usuários para MapToDto conseguir resolver itens
-        var userIds        = crediarios.Select(c => c.UserId).Distinct().ToList();
-        var comandasPorUser = await CarregarComandasCrediario(userIds);
 
         var agora = DateTime.UtcNow;
         var grupos = crediarios
             .GroupBy(c => c.UserId)
             .Select(g =>
             {
-                var userComandas = comandasPorUser.GetValueOrDefault(g.Key);
-                var dividas = g.Select(c => MapToDto(c, userComandas)).ToList();
+                var dividas = g.Select(MapToDto).ToList();
                 var user    = g.First().User;
                 return new CrediariosClienteDto
                 {
@@ -162,6 +163,7 @@ public class CrediariosController : ControllerBase
         var query = _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
+            .Include(c => c.Lancamentos)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status) &&
@@ -172,9 +174,7 @@ public class CrediariosController : ControllerBase
             .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
 
-        var userIds = crediarios.Select(c => c.UserId).Distinct().ToList();
-        var comandas = await CarregarComandasCrediario(userIds);
-        return Ok(crediarios.Select(c => MapToDto(c, comandas.GetValueOrDefault(c.UserId))).ToList());
+        return Ok(crediarios.Select(MapToDto).ToList());
     }
 
     // -------------------------------------------------------------------------
@@ -187,13 +187,12 @@ public class CrediariosController : ControllerBase
         var crediarios = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
+            .Include(c => c.Lancamentos)
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
 
-        var comandas = await CarregarComandasCrediario(new List<Guid> { userId });
-        var listaComandas = comandas.GetValueOrDefault(userId);
-        return Ok(crediarios.Select(c => MapToDto(c, listaComandas)).ToList());
+        return Ok(crediarios.Select(MapToDto).ToList());
     }
 
     // -------------------------------------------------------------------------
@@ -206,14 +205,14 @@ public class CrediariosController : ControllerBase
         var crediario = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
+            .Include(c => c.Lancamentos)
             .Where(c => c.UserId == userId && c.Status == CrediariosStatus.Aberto)
             .FirstOrDefaultAsync();
 
         if (crediario == null)
             return NotFound(new { Message = "Nenhum crediário em aberto." });
 
-        var comandas = await CarregarComandasCrediario(new List<Guid> { userId });
-        return Ok(MapToDto(crediario, comandas.GetValueOrDefault(userId)));
+        return Ok(MapToDto(crediario));
     }
 
     // -------------------------------------------------------------------------
@@ -226,29 +225,12 @@ public class CrediariosController : ControllerBase
         var lista  = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
+            .Include(c => c.Lancamentos)
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
 
-        var comandas = await CarregarComandasCrediario(new List<Guid> { userId });
-        var listaComandas = comandas.GetValueOrDefault(userId);
-        return Ok(lista.Select(c => MapToDto(c, listaComandas)).ToList());
-    }
-
-    // ── Carrega todas as comandas pagas com crediário para uma lista de usuários ──
-    private async Task<Dictionary<Guid, List<Comanda>>> CarregarComandasCrediario(List<Guid> userIds)
-    {
-        var all = await _db.Comandas
-            .Include(c => c.Items)
-            .Where(c => userIds.Contains(c.UserId)
-                     && c.PaymentMethod == "Crediario"
-                     && c.Status == ComandaStatus.Fechada
-                     && c.ClosedAt != null)
-            .ToListAsync();
-
-        return all
-            .GroupBy(c => c.UserId)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        return Ok(lista.Select(MapToDto).ToList());
     }
 
     // -------------------------------------------------------------------------
@@ -262,7 +244,7 @@ public class CrediariosController : ControllerBase
         var crediario = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
-            .Include(c => c.Comanda).ThenInclude(cmd => cmd!.Items)
+            .Include(c => c.Lancamentos)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (crediario == null)
@@ -308,7 +290,7 @@ public class CrediariosController : ControllerBase
         var crediario = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
-            .Include(c => c.Comanda).ThenInclude(cmd => cmd!.Items)
+            .Include(c => c.Lancamentos)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (crediario == null)
@@ -337,13 +319,37 @@ public class CrediariosController : ControllerBase
             crediario.DataVencimento = request.DataVencimento.Value.ToUniversalTime();
         }
 
-        // Itens editados manualmente têm prioridade; caso contrário verifica flag de limpeza
+        // Cada item volta pra compra de onde veio (LancamentoId); item novo, sem compra,
+        // vai pro bloco de ajuste manual da conta.
         if (request.Itens != null)
-            crediario.ItensJson = request.Itens.Count > 0
-                ? JsonSerializer.Serialize(request.Itens)
-                : null; // lista vazia = remove itens (deixa cair no date-range)
-        else if (request.LimparItens)
-            crediario.ItensJson = null;
+        {
+            var ativos    = crediario.Lancamentos.Where(l => l.EstornadoEm == null).ToList();
+            var idsAtivos = ativos.Select(l => l.Id).ToHashSet();
+
+            foreach (var l in ativos)
+                l.ItensJson = CrediarioLancamentos.SerializarItens(request.Itens.Where(i => i.LancamentoId == l.Id));
+
+            var semCompra = request.Itens
+                .Where(i => i.LancamentoId is null || !idsAtivos.Contains(i.LancamentoId.Value))
+                .ToList();
+            if (semCompra.Count > 0)
+            {
+                var ajuste = ativos.FirstOrDefault(l => l.Origem == CrediarioLancamentoOrigem.Ajuste);
+                if (ajuste is null)
+                {
+                    ajuste = new CrediarioLancamento
+                    {
+                        CrediarioId     = crediario.Id,
+                        Origem          = CrediarioLancamentoOrigem.Ajuste,
+                        ValorEmCentavos = 0,
+                        Descricao       = "Itens adicionados na edição da conta",
+                    };
+                    _db.CrediarioLancamentos.Add(ajuste);
+                }
+                ajuste.ItensJson = CrediarioLancamentos.SerializarItens(
+                    request.Itens.Where(i => i.LancamentoId == ajuste.Id).Concat(semCompra));
+            }
+        }
 
         await _db.SaveChangesAsync();
 
@@ -383,7 +389,7 @@ public class CrediariosController : ControllerBase
         var crediario = await _db.Crediarios
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
-            .Include(c => c.Comanda).ThenInclude(cmd => cmd!.Items)
+            .Include(c => c.Lancamentos)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (crediario == null)
@@ -392,12 +398,24 @@ public class CrediariosController : ControllerBase
         if (crediario.Status == CrediariosStatus.Pago)
             return BadRequest(new { Message = "Crediário já está quitado." });
 
+        // Os dois métodos juntos não podem passar do saldo — antes só o primeiro era
+        // conferido, e um split de 50 + 30 numa dívida de 50 registrava R$ 80 recebidos.
+        var temSegundo = !string.IsNullOrWhiteSpace(request.SecondFormaPagamento) && request.SecondValorEmCentavos > 0;
+        var totalPago  = (long)request.ValorEmCentavos + (temSegundo ? request.SecondValorEmCentavos : 0);
         var saldoAtual = crediario.SaldoRestanteEmCentavos;
-        if (request.ValorEmCentavos > saldoAtual)
+        if (totalPago > saldoAtual)
             return BadRequest(new
             {
-                Message = $"Pagamento de R$ {request.ValorEmCentavos / 100m:N2} excede o saldo restante de R$ {saldoAtual / 100m:N2}."
+                Message = temSegundo
+                    ? $"Os dois pagamentos somam R$ {totalPago / 100m:N2} e passam do saldo restante de R$ {saldoAtual / 100m:N2}."
+                    : $"Pagamento de R$ {request.ValorEmCentavos / 100m:N2} excede o saldo restante de R$ {saldoAtual / 100m:N2}."
             });
+
+        // O saldo vai mudar: QR Code gerado antes cobraria o valor velho. Derruba antes de
+        // lançar — e se o cliente acabou de pagar por ele, para aqui pra não receber duas vezes.
+        var pixPago = await EncerrarPixAtivosAsync(id);
+        if (pixPago is not null)
+            return Conflict(new { Message = pixPago });
 
         // Registra o pagamento parcial (método principal)
         var pagamento = new PagamentoCrediario
@@ -412,13 +430,13 @@ public class CrediariosController : ControllerBase
         crediario.ValorPagoEmCentavos += request.ValorEmCentavos;
 
         // Segundo método (split) — registra como entrada separada
-        if (!string.IsNullOrWhiteSpace(request.SecondFormaPagamento) && request.SecondValorEmCentavos > 0)
+        if (temSegundo)
         {
             var pagamento2 = new PagamentoCrediario
             {
                 CrediarioId     = id,
                 ValorEmCentavos = request.SecondValorEmCentavos,
-                FormaPagamento  = request.SecondFormaPagamento,
+                FormaPagamento  = request.SecondFormaPagamento!,
                 Observacao      = request.Observacao,
                 AdminId         = adminId,
             };
@@ -559,6 +577,12 @@ public class CrediariosController : ControllerBase
                           "Exclua apenas crediários sem nenhum pagamento registrado."
             });
 
+        // Excluir a conta apaga as cobranças Pix dela: um QR ainda pagável viraria
+        // dinheiro recebido sem dono.
+        var pixPago = await EncerrarPixAtivosAsync(id);
+        if (pixPago is not null)
+            return Conflict(new { Message = pixPago });
+
         _db.Crediarios.Remove(crediario);
         await _db.SaveChangesAsync();
 
@@ -568,87 +592,41 @@ public class CrediariosController : ControllerBase
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    // todasComandas: todas as comandas com PaymentMethod=Crediario deste usuário,
-    // filtradas aqui pelo período do crediário — cobre histórico e novos acúmulos.
-    private static CrediariosDto MapToDto(Crediario c, List<Comanda>? todasComandas = null)
+    private static CrediariosDto MapToDto(Crediario c)
     {
         var agora   = DateTime.UtcNow;
         var vencido = c.Status == CrediariosStatus.Aberto && c.DataVencimento < agora;
         var dias    = (int)Math.Round((c.DataVencimento - agora).TotalDays);
 
-        // Se ItensJson tem dados (acumulação manual ou multi-comanda), usa exclusivamente esses.
-        // Isso evita duplicatas quando items foram migrados para ItensJson durante acumulação.
-        // Caso contrário, busca pelos itens via ComandaId ou date-range (dados legados).
-        var fromJson = string.IsNullOrWhiteSpace(c.ItensJson)
-            ? new List<ItemCrediarioDto>()
-            : JsonSerializer.Deserialize<List<ItemCrediarioDto>>(c.ItensJson)
-              ?? new List<ItemCrediarioDto>();
+        var lancamentos = c.Lancamentos
+            .OrderBy(l => l.CreatedAt)
+            .Select(CrediarioLancamentos.ToDto)
+            .ToList();
 
-        List<ItemCrediarioDto> fromComanda;
-        if (fromJson.Count > 0)
-        {
-            // ItensJson definido manualmente — não faz lookup adicional
-            fromComanda = new List<ItemCrediarioDto>();
-        }
-        else if (c.ComandaId != null && todasComandas != null)
-        {
-            // Crediário originado de comanda: busca itens pelo período
-            var inicio = c.DataAbertura.AddSeconds(-60);
-            var fim    = c.DataPagamento.HasValue ? c.DataPagamento.Value.AddDays(1) : DateTime.MaxValue;
-            fromComanda = todasComandas
-                .Where(cmd => cmd.ClosedAt.HasValue
-                           && cmd.ClosedAt.Value >= inicio
-                           && cmd.ClosedAt.Value <= fim)
-                .SelectMany(cmd => cmd.Items)
-                .OrderBy(i => i.AddedAt)
-                .Select(i => new ItemCrediarioDto
-                {
-                    ItemName         = i.ItemNameSnapshot,
-                    Quantity         = i.Quantity,
-                    UnitPriceInReais = i.UnitPriceInCents / 100m,
-                    SubtotalInReais  = i.SubtotalInCents  / 100m,
-                })
-                .ToList();
-        }
-        else if (c.ComandaId != null)
-        {
-            fromComanda = c.Comanda?.Items
-                .OrderBy(i => i.AddedAt)
-                .Select(i => new ItemCrediarioDto
-                {
-                    ItemName         = i.ItemNameSnapshot,
-                    Quantity         = i.Quantity,
-                    UnitPriceInReais = i.UnitPriceInCents / 100m,
-                    SubtotalInReais  = i.SubtotalInCents  / 100m,
-                })
-                .ToList() ?? new List<ItemCrediarioDto>();
-        }
-        else
-        {
-            // Crediário manual (ComandaId = null, ItensJson = null) — sem itens até admin adicionar
-            fromComanda = new List<ItemCrediarioDto>();
-        }
-
-        var todosItens = fromComanda.Concat(fromJson).ToList();
+        // Conta sem lançamento só existe se a conversão do startup falhou — mostra o legado.
+        var itens = lancamentos.Count > 0
+            ? lancamentos.Where(l => l.EstornadoEm == null).SelectMany(l => l.Itens).ToList()
+            : CrediarioLancamentos.LerItens(c.ItensJson);
 
         return new CrediariosDto
         {
-            Id                   = c.Id,
-            UserId               = c.UserId,
-            UserName             = c.User?.Name ?? string.Empty,
-            UserEmail            = c.User?.Email,
-            ComandaId            = c.ComandaId,
-            ValorEmReais         = c.ValorEmReais,
-            ValorPagoEmReais     = c.ValorPagoEmReais,
-            SaldoRestanteEmReais = c.SaldoRestanteEmReais,
-            DataAbertura         = c.DataAbertura,
-            DataVencimento       = c.DataVencimento,
-            DataPagamento        = c.DataPagamento,
-            Status               = vencido ? "Vencido" : c.Status.ToString(),
-            Observacao           = c.Observacao,
-            Vencido              = vencido,
-            DiasRestantes        = dias,
-            Pagamentos           = c.Pagamentos
+            Id                    = c.Id,
+            UserId                = c.UserId,
+            UserName              = c.User?.Name ?? string.Empty,
+            UserEmail             = c.User?.Email,
+            ComandaId             = c.ComandaId,
+            ValorEmReais          = c.ValorEmReais,
+            ValorPagoEmReais      = c.ValorPagoEmReais,
+            SaldoRestanteEmReais  = c.SaldoRestanteEmReais,
+            ValorExcedenteEmReais = Math.Max(0, c.ValorPagoEmCentavos - c.ValorEmCentavos) / 100m,
+            DataAbertura          = c.DataAbertura,
+            DataVencimento        = c.DataVencimento,
+            DataPagamento         = c.DataPagamento,
+            Status                = vencido ? "Vencido" : c.Status.ToString(),
+            Observacao            = c.Observacao,
+            Vencido               = vencido,
+            DiasRestantes         = dias,
+            Pagamentos            = c.Pagamentos
                 .OrderBy(p => p.CreatedAt)
                 .Select(p => new PagamentoCrediarioDto
                 {
@@ -658,8 +636,54 @@ public class CrediariosController : ControllerBase
                     Observacao     = p.Observacao,
                     CreatedAt      = p.CreatedAt,
                 }).ToList(),
-            ItensComanda = todosItens,
+            Lancamentos           = lancamentos,
+            ItensComanda          = itens,
         };
+    }
+
+    /// <summary>
+    /// Encerra as cobranças Pix ainda ativas da conta. Antes de cancelar, confere no
+    /// Inter: se o cliente acabou de pagar, a reconciliação dá a baixa e devolve a
+    /// mensagem pro chamador parar. Se o Inter não deixar cancelar, a cobrança segue
+    /// ativa pro robô — e, se for paga, o que passar do saldo vira crédito do cliente.
+    /// </summary>
+    private async Task<string?> EncerrarPixAtivosAsync(Guid crediarioId)
+    {
+        var ativos = await _db.PixCobrancas
+            .Where(p => p.CrediarioId == crediarioId && p.Status == "ATIVA" && p.PagoEm == null)
+            .ToListAsync();
+        if (ativos.Count == 0) return null;
+
+        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+        foreach (var pix in ativos)
+        {
+            var vencida = pix.ExpiraEm is not null && pix.ExpiraEm <= DateTime.UtcNow;
+            if (!vencida)
+            {
+                var conferida = await _pixReconciliation.ReconciliarAsync(pix, GetUserId());
+                if (conferida.PagoEm is not null)
+                    return $"O cliente acabou de pagar R$ {pix.ValorEmReais:N2} pela cobrança Pix desta conta e o pagamento já foi registrado. Recarregue a tela antes de lançar outro.";
+                if (pix.Status != "ATIVA") continue; // o Inter já encerrou por conta própria
+            }
+
+            var removida = cfg is null
+                ? new PixCobrancaResult { Error = "Integração com o Inter não configurada." }
+                : await _inter.RemoverCobrancaAsync(cfg, pix.TxId);
+
+            if (removida.Error is null || vencida)
+            {
+                pix.Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR";
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Cobrança Pix {TxId} do crediário {CrediarioId} não foi cancelada no Inter ({Erro}) — segue ativa pro robô conciliar.",
+                    pix.TxId, crediarioId, removida.Error);
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        return null;
     }
 
     private Guid GetUserId()

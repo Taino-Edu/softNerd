@@ -296,15 +296,20 @@ public class VendaAvulsaService : IVendaAvulsaService
                     SubtotalInReais  = i.SubtotalInCents  / 100m,
                 }).ToList();
 
+                // A venda entra como lançamento próprio, vinculado ao id dela: separa os
+                // itens por compra e é por onde o estorno acha o que baixar.
+                var lancamento = new CrediarioLancamento
+                {
+                    Origem          = CrediarioLancamentoOrigem.VendaAvulsa,
+                    VendaAvulsaId   = venda.Id,
+                    ValorEmCentavos = primaryAmt,
+                    ItensJson       = CrediarioLancamentos.SerializarItens(novosItens),
+                };
+
                 if (crediarioExistente != null)
                 {
-                    var itensAtuais = string.IsNullOrWhiteSpace(crediarioExistente.ItensJson)
-                        ? new List<ItemCrediarioDto>()
-                        : JsonSerializer.Deserialize<List<ItemCrediarioDto>>(crediarioExistente.ItensJson)
-                          ?? new List<ItemCrediarioDto>();
-
-                    itensAtuais.AddRange(novosItens);
-                    crediarioExistente.ItensJson        = JsonSerializer.Serialize(itensAtuais);
+                    lancamento.CrediarioId = crediarioExistente.Id;
+                    _db.CrediarioLancamentos.Add(lancamento);
                     crediarioExistente.ValorEmCentavos += primaryAmt;
                     // Sem mexer no vencimento: acumular uma compra nova NÃO pode dar mais 30
                     // dias pra dívida velha (o fechamento de comanda já fazia certo).
@@ -325,8 +330,9 @@ public class VendaAvulsaService : IVendaAvulsaService
                         Status           = CrediariosStatus.Aberto,
                         AbertoPorAdminId = adminId,
                         Observacao       = "Venda avulsa no balcão",
-                        ItensJson        = JsonSerializer.Serialize(novosItens),
                     };
+                    lancamento.CrediarioId = crediario.Id;
+                    crediario.Lancamentos.Add(lancamento);
                     _db.Crediarios.Add(crediario);
                     crediarioIdVinculado = crediario.Id;
                     _logger.LogInformation(
@@ -502,13 +508,27 @@ public class VendaAvulsaService : IVendaAvulsaService
 
         // ── Crediário gerado pela venda ───────────────────────────────────────────
         Crediario? crediario = null;
+        CrediarioLancamento? lancamentoCrediario = null;
+        var valorCrediario = venda.TotalInCents - venda.SecondPaymentAmountInCents;
         if (venda.CrediarioId.HasValue)
         {
-            crediario = await _db.Crediarios.FirstOrDefaultAsync(c => c.Id == venda.CrediarioId.Value);
-            if (crediario is not null && crediario.ValorPagoEmCentavos > 0)
-                throw new InvalidOperationException(
-                    $"O crediário desta venda já tem R$ {crediario.ValorPagoEmCentavos / 100m:N2} pagos. " +
-                    "Acerte o crediário do cliente antes de estornar a venda.");
+            lancamentoCrediario = await _db.CrediarioLancamentos
+                .Include(l => l.Crediario)
+                .FirstOrDefaultAsync(l => l.VendaAvulsaId == venda.Id && l.EstornadoEm == null);
+
+            if (lancamentoCrediario is not null)
+            {
+                crediario      = lancamentoCrediario.Crediario;
+                valorCrediario = lancamentoCrediario.ValorEmCentavos;
+            }
+            else
+            {
+                // Venda de antes da separação por compra: acha a conta pelo vínculo da venda.
+                crediario = await _db.Crediarios.FirstOrDefaultAsync(c => c.Id == venda.CrediarioId.Value);
+            }
+
+            if (crediario is not null)
+                CrediarioLancamentos.ValidarEstorno(crediario, valorCrediario);
         }
 
         // ── Devolve estoque ───────────────────────────────────────────────────────
@@ -558,14 +578,7 @@ public class VendaAvulsaService : IVendaAvulsaService
 
         // ── Baixa a dívida do crediário ───────────────────────────────────────────
         if (crediario is not null)
-        {
-            var principal = venda.TotalInCents - venda.SecondPaymentAmountInCents;
-            crediario.ValorEmCentavos = Math.Max(0, crediario.ValorEmCentavos - principal);
-
-            // Conta que ficou zerada e sem pagamento nenhum não deve continuar cobrando.
-            if (crediario.ValorEmCentavos == 0)
-                _db.Crediarios.Remove(crediario);
-        }
+            CrediarioLancamentos.AplicarEstorno(_db, crediario, lancamentoCrediario, valorCrediario, adminId);
 
         await _db.SaveChangesAsync();
 

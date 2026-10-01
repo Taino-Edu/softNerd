@@ -176,28 +176,51 @@ public class PixReconciliationService : IPixReconciliationService
     }
 
     // ── Crediário: paga → registra PagamentoCrediario e quita se zerou ────────
+    // O dinheiro já caiu no Inter, então o pagamento é registrado INTEIRO mesmo quando
+    // a conta foi acertada por outro meio depois de o QR ser gerado (ou já estava
+    // quitada). Antes a baixa parava calada e o valor entrava no banco sem aparecer
+    // em lugar nenhum. O que passar do saldo vira crédito (cashback) do cliente.
     private async Task BaixarCrediarioAsync(PixCobranca pix, Guid adminId)
     {
         var crediario = await _db.Crediarios
             .Include(c => c.User)
             .FirstOrDefaultAsync(c => c.Id == pix.CrediarioId);
 
-        if (crediario is null || crediario.Status == CrediariosStatus.Pago) return;
+        if (crediario is null)
+        {
+            _logger.LogError(
+                "Cobrança Pix {TxId} paga (R$ {Valor:N2}), mas o crediário {CrediarioId} não existe mais — confira no extrato do Inter e lance à mão.",
+                pix.TxId, pix.ValorEmReais, pix.CrediarioId);
+            return;
+        }
 
-        var valorPagar = Math.Min(pix.ValorEmCentavos, crediario.SaldoRestanteEmCentavos);
+        var jaQuitado = crediario.Status == CrediariosStatus.Pago;
+        var aplicado  = jaQuitado ? 0 : Math.Min(pix.ValorEmCentavos, crediario.SaldoRestanteEmCentavos);
+        var excedente = pix.ValorEmCentavos - aplicado;
 
         _db.PagamentosCrediario.Add(new PagamentoCrediario
         {
             CrediarioId     = crediario.Id,
-            ValorEmCentavos = valorPagar,
+            ValorEmCentavos = pix.ValorEmCentavos,
             FormaPagamento  = "Pix",
-            Observacao      = $"Cobrança Pix automática (txid {pix.TxId})",
+            Observacao      = excedente > 0
+                ? $"Cobrança Pix automática (txid {pix.TxId}) — R$ {excedente / 100m:N2} acima do saldo virou crédito do cliente"
+                : $"Cobrança Pix automática (txid {pix.TxId})",
             AdminId         = adminId,
         });
-        crediario.ValorPagoEmCentavos += valorPagar;
+        crediario.ValorPagoEmCentavos += pix.ValorEmCentavos;
+
+        if (excedente > 0 && crediario.User is not null)
+        {
+            crediario.User.BalanceInCents += excedente;
+            crediario.User.UpdatedAt       = DateTime.UtcNow;
+            _logger.LogWarning(
+                "Cobrança Pix {TxId} pagou R$ {Excedente:N2} além do saldo do crediário {CrediarioId} — valor creditado no saldo do cliente {UserId}.",
+                pix.TxId, excedente / 100m, crediario.Id, crediario.UserId);
+        }
 
         // Quita automaticamente se saldo chegou a zero (tolerância de 1 centavo para arredondamentos)
-        if (crediario.SaldoRestanteEmCentavos <= 1)
+        if (!jaQuitado && crediario.SaldoRestanteEmCentavos <= 1)
         {
             crediario.Status         = CrediariosStatus.Pago;
             crediario.DataPagamento  = DateTime.UtcNow;
@@ -210,7 +233,7 @@ public class PixReconciliationService : IPixReconciliationService
 
         _logger.LogInformation(
             "Cobrança Pix {TxId} confirmada — pagamento de R$ {Valor:N2} registrado no crediário {CrediarioId}",
-            pix.TxId, valorPagar / 100m, crediario.Id);
+            pix.TxId, pix.ValorEmReais, crediario.Id);
     }
 
     // ── Campeonato: paga → marca a inscrição como paga (Pix) ──────────────────
