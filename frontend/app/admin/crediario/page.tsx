@@ -11,10 +11,11 @@ import {
   CreditCard, CheckCircle, Clock, AlertTriangle,
   Filter, Loader2, User, Calendar, ChevronDown, ChevronUp,
   Plus, History, DollarSign, X, Search, Pencil, Printer, Package, Trash2,
-  MessageCircle, RefreshCw, QrCode,
+  MessageCircle, RefreshCw, QrCode, Send,
 } from 'lucide-react'
 import { ItemCrediarioDto } from '@/lib/api'
 import { CobrancaPixModal } from '@/components/admin/CobrancaPixModal'
+import { AvisosAutomaticosButton, AvisarModal, UltimoAviso } from '@/components/admin/CrediarioAvisos'
 import clsx from 'clsx'
 
 const fmt     = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
@@ -941,6 +942,7 @@ function CrediarioCard({
   onEditar,
   onDeletar,
   onCobrancaPix,
+  onAvisar,
 }: {
   c: CrediariosDto
   compact?: boolean
@@ -948,6 +950,7 @@ function CrediarioCard({
   onEditar: (c: CrediariosDto) => void
   onDeletar: (c: CrediariosDto) => void
   onCobrancaPix: (c: CrediariosDto) => void
+  onAvisar: (c: CrediariosDto) => void
 }) {
   const [expandido,   setExpandido]   = useState(false)
 
@@ -1001,6 +1004,7 @@ function CrediarioCard({
                     : `Vence em ${c.diasRestantes} dias (${fmtDate(c.dataVencimento)})`
                 }
               </span>
+              {c.status !== 'Pago' && <UltimoAviso avisos={c.avisos} />}
             </div>
           </div>
         </div>
@@ -1036,6 +1040,12 @@ function CrediarioCard({
                 className="btn-secondary text-sm py-1.5 px-4 whitespace-nowrap"
               >
                 <QrCode className="w-4 h-4" /> Cobrar via Pix
+              </button>
+              <button
+                onClick={() => onAvisar(c)}
+                className="btn-secondary text-sm py-1.5 px-4 whitespace-nowrap"
+              >
+                <Send className="w-4 h-4" /> Avisar
               </button>
               <button
                 onClick={() => onEditar(c)}
@@ -1120,12 +1130,14 @@ function ClienteCrediarioCard({
   onEditar,
   onDeletar,
   onCobrancaPix,
+  onAvisar,
 }: {
   grupo: CrediariosClienteDto
   onPagamento: (c: CrediariosDto) => void
   onEditar: (c: CrediariosDto) => void
   onDeletar: (c: CrediariosDto) => void
   onCobrancaPix: (c: CrediariosDto) => void
+  onAvisar: (c: CrediariosDto) => void
 }) {
   const [aberto, setAberto] = useState(grupo.temVencido)
 
@@ -1203,6 +1215,7 @@ function ClienteCrediarioCard({
               onEditar={onEditar}
               onDeletar={onDeletar}
               onCobrancaPix={onCobrancaPix}
+              onAvisar={onAvisar}
             />
           ))}
         </div>
@@ -1223,6 +1236,7 @@ export default function CrediarioPage() {
   const [editarCrediario, setEditarCrediario] = useState<CrediariosDto | null>(null)
   const [pixCrediario, setPixCrediario]       = useState<CrediariosDto | null>(null)
   const [showNovaDivida, setShowNovaDivida] = useState(false)
+  const [avisarCrediario, setAvisarCrediario] = useState<CrediariosDto | null>(null)
 
   async function handleDeletar(crediario: CrediariosDto) {
     if (!window.confirm(`Excluir o crediário de ${crediario.userName}?\nEsta ação não pode ser desfeita.`)) return
@@ -1310,6 +1324,13 @@ export default function CrediarioPage() {
           onSuccess={fetchCrediarios}
         />
       )}
+      {avisarCrediario && (
+        <AvisarModal
+          crediario={avisarCrediario}
+          onClose={() => setAvisarCrediario(null)}
+          onSuccess={fetchCrediarios}
+        />
+      )}
       {pixCrediario && (
         <CobrancaPixModal
           clienteNome={pixCrediario.userName}
@@ -1324,9 +1345,12 @@ export default function CrediarioPage() {
         title="Crediário"
         subtitle="Clientes com pagamento em aberto — suporta pagamentos parciais"
         actions={
-          <button onClick={() => setShowNovaDivida(true)} className="btn-primary shrink-0">
-            <Plus className="w-4 h-4" /> Nova Dívida
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <AvisosAutomaticosButton />
+            <button onClick={() => setShowNovaDivida(true)} className="btn-primary shrink-0">
+              <Plus className="w-4 h-4" /> Nova Dívida
+            </button>
+          </div>
         }
       />
 
@@ -1407,6 +1431,7 @@ export default function CrediarioPage() {
                 onEditar={setEditarCrediario}
                 onDeletar={handleDeletar}
                 onCobrancaPix={setPixCrediario}
+                onAvisar={setAvisarCrediario}
               />
             ))}
           </div>
@@ -1430,6 +1455,7 @@ export default function CrediarioPage() {
               onEditar={setEditarCrediario}
               onDeletar={handleDeletar}
               onCobrancaPix={setPixCrediario}
+              onAvisar={setAvisarCrediario}
             />
           ))}
         </div>

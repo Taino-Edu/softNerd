@@ -93,6 +93,9 @@ public class Crediario
 
     public ICollection<PagamentoCrediario> Pagamentos { get; set; } = new List<PagamentoCrediario>();
 
+    /// <summary>Lembretes de vencimento que saíram pra esta conta.</summary>
+    public ICollection<CrediarioAviso> Avisos { get; set; } = new List<CrediarioAviso>();
+
     // ── Calculado ─────────────────────────────────────────────────────────────
 
     [NotMapped]

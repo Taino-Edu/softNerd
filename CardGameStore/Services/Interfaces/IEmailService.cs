@@ -22,6 +22,12 @@ public interface IEmailService
     /// <summary>Notifica o cliente que seu crediário foi quitado.</summary>
     Task SendCrediarioPagoAsync(string toEmail, string toName, decimal valor);
 
+    /// <summary>
+    /// Lembrete de vencimento do crediário. <paramref name="mensagem"/> é texto puro
+    /// (o mesmo do WhatsApp) — é escapado e as quebras de linha viram &lt;br&gt;.
+    /// </summary>
+    Task SendCrediarioLembreteAsync(string toEmail, string toName, string assunto, string mensagem);
+
     // ── Campeonatos ───────────────────────────────────────────────────────────
 
     /// <summary>Confirmação de inscrição em campeonato.</summary>

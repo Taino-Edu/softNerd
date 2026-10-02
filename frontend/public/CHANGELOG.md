@@ -1,5 +1,19 @@
 # Changelog — Santuário Nerd
 
+## [v1.34.0] — 2026-10-02
+
+### Adicionado
+- **Aviso automático de vencimento do crediário**: o sistema lembra o cliente sozinho nos dias escolhidos — por padrão 3 dias antes, no dia do vencimento e com 3, 7, 15 e 30 dias de atraso. A mensagem sai pelo sininho e push do app, por e-mail e, se ligado, pelo WhatsApp da loja. Cliente com mais de uma conta recebe uma mensagem só, com cada conta e o total em aberto. Cada aviso sai uma vez por vencimento (se o prazo for prorrogado, recomeça pela data nova), só a partir do horário escolhido e nunca depois das 20h, e quem já foi avisado à mão no dia não recebe outro
+- **Configuração dos avisos**: botão "Avisos" no topo da tela do crediário — liga e desliga, escolhe os dias, o horário e os canais, e permite um recado no fim da mensagem (ex.: a chave Pix da loja). O WhatsApp vem desligado: mensagem automática pelo número da loja é escolha do dono. A tela mostra se o WhatsApp está conectado
+- **Resumo do dia pro admin**: uma notificação por dia com quantas contas vencem hoje, quantas estão atrasadas e quanto somam, e pra quantos clientes saiu lembrete
+- **Botão "Avisar" em cada conta**: mostra a mensagem antes de mandar e envia na hora pelos canais ligados. Sem o WhatsApp da loja conectado, "Pelo meu WhatsApp" abre a conversa no celular com o texto pronto, e dá pra copiar o texto
+- **Último aviso no card**: cada conta mostra quando foi avisada e por onde ("Avisado 02/10, 12:00 · App, E-mail"), com o motivo quando algum canal falhou
+- **Link do aviso abre direto na dívida**: a notificação leva o cliente pra aba Dívida do perfil
+
+### Corrigido
+- **E-mail de crediário aberto**: dizia que novas comandas ficariam bloqueadas enquanto houvesse dívida (não é verdade há tempos) e mostrava o vencimento no fuso do servidor. Agora aponta pra aba Dívida do perfil e mostra a data certa
+- **Manual do crediário**: atualizado — falava em "um crediário por vez", em "Marcar como Pago" e em prazo renovado a cada pagamento, nada disso vale mais
+
 ## [v1.33.1] — 2026-10-01
 
 ### Corrigido

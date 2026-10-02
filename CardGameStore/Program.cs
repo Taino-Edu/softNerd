@@ -429,6 +429,11 @@ if (!useCentralFiscalEngine)
 builder.Services.AddScoped<IPixReconciliationService, PixReconciliationService>();
 builder.Services.AddHostedService<PixReconciliationBackgroundService>();
 
+// Crediário — lembretes de vencimento (cliente: sininho/push, e-mail, WhatsApp;
+// admin: resumo do dia). Configurado em /admin/crediario → Avisos automáticos.
+builder.Services.AddScoped<CrediarioAvisoService>();
+builder.Services.AddHostedService<CrediarioAvisoBackgroundService>();
+
 // ---------------------------------------------------------------------------
 // 12. CORS — origens lidas de config para facilitar deploy sem rebuild
 // ---------------------------------------------------------------------------
@@ -895,6 +900,36 @@ using (var scope = app.Services.CreateScope())
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_comanda   ON crediario_lancamentos (comanda_id);
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_venda     ON crediario_lancamentos (venda_avulsa_id);
 
+                -- Crediário: lembretes de vencimento (config de linha única + histórico)
+                CREATE TABLE IF NOT EXISTS crediario_aviso_config (
+                    id               UUID         NOT NULL,
+                    ativo            BOOLEAN      NOT NULL DEFAULT TRUE,
+                    hora_envio       INTEGER      NOT NULL DEFAULT 10,
+                    marcos_json      TEXT         NOT NULL DEFAULT '[-3,0,3,7,15,30]',
+                    canal_app        BOOLEAN      NOT NULL DEFAULT TRUE,
+                    canal_email      BOOLEAN      NOT NULL DEFAULT TRUE,
+                    canal_whatsapp   BOOLEAN      NOT NULL DEFAULT FALSE,
+                    resumo_admin     BOOLEAN      NOT NULL DEFAULT TRUE,
+                    mensagem_extra   VARCHAR(300) NULL,
+                    ultimo_resumo_em TIMESTAMPTZ  NULL,
+                    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                    CONSTRAINT pk_crediario_aviso_config PRIMARY KEY (id)
+                );
+                CREATE TABLE IF NOT EXISTS crediario_avisos (
+                    id                    UUID         NOT NULL DEFAULT gen_random_uuid(),
+                    crediario_id          UUID         NOT NULL REFERENCES crediarios(id) ON DELETE CASCADE,
+                    marco                 INTEGER      NULL,
+                    vencimento_referencia TIMESTAMPTZ  NOT NULL,
+                    canais                VARCHAR(60)  NOT NULL DEFAULT '',
+                    falhas                VARCHAR(500) NULL,
+                    enviado_por_admin_id  UUID         NULL,
+                    enviado_em            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                    CONSTRAINT pk_crediario_avisos PRIMARY KEY (id)
+                );
+                CREATE INDEX IF NOT EXISTS ix_crediario_avisos_crediario ON crediario_avisos (crediario_id);
+                CREATE UNIQUE INDEX IF NOT EXISTS ux_crediario_avisos_marco
+                    ON crediario_avisos (crediario_id, marco, vencimento_referencia) WHERE marco IS NOT NULL;
+
                 -- Vencimento escolhido como data era gravado à meia-noite UTC (21h da véspera
                 -- em Brasília) e a conta aparecia vencida um dia antes. Passa as contas
                 -- abertas pro fim do dia escolhido, no horário de Brasília. Uma vez só.
@@ -1233,6 +1268,33 @@ using (var scope = app.Services.CreateScope())
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_crediario ON crediario_lancamentos (crediario_id);
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_comanda   ON crediario_lancamentos (comanda_id);
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_venda     ON crediario_lancamentos (venda_avulsa_id);
+
+                CREATE TABLE IF NOT EXISTS crediario_aviso_config (
+                    id               TEXT    NOT NULL PRIMARY KEY,
+                    ativo            INTEGER NOT NULL DEFAULT 1,
+                    hora_envio       INTEGER NOT NULL DEFAULT 10,
+                    marcos_json      TEXT    NOT NULL DEFAULT '[-3,0,3,7,15,30]',
+                    canal_app        INTEGER NOT NULL DEFAULT 1,
+                    canal_email      INTEGER NOT NULL DEFAULT 1,
+                    canal_whatsapp   INTEGER NOT NULL DEFAULT 0,
+                    resumo_admin     INTEGER NOT NULL DEFAULT 1,
+                    mensagem_extra   TEXT    NULL,
+                    ultimo_resumo_em TEXT    NULL,
+                    updated_at       TEXT    NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS crediario_avisos (
+                    id                    TEXT    NOT NULL PRIMARY KEY,
+                    crediario_id          TEXT    NOT NULL REFERENCES crediarios(id) ON DELETE CASCADE,
+                    marco                 INTEGER NULL,
+                    vencimento_referencia TEXT    NOT NULL,
+                    canais                TEXT    NOT NULL DEFAULT '',
+                    falhas                TEXT    NULL,
+                    enviado_por_admin_id  TEXT    NULL,
+                    enviado_em            TEXT    NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS ix_crediario_avisos_crediario ON crediario_avisos (crediario_id);
+                CREATE UNIQUE INDEX IF NOT EXISTS ux_crediario_avisos_marco
+                    ON crediario_avisos (crediario_id, marco, vencimento_referencia) WHERE marco IS NOT NULL;
             ");
 
             // SQLite não tem ADD COLUMN IF NOT EXISTS: rodar de novo num banco que já tem

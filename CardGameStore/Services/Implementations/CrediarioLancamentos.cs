@@ -26,8 +26,11 @@ public static class CrediarioLancamentos
     public static readonly string[] FormasDePagamento =
         ["Dinheiro", "Pix", "CartaoCredito", "CartaoDebito"];
 
-    public static DateTime HojeBrasil() =>
-        TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BrazilZone).Date;
+    public static DateTime HojeBrasil() => ParaBrasilia(DateTime.UtcNow).Date;
+
+    /// <summary>Instante UTC (como vem do banco) no relógio de Brasília.</summary>
+    public static DateTime ParaBrasilia(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), BrazilZone);
 
     /// <summary>
     /// Vencimento escolhido como data vale o dia inteiro no horário de Brasília. Antes a

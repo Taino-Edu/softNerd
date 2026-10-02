@@ -34,6 +34,8 @@ public class AppDbContext : DbContext
     public DbSet<Crediario>               Crediarios               { get; set; }
     public DbSet<PagamentoCrediario>      PagamentosCrediario      { get; set; }
     public DbSet<CrediarioLancamento>     CrediarioLancamentos     { get; set; }
+    public DbSet<CrediarioAviso>          CrediarioAvisos          { get; set; }
+    public DbSet<CrediarioAvisoConfig>    CrediarioAvisoConfigs    { get; set; }
     public DbSet<PixCobranca>             PixCobrancas             { get; set; }
     public DbSet<Perfil>                  Perfis                   { get; set; }
     public DbSet<Deck>                    Decks                    { get; set; }
@@ -395,6 +397,27 @@ public class AppDbContext : DbContext
                   .HasDatabaseName("ix_crediario_lancamentos_comanda");
             entity.HasIndex(l => l.VendaAvulsaId)
                   .HasDatabaseName("ix_crediario_lancamentos_venda");
+        });
+
+        // =====================================================================
+        // CREDIARIO AVISO
+        // =====================================================================
+        modelBuilder.Entity<CrediarioAviso>(entity =>
+        {
+            entity.HasOne(a => a.Crediario)
+                  .WithMany(c => c.Avisos)
+                  .HasForeignKey(a => a.CrediarioId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(a => a.CrediarioId)
+                  .HasDatabaseName("ix_crediario_avisos_crediario");
+
+            // Um aviso por marco por vencimento — é a trava contra mandar o mesmo
+            // lembrete duas vezes (duas instâncias ou duas rodadas no mesmo dia).
+            entity.HasIndex(a => new { a.CrediarioId, a.Marco, a.VencimentoReferencia })
+                  .IsUnique()
+                  .HasFilter("marco IS NOT NULL")
+                  .HasDatabaseName("ux_crediario_avisos_marco");
         });
 
         // =====================================================================

@@ -266,6 +266,12 @@ export default function PerfilPage() {
   const [loading,        setLoading]        = useState(true)
   const [expanded,       setExpanded]       = useState<string | null>(null)
   const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas' | 'notas'>('pontos')
+
+  // Link do lembrete de vencimento abre direto na aba da dívida (/cliente/perfil?tab=crediario).
+  // Lido do window em vez de useSearchParams pra não precisar de Suspense na página inteira.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'crediario') setTab('crediario')
+  }, [])
   const [filtroPagamento, setFiltroPagamento] = useState<string | null>(null)
   const [isUploading,    setIsUploading]    = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)

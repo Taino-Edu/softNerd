@@ -6,6 +6,10 @@
 // GET  /api/crediarios/usuario/{userId}    → Admin: crediários de um cliente
 // GET  /api/crediarios/meu                 → Cliente: seu crediário ativo
 // POST /api/crediarios/{id}/pagamento      → Admin: registra pagamento parcial ou total
+// GET  /api/crediarios/avisos/config        → Admin: config dos lembretes automáticos
+// PUT  /api/crediarios/avisos/config        → Admin: salva a config
+// GET  /api/crediarios/{id}/aviso/previa    → Admin: texto do lembrete, sem enviar
+// POST /api/crediarios/{id}/aviso           → Admin: manda o lembrete agora
 //
 // Cada compra da conta é um CrediarioLancamento — o DTO devolve as compras
 // separadas (Lancamentos) e a lista corrida (ItensComanda) pra impressão.
@@ -34,11 +38,16 @@ public class CrediariosController : ControllerBase
     private readonly InterSyncService _inter;
     private readonly IPixReconciliationService _pixReconciliation;
     private readonly IAuditService   _audit;
+    private readonly CrediarioAvisoService _avisos;
+    private readonly IWhatsAppGateway _whatsApp;
     private readonly ILogger<CrediariosController> _logger;
 
     public CrediariosController(AppDbContext db, IEmailService email, InterSyncService inter,
-        IPixReconciliationService pixReconciliation, IAuditService audit, ILogger<CrediariosController> logger)
+        IPixReconciliationService pixReconciliation, IAuditService audit,
+        CrediarioAvisoService avisos, IWhatsAppGateway whatsApp, ILogger<CrediariosController> logger)
     {
+        _avisos            = avisos;
+        _whatsApp          = whatsApp;
         _db                = db;
         _email             = email;
         _inter             = inter;
@@ -103,6 +112,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .FirstAsync(c => c.Id == crediario.Id);
 
         _logger.LogInformation(
@@ -123,6 +133,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .Where(c => c.Status == CrediariosStatus.Aberto)
             .OrderBy(c => c.DataVencimento)
             .ToListAsync();
@@ -165,6 +176,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status) &&
@@ -189,6 +201,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
@@ -207,6 +220,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .Where(c => c.UserId == userId && c.Status == CrediariosStatus.Aberto)
             .FirstOrDefaultAsync();
 
@@ -227,6 +241,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
@@ -248,6 +263,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (crediario == null)
@@ -358,6 +374,7 @@ public class CrediariosController : ControllerBase
             .Include(c => c.User)
             .Include(c => c.Pagamentos)
             .Include(c => c.Lancamentos)
+            .Include(c => c.Avisos)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (crediario == null)
@@ -549,6 +566,102 @@ public class CrediariosController : ControllerBase
     }
 
     // -------------------------------------------------------------------------
+    // Lembretes de vencimento
+    // -------------------------------------------------------------------------
+    [HttpGet("avisos/config")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<ActionResult<CrediarioAvisoConfigDto>> GetAvisoConfig(CancellationToken ct)
+    {
+        var cfg    = await _avisos.ObterConfigAsync();
+        var status = await _whatsApp.GetStatusAsync(ct);
+        return Ok(ToConfigDto(cfg, status.Connected));
+    }
+
+    [HttpPut("avisos/config")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<ActionResult<CrediarioAvisoConfigDto>> SalvarAvisoConfig(
+        [FromBody] CrediarioAvisoConfigDto request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var marcos = request.Marcos.Where(m => m is >= -30 and <= 90).Distinct().OrderBy(m => m).ToList();
+        if (request.Ativo && marcos.Count == 0)
+            return BadRequest(new { Message = "Escolha pelo menos um dia de aviso." });
+        if (request.Ativo && !request.CanalApp && !request.CanalEmail && !request.CanalWhatsApp)
+            return BadRequest(new { Message = "Ligue pelo menos um canal de aviso." });
+
+        var cfg = await _avisos.ObterConfigAsync();
+        cfg.Ativo         = request.Ativo;
+        cfg.HoraEnvio     = request.HoraEnvio;
+        cfg.MarcosJson    = JsonSerializer.Serialize(marcos);
+        cfg.CanalApp      = request.CanalApp;
+        cfg.CanalEmail    = request.CanalEmail;
+        cfg.CanalWhatsApp = request.CanalWhatsApp;
+        cfg.ResumoAdmin   = request.ResumoAdmin;
+        cfg.MensagemExtra = string.IsNullOrWhiteSpace(request.MensagemExtra) ? null : request.MensagemExtra.Trim();
+        cfg.UpdatedAt     = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync("ConfigurouAvisosCrediario", "CrediarioAvisoConfig", cfg.Id.ToString(),
+            details: JsonSerializer.Serialize(new { cfg.Ativo, cfg.HoraEnvio, marcos, cfg.CanalApp, cfg.CanalEmail, cfg.CanalWhatsApp }),
+            httpContext: HttpContext);
+
+        var status = await _whatsApp.GetStatusAsync(ct);
+        return Ok(ToConfigDto(cfg, status.Connected));
+    }
+
+    [HttpGet("{id:guid}/aviso/previa")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> PreviaAviso(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            var previa = await _avisos.PreviaAsync(id, ct);
+            return Ok(new
+            {
+                previa.Titulo,
+                previa.Texto,
+                previa.WhatsApp,
+                previa.Email,
+                previa.CanaisDisponiveis,
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/aviso")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> AvisarAgora(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            var envio = await _avisos.AvisarAgoraAsync(id, GetUserId(), ct);
+            return Ok(new { Canais = envio.Canais.Split(',', StringSplitOptions.RemoveEmptyEntries), envio.Falhas });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    private static CrediarioAvisoConfigDto ToConfigDto(CrediarioAvisoConfig cfg, bool whatsAppConectado) => new()
+    {
+        Ativo             = cfg.Ativo,
+        HoraEnvio         = cfg.HoraEnvio,
+        Marcos            = CrediarioAvisoService.LerMarcos(cfg.MarcosJson),
+        CanalApp          = cfg.CanalApp,
+        CanalEmail        = cfg.CanalEmail,
+        CanalWhatsApp     = cfg.CanalWhatsApp,
+        ResumoAdmin       = cfg.ResumoAdmin,
+        MensagemExtra     = cfg.MensagemExtra,
+        WhatsAppConectado = whatsAppConectado,
+    };
+
+    // -------------------------------------------------------------------------
     // DELETE /api/crediarios/{id}
     // -------------------------------------------------------------------------
     [HttpDelete("{id:guid}")]
@@ -638,6 +751,16 @@ public class CrediariosController : ControllerBase
                     FormaPagamento = p.FormaPagamento,
                     Observacao     = p.Observacao,
                     CreatedAt      = p.CreatedAt,
+                }).ToList(),
+            Avisos                = c.Avisos
+                .OrderByDescending(a => a.EnviadoEm)
+                .Select(a => new AvisoCrediarioDto
+                {
+                    EnviadoEm  = a.EnviadoEm,
+                    Marco      = a.Marco,
+                    Automatico = a.EnviadoPorAdminId == null,
+                    Canais     = a.Canais.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                    Falhas     = a.Falhas,
                 }).ToList(),
             Lancamentos           = lancamentos,
             ItensComanda          = itens,

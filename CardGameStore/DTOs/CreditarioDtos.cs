@@ -39,6 +39,9 @@ public class CrediariosDto
     /// </summary>
     public decimal ValorExcedenteEmReais { get; set; }
 
+    /// <summary>Lembretes de vencimento enviados, mais recente primeiro.</summary>
+    public List<AvisoCrediarioDto> Avisos { get; set; } = new();
+
     /// <summary>Compras que entraram na conta, mais antiga primeiro (inclui as estornadas).</summary>
     public List<LancamentoCrediarioDto> Lancamentos { get; set; } = new();
 
@@ -173,4 +176,34 @@ public class RegistrarPagamentoRequest
     /// <summary>Observação opcional.</summary>
     [MaxLength(500)]
     public string? Observacao { get; set; }
+}
+
+/// <summary>Um lembrete de vencimento que saiu pra conta.</summary>
+public class AvisoCrediarioDto
+{
+    public DateTime     EnviadoEm  { get; set; }
+    /// <summary>Dias em relação ao vencimento; null = enviado à mão.</summary>
+    public int?         Marco      { get; set; }
+    public bool         Automatico { get; set; }
+    public List<string> Canais     { get; set; } = new();
+    public string?      Falhas     { get; set; }
+}
+
+/// <summary>Configuração dos lembretes automáticos (GET/PUT /api/crediarios/avisos/config).</summary>
+public class CrediarioAvisoConfigDto
+{
+    public bool      Ativo         { get; set; }
+    [Range(6, 19, ErrorMessage = "A hora de envio vai das 6h às 19h.")]
+    public int       HoraEnvio     { get; set; }
+    /// <summary>Dias em relação ao vencimento: negativo = antes, 0 = no dia, positivo = atraso.</summary>
+    public List<int> Marcos        { get; set; } = new();
+    public bool      CanalApp      { get; set; }
+    public bool      CanalEmail    { get; set; }
+    public bool      CanalWhatsApp { get; set; }
+    public bool      ResumoAdmin   { get; set; }
+    [MaxLength(300)]
+    public string?   MensagemExtra { get; set; }
+
+    /// <summary>Somente leitura: o WhatsApp da loja está pareado agora?</summary>
+    public bool      WhatsAppConectado { get; set; }
 }

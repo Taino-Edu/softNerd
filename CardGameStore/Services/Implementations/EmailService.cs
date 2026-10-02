@@ -67,7 +67,11 @@ public class EmailService : IEmailService
 
     public async Task SendCrediarioAbertoAsync(string toEmail, string toName, decimal valor, DateTime vencimento)
     {
-        var venc = vencimento.ToLocalTime().ToString("dd/MM/yyyy");
+        // Vencimento é guardado no fim do dia em Brasília (23:59:59 daqui) — converte pra lá
+        var venc = TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.SpecifyKind(vencimento, DateTimeKind.Utc),
+            TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "E. South America Standard Time" : "America/Sao_Paulo"))
+            .ToString("dd/MM/yyyy");
         var body = $"""
             <div style="font-family:sans-serif;max-width:500px">
               <h2 style="color:#7839F3">softNerd — Crediário Aberto</h2>
@@ -87,14 +91,30 @@ public class EmailService : IEmailService
                 </tr>
               </table>
               <p>
-                Enquanto o crediário estiver em aberto, novas comandas ficarão bloqueadas.
-                Compareça à loja ou fale com o Maikon para quitar.
+                Você pode acompanhar o saldo e as compras no seu perfil, na aba Dívida.
+                Para quitar, é só passar no balcão ou pagar por Pix.
               </p>
               <p style="color:#888;font-size:12px">softNerd — Sistema de Gestão</p>
             </div>
             """;
 
         await SendAsync(toEmail, toName, $"Crediário aberto — R$ {valor:N2} vence em {venc}", body);
+    }
+
+    public async Task SendCrediarioLembreteAsync(string toEmail, string toName, string assunto, string mensagem)
+    {
+        // Escapa linha a linha: o HtmlEncoder também codificaria a quebra de linha
+        var html = string.Join("<br>", mensagem.Split('\n')
+            .Select(l => System.Text.Encodings.Web.HtmlEncoder.Default.Encode(l)));
+        var body = $"""
+            <div style="font-family:sans-serif;max-width:500px;line-height:1.5">
+              <h2 style="color:#7839F3">Lembrete do crediário</h2>
+              <p>{html}</p>
+              <p style="color:#888;font-size:12px">Mensagem automática — se já pagou, pode desconsiderar.</p>
+            </div>
+            """;
+
+        await SendAsync(toEmail, toName, assunto, body);
     }
 
     public async Task SendCrediarioPagoAsync(string toEmail, string toName, decimal valor)
@@ -107,7 +127,6 @@ public class EmailService : IEmailService
                 Seu crediário de <strong>R$ {valor:N2}</strong> foi quitado com sucesso.
                 Obrigado pelo pagamento!
               </p>
-              <p>Você já pode abrir uma nova comanda normalmente.</p>
               <p style="color:#888;font-size:12px">softNerd — Sistema de Gestão</p>
             </div>
             """;

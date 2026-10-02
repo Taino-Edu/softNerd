@@ -575,10 +575,43 @@ export interface CrediariosDto {
   /** Pago acima do valor da conta (Pix antigo pago depois do acerto) — virou crédito do cliente. */
   valorExcedenteEmReais: number
   pagamentos: PagamentoCrediarioDto[]
+  /** Lembretes de vencimento enviados, mais recente primeiro. */
+  avisos: AvisoCrediarioDto[]
   /** Compras que entraram na conta, mais antiga primeiro (inclui estornadas). */
   lancamentos: LancamentoCrediarioDto[]
   /** Itens de todas as compras não estornadas, em lista corrida (impressão/edição). */
   itensComanda: ItemCrediarioDto[]
+}
+
+export interface AvisoCrediarioDto {
+  enviadoEm: string
+  /** Dias em relação ao vencimento; null = enviado à mão. */
+  marco: number | null
+  automatico: boolean
+  canais: string[]
+  falhas: string | null
+}
+
+export interface CrediarioAvisoConfigDto {
+  ativo: boolean
+  horaEnvio: number
+  /** Dias em relação ao vencimento: negativo = antes, 0 = no dia, positivo = atraso. */
+  marcos: number[]
+  canalApp: boolean
+  canalEmail: boolean
+  canalWhatsApp: boolean
+  resumoAdmin: boolean
+  mensagemExtra: string | null
+  /** Somente leitura. */
+  whatsAppConectado: boolean
+}
+
+export interface PreviaAvisoCrediarioDto {
+  titulo: string
+  texto: string
+  whatsApp: string | null
+  email: string | null
+  canaisDisponiveis: string[]
 }
 
 export type OrigemLancamentoCrediario = 'Comanda' | 'VendaAvulsa' | 'Manual' | 'Ajuste' | 'Legado'
@@ -653,6 +686,14 @@ export const crediarioApi = {
     api.post<PixCobrancaDto>(`/api/crediarios/${id}/pix`),
   statusPix: (id: string, txid: string) =>
     api.get<{ txId: string; status: string; pagoEm: string | null }>(`/api/crediarios/${id}/pix/${txid}/status`),
+  avisoConfig: () =>
+    api.get<CrediarioAvisoConfigDto>('/api/crediarios/avisos/config'),
+  salvarAvisoConfig: (cfg: CrediarioAvisoConfigDto) =>
+    api.put<CrediarioAvisoConfigDto>('/api/crediarios/avisos/config', cfg),
+  previaAviso: (id: string) =>
+    api.get<PreviaAvisoCrediarioDto>(`/api/crediarios/${id}/aviso/previa`),
+  avisarAgora: (id: string) =>
+    api.post<{ canais: string[]; falhas: string | null }>(`/api/crediarios/${id}/aviso`),
 }
 
 export const COMANDA_PAYMENT_METHODS = [
