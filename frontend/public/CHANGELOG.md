@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.35.1] — 2026-10-06
+
+### Corrigido
+- **Vencimento da conta nova vinha com um dia a mais à noite**: na janela "Conta de Crediário" (fechamento de comanda e PDV), a data sugerida de 30 dias e o limite mínimo do calendário eram calculados no horário de Londres — das 21h à meia-noite já pulavam pro dia seguinte. Agora seguem o calendário de Brasília
+- **Rótulo da conta nova**: dizia "prazo 30 dias" mesmo depois de escolher outra data. Agora mostra a data escolhida ("Nova conta — vence 20/11/2026")
+
 ## [v1.35.0] — 2026-10-06
 
 ### Adicionado

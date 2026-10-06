@@ -6,6 +6,14 @@ import { CrediariosDto } from '@/lib/api'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+/** Data (YYYY-MM-DD) no calendário de Brasília, daqui a `dias` dias — toISOString daria a data UTC,
+ * que das 21h à meia-noite já é o dia seguinte. */
+const dataBrasil = (dias = 0) =>
+  new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(Date.now() + dias * 864e5))
+
+/** YYYY-MM-DD → dd/mm/aaaa sem passar por Date (que leria como meia-noite UTC). */
+const dataCurta = (iso: string) => iso.split('-').reverse().join('/')
+
 /**
  * Escolha da conta de crediário quando o cliente já tem conta aberta: acumular
  * numa existente (sem renovar o prazo dela) ou abrir conta nova com vencimento
@@ -32,7 +40,7 @@ export default function EscolherContaCrediarioModal({
 
   // Vencimento da conta nova: o Maikon precisa casar o prazo com a chegada do produto
   // (pré-venda que chega dia 16 não pode virar dívida vencida no dia 11).
-  const trintaDias = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)
+  const trintaDias = dataBrasil(30)
   const [vencimento, setVencimento] = useState(trintaDias)
 
   return (
@@ -103,7 +111,11 @@ export default function EscolherContaCrediarioModal({
               )}
             >
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-white">Nova conta — prazo 30 dias</span>
+                <span className="text-sm font-medium text-white">
+                  Nova conta — {vencimento && vencimento !== trintaDias
+                    ? `vence ${dataCurta(vencimento)}`
+                    : 'prazo 30 dias'}
+                </span>
                 <span className={clsx('w-4 h-4 rounded-full border-2 shrink-0',
                   escolhido === '__nova__' ? 'border-brand-400 bg-brand-400' : 'border-gray-500'
                 )} />
@@ -117,7 +129,7 @@ export default function EscolherContaCrediarioModal({
                 <input
                   type="date"
                   value={vencimento}
-                  min={new Date().toISOString().slice(0, 10)}
+                  min={dataBrasil()}
                   onChange={e => setVencimento(e.target.value)}
                   className="input text-sm w-full"
                 />
