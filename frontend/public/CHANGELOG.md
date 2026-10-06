@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.36.0] — 2026-10-06
+
+### Mudado
+- **Crediário com os itens somados**: a conta mostra um resumo com tudo junto — "23× Coca Cola Lata — R$ 115,00" em vez de 23 linhas de "1× Coca Cola Lata". Vale pras contas novas e pras antigas (que vinham como uma lista corrida enorme em "Compras anteriores"). O mesmo produto com preço diferente fica em linhas separadas. O detalhe de cada compra continua em "Ver por compra", e o perfil do cliente também passou a mostrar os itens somados
+
+### Adicionado
+- **Súmula do crediário em PDF**: botão "Súmula (PDF)" em cada conta gera o documento completo — dados da conta, totais (total, pago, saldo, situação), resumo dos itens somados, extrato com data e hora de cada compra, estorno e pagamento (de onde veio cada compra — comanda, venda no balcão, lançamento manual — e a forma de cada pagamento) com o saldo correndo, os itens de cada compra, os lembretes de vencimento enviados e espaço pra assinatura do cliente e da loja. Substitui o antigo "Imprimir", que só listava os itens
+
 ## [v1.35.1] — 2026-10-06
 
 ### Corrigido

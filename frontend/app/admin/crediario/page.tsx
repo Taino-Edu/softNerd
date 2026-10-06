@@ -10,11 +10,13 @@ import toast from 'react-hot-toast'
 import {
   CreditCard, CheckCircle, Clock, AlertTriangle,
   Filter, Loader2, User, Calendar, ChevronDown, ChevronUp,
-  Plus, History, DollarSign, X, Search, Pencil, Printer, Package, Trash2,
+  Plus, History, DollarSign, X, Search, Pencil, FileText, Package, Trash2,
   MessageCircle, RefreshCw, QrCode, Send,
 } from 'lucide-react'
 import { ItemCrediarioDto } from '@/lib/api'
 import { CobrancaPixModal } from '@/components/admin/CobrancaPixModal'
+import { agruparItens, totalUnidades } from '@/lib/crediario'
+import { gerarSumulaCrediario } from '@/lib/sumula-crediario'
 import { AvisosAutomaticosButton, AvisarModal, UltimoAviso } from '@/components/admin/CrediarioAvisos'
 import clsx from 'clsx'
 
@@ -779,57 +781,6 @@ function PagamentoModal({ crediario, onClose, onSuccess }: PagamentoModalProps) 
 
 // ── Card do crediário ─────────────────────────────────────────────────────────
 
-function imprimirItens(c: CrediariosDto) {
-  const w = window.open('', '_blank', 'width=480,height=640')
-  if (!w) { alert('Permita pop-ups para imprimir'); return }
-  const data = new Date(c.dataAbertura).toLocaleDateString('pt-BR')
-  const brl  = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
-  const linhas = comprasDa(c)
-    .filter(l => !l.estornadoEm)
-    .map(l => {
-      const cabecalho = `<tr class="grupo">
-        <td colspan="2">${fmtDate(l.createdAt)} — ${ORIGEM_LABEL[l.origem] ?? l.origem}</td>
-        <td style="text-align:right">${l.valorEmReais > 0 ? brl(l.valorEmReais) : ''}</td>
-      </tr>`
-      const itens = l.itens.map(i =>
-        `<tr>
-          <td>${i.quantity}× ${i.itemName}</td>
-          <td style="text-align:right">${brl(i.unitPriceInReais)}</td>
-          <td style="text-align:right">${brl(i.subtotalInReais)}</td>
-        </tr>`
-      ).join('')
-      return cabecalho + itens
-    }).join('')
-  w.document.write(`<!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Crediário — ${c.userName}</title>
-<style>
-  @page { size: A5; margin: 16mm; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; }
-  h1 { font-size: 16px; margin: 0 0 2px; }
-  .sub { font-size: 11px; color: #555; margin: 0 0 12px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th { text-align: left; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #ccc; padding: 4px 2px; }
-  td { padding: 5px 2px; border-bottom: 1px solid #eee; vertical-align: top; }
-  tr.grupo td { font-weight: bold; background: #f3f3f3; border-bottom: 1px solid #ccc; padding-top: 8px; }
-  .total { font-weight: bold; font-size: 14px; margin-top: 12px; text-align: right; }
-  .footer { margin-top: 20px; font-size: 10px; color: #888; border-top: 1px dashed #ccc; padding-top: 8px; }
-  @media print { button { display: none; } }
-</style>
-</head><body>
-<h1>Santuário Nerd — Crediário</h1>
-<p class="sub">Cliente: <strong>${c.userName}</strong> · Data: ${data}</p>
-<table>
-  <thead><tr><th>Item</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th></tr></thead>
-  <tbody>${linhas}</tbody>
-</table>
-<p class="total">Total: R$ ${c.valorEmReais.toFixed(2).replace('.', ',')}</p>
-<div class="footer">Assinatura do cliente: ____________________________</div>
-<script>window.onload = () => { window.print(); }</script>
-</body></html>`)
-  w.document.close()
-}
-
 // ── Compras dentro da conta ───────────────────────────────────────────────────
 // Cada compra (comanda, venda do balcão, lançamento manual) vira uma linha com
 // data e valor; os itens ficam dentro, fechados — antes todos os itens de todas
@@ -839,6 +790,9 @@ function CompraRow({ l, inicialAberta }: { l: LancamentoCrediarioDto; inicialAbe
   const [aberta, setAberta] = useState(inicialAberta)
   const estornada = !!l.estornadoEm
   const temItens  = l.itens.length > 0
+  // Linhas repetidas somadas: a lista corrida das contas antigas ficava com dezenas de "1× Coca"
+  const itens     = agruparItens(l.itens)
+  const unidades  = totalUnidades(l.itens)
 
   return (
     <div className={clsx('bg-surface-700 rounded-lg', estornada && 'opacity-60')}>
@@ -863,7 +817,7 @@ function CompraRow({ l, inicialAberta }: { l: LancamentoCrediarioDto; inicialAbe
           </span>
         )}
         <span className="ml-auto text-gray-400 shrink-0">
-          {l.itens.length} {l.itens.length === 1 ? 'item' : 'itens'}
+          {unidades} {unidades === 1 ? 'item' : 'itens'}
         </span>
         {l.valorEmReais > 0 && (
           <span className={clsx('font-mono shrink-0 w-20 text-right', estornada ? 'line-through text-gray-400' : 'text-accent-gold')}>
@@ -873,7 +827,7 @@ function CompraRow({ l, inicialAberta }: { l: LancamentoCrediarioDto; inicialAbe
       </button>
       {aberta && temItens && (
         <div className="border-t border-surface-600 px-3 py-1.5 space-y-0.5">
-          {l.itens.map((item, idx) => (
+          {itens.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between text-xs py-1 pl-5">
               <span className="text-gray-300 truncate">{item.quantity}× {item.itemName}</span>
               <span className="text-gray-400 font-mono ml-2 shrink-0">{fmt(item.subtotalInReais)}</span>
@@ -886,7 +840,9 @@ function CompraRow({ l, inicialAberta }: { l: LancamentoCrediarioDto; inicialAbe
 }
 
 function ComprasDaConta({ c, inicialAberto }: { c: CrediariosDto; inicialAberto: boolean }) {
-  const [aberto, setAberto] = useState(inicialAberto)
+  const [aberto, setAberto]         = useState(inicialAberto)
+  const [porCompra, setPorCompra]   = useState(false)
+  const [gerando, setGerando]       = useState(false)
   const compras = comprasDa(c)
   if (compras.length === 0) return null
 
@@ -894,8 +850,19 @@ function ComprasDaConta({ c, inicialAberto }: { c: CrediariosDto; inicialAberto:
   const somaCompras = ativas.reduce((s, l) => s + l.valorEmReais, 0)
   // Valor da conta editado à mão não bate com a soma das compras — mostra a diferença.
   const ajusteValor = c.lancamentos.length > 0 ? c.valorEmReais - somaCompras : 0
-  const totalItens  = ativas.reduce((s, l) => s + l.itens.length, 0)
+  const todosItens  = ativas.flatMap(l => l.itens)
+  const totalItens  = totalUnidades(todosItens)
   const qtdCompras  = ativas.filter(l => l.origem !== 'Ajuste').length
+  // Tudo somado: "Coca Cola Lata × 23" em vez de 23 linhas. O detalhe por compra
+  // (data, hora, de onde veio) fica no "ver por compra" e na súmula em PDF.
+  const resumo      = agruparItens(todosItens).sort((a, b) => b.subtotalInReais - a.subtotalInReais)
+
+  async function sumula() {
+    setGerando(true)
+    try { await gerarSumulaCrediario(c) }
+    catch { toast.error('Erro ao gerar a súmula') }
+    finally { setGerando(false) }
+  }
 
   return (
     <div className="mt-3 border-t border-surface-500 pt-3">
@@ -905,28 +872,52 @@ function ComprasDaConta({ c, inicialAberto }: { c: CrediariosDto; inicialAberto:
           className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
         >
           <Package className="w-3.5 h-3.5" />
-          {qtdCompras} compra{qtdCompras !== 1 ? 's' : ''} · {totalItens} {totalItens === 1 ? 'item' : 'itens'}
+          {totalItens} {totalItens === 1 ? 'item' : 'itens'} · {qtdCompras} compra{qtdCompras !== 1 ? 's' : ''}
           {aberto ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
         </button>
-        {totalItens > 0 && (
-          <button
-            onClick={() => imprimirItens(c)}
-            className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
-            title="Imprimir lista de produtos"
-          >
-            <Printer className="w-3.5 h-3.5" /> Imprimir
-          </button>
-        )}
+        <button
+          onClick={sumula}
+          disabled={gerando}
+          className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors disabled:opacity-60"
+        >
+          {gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />} Súmula (PDF)
+        </button>
       </div>
       {aberto && (
-        <div className="space-y-1.5">
-          {compras.map(l => (
-            <CompraRow key={l.id} l={l} inicialAberta={compras.length === 1} />
-          ))}
+        <div className="space-y-2">
+          {resumo.length > 0 && (
+            <div className="bg-surface-700 rounded-lg px-3 py-2 space-y-0.5">
+              {resumo.map(i => (
+                <div key={`${i.itemName}|${i.unitPriceInReais}`} className="flex items-center justify-between text-xs py-0.5">
+                  <span className="text-gray-200 truncate">
+                    <span className="font-semibold text-white">{i.quantity}×</span> {i.itemName}
+                    <span className="text-gray-400"> · {fmt(i.unitPriceInReais)}</span>
+                  </span>
+                  <span className="text-accent-gold font-mono ml-2 shrink-0">{fmt(i.subtotalInReais)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {Math.abs(ajusteValor) >= 0.01 && (
             <div className="flex items-center justify-between px-3 py-2 text-xs rounded-lg border border-dashed border-surface-500">
-              <span className="text-gray-400 pl-5">Ajuste manual no valor da conta</span>
+              <span className="text-gray-400">Ajuste manual no valor da conta</span>
               <span className="font-mono text-gray-300">{ajusteValor > 0 ? '+' : '−'} {fmt(Math.abs(ajusteValor))}</span>
+            </div>
+          )}
+
+          <button
+            onClick={() => setPorCompra(v => !v)}
+            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors"
+          >
+            {porCompra ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {porCompra ? 'Esconder' : 'Ver'} por compra ({compras.length})
+          </button>
+          {porCompra && (
+            <div className="space-y-1.5">
+              {compras.map(l => (
+                <CompraRow key={l.id} l={l} inicialAberta={false} />
+              ))}
             </div>
           )}
         </div>

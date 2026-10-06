@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { agruparItens } from '@/lib/crediario'
 import {
   userApi, UserProfile, crediarioApi, CrediariosDto, comandaApi, ComandaDto, championshipApi, MyParticipation,
   reservationApi, MyReservation, minhasNotasApi, MinhaNotaDto, COMANDA_PAYMENT_METHODS,
@@ -1034,7 +1035,7 @@ export default function PerfilPage() {
                                   {l.valorEmReais > 0 && <> · R$ {l.valorEmReais.toFixed(2).replace('.', ',')}</>}
                                 </p>
                                 <p className="text-[11px] text-gray-400">
-                                  {l.itens.map(i => `${i.quantity}× ${i.itemName}`).join(', ')}
+                                  {agruparItens(l.itens).map(i => `${i.quantity}× ${i.itemName}`).join(', ')}
                                 </p>
                               </div>
                             ))}
