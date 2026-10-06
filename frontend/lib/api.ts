@@ -711,6 +711,11 @@ export interface PagamentoCrediarioResumo {
   vencido: boolean
   diasDeAtraso: number
   pixDisponivel: boolean
+  valorMinimoEmReais: number
+  /** Outras contas abertas do mesmo cliente — habilita "pagar todas num Pix só". */
+  outrasContas: number
+  /** Soma do que falta em todas as contas abertas do cliente (esta inclusa). */
+  saldoTodasEmReais: number
   compras: { data: string; valorEmReais: number }[]
 }
 
@@ -726,10 +731,11 @@ export interface PagamentoCrediarioPix {
 export const pagarCrediarioApi = {
   resumo: (token: string) =>
     api.get<PagamentoCrediarioResumo>(`/api/pagar/crediario/${token}`),
-  gerarPix: (token: string) =>
-    api.post<PagamentoCrediarioPix>(`/api/pagar/crediario/${token}/pix`),
+  /** Sem nada = saldo inteiro desta conta; `valorEmCentavos` = parcial; `tudo` = todas as contas abertas. */
+  gerarPix: (token: string, opcoes: { valorEmCentavos?: number; tudo?: boolean } = {}) =>
+    api.post<PagamentoCrediarioPix>(`/api/pagar/crediario/${token}/pix`, opcoes),
   statusPix: (token: string, txid: string) =>
-    api.get<{ status: string; pagoEm: string | null; quitado: boolean; saldoRestanteEmReais: number; aviso: string | null }>(
+    api.get<{ status: string; pagoEm: string | null; quitado: boolean; saldoRestanteEmReais: number; saldoTodasEmReais: number; aviso: string | null }>(
       `/api/pagar/crediario/${token}/pix/${txid}`),
 }
 

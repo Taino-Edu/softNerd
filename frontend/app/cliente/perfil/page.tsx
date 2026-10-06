@@ -995,6 +995,14 @@ export default function PerfilPage() {
                       <p className="text-4xl font-black text-gray-900">
                         R$ {totalDevido.toFixed(2).replace('.', ',')}
                       </p>
+                      {dividasAbertas.length > 1 && dividasAbertas[0].pagamentoToken && (
+                        <Link
+                          href={`/pagar/${dividasAbertas[0].pagamentoToken}?tudo=1`}
+                          className="inline-flex items-center justify-center gap-2 mt-3 px-5 py-2.5 rounded-xl text-sm font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors"
+                        >
+                          Pagar tudo com Pix
+                        </Link>
+                      )}
                     </div>
 
                     {dividasAbertas.map(c => <ContaCrediarioCliente key={c.id} c={c} />)}

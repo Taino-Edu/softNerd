@@ -176,70 +176,126 @@ public class PixReconciliationService : IPixReconciliationService
     }
 
     // ── Crediário: paga → registra PagamentoCrediario e quita se zerou ────────
-    // O dinheiro já caiu no Inter, então o pagamento é registrado INTEIRO mesmo quando
-    // a conta foi acertada por outro meio depois de o QR ser gerado (ou já estava
-    // quitada). Antes a baixa parava calada e o valor entrava no banco sem aparecer
-    // em lugar nenhum. O que passar do saldo vira crédito (cashback) do cliente.
+    // O dinheiro já caiu no Inter, então o valor é registrado INTEIRO mesmo quando a
+    // conta foi acertada por outro meio depois de o QR ser gerado (ou já estava
+    // quitada). Pix de várias contas ("pagar tudo") é distribuído na ordem gravada
+    // na cobrança — vencimento mais antigo primeiro. O que passar dos saldos vira
+    // crédito (cashback) do cliente.
     private async Task BaixarCrediarioAsync(PixCobranca pix, Guid adminId)
     {
-        var crediario = await _db.Crediarios
-            .Include(c => c.User)
-            .FirstOrDefaultAsync(c => c.Id == pix.CrediarioId);
-
-        if (crediario is null)
+        var alvos = new List<Guid>();
+        if (!string.IsNullOrWhiteSpace(pix.CrediarioIdsJson))
         {
-            _logger.LogError(
-                "Cobrança Pix {TxId} paga (R$ {Valor:N2}), mas o crediário {CrediarioId} não existe mais — confira no extrato do Inter e lance à mão.",
-                pix.TxId, pix.ValorEmReais, pix.CrediarioId);
-            return;
+            try { alvos = JsonSerializer.Deserialize<List<Guid>>(pix.CrediarioIdsJson) ?? new List<Guid>(); }
+            catch (JsonException) { alvos = new List<Guid>(); }
+        }
+        if (alvos.Count == 0 && pix.CrediarioId is Guid unico) alvos.Add(unico);
+
+        var varias   = alvos.Count > 1;
+        var origem   = varias ? $"Pix único de {alvos.Count} contas (txid {pix.TxId})" : $"Cobrança Pix automática (txid {pix.TxId})";
+        var restante = pix.ValorEmCentavos;
+
+        var                 pagas           = new List<Crediario>();
+        Crediario?          primeira        = null;
+        Crediario?          ultimaPaga      = null;
+        PagamentoCrediario? ultimoPagamento = null;
+
+        foreach (var id in alvos)
+        {
+            var conta = await _db.Crediarios.Include(c => c.User).FirstOrDefaultAsync(c => c.Id == id);
+            if (conta is null) continue;
+            primeira ??= conta;
+            if (restante <= 0 || conta.Status == CrediariosStatus.Pago) continue;
+
+            var parte = Math.Min(restante, conta.SaldoRestanteEmCentavos);
+            if (parte <= 0) continue;
+
+            // Soma no banco (não na memória) pra não perder pagamento lançado no caixa ao mesmo tempo
+            await _db.Crediarios
+                .Where(c => c.Id == conta.Id)
+                .ExecuteUpdateAsync(u => u.SetProperty(c => c.ValorPagoEmCentavos, c => c.ValorPagoEmCentavos + parte));
+            await _db.Entry(conta).ReloadAsync();
+
+            ultimoPagamento = new PagamentoCrediario
+            {
+                CrediarioId     = conta.Id,
+                ValorEmCentavos = parte,
+                FormaPagamento  = "Pix",
+                Observacao      = origem,
+                AdminId         = adminId,
+            };
+            _db.PagamentosCrediario.Add(ultimoPagamento);
+            ultimaPaga = conta;
+            restante  -= parte;
+            pagas.Add(conta);
         }
 
-        // Soma no banco (não na memória) pra não perder pagamento lançado no caixa ao
-        // mesmo tempo; o excedente é calculado depois, já com o valor real da conta.
-        await _db.Crediarios
-            .Where(c => c.Id == crediario.Id)
-            .ExecuteUpdateAsync(u => u.SetProperty(c => c.ValorPagoEmCentavos, c => c.ValorPagoEmCentavos + pix.ValorEmCentavos));
-        await _db.Entry(crediario).ReloadAsync();
-
-        var jaQuitado      = crediario.Status == CrediariosStatus.Pago;
-        var excessoDepois  = Math.Max(0, crediario.ValorPagoEmCentavos - crediario.ValorEmCentavos);
-        var excessoAntes   = Math.Max(0, crediario.ValorPagoEmCentavos - pix.ValorEmCentavos - crediario.ValorEmCentavos);
-        var excedente      = jaQuitado ? pix.ValorEmCentavos : excessoDepois - excessoAntes;
-
-        _db.PagamentosCrediario.Add(new PagamentoCrediario
+        // Sobrou dinheiro (conta acertada por outro meio, ou paga a mais): entra inteiro
+        // na última conta paga (ou na primeira, se nenhuma tinha saldo) e vira crédito.
+        if (restante > 0)
         {
-            CrediarioId     = crediario.Id,
-            ValorEmCentavos = pix.ValorEmCentavos,
-            FormaPagamento  = "Pix",
-            Observacao      = excedente > 0
-                ? $"Cobrança Pix automática (txid {pix.TxId}) — R$ {excedente / 100m:N2} acima do saldo virou crédito do cliente"
-                : $"Cobrança Pix automática (txid {pix.TxId})",
-            AdminId         = adminId,
-        });
-        if (excedente > 0 && crediario.User is not null)
-        {
-            crediario.User.BalanceInCents += excedente;
-            crediario.User.UpdatedAt       = DateTime.UtcNow;
+            var destino = ultimaPaga ?? primeira;
+            if (destino is null)
+            {
+                _logger.LogError(
+                    "Cobrança Pix {TxId} paga (R$ {Valor:N2}), mas nenhuma das contas de crediário existe mais — confira no extrato do Inter e lance à mão.",
+                    pix.TxId, pix.ValorEmReais);
+                return;
+            }
+
+            var excedente = restante;
+            await _db.Crediarios
+                .Where(c => c.Id == destino.Id)
+                .ExecuteUpdateAsync(u => u.SetProperty(c => c.ValorPagoEmCentavos, c => c.ValorPagoEmCentavos + excedente));
+            await _db.Entry(destino).ReloadAsync();
+
+            var obs = $"{origem} — R$ {excedente / 100m:N2} acima do saldo virou crédito do cliente";
+            if (ultimoPagamento is not null && ultimoPagamento.CrediarioId == destino.Id)
+            {
+                ultimoPagamento.ValorEmCentavos += excedente;
+                ultimoPagamento.Observacao       = obs;
+            }
+            else
+            {
+                _db.PagamentosCrediario.Add(new PagamentoCrediario
+                {
+                    CrediarioId     = destino.Id,
+                    ValorEmCentavos = excedente,
+                    FormaPagamento  = "Pix",
+                    Observacao      = obs,
+                    AdminId         = adminId,
+                });
+            }
+
+            if (destino.User is not null)
+            {
+                destino.User.BalanceInCents += excedente;
+                destino.User.UpdatedAt       = DateTime.UtcNow;
+            }
             _logger.LogWarning(
-                "Cobrança Pix {TxId} pagou R$ {Excedente:N2} além do saldo do crediário {CrediarioId} — valor creditado no saldo do cliente {UserId}.",
-                pix.TxId, excedente / 100m, crediario.Id, crediario.UserId);
+                "Cobrança Pix {TxId} pagou R$ {Excedente:N2} além do saldo do crediário — valor creditado no saldo do cliente {UserId}.",
+                pix.TxId, excedente / 100m, destino.UserId);
         }
 
-        // Quita automaticamente se saldo chegou a zero (tolerância de 1 centavo para arredondamentos)
-        if (!jaQuitado && crediario.SaldoRestanteEmCentavos <= 1)
-        {
-            crediario.Status         = CrediariosStatus.Pago;
-            crediario.DataPagamento  = DateTime.UtcNow;
-            crediario.PagoPorAdminId = adminId;
-
-            if (!string.IsNullOrWhiteSpace(crediario.User?.Email))
-                _ = _email.SendCrediarioPagoAsync(
-                    crediario.User.Email, crediario.User.Name, crediario.ValorEmReais);
-        }
+        // Quitação só no fim: o Reload do excedente acima desfaria uma quitação feita antes
+        foreach (var conta in pagas) QuitarSeZerou(conta, adminId);
 
         _logger.LogInformation(
-            "Cobrança Pix {TxId} confirmada — pagamento de R$ {Valor:N2} registrado no crediário {CrediarioId}",
-            pix.TxId, pix.ValorEmReais, crediario.Id);
+            "Cobrança Pix {TxId} confirmada — R$ {Valor:N2} registrados em {Qtd} conta(s) de crediário",
+            pix.TxId, pix.ValorEmReais, alvos.Count);
+    }
+
+    private void QuitarSeZerou(Crediario conta, Guid adminId)
+    {
+        // Tolerância de 1 centavo para arredondamentos
+        if (conta.Status == CrediariosStatus.Pago || conta.SaldoRestanteEmCentavos > 1) return;
+
+        conta.Status         = CrediariosStatus.Pago;
+        conta.DataPagamento  = DateTime.UtcNow;
+        conta.PagoPorAdminId = adminId;
+
+        if (!string.IsNullOrWhiteSpace(conta.User?.Email))
+            _ = _email.SendCrediarioPagoAsync(conta.User.Email, conta.User.Name, conta.ValorEmReais);
     }
 
     // ── Campeonato: paga → marca a inscrição como paga (Pix) ──────────────────

@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.38.0] — 2026-10-06
+
+### Adicionado
+- **Pagar uma parte pelo link**: na página de pagamento do crediário o cliente escolhe "Pagar outro valor" e digita quanto quer pagar agora (mínimo R$ 1,00, até o que falta na conta). A baixa é automática e a conta continua aberta com o restante
+- **Pagar todas as contas num Pix só**: quem tem mais de uma conta aberta vê a opção "Pagar todas as contas" com o total. Um Pix só, e a baixa distribui o valor quitando primeiro a conta que vence antes. No perfil, o botão "Pagar tudo com Pix" aparece embaixo do total devido
+
 ## [v1.37.0] — 2026-10-06
 
 ### Adicionado

@@ -185,6 +185,56 @@ public class PixReconciliationServiceTests
     }
 
     [Fact]
+    public async Task Reconciliar_PixDeVariasContas_DistribuiPeloVencimentoEQuitaTodas()
+    {
+        var db   = CreateDb(nameof(Reconciliar_PixDeVariasContas_DistribuiPeloVencimentoEQuitaTodas));
+        var user = await SeedBaseAsync(db);
+
+        var vencida = new Crediario { UserId = user.Id, ValorEmCentavos = 3000, DataVencimento = DateTime.UtcNow.AddDays(-5) };
+        var aVencer = new Crediario { UserId = user.Id, ValorEmCentavos = 5000, ValorPagoEmCentavos = 1000, DataVencimento = DateTime.UtcNow.AddDays(10) };
+        db.Crediarios.AddRange(vencida, aVencer);
+        var pix = NovaCobranca(PixCobrancaOrigem.Crediario, valorEmCentavos: 9000); // 3000 + 4000 + 2000 a mais
+        pix.CrediarioId      = vencida.Id;
+        pix.CrediarioIdsJson = System.Text.Json.JsonSerializer.Serialize(new[] { vencida.Id, aVencer.Id });
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+        await service.ReconciliarAsync(pix);
+
+        vencida.Status.Should().Be(CrediariosStatus.Pago);
+        aVencer.Status.Should().Be(CrediariosStatus.Pago);
+        (await db.PagamentosCrediario.Where(p => p.CrediarioId == vencida.Id).SumAsync(p => p.ValorEmCentavos)).Should().Be(3000);
+        (await db.PagamentosCrediario.Where(p => p.CrediarioId == aVencer.Id).SumAsync(p => p.ValorEmCentavos)).Should().Be(6000,
+            "os 4000 que faltavam mais os 2000 a mais entram na última conta paga");
+        (await db.Users.FindAsync(user.Id))!.BalanceInCents.Should().Be(2000, "o que passou dos saldos vira crédito");
+    }
+
+    [Fact]
+    public async Task Reconciliar_PixDeVariasContas_ValorMenor_PagaAMaisAntigaPrimeiro()
+    {
+        var db   = CreateDb(nameof(Reconciliar_PixDeVariasContas_ValorMenor_PagaAMaisAntigaPrimeiro));
+        var user = await SeedBaseAsync(db);
+
+        var antiga = new Crediario { UserId = user.Id, ValorEmCentavos = 3000, DataVencimento = DateTime.UtcNow.AddDays(-5) };
+        var nova   = new Crediario { UserId = user.Id, ValorEmCentavos = 5000, DataVencimento = DateTime.UtcNow.AddDays(10) };
+        db.Crediarios.AddRange(antiga, nova);
+        // Saldo mudou entre gerar e pagar: o Pix cobre 5000 de 8000
+        var pix = NovaCobranca(PixCobrancaOrigem.Crediario, valorEmCentavos: 5000);
+        pix.CrediarioId      = antiga.Id;
+        pix.CrediarioIdsJson = System.Text.Json.JsonSerializer.Serialize(new[] { antiga.Id, nova.Id });
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+        await service.ReconciliarAsync(pix);
+
+        antiga.Status.Should().Be(CrediariosStatus.Pago);
+        nova.ValorPagoEmCentavos.Should().Be(2000);
+        nova.Status.Should().Be(CrediariosStatus.Aberto);
+    }
+
+    [Fact]
     public async Task Reconciliar_Crediario_SegundaChamadaNaoDuplicaPagamento()
     {
         var db   = CreateDb(nameof(Reconciliar_Crediario_SegundaChamadaNaoDuplicaPagamento));

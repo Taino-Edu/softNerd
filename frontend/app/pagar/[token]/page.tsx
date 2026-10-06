@@ -27,17 +27,41 @@ export default function PagarCrediarioPage() {
   const [gerando, setGerando]     = useState(false)
   const [verificando, setVerificando] = useState(false)
   const [pago, setPago]           = useState(false)
+  // O que pagar: esta conta inteira, todas as contas do cliente ou um valor escolhido
+  const [modo, setModo]           = useState<'conta' | 'tudo' | 'valor'>('conta')
+  const [valorTexto, setValorTexto] = useState('')
+  const [tudoQuitado, setTudoQuitado] = useState(false)
 
   useEffect(() => {
     pagarCrediarioApi.resumo(token)
-      .then(r => { setResumo(r.data); setPago(r.data.quitado) })
+      .then(r => {
+        setResumo(r.data)
+        setPago(r.data.quitado)
+        // Link vindo do "Pagar tudo" do perfil já abre com essa opção marcada
+        if (r.data.outrasContas > 0 && new URLSearchParams(window.location.search).get('tudo') === '1') setModo('tudo')
+      })
       .catch(err => setErro(mensagemErro(err, 'Não deu pra abrir este link agora.')))
   }, [token])
 
+  // "1.234,56" (vírgula decimal) ou "12.50" (ponto decimal, sem vírgula)
+  const valorEscolhido = Number(valorTexto.includes(',')
+    ? valorTexto.replace(/\./g, '').replace(',', '.')
+    : valorTexto)
+  const valorAPagar = !resumo ? 0
+    : modo === 'tudo'  ? resumo.saldoTodasEmReais
+    : modo === 'valor' ? (Number.isFinite(valorEscolhido) ? valorEscolhido : 0)
+    : resumo.saldoRestanteEmReais
+  const valorInvalido = !!resumo && modo === 'valor' &&
+    (!(valorEscolhido >= resumo.valorMinimoEmReais) || valorEscolhido > resumo.saldoRestanteEmReais)
+
   async function gerarPix() {
+    if (valorInvalido) return
     setGerando(true)
     try {
-      const { data: p } = await pagarCrediarioApi.gerarPix(token)
+      const { data: p } = await pagarCrediarioApi.gerarPix(token,
+        modo === 'tudo'  ? { tudo: true }
+        : modo === 'valor' ? { valorEmCentavos: Math.round(valorEscolhido * 100) }
+        : {})
       setPix(p)
     } catch (err) {
       toast.error(mensagemErro(err, 'Não deu pra gerar o Pix agora.'))
@@ -54,7 +78,10 @@ export default function PagarCrediarioPage() {
       const { data: s } = await pagarCrediarioApi.statusPix(token, pix.txId)
       if (s.status === 'CONCLUIDA') {
         setPago(s.quitado)
-        setResumo(prev => prev ? { ...prev, saldoRestanteEmReais: s.saldoRestanteEmReais, quitado: s.quitado } : prev)
+        setTudoQuitado(s.saldoTodasEmReais <= 0)
+        setResumo(prev => prev
+          ? { ...prev, saldoRestanteEmReais: s.saldoRestanteEmReais, saldoTodasEmReais: s.saldoTodasEmReais, quitado: s.quitado }
+          : prev)
         setPix(prev => prev ? { ...prev, status: 'CONCLUIDA' } : prev)
         if (!s.quitado) toast.success('Pagamento recebido!')
       } else if (!silencioso) {
@@ -104,9 +131,13 @@ export default function PagarCrediarioPage() {
             {pago ? (
               <div className="bg-white border border-emerald-100 rounded-2xl p-8 text-center shadow-sm space-y-3">
                 <CheckCircle className="w-14 h-14 mx-auto text-emerald-500" />
-                <p className="text-xl font-black text-gray-900">Conta quitada ✅</p>
+                <p className="text-xl font-black text-gray-900">
+                  {tudoQuitado && resumo.outrasContas > 0 ? 'Todas as contas quitadas ✅' : 'Conta quitada ✅'}
+                </p>
                 <p className="text-sm text-gray-500">
-                  Valeu, {resumo.primeiroNome}! Não tem mais nada a pagar nesta conta.
+                  Valeu, {resumo.primeiroNome}! {tudoQuitado || resumo.saldoTodasEmReais <= 0
+                    ? 'Não tem mais nada a pagar.'
+                    : `Ainda tem ${brl(resumo.saldoTodasEmReais)} em outra conta — dá pra pagar pelo seu perfil.`}
                 </p>
               </div>
             ) : (
@@ -134,14 +165,51 @@ export default function PagarCrediarioPage() {
                     O pagamento por Pix não está disponível agora. Dá pra pagar direto no balcão da loja.
                   </div>
                 ) : !pix ? (
-                  <button
-                    onClick={gerarPix}
-                    disabled={gerando}
-                    className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors disabled:opacity-60 shadow-sm"
-                  >
-                    {gerando ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
-                    Pagar {brl(resumo.saldoRestanteEmReais)} com Pix
-                  </button>
+                  <div className="space-y-3">
+                    <div className="bg-white border border-gray-100 rounded-2xl p-2 shadow-sm space-y-1">
+                      <Opcao ativo={modo === 'conta'} onClick={() => setModo('conta')}
+                        titulo="Pagar esta conta" valor={brl(resumo.saldoRestanteEmReais)} />
+                      {resumo.outrasContas > 0 && (
+                        <Opcao ativo={modo === 'tudo'} onClick={() => setModo('tudo')}
+                          titulo={`Pagar todas as contas (${resumo.outrasContas + 1})`}
+                          detalhe="Um Pix só — quita primeiro a que vence antes"
+                          valor={brl(resumo.saldoTodasEmReais)} />
+                      )}
+                      <Opcao ativo={modo === 'valor'} onClick={() => setModo('valor')}
+                        titulo="Pagar outro valor" detalhe="Pague uma parte agora e o resto depois" />
+                      {modo === 'valor' && (
+                        <div className="px-3 pb-2">
+                          <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-violet-500">
+                            <span className="text-sm font-bold text-gray-500">R$</span>
+                            <input
+                              autoFocus
+                              inputMode="decimal"
+                              placeholder="0,00"
+                              value={valorTexto}
+                              onChange={e => setValorTexto(e.target.value.replace(/[^\d,.]/g, ''))}
+                              className="flex-1 text-lg font-black text-gray-900 outline-none bg-transparent"
+                              aria-label="Valor a pagar"
+                            />
+                          </div>
+                          {valorTexto && valorInvalido && (
+                            <p className="text-xs text-red-500 mt-1">
+                              {valorEscolhido > resumo.saldoRestanteEmReais
+                                ? `Passa do que falta nesta conta (${brl(resumo.saldoRestanteEmReais)}).`
+                                : `O mínimo é ${brl(resumo.valorMinimoEmReais)}.`}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={gerarPix}
+                      disabled={gerando || valorInvalido || valorAPagar <= 0}
+                      className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors disabled:opacity-50 shadow-sm"
+                    >
+                      {gerando ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
+                      {valorAPagar > 0 && !valorInvalido ? `Gerar Pix de ${brl(valorAPagar)}` : 'Gerar Pix'}
+                    </button>
+                  </div>
                 ) : pix.status === 'CONCLUIDA' ? (
                   <div className="bg-white border border-emerald-100 rounded-2xl p-6 text-center shadow-sm space-y-2">
                     <CheckCircle className="w-12 h-12 mx-auto text-emerald-500" />
@@ -149,7 +217,10 @@ export default function PagarCrediarioPage() {
                     <p className="text-sm text-gray-500">
                       Ainda faltam {brl(resumo.saldoRestanteEmReais)} nesta conta.
                     </p>
-                    <button onClick={() => setPix(null)} className="text-sm font-bold text-violet-600">
+                    <button
+                      onClick={() => { setPix(null); setModo('conta'); setValorTexto('') }}
+                      className="text-sm font-bold text-violet-600"
+                    >
                       Pagar o restante
                     </button>
                   </div>
@@ -203,5 +274,34 @@ export default function PagarCrediarioPage() {
         )}
       </div>
     </main>
+  )
+}
+
+function Opcao({ ativo, onClick, titulo, detalhe, valor }: {
+  ativo: boolean
+  onClick: () => void
+  titulo: string
+  detalhe?: string
+  valor?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={clsx(
+        'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors',
+        ativo ? 'bg-violet-50' : 'hover:bg-gray-50',
+      )}
+    >
+      <span className={clsx(
+        'w-4 h-4 rounded-full border-2 shrink-0',
+        ativo ? 'border-violet-600 bg-violet-600 shadow-[inset_0_0_0_3px_white]' : 'border-gray-300',
+      )} />
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-bold text-gray-900">{titulo}</span>
+        {detalhe && <span className="block text-[11px] text-gray-500">{detalhe}</span>}
+      </span>
+      {valor && <span className="text-sm font-black text-gray-900 shrink-0">{valor}</span>}
+    </button>
   )
 }

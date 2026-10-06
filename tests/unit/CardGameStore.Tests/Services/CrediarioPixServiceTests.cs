@@ -117,6 +117,58 @@ public class CrediarioPixServiceTests
         r.Erro.Should().Contain("quitada");
     }
 
+    [Theory]
+    [InlineData(50, "mínimo")]
+    [InlineData(20000, "passa do que falta")]
+    public async Task ObterOuGerar_ValorEscolhidoForaDoLimite_Recusa(int valor, string mensagem)
+    {
+        var db = CreateDb();
+        var (_, conta) = Seed(db, valor: 10000);
+
+        var r = await CreateService(db).ObterOuGerarAsync(conta.Id, criadoPor: null, valorEmCentavos: valor);
+
+        r.Pix.Should().BeNull();
+        r.Erro.Should().Contain(mensagem);
+    }
+
+    [Fact]
+    public async Task ObterOuGerar_ValorParcialComCobrancaAtivaIgual_Reaproveita()
+    {
+        var db = CreateDb();
+        var (_, conta) = Seed(db, valor: 10000);
+        db.PixCobrancas.Add(new PixCobranca
+        {
+            Origem = PixCobrancaOrigem.Crediario, CrediarioId = conta.Id, TxId = "tx-parcial",
+            ValorEmCentavos = 3000, Status = "ATIVA", CriadoPorAdminId = Guid.NewGuid(),
+            ExpiraEm = DateTime.UtcNow.AddMinutes(40),
+        });
+        await db.SaveChangesAsync();
+
+        var r = await CreateService(db).ObterOuGerarAsync(conta.Id, criadoPor: null, valorEmCentavos: 3000);
+
+        r.Pix!.TxId.Should().Be("tx-parcial");
+    }
+
+    [Fact]
+    public async Task ObterOuGerar_Tudo_ReaproveitaSoACobrancaDasMesmasContas()
+    {
+        var db = CreateDb();
+        var (user, conta) = Seed(db, valor: 10000);
+        var outra = new Crediario { UserId = user.Id, ValorEmCentavos = 4000, DataVencimento = DateTime.UtcNow.AddDays(30) };
+        db.Crediarios.Add(outra);
+        var ids = System.Text.Json.JsonSerializer.Serialize(new[] { conta.Id, outra.Id });
+        db.PixCobrancas.AddRange(
+            new PixCobranca { Origem = PixCobrancaOrigem.Crediario, CrediarioId = conta.Id, TxId = "tx-so-esta",
+                ValorEmCentavos = 14000, Status = "ATIVA", CriadoPorAdminId = Guid.NewGuid(), ExpiraEm = DateTime.UtcNow.AddMinutes(40) },
+            new PixCobranca { Origem = PixCobrancaOrigem.Crediario, CrediarioId = conta.Id, TxId = "tx-tudo", CrediarioIdsJson = ids,
+                ValorEmCentavos = 14000, Status = "ATIVA", CriadoPorAdminId = Guid.NewGuid(), ExpiraEm = DateTime.UtcNow.AddMinutes(40) });
+        await db.SaveChangesAsync();
+
+        var r = await CreateService(db).ObterOuGerarAsync(conta.Id, criadoPor: null, todasDoCliente: true);
+
+        r.Pix!.TxId.Should().Be("tx-tudo");
+    }
+
     [Fact]
     public void LinkPagamento_UsaAUrlDoSite()
     {

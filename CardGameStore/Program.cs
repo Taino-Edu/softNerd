@@ -903,6 +903,8 @@ using (var scope = app.Services.CreateScope())
 
                 -- Crediário: link público de pagamento (página /pagar/codigo)
                 ALTER TABLE crediarios ADD COLUMN IF NOT EXISTS pagamento_token VARCHAR(64) NULL;
+                -- Pix único cobrindo várias contas do mesmo cliente
+                ALTER TABLE pix_cobrancas ADD COLUMN IF NOT EXISTS crediario_ids_json TEXT NULL;
                 CREATE UNIQUE INDEX IF NOT EXISTS ux_crediarios_pagamento_token
                     ON crediarios (pagamento_token) WHERE pagamento_token IS NOT NULL;
 
@@ -1310,6 +1312,7 @@ using (var scope = app.Services.CreateScope())
             {
                 "ALTER TABLE championships ADD COLUMN minutos_para_pagar INTEGER NOT NULL DEFAULT 30;",
                 "ALTER TABLE crediarios ADD COLUMN pagamento_token TEXT NULL;",
+                "ALTER TABLE pix_cobrancas ADD COLUMN crediario_ids_json TEXT NULL;",
                 "ALTER TABLE championship_participants ADD COLUMN inscricao_expira_em TEXT NULL;",
             })
             {

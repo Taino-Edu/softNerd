@@ -10,6 +10,7 @@
 
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using System.Text.Json;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
@@ -24,6 +25,9 @@ public sealed record CrediarioPixResultado(PixCobranca? Pix, string? Erro, int S
 
 public class CrediarioPixService
 {
+    /// <summary>Pix parcial menor que isso não compensa (e o Inter cobra tarifa por cobrança).</summary>
+    public const int ValorMinimoEmCentavos = 100;
+
     /// <summary>Cobrança que vence em menos que isso não é reaproveitada — o cliente não daria tempo de pagar.</summary>
     private static readonly TimeSpan FolgaMinima = TimeSpan.FromMinutes(5);
 
@@ -86,8 +90,11 @@ public class CrediarioPixService
     /// <paramref name="criadoPor"/> = admin que pediu; no link público é null e a
     /// cobrança fica no nome de quem abriu a conta (é quem assina a baixa depois).
     /// </summary>
+    /// <param name="valorEmCentavos">Valor escolhido pelo cliente (parcial); null = saldo inteiro.</param>
+    /// <param name="todasDoCliente">Um Pix só pra todas as contas abertas do cliente desta conta.</param>
     public async Task<CrediarioPixResultado> ObterOuGerarAsync(
-        Guid crediarioId, Guid? criadoPor, bool reaproveitar = true, CancellationToken ct = default)
+        Guid crediarioId, Guid? criadoPor, int? valorEmCentavos = null, bool todasDoCliente = false,
+        bool reaproveitar = true, CancellationToken ct = default)
     {
         var trava = Travas.GetOrAdd(crediarioId, _ => new SemaphoreSlim(1, 1));
         await trava.WaitAsync(ct);
@@ -102,7 +109,34 @@ public class CrediarioPixService
             if (crediario.Status == CrediariosStatus.Pago || crediario.SaldoRestanteEmCentavos <= 0)
                 return CrediarioPixResultado.Falha("Esta conta já está quitada.");
 
-            var saldo = crediario.SaldoRestanteEmCentavos;
+            // "Pagar tudo": todas as contas abertas do cliente, vencimento mais antigo primeiro
+            // (é a ordem em que a baixa distribui o valor).
+            string? idsJson = null;
+            int valor;
+            if (todasDoCliente)
+            {
+                var contas = await _db.Crediarios
+                    .Where(c => c.UserId == crediario.UserId
+                             && c.Status == CrediariosStatus.Aberto
+                             && c.ValorEmCentavos > c.ValorPagoEmCentavos)
+                    .OrderBy(c => c.DataVencimento)
+                    .ToListAsync(ct);
+                valor = contas.Sum(c => c.SaldoRestanteEmCentavos);
+                if (contas.Count > 1)
+                    idsJson = JsonSerializer.Serialize(contas.Select(c => c.Id));
+            }
+            else if (valorEmCentavos is int escolhido)
+            {
+                if (escolhido < ValorMinimoEmCentavos)
+                    return CrediarioPixResultado.Falha($"O valor mínimo pra pagar por Pix é R$ {ValorMinimoEmCentavos / 100m:N2}.");
+                if (escolhido > crediario.SaldoRestanteEmCentavos)
+                    return CrediarioPixResultado.Falha($"O valor passa do que falta pagar nesta conta (R$ {crediario.SaldoRestanteEmReais:N2}).");
+                valor = escolhido;
+            }
+            else
+            {
+                valor = crediario.SaldoRestanteEmCentavos;
+            }
 
             if (reaproveitar)
             {
@@ -111,7 +145,8 @@ public class CrediarioPixService
                     .Where(p => p.CrediarioId == crediarioId
                              && p.Status == "ATIVA"
                              && p.PagoEm == null
-                             && p.ValorEmCentavos == saldo
+                             && p.ValorEmCentavos == valor
+                             && p.CrediarioIdsJson == idsJson
                              && (p.ExpiraEm == null || p.ExpiraEm > limite))
                     .OrderByDescending(p => p.CriadoEm)
                     .FirstOrDefaultAsync(ct);
@@ -129,7 +164,7 @@ public class CrediarioPixService
                 .Select(s => s.SiteName)
                 .FirstOrDefaultAsync(ct) ?? "Santuário Nerd";
 
-            var result = await _inter.CriarCobrancaAsync(cfg, saldo, crediario.User.Name, cpf, $"{nomeLoja} — Crediário");
+            var result = await _inter.CriarCobrancaAsync(cfg, valor, crediario.User.Name, cpf, $"{nomeLoja} — Crediário");
             if (result.Error is not null)
                 return CrediarioPixResultado.Falha(result.Error, 422);
 
@@ -138,7 +173,8 @@ public class CrediarioPixService
                 Origem           = PixCobrancaOrigem.Crediario,
                 CrediarioId      = crediario.Id,
                 TxId             = result.TxId!,
-                ValorEmCentavos  = saldo,
+                ValorEmCentavos  = valor,
+                CrediarioIdsJson = idsJson,
                 Status           = result.Status ?? "ATIVA",
                 PixCopiaCola     = result.PixCopiaCola,
                 ImagemQrCode     = result.ImagemQrCode,
@@ -180,8 +216,11 @@ public class CrediarioPixService
     /// </summary>
     public async Task<string?> EncerrarAtivasAsync(Guid crediarioId, Guid? adminId, CancellationToken ct = default)
     {
+        var idTexto = crediarioId.ToString();
         var ativas = await _db.PixCobrancas
-            .Where(p => p.CrediarioId == crediarioId && p.Status == "ATIVA" && p.PagoEm == null)
+            .Where(p => (p.CrediarioId == crediarioId
+                         || (p.CrediarioIdsJson != null && p.CrediarioIdsJson.Contains(idTexto)))
+                     && p.Status == "ATIVA" && p.PagoEm == null)
             .ToListAsync(ct);
         if (ativas.Count == 0) return null;
 

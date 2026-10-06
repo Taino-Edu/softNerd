@@ -101,6 +101,14 @@ public class PixCobranca
     [Column("nome_devedor")]
     public string? NomeDevedor { get; set; }
 
+    /// <summary>
+    /// "Pagar todas as contas" do crediário: JSON com os ids das contas que este Pix
+    /// cobre, na ordem em que o valor é distribuído (vencimento mais antigo primeiro).
+    /// Null = cobrança de uma conta só (CrediarioId).
+    /// </summary>
+    [Column("crediario_ids_json", TypeName = "text")]
+    public string? CrediarioIdsJson { get; set; }
+
     [Column("criado_por_admin_id")]
     public Guid CriadoPorAdminId { get; set; }
 
