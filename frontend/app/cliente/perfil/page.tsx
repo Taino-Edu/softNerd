@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { agruparItens } from '@/lib/crediario'
+import ContaCrediarioCliente from '@/components/cliente/ContaCrediarioCliente'
 import {
   userApi, UserProfile, crediarioApi, CrediariosDto, comandaApi, ComandaDto, championshipApi, MyParticipation,
   reservationApi, MyReservation, minhasNotasApi, MinhaNotaDto, COMANDA_PAYMENT_METHODS,
@@ -330,6 +330,10 @@ export default function PerfilPage() {
     .filter(c => c.status !== 'Pago')
     .sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento))
   const totalDevido = dividasAbertas.reduce((s, c) => s + c.saldoRestanteEmReais, 0)
+  const contasQuitadas = crediarios
+    .filter(c => c.status === 'Pago')
+    .sort((a, b) => (b.dataPagamento ?? '').localeCompare(a.dataPagamento ?? ''))
+  const [verQuitadas, setVerQuitadas] = useState(false)
 
   const agora = new Date()
   const doMesAtual = (iso: string) => {
@@ -993,60 +997,27 @@ export default function PerfilPage() {
                       </p>
                     </div>
 
-                    {dividasAbertas.map(c => (
-                      <div key={c.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-lg font-black text-gray-900">
-                              R$ {c.saldoRestanteEmReais.toFixed(2).replace('.', ',')}
-                            </p>
-                            {c.valorPagoEmReais > 0 && (
-                              <p className="text-[11px] text-gray-400">
-                                já pago R$ {c.valorPagoEmReais.toFixed(2).replace('.', ',')} de R$ {c.valorEmReais.toFixed(2).replace('.', ',')}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-[10px] text-gray-400 font-bold uppercase">Vencimento</p>
-                            <p className={c.vencido ? 'text-sm font-bold text-red-500' : 'text-sm font-bold text-gray-700'}>
-                              {new Date(c.dataVencimento).toLocaleDateString('pt-BR')}
-                            </p>
-                            {c.vencido && (
-                              <span className="text-[10px] font-black uppercase text-red-500">vencida</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {c.pagamentoToken && (
-                          <Link
-                            href={`/pagar/${c.pagamentoToken}`}
-                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors"
-                          >
-                            Pagar R$ {c.saldoRestanteEmReais.toFixed(2).replace('.', ',')} com Pix
-                          </Link>
-                        )}
-
-                        {c.lancamentos.filter(l => !l.estornadoEm && l.itens.length > 0).length > 0 && (
-                          <div className="border-t border-gray-100 pt-2 space-y-2">
-                            {c.lancamentos.filter(l => !l.estornadoEm && l.itens.length > 0).map(l => (
-                              <div key={l.id}>
-                                <p className="text-[11px] font-bold text-gray-500">
-                                  {new Date(l.createdAt).toLocaleDateString('pt-BR')}
-                                  {l.valorEmReais > 0 && <> · R$ {l.valorEmReais.toFixed(2).replace('.', ',')}</>}
-                                </p>
-                                <p className="text-[11px] text-gray-400">
-                                  {agruparItens(l.itens).map(i => `${i.quantity}× ${i.itemName}`).join(', ')}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                    {dividasAbertas.map(c => <ContaCrediarioCliente key={c.id} c={c} />)}
 
                     <p className="text-[10px] text-gray-400 italic text-center">
                       * Dá pra pagar por Pix aqui mesmo ou no balcão da loja.
                     </p>
+                  </div>
+                )}
+
+                {contasQuitadas.length > 0 && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => setVerQuitadas(v => !v)}
+                      className="w-full text-center text-xs font-bold text-gray-500 hover:text-gray-700 py-2"
+                    >
+                      {verQuitadas ? 'Esconder' : 'Ver'} contas já quitadas ({contasQuitadas.length})
+                    </button>
+                    {verQuitadas && (
+                      <div className="space-y-3 mt-2">
+                        {contasQuitadas.map(c => <ContaCrediarioCliente key={c.id} c={c} />)}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

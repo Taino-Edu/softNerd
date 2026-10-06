@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.37.0] — 2026-10-06
+
+### Adicionado
+- **O cliente confere a própria dívida no perfil**: na aba Dívida, cada conta mostra quanto falta pagar, o total e quanto já foi pago, o vencimento, e "O que você levou" com tudo somado ("3× Coca Cola Lata"). Em "Ver histórico" aparece cada compra e cada pagamento, do mais recente pro mais antigo, com data e hora, de onde veio (comanda, compra no balcão), os produtos de cada compra, compras canceladas riscadas e ajustes de valor feitos pela loja
+- **Extrato em PDF pro cliente**: botão "Extrato PDF" em cada conta baixa o mesmo documento da súmula da loja, sem as observações internas e sem a lista de lembretes
+- **Contas já quitadas** ficam guardadas no perfil ("Ver contas já quitadas"), com o histórico e o extrato de cada uma
+
 ## [v1.36.1] — 2026-10-06
 
 ### Corrigido

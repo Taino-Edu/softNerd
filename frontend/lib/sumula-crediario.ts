@@ -79,7 +79,15 @@ const tabelaBase = {
   margin:             { left: ML, right: MR },
 }
 
-export async function gerarSumulaCrediario(c: CrediariosDto, nomeLoja = 'Santuário Nerd') {
+/**
+ * `paraCliente`: versão que o próprio cliente baixa no perfil — título "Extrato",
+ * sem observações internas dos pagamentos (txid etc.) e sem a lista de lembretes.
+ */
+export async function gerarSumulaCrediario(
+  c: CrediariosDto, nomeLoja = 'Santuário Nerd', opcoes: { paraCliente?: boolean } = {},
+) {
+  const paraCliente = !!opcoes.paraCliente
+  const titulo      = paraCliente ? 'Extrato do Crediário' : 'Súmula do Crediário'
   const JsPDF = await getJsPDF()
   const doc: Doc = new (JsPDF as Doc)({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
@@ -94,7 +102,7 @@ export async function gerarSumulaCrediario(c: CrediariosDto, nomeLoja = 'Santuá
   doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...BLACK)
   doc.text(nomeLoja, ML, y)
   doc.setFontSize(11)
-  doc.text('Súmula do Crediário', PW - MR, y, { align: 'right' })
+  doc.text(titulo, PW - MR, y, { align: 'right' })
   y += 6
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY)
   doc.text(`Cliente: ${c.userName}${c.userEmail ? `  ·  ${c.userEmail}` : ''}`, ML, y)
@@ -157,7 +165,7 @@ export async function gerarSumulaCrediario(c: CrediariosDto, nomeLoja = 'Santuá
   for (const p of c.pagamentos)
     linhas.push({
       quando: p.createdAt, tipo: 'Pagamento',
-      origem: (FORMA[p.formaPagamento] ?? p.formaPagamento) + (p.observacao ? ` — ${p.observacao}` : ''),
+      origem: (FORMA[p.formaPagamento] ?? p.formaPagamento) + (!paraCliente && p.observacao ? ` — ${p.observacao}` : ''),
       valor: -p.valorEmReais,
     })
   linhas.sort((a, b) => a.quando.localeCompare(b.quando))
@@ -226,7 +234,7 @@ export async function gerarSumulaCrediario(c: CrediariosDto, nomeLoja = 'Santuá
   }
 
   // ── Lembretes enviados ─────────────────────────────────────────────────────
-  if (c.avisos.length > 0) {
+  if (!paraCliente && c.avisos.length > 0) {
     y = secao(doc, y + 2, 'Lembretes de vencimento enviados')
     doc.autoTable({
       ...tabelaBase,
@@ -259,10 +267,10 @@ export async function gerarSumulaCrediario(c: CrediariosDto, nomeLoja = 'Santuá
     doc.setPage(i)
     hRule(doc, 285)
     doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...LGRAY)
-    doc.text(`${nomeLoja} — Súmula do crediário de ${c.userName}`, ML, 290)
+    doc.text(`${nomeLoja} — ${titulo} de ${c.userName}`, ML, 290)
     doc.text(`${i} / ${paginas}`, PW - MR, 290, { align: 'right' })
   }
 
-  const nomeArquivo = `sumula-crediario-${c.userName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${data(c.dataAbertura).replace(/\//g, '-')}.pdf`
+  const nomeArquivo = `${paraCliente ? 'extrato' : 'sumula'}-crediario-${c.userName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${data(c.dataAbertura).replace(/\//g, '-')}.pdf`
   doc.save(nomeArquivo)
 }
