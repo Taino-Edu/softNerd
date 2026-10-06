@@ -39,11 +39,12 @@ function Switch({ ligado, onChange, label }: { ligado: boolean; onChange: (v: bo
       aria-checked={ligado}
       aria-label={label}
       onClick={() => onChange(!ligado)}
-      className={clsx('relative w-11 h-6 rounded-full transition-colors shrink-0', ligado ? 'bg-green-500' : 'bg-surface-500')}
+      className={clsx('relative w-12 h-7 p-0 rounded-full transition-colors shrink-0', ligado ? 'bg-green-500' : 'bg-surface-500')}
     >
+      {/* left/top fixos: sem eles a bolinha seguia o padding do botão e saía do trilho */}
       <span className={clsx(
-        'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform',
-        ligado ? 'translate-x-5' : 'translate-x-0.5',
+        'absolute left-1 top-1 w-5 h-5 rounded-full bg-white shadow transition-transform',
+        ligado ? 'translate-x-5' : 'translate-x-0',
       )} />
     </button>
   )
@@ -114,8 +115,9 @@ function AvisosConfigModal({
       onClick={() => alternarMarco(m)}
       className={clsx(
         'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+        // Marcado = sólido; o azul clarinho de antes sumia no tema claro e parecia desligado
         cfg.marcos.includes(m)
-          ? 'bg-brand-500/20 border-brand-400 text-brand-200'
+          ? 'bg-brand-500 border-brand-500 text-white font-semibold'
           : 'bg-surface-700 border-surface-500 text-gray-400 hover:text-white',
       )}
     >
@@ -140,7 +142,11 @@ function AvisosConfigModal({
           <div className="flex items-center justify-between gap-4 bg-surface-700 rounded-xl px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-white">Avisos automáticos</p>
-              <p className="text-xs text-gray-400">Desligado, nada sai sozinho — o botão "Avisar" continua funcionando</p>
+              <p className="text-xs text-gray-400">
+                {cfg.ativo
+                  ? 'Ligado: o sistema manda os lembretes nos dias marcados abaixo'
+                  : 'Desligado: nada sai sozinho — o botão "Avisar" continua funcionando'}
+              </p>
             </div>
             <Switch ligado={cfg.ativo} onChange={v => set('ativo', v)} label="Avisos automáticos" />
           </div>
@@ -186,14 +192,14 @@ function AvisosConfigModal({
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-gray-200">
                   WhatsApp da loja
-                  <span className={clsx('ml-2 text-[11px]', cfg.whatsAppConectado ? 'text-green-400' : 'text-amber-400')}>
+                  <span className={clsx('ml-2 text-[11px]', cfg.whatsAppConectado ? 'txt-ok' : 'txt-alerta')}>
                     {cfg.whatsAppConectado ? '● conectado' : '● não conectado'}
                   </span>
                 </span>
                 <Switch ligado={cfg.canalWhatsApp} onChange={v => set('canalWhatsApp', v)} label="WhatsApp" />
               </div>
               {cfg.canalWhatsApp && !cfg.whatsAppConectado && (
-                <p className="text-[11px] text-amber-300">
+                <p className="text-[11px] txt-alerta">
                   O WhatsApp da loja não está pareado agora — os avisos por ele vão falhar até ler o QR Code em Atendimento → WhatsApp.
                 </p>
               )}
@@ -365,7 +371,7 @@ export function UltimoAviso({ avisos }: { avisos: AvisoCrediarioDto[] }) {
 
   return (
     <span
-      className={clsx('flex items-center gap-1', a.falhas ? 'text-amber-400' : 'text-gray-400')}
+      className={clsx('flex items-center gap-1', a.falhas ? 'txt-alerta' : 'text-gray-400')}
       title={[
         `${avisos.length} aviso(s) enviado(s)`,
         a.falhas ? `Falhou: ${a.falhas}` : null,

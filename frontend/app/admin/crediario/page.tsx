@@ -799,7 +799,7 @@ function CompraRow({ l, inicialAberta }: { l: LancamentoCrediarioDto; inicialAbe
       <button
         type="button"
         onClick={() => temItens && setAberta(v => !v)}
-        className={clsx('w-full flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg', temItens && 'hover:bg-surface-600')}
+        className={clsx('w-full flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg', temItens && 'hover:bg-surface-700')}
       >
         {temItens
           ? (aberta
@@ -1075,7 +1075,7 @@ function CrediarioCard({
       <ComprasDaConta c={c} inicialAberto={compact} />
 
       {c.valorExcedenteEmReais > 0 && (
-        <p className="mt-3 text-xs text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-2">
+        <p className="mt-3 text-xs text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded-lg px-3 py-2">
           {fmt(c.valorExcedenteEmReais)} pagos a mais (Pix pago depois do acerto) — o valor virou crédito no saldo do cliente.
         </p>
       )}

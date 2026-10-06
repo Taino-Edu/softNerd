@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.36.1] — 2026-10-06
+
+### Corrigido
+- **Linha da compra ficava preta ao passar o mouse** no tema claro, escondendo o texto (a cor de destaque usada não tinha versão clara)
+- **Botões de liga/desliga dos avisos escapavam do trilho** — a bolinha saía pra fora quando ligado
+- **Dias de aviso marcados pareciam desligados** no tema claro (azul quase transparente). Agora o dia marcado tem fundo sólido
+- **Texto do "Avisos automáticos" dizia "Desligado…" mesmo ligado** — agora acompanha o botão
+- Avisos em amarelo e o aviso de "pago a mais" com contraste nos dois temas
+
 ## [v1.36.0] — 2026-10-06
 
 ### Mudado
