@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.38.2] — 2026-10-06
+
+### Corrigido
+- **Botões de liga/desliga quebrados pelo sistema**: cada tela tinha o seu feito à mão. No Fiscal a bolinha escapava do trilho quando ligada; em Configurações e no formulário de produto do Estoque, desligado no tema claro o trilho ficava quase branco, igual à bolinha, e parecia que o botão tinha sumido. Agora todos (Configurações, Estoque, Fiscal e avisos do Crediário) usam o mesmo componente, com medidas fixas e cinza visível nos dois temas, e são lidos corretamente pelo leitor de tela
+
 ## [v1.38.1] — 2026-10-06
 
 ### Corrigido

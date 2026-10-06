@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { api, fiscalApi, FiscalConfigDto, NaturezaOperacaoDto, NotaFiscalDto, COMANDA_PAYMENT_METHODS } from '@/lib/api'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Switch } from '@/components/ui/Switch'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import {
@@ -395,22 +396,7 @@ export default function FiscalPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={moduloFiscalAtivo}
-              aria-label="Liberar módulo fiscal"
-              onClick={() => setModuloFiscalAtivo(v => !v)}
-              className={clsx(
-                'relative w-12 h-7 rounded-full transition-colors',
-                moduloFiscalAtivo ? 'bg-green-500' : 'bg-surface-500',
-              )}
-            >
-              <span className={clsx(
-                'absolute top-1 w-5 h-5 rounded-full bg-white transition-transform',
-                moduloFiscalAtivo ? 'translate-x-6' : 'translate-x-1',
-              )} />
-            </button>
+            <Switch ligado={moduloFiscalAtivo} onChange={setModuloFiscalAtivo} label="Liberar módulo fiscal" />
             <button onClick={salvarTravaFiscal} disabled={savingTrava || !travaAlterada} className="btn-primary justify-center">
               {savingTrava ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Salvar trava

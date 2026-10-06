@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { productApi, variantApi, categoryApi, reservationApi, fiscalApi, siteConfigApi, Product, ProductCategory, ProductVariant, AdminReservation, NaturezaOperacaoDto, SiteConfigDto } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Badge } from '@/components/ui/Badge'
+import { Switch } from '@/components/ui/Switch'
 import { Table } from '@/components/ui/Table'
 import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X, Loader2, Check, ScanBarcode, Camera, Download, FileText, BarChart2, Layers, DollarSign, TrendingDown, CircleOff, Grid3X3, ChevronDown, ChevronUp, Users, Bell } from 'lucide-react'
 import ImageUpload from '@/components/admin/ImageUpload'
@@ -688,18 +689,8 @@ function ProductModal({
                 <p className="text-sm font-medium text-[var(--text-primary)]">👕 Grade de tamanhos/cores</p>
                 <p className="text-xs text-[var(--text-muted)]">Ative para produtos com variantes (camisas, bonés, etc.). O estoque passa a ser gerenciado por variante.</p>
               </div>
-              <div
-                onClick={() => set('hasVariants', !(form.hasVariants ?? false))}
-                className={[
-                  'relative w-10 h-6 rounded-full transition-colors cursor-pointer shrink-0',
-                  form.hasVariants ? 'bg-emerald-500' : 'bg-surface-600',
-                ].join(' ')}
-              >
-                <span className={[
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform',
-                  form.hasVariants ? 'translate-x-4' : 'translate-x-0',
-                ].join(' ')} />
-              </div>
+              <Switch ligado={form.hasVariants ?? false} onChange={v => set('hasVariants', v)}
+                label="Grade de tamanhos/cores" cor="verde" />
             </label>
             {form.hasVariants && form.id && (
               <div className="mt-3 pt-3 border-t border-surface-500">
@@ -779,57 +770,24 @@ function ProductModal({
                 <p className="text-sm font-medium text-[var(--text-primary)]">🛍️ Marketplace</p>
                 <p className="text-xs text-[var(--text-muted)]">Aparece na loja digital — desmarcado: some do marketplace, continua nas comandas</p>
               </div>
-              <div
-                onClick={() => {
-                  const next = !(form.showOnMarketplace ?? true)
-                  setForm(f => ({ ...f, showOnMarketplace: next, ...(!next ? { isFeatured: false } : {}) }))
-                }}
-                className={[
-                  'relative w-10 h-6 rounded-full transition-colors cursor-pointer shrink-0',
-                  (form.showOnMarketplace ?? true) ? 'bg-brand-500' : 'bg-surface-600',
-                ].join(' ')}
-              >
-                <span className={[
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform',
-                  (form.showOnMarketplace ?? true) ? 'translate-x-4' : 'translate-x-0',
-                ].join(' ')} />
-              </div>
+              <Switch ligado={form.showOnMarketplace ?? true} label="Mostrar na vitrine" cor="marca"
+                onChange={next => setForm(f => ({ ...f, showOnMarketplace: next, ...(!next ? { isFeatured: false } : {}) }))} />
             </label>
             <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">⭐ Destaque na landing</p>
                 <p className="text-xs text-[var(--text-muted)]">Aparece na seção de produtos da home</p>
               </div>
-              <div
-                onClick={() => set('isFeatured', !form.isFeatured)}
-                className={[
-                  'relative w-10 h-6 rounded-full transition-colors cursor-pointer shrink-0',
-                  form.isFeatured ? 'bg-yellow-500' : 'bg-surface-600',
-                ].join(' ')}
-              >
-                <span className={[
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform',
-                  form.isFeatured ? 'translate-x-4' : 'translate-x-0',
-                ].join(' ')} />
-              </div>
+              <Switch ligado={!!form.isFeatured} onChange={v => set('isFeatured', v)}
+                label="Destaque na landing" cor="amarelo" />
             </label>
             <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">📋 Fila de espera</p>
                 <p className="text-xs text-[var(--text-muted)]">Se o estoque zerar, o cliente entra numa fila — ao chegar estoque, vira pré-venda automaticamente</p>
               </div>
-              <div
-                onClick={() => set('isPreVenda', !form.isPreVenda)}
-                className={[
-                  'relative w-10 h-6 rounded-full transition-colors cursor-pointer shrink-0',
-                  form.isPreVenda ? 'bg-purple-500' : 'bg-surface-600',
-                ].join(' ')}
-              >
-                <span className={[
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform',
-                  form.isPreVenda ? 'translate-x-4' : 'translate-x-0',
-                ].join(' ')} />
-              </div>
+              <Switch ligado={!!form.isPreVenda} onChange={v => set('isPreVenda', v)}
+                label="Fila de espera" cor="roxo" />
             </label>
             <div>
               <label className="label">💳 Parcelar no cartão em até — opcional</label>

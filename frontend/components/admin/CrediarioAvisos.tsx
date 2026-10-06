@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { Switch } from '@/components/ui/Switch'
 import { Bell, BellOff, Copy, Link2, Loader2, MessageCircle, Send, X } from 'lucide-react'
 import {
   crediarioApi, CrediariosDto, AvisoCrediarioDto, CrediarioAvisoConfigDto, PreviaAvisoCrediarioDto,
@@ -31,24 +32,6 @@ function mensagemErro(err: unknown, padrao: string) {
   return (err as { response?: { data?: { message?: string } } })?.response?.data?.message || padrao
 }
 
-function Switch({ ligado, onChange, label }: { ligado: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={ligado}
-      aria-label={label}
-      onClick={() => onChange(!ligado)}
-      className={clsx('relative w-12 h-7 p-0 rounded-full transition-colors shrink-0', ligado ? 'bg-green-500' : 'bg-surface-500')}
-    >
-      {/* left/top fixos: sem eles a bolinha seguia o padding do botão e saía do trilho */}
-      <span className={clsx(
-        'absolute left-1 top-1 w-5 h-5 rounded-full bg-white shadow transition-transform',
-        ligado ? 'translate-x-5' : 'translate-x-0',
-      )} />
-    </button>
-  )
-}
 
 // ── Botão do cabeçalho: mostra se está ligado e abre a configuração ─────────
 

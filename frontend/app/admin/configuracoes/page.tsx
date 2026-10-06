@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { usePreferences } from '@/hooks/usePreferences'
 import { BrainCircuit, Bell, Tag, Check, Loader2, Accessibility, LayoutDashboard, RotateCcw, Timer } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Switch } from '@/components/ui/Switch'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
 import { UserPreferences, DashboardPanels, DEFAULT_DASHBOARD_PANELS } from '@/lib/api'
@@ -39,15 +40,8 @@ function Row({ label, desc, children }: { label: string; desc?: string; children
   )
 }
 
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!value)}
-      className={clsx('relative w-11 h-6 rounded-full transition-colors duration-200', value ? 'bg-brand-500' : 'bg-surface-600')}
-    >
-      <span className={clsx('absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200', value ? 'translate-x-5' : 'translate-x-0')} />
-    </button>
-  )
+function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
+  return <Switch ligado={value} onChange={onChange} label={label} cor="marca" />
 }
 
 export default function ConfiguracoesPage() {
@@ -102,13 +96,13 @@ export default function ConfiguracoesPage() {
       {/* ── Botão IA ── */}
       <Section title="Assistente IA" icon={<BrainCircuit className="w-5 h-5 text-violet-400" />}>
         <Row label="Ativar chat IA" desc="Exibe o botão flutuante do assistente">
-          <Toggle value={prefs.aiButton.enabled} onChange={v => set('aiButton', { enabled: v })} />
+          <Toggle label="Ativar chat IA" value={prefs.aiButton.enabled} onChange={v => set('aiButton', { enabled: v })} />
         </Row>
 
         {prefs.aiButton.enabled && (
           <>
             <Row label="Botão arrastável" desc="Arraste o botão para qualquer lugar da tela">
-              <Toggle value={prefs.aiButton.mode === 'draggable'} onChange={v => set('aiButton', { mode: v ? 'draggable' : 'fixed' })} />
+              <Toggle label="Botão arrastável" value={prefs.aiButton.mode === 'draggable'} onChange={v => set('aiButton', { mode: v ? 'draggable' : 'fixed' })} />
             </Row>
 
             {prefs.aiButton.mode === 'fixed' && (
@@ -140,7 +134,7 @@ export default function ConfiguracoesPage() {
       {/* ── VLibras ── */}
       <Section title="VLibras (Acessibilidade)" icon={<Accessibility className="w-5 h-5 text-blue-400" />}>
         <Row label="Ativar VLibras" desc="Exibe o botão de tradução em Libras">
-          <Toggle value={prefs.vlibras.enabled} onChange={v => set('vlibras', { enabled: v })} />
+          <Toggle label="Ativar VLibras" value={prefs.vlibras.enabled} onChange={v => set('vlibras', { enabled: v })} />
         </Row>
 
         {prefs.vlibras.enabled && (
@@ -170,7 +164,7 @@ export default function ConfiguracoesPage() {
       {/* ── Timer de torneio ── */}
       <Section title="Timer de Torneio" icon={<Timer className="w-5 h-5 text-emerald-400" />}>
         <Row label="Widget lateral" desc="Deixa o timer preso na lateral em qualquer tela do sistema">
-          <Toggle value={prefs.timer.enabled} onChange={v => set('timer', { enabled: v })} />
+          <Toggle label="Widget lateral" value={prefs.timer.enabled} onChange={v => set('timer', { enabled: v })} />
         </Row>
 
         {prefs.timer.enabled && (
@@ -200,10 +194,10 @@ export default function ConfiguracoesPage() {
       {/* ── Notificações ── */}
       <Section title="Notificações" icon={<Bell className="w-5 h-5 text-amber-400" />}>
         <Row label="Sons" desc="Toca um som ao receber notificações">
-          <Toggle value={prefs.notifications.soundEnabled} onChange={v => set('notifications', { soundEnabled: v })} />
+          <Toggle label="Sons" value={prefs.notifications.soundEnabled} onChange={v => set('notifications', { soundEnabled: v })} />
         </Row>
         <Row label="Notificações do navegador" desc="Permite notificações push mesmo com a aba em segundo plano">
-          <Toggle
+          <Toggle label="Notificações do navegador"
             value={prefs.notifications.browserEnabled && browserPermission === 'granted'}
             onChange={setBrowserNotifications}
           />
@@ -324,7 +318,7 @@ export default function ConfiguracoesPage() {
               { key: 'preVenda',      label: 'Lista de espera pré-venda' },
             ] as { key: keyof DashboardPanels; label: string }[]).map(({ key, label }) => (
               <Row key={key} label={label}>
-                <Toggle
+                <Toggle label={label}
                   value={prefs.dashboard.panels[key]}
                   onChange={v => set('dashboard', { panels: { ...prefs.dashboard.panels, [key]: v } })}
                 />
