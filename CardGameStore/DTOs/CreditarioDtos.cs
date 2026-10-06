@@ -39,6 +39,9 @@ public class CrediariosDto
     /// </summary>
     public decimal ValorExcedenteEmReais { get; set; }
 
+    /// <summary>Código do link público de pagamento — a página é /pagar/{PagamentoToken}.</summary>
+    public string?  PagamentoToken        { get; set; }
+
     /// <summary>Lembretes de vencimento enviados, mais recente primeiro.</summary>
     public List<AvisoCrediarioDto> Avisos { get; set; } = new();
 

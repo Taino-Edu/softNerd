@@ -39,12 +39,14 @@ public class CrediarioAvisoService
     private readonly IEmailService    _email;
     private readonly IPushService     _push;
     private readonly IWhatsAppGateway _whatsApp;
+    private readonly IConfiguration   _config;
     private readonly ILogger<CrediarioAvisoService> _logger;
 
     public CrediarioAvisoService(
         AppDbContext db, IEmailService email, IPushService push, IWhatsAppGateway whatsApp,
-        ILogger<CrediarioAvisoService> logger)
+        IConfiguration config, ILogger<CrediarioAvisoService> logger)
     {
+        _config   = config;
         _db       = db;
         _email    = email;
         _push     = push;
@@ -218,7 +220,8 @@ public class CrediarioAvisoService
             .ToListAsync(ct);
         var site  = await NomeDaLojaAsync(ct);
 
-        var (titulo, texto) = MontarMensagem(conta.User, new List<Crediario> { conta }, todas, hoje, site, cfg.MensagemExtra);
+        var linkPix = await LinkPixAsync(ct);
+        var (titulo, texto) = MontarMensagem(conta.User, new List<Crediario> { conta }, todas, hoje, site, cfg.MensagemExtra, linkPix);
 
         var canais = new List<string>();
         if (cfg.CanalApp) canais.Add("app");
@@ -235,8 +238,9 @@ public class CrediarioAvisoService
         CrediarioAvisoConfig cfg, User user, List<Crediario> contasDoAviso, List<Crediario> todasDoCliente,
         DateTime hoje, CancellationToken ct)
     {
-        var site = await NomeDaLojaAsync(ct);
-        var (titulo, texto) = MontarMensagem(user, contasDoAviso, todasDoCliente, hoje, site, cfg.MensagemExtra);
+        var site    = await NomeDaLojaAsync(ct);
+        var linkPix = await LinkPixAsync(ct);
+        var (titulo, texto) = MontarMensagem(user, contasDoAviso, todasDoCliente, hoje, site, cfg.MensagemExtra, linkPix);
 
         var ok     = new List<string>();
         var falhas = new List<string>();
@@ -376,7 +380,7 @@ public class CrediarioAvisoService
 
     public static (string Titulo, string Texto) MontarMensagem(
         User user, List<Crediario> contasDoAviso, List<Crediario> todasDoCliente, DateTime hoje,
-        string nomeLoja, string? mensagemExtra)
+        string nomeLoja, string? mensagemExtra, Func<Crediario, string?>? linkPix = null)
     {
         var piorDias = contasDoAviso.Max(c => DiasDoVencimento(c, hoje));
         var titulo = piorDias switch
@@ -393,14 +397,27 @@ public class CrediarioAvisoService
             ? "Passando pra lembrar que tem crediário em atraso:\n"
             : "Passando pra lembrar do seu crediário:\n");
 
-        foreach (var c in contasDoAviso.OrderBy(c => c.DataVencimento))
+        var ordenadas = contasDoAviso.OrderBy(c => c.DataVencimento).ToList();
+        var links     = ordenadas.Select(c => linkPix?.Invoke(c)).ToList();
+        for (var i = 0; i < ordenadas.Count; i++)
+        {
+            var c = ordenadas[i];
             sb.Append($"• R$ {c.SaldoRestanteEmReais:N2} — {Situacao(c, hoje)}\n");
+            // Mais de uma conta: o link de cada uma vai logo abaixo dela
+            if (ordenadas.Count > 1 && links[i] is not null)
+                sb.Append($"  Pagar por Pix: {links[i]}\n");
+        }
 
         var total = todasDoCliente.Sum(c => c.SaldoRestanteEmReais);
         if (todasDoCliente.Count > contasDoAviso.Count || contasDoAviso.Count > 1)
             sb.Append($"Total em aberto: R$ {total:N2}\n");
 
-        sb.Append("\nDá pra pagar no balcão ou por Pix. Os detalhes de cada compra estão no seu perfil, na aba Dívida.");
+        if (ordenadas.Count == 1 && links[0] is not null)
+            sb.Append($"\nPague por Pix na hora, por este link:\n{links[0]}\n");
+
+        sb.Append(links.Any(l => l is not null)
+            ? "\nTambém dá pra pagar no balcão. Os detalhes de cada compra estão no seu perfil, na aba Dívida."
+            : "\nDá pra pagar no balcão ou por Pix. Os detalhes de cada compra estão no seu perfil, na aba Dívida.");
         if (!string.IsNullOrWhiteSpace(mensagemExtra))
             sb.Append($"\n{mensagemExtra.Trim()}");
         sb.Append("\nSe já pagou, pode desconsiderar. 🙂");
@@ -416,6 +433,13 @@ public class CrediarioAvisoService
         var texto = string.Join(" · ", linhas);
         if (todas.Count > 1) texto += $". Total em aberto: R$ {todas.Sum(c => c.SaldoRestanteEmReais):N2}";
         return texto.Length > 500 ? texto[..500] : texto;
+    }
+
+    /// <summary>Link de pagamento de cada conta — só quando o Pix do Inter está configurado.</summary>
+    private async Task<Func<Crediario, string?>?> LinkPixAsync(CancellationToken ct)
+    {
+        if (!await CrediarioPixService.PixConfiguradoAsync(_db, ct)) return null;
+        return c => c.PagamentoToken is null ? null : CrediarioPixService.LinkPagamento(_config, c.PagamentoToken);
     }
 
     private async Task<string> NomeDaLojaAsync(CancellationToken ct)

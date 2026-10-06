@@ -35,23 +35,20 @@ public class CrediariosController : ControllerBase
 {
     private readonly AppDbContext    _db;
     private readonly IEmailService   _email;
-    private readonly InterSyncService _inter;
-    private readonly IPixReconciliationService _pixReconciliation;
+    private readonly CrediarioPixService _pix;
     private readonly IAuditService   _audit;
     private readonly CrediarioAvisoService _avisos;
     private readonly IWhatsAppGateway _whatsApp;
     private readonly ILogger<CrediariosController> _logger;
 
-    public CrediariosController(AppDbContext db, IEmailService email, InterSyncService inter,
-        IPixReconciliationService pixReconciliation, IAuditService audit,
+    public CrediariosController(AppDbContext db, IEmailService email, CrediarioPixService pix, IAuditService audit,
         CrediarioAvisoService avisos, IWhatsAppGateway whatsApp, ILogger<CrediariosController> logger)
     {
         _avisos            = avisos;
         _whatsApp          = whatsApp;
         _db                = db;
         _email             = email;
-        _inter             = inter;
-        _pixReconciliation = pixReconciliation;
+        _pix               = pix;
         _audit             = audit;
         _logger            = logger;
     }
@@ -398,7 +395,7 @@ public class CrediariosController : ControllerBase
 
         // O saldo vai mudar: QR Code gerado antes cobraria o valor velho. Derruba antes de
         // lançar — e se o cliente acabou de pagar por ele, para aqui pra não receber duas vezes.
-        var pixPago = await EncerrarPixAtivosAsync(id);
+        var pixPago = await _pix.EncerrarAtivasAsync(id, GetUserId());
         if (pixPago is not null)
             return Conflict(new { Message = pixPago });
 
@@ -491,49 +488,13 @@ public class CrediariosController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> GerarCobrancaPix(Guid id)
     {
-        var crediario = await _db.Crediarios
-            .Include(c => c.User)
-            .FirstOrDefaultAsync(c => c.Id == id);
+        // Reaproveita a cobrança ativa do mesmo saldo (pode ter sido aberta pelo
+        // link do cliente) em vez de abrir outra no Inter.
+        var resultado = await _pix.ObterOuGerarAsync(id, GetUserId());
+        if (resultado.Pix is null)
+            return StatusCode(resultado.StatusCode, new { Message = resultado.Erro });
 
-        if (crediario == null)
-            return NotFound(new { Message = "Crediário não encontrado." });
-
-        if (crediario.Status == CrediariosStatus.Pago)
-            return BadRequest(new { Message = "Crediário já está quitado." });
-
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg == null)
-            return BadRequest(new { Message = "Integração com o Inter não configurada em /admin/integracoes." });
-
-        var cpf = crediario.User.Cpf?.Length == 11 ? crediario.User.Cpf : null;
-
-        var result = await _inter.CriarCobrancaAsync(
-            cfg, crediario.SaldoRestanteEmCentavos, crediario.User.Name, cpf,
-            "Santuário Nerd — Crediário");
-
-        if (result.Error is not null)
-            return StatusCode(422, new { message = result.Error });
-
-        var pix = new PixCobranca
-        {
-            Origem           = PixCobrancaOrigem.Crediario,
-            CrediarioId      = crediario.Id,
-            TxId             = result.TxId!,
-            ValorEmCentavos  = crediario.SaldoRestanteEmCentavos,
-            Status           = result.Status ?? "ATIVA",
-            PixCopiaCola     = result.PixCopiaCola,
-            ImagemQrCode     = result.ImagemQrCode,
-            NomeDevedor      = crediario.User.Name,
-            CriadoPorAdminId = GetUserId(),
-            ExpiraEm         = result.ExpiraEm,
-        };
-        _db.PixCobrancas.Add(pix);
-        await _db.SaveChangesAsync();
-
-        _logger.LogInformation(
-            "Cobrança Pix {TxId} gerada pelo admin {AdminId} para crediário {CrediarioId} — R$ {Valor:N2}",
-            pix.TxId, GetUserId(), crediario.Id, pix.ValorEmReais);
-
+        var pix = resultado.Pix;
         return Ok(new
         {
             pix.TxId,
@@ -552,15 +513,13 @@ public class CrediariosController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ConsultarCobrancaPix(Guid id, string txid)
     {
-        var pix = await _db.PixCobrancas.FirstOrDefaultAsync(p => p.CrediarioId == id && p.TxId == txid);
-        if (pix == null)
-            return NotFound(new { Message = "Cobrança não encontrada." });
-
         // Reconcilia automaticamente: cobrança paga → registra pagamento no crediário.
         // A baixa mora no PixReconciliationService — mesmo caminho do robô.
-        var result = await _pixReconciliation.ReconciliarAsync(pix, GetUserId());
-        if (result.Error is not null)
-            return StatusCode(422, new { message = result.Error });
+        var (pix, erro) = await _pix.VerificarAsync(id, txid, GetUserId());
+        if (pix is null)
+            return NotFound(new { Message = erro });
+        if (erro is not null)
+            return StatusCode(422, new { message = erro });
 
         return Ok(new { pix.TxId, pix.Status, PagoEm = pix.PagoEm });
     }
@@ -689,7 +648,7 @@ public class CrediariosController : ControllerBase
 
         // Excluir a conta apaga as cobranças Pix dela: um QR ainda pagável viraria
         // dinheiro recebido sem dono.
-        var pixPago = await EncerrarPixAtivosAsync(id);
+        var pixPago = await _pix.EncerrarAtivasAsync(id, GetUserId());
         if (pixPago is not null)
             return Conflict(new { Message = pixPago });
 
@@ -740,6 +699,7 @@ public class CrediariosController : ControllerBase
             DataPagamento         = c.DataPagamento,
             Status                = vencido ? "Vencido" : c.Status.ToString(),
             Observacao            = c.Observacao,
+            PagamentoToken        = c.Status == CrediariosStatus.Aberto ? c.PagamentoToken : null,
             Vencido               = vencido,
             DiasRestantes         = dias,
             Pagamentos            = c.Pagamentos
@@ -765,51 +725,6 @@ public class CrediariosController : ControllerBase
             Lancamentos           = lancamentos,
             ItensComanda          = itens,
         };
-    }
-
-    /// <summary>
-    /// Encerra as cobranças Pix ainda ativas da conta. Antes de cancelar, confere no
-    /// Inter: se o cliente acabou de pagar, a reconciliação dá a baixa e devolve a
-    /// mensagem pro chamador parar. Se o Inter não deixar cancelar, a cobrança segue
-    /// ativa pro robô — e, se for paga, o que passar do saldo vira crédito do cliente.
-    /// </summary>
-    private async Task<string?> EncerrarPixAtivosAsync(Guid crediarioId)
-    {
-        var ativos = await _db.PixCobrancas
-            .Where(p => p.CrediarioId == crediarioId && p.Status == "ATIVA" && p.PagoEm == null)
-            .ToListAsync();
-        if (ativos.Count == 0) return null;
-
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        foreach (var pix in ativos)
-        {
-            var vencida = pix.ExpiraEm is not null && pix.ExpiraEm <= DateTime.UtcNow;
-            if (!vencida)
-            {
-                var conferida = await _pixReconciliation.ReconciliarAsync(pix, GetUserId());
-                if (conferida.PagoEm is not null)
-                    return $"O cliente acabou de pagar R$ {pix.ValorEmReais:N2} pela cobrança Pix desta conta e o pagamento já foi registrado. Recarregue a tela antes de lançar outro.";
-                if (pix.Status != "ATIVA") continue; // o Inter já encerrou por conta própria
-            }
-
-            var removida = cfg is null
-                ? new PixCobrancaResult { Error = "Integração com o Inter não configurada." }
-                : await _inter.RemoverCobrancaAsync(cfg, pix.TxId);
-
-            if (removida.Error is null || vencida)
-            {
-                pix.Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR";
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "Cobrança Pix {TxId} do crediário {CrediarioId} não foi cancelada no Inter ({Erro}) — segue ativa pro robô conciliar.",
-                    pix.TxId, crediarioId, removida.Error);
-            }
-        }
-
-        await _db.SaveChangesAsync();
-        return null;
     }
 
     private Guid GetUserId()

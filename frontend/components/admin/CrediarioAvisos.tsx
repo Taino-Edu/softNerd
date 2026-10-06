@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
-import { Bell, BellOff, Copy, Loader2, MessageCircle, Send, X } from 'lucide-react'
+import { Bell, BellOff, Copy, Link2, Loader2, MessageCircle, Send, X } from 'lucide-react'
 import {
   crediarioApi, CrediariosDto, AvisoCrediarioDto, CrediarioAvisoConfigDto, PreviaAvisoCrediarioDto,
 } from '@/lib/api'
@@ -278,6 +278,17 @@ export function AvisarModal({
     }
   }
 
+  // Link público de pagamento (/pagar/{token}) — o mesmo que vai dentro do aviso
+  async function copiarLink() {
+    if (!crediario.pagamentoToken) return
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/pagar/${crediario.pagamentoToken}`)
+      toast.success('Link de pagamento copiado')
+    } catch {
+      toast.error('Não deu pra copiar')
+    }
+  }
+
   // Sem o WhatsApp da loja pareado, dá pra mandar do próprio celular com o texto pronto
   const waLink = previa?.whatsApp
     ? `https://wa.me/55${previa.whatsApp}?text=${encodeURIComponent(previa.texto)}`
@@ -333,6 +344,11 @@ export function AvisarModal({
               <Copy className="w-4 h-4" /> Copiar texto
             </button>
           </div>
+          {crediario.pagamentoToken && (
+            <button type="button" onClick={copiarLink} className="btn-secondary justify-center">
+              <Link2 className="w-4 h-4" /> Copiar link de pagamento por Pix
+            </button>
+          )}
         </div>
       </div>
     </div>

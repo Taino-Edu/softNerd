@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.35.0] — 2026-10-06
+
+### Adicionado
+- **Link pro cliente pagar o crediário por Pix**: cada conta tem um link próprio que abre no celular, sem login — mostra o saldo, o vencimento e as datas das compras, gera o Pix na hora e confirma sozinho quando o pagamento cai (dá baixa automática na conta). O link mostra só o primeiro nome do cliente e valores, nada de telefone, e-mail ou CPF, e não dá pra adivinhar
+- **O aviso de vencimento leva o link**: com o Pix do Inter configurado, a mensagem de lembrete (WhatsApp, e-mail) vem com "Pague por Pix na hora, por este link". Cliente com várias contas recebe o link de cada uma
+- **"Pagar com Pix" no perfil do cliente**: cada conta na aba Dívida tem o botão, que abre a mesma página de pagamento
+- **Copiar link de pagamento** no botão "Avisar" do admin, pra mandar por onde quiser
+
+### Mudado
+- **Cobrança Pix reaproveitada**: abrir o link de novo, clicar duas vezes ou o admin usar "Cobrar via Pix" devolve a cobrança que ainda está valendo pro mesmo saldo, em vez de abrir outra no banco a cada clique
+
 ## [v1.34.0] — 2026-10-02
 
 ### Adicionado

@@ -349,6 +349,11 @@ public class AppDbContext : DbContext
             entity.HasIndex(c => c.Status)
                   .HasDatabaseName("ix_crediarios_status");
 
+            entity.HasIndex(c => c.PagamentoToken)
+                  .IsUnique()
+                  .HasFilter("pagamento_token IS NOT NULL")
+                  .HasDatabaseName("ux_crediarios_pagamento_token");
+
             entity.HasOne(c => c.User)
                   .WithMany()
                   .HasForeignKey(c => c.UserId)

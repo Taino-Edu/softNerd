@@ -432,6 +432,7 @@ builder.Services.AddHostedService<PixReconciliationBackgroundService>();
 // Crediário — lembretes de vencimento (cliente: sininho/push, e-mail, WhatsApp;
 // admin: resumo do dia). Configurado em /admin/crediario → Avisos automáticos.
 builder.Services.AddScoped<CrediarioAvisoService>();
+builder.Services.AddScoped<CrediarioPixService>();
 builder.Services.AddHostedService<CrediarioAvisoBackgroundService>();
 
 // ---------------------------------------------------------------------------
@@ -900,6 +901,11 @@ using (var scope = app.Services.CreateScope())
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_comanda   ON crediario_lancamentos (comanda_id);
                 CREATE INDEX IF NOT EXISTS ix_crediario_lancamentos_venda     ON crediario_lancamentos (venda_avulsa_id);
 
+                -- Crediário: link público de pagamento (página /pagar/codigo)
+                ALTER TABLE crediarios ADD COLUMN IF NOT EXISTS pagamento_token VARCHAR(64) NULL;
+                CREATE UNIQUE INDEX IF NOT EXISTS ux_crediarios_pagamento_token
+                    ON crediarios (pagamento_token) WHERE pagamento_token IS NOT NULL;
+
                 -- Crediário: lembretes de vencimento (config de linha única + histórico)
                 CREATE TABLE IF NOT EXISTS crediario_aviso_config (
                     id               UUID         NOT NULL,
@@ -1303,6 +1309,7 @@ using (var scope = app.Services.CreateScope())
             foreach (var ddl in new[]
             {
                 "ALTER TABLE championships ADD COLUMN minutos_para_pagar INTEGER NOT NULL DEFAULT 30;",
+                "ALTER TABLE crediarios ADD COLUMN pagamento_token TEXT NULL;",
                 "ALTER TABLE championship_participants ADD COLUMN inscricao_expira_em TEXT NULL;",
             })
             {
@@ -1324,6 +1331,21 @@ using (var scope = app.Services.CreateScope())
         catch (Exception ex)
         {
             logger.LogError(ex, "Crediário: falha ao converter contas antigas em lançamentos.");
+        }
+
+        // Crediário: contas de antes do link de pagamento ganham o código delas.
+        try
+        {
+            if (useSqlite)
+                await db.Database.ExecuteSqlRawAsync(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ux_crediarios_pagamento_token ON crediarios (pagamento_token) WHERE pagamento_token IS NOT NULL;");
+            var comToken = await CardGameStore.Services.Implementations.CrediarioPixService.GarantirTokensAsync(db);
+            if (comToken > 0)
+                logger.LogInformation("Crediário: {Qtd} conta(s) ganharam link de pagamento.", comToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Crediário: falha ao gerar os links de pagamento das contas antigas.");
         }
 
         // Seed: cria o admin se não existir

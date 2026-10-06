@@ -47,6 +47,7 @@ public class CrediarioAvisoServiceTests
            .ReturnsAsync(new WhatsAppGatewaySendResult(true, "msg-1"));
 
         var service = new CrediarioAvisoService(db, email.Object, push.Object, wpp.Object,
+            new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build(),
             NullLogger<CrediarioAvisoService>.Instance);
         return new(db, service, email, push, wpp);
     }

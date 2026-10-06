@@ -76,6 +76,16 @@ public class Crediario
     [Column("pago_por_admin_id")]
     public Guid? PagoPorAdminId { get; set; }
 
+    // ── Link de pagamento ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Código do link público /pagar/{token}: abre sem login, mostra o saldo e gera o
+    /// Pix. Vai no aviso de vencimento. 128 bits aleatórios — não dá pra adivinhar.
+    /// </summary>
+    [MaxLength(64)]
+    [Column("pagamento_token")]
+    public string? PagamentoToken { get; set; } = CardGameStore.Services.Implementations.CrediarioPixService.NovoToken();
+
     // ── Itens (legado) ────────────────────────────────────────────────────────
 
     /// <summary>

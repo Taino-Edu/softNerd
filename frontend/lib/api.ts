@@ -575,6 +575,8 @@ export interface CrediariosDto {
   /** Pago acima do valor da conta (Pix antigo pago depois do acerto) — virou crédito do cliente. */
   valorExcedenteEmReais: number
   pagamentos: PagamentoCrediarioDto[]
+  /** Código do link público de pagamento (/pagar/{token}); null em conta quitada. */
+  pagamentoToken: string | null
   /** Lembretes de vencimento enviados, mais recente primeiro. */
   avisos: AvisoCrediarioDto[]
   /** Compras que entraram na conta, mais antiga primeiro (inclui estornadas). */
@@ -694,6 +696,41 @@ export const crediarioApi = {
     api.get<PreviaAvisoCrediarioDto>(`/api/crediarios/${id}/aviso/previa`),
   avisarAgora: (id: string) =>
     api.post<{ canais: string[]; falhas: string | null }>(`/api/crediarios/${id}/aviso`),
+}
+
+// ── Link público de pagamento do crediário (/pagar/{token}) — sem login ───────
+
+export interface PagamentoCrediarioResumo {
+  loja: string
+  primeiroNome: string
+  valorEmReais: number
+  valorPagoEmReais: number
+  saldoRestanteEmReais: number
+  dataVencimento: string
+  quitado: boolean
+  vencido: boolean
+  diasDeAtraso: number
+  pixDisponivel: boolean
+  compras: { data: string; valorEmReais: number }[]
+}
+
+export interface PagamentoCrediarioPix {
+  txId: string
+  status: string
+  pixCopiaCola: string | null
+  imagemQrCode: string | null
+  expiraEm: string | null
+  valorEmReais: number
+}
+
+export const pagarCrediarioApi = {
+  resumo: (token: string) =>
+    api.get<PagamentoCrediarioResumo>(`/api/pagar/crediario/${token}`),
+  gerarPix: (token: string) =>
+    api.post<PagamentoCrediarioPix>(`/api/pagar/crediario/${token}/pix`),
+  statusPix: (token: string, txid: string) =>
+    api.get<{ status: string; pagoEm: string | null; quitado: boolean; saldoRestanteEmReais: number; aviso: string | null }>(
+      `/api/pagar/crediario/${token}/pix/${txid}`),
 }
 
 export const COMANDA_PAYMENT_METHODS = [

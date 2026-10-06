@@ -1016,6 +1016,15 @@ export default function PerfilPage() {
                           </div>
                         </div>
 
+                        {c.pagamentoToken && (
+                          <Link
+                            href={`/pagar/${c.pagamentoToken}`}
+                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors"
+                          >
+                            Pagar R$ {c.saldoRestanteEmReais.toFixed(2).replace('.', ',')} com Pix
+                          </Link>
+                        )}
+
                         {c.lancamentos.filter(l => !l.estornadoEm && l.itens.length > 0).length > 0 && (
                           <div className="border-t border-gray-100 pt-2 space-y-2">
                             {c.lancamentos.filter(l => !l.estornadoEm && l.itens.length > 0).map(l => (
@@ -1035,7 +1044,7 @@ export default function PerfilPage() {
                     ))}
 
                     <p className="text-[10px] text-gray-400 italic text-center">
-                      * Compareça ao balcão para quitar sua dívida com o Maikon.
+                      * Dá pra pagar por Pix aqui mesmo ou no balcão da loja.
                     </p>
                   </div>
                 )}
