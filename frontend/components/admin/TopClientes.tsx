@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { analyticsApi, ClienteInsightDto, ClientesFiltro } from '@/lib/api'
 import { Star, Medal, Trophy, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
+import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
 
 const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 
@@ -38,10 +39,7 @@ export function getRangeClientes(preset: PeriodoPreset): { inicio: string; fim: 
 }
 
 const FORMAS = ['', 'Pix', 'Dinheiro', 'CartaoCredito', 'CartaoDebito', 'Crediario'] as const
-const FORMA_LABELS: Record<string, string> = {
-  Pix: 'Pix', Dinheiro: 'Dinheiro', CartaoCredito: 'Crédito',
-  CartaoDebito: 'Débito', Crediario: 'Crediário',
-}
+const FORMA_LABELS: Record<string, string> = Object.fromEntries(FORMAS_PAGAMENTO.map(f => [f.value, f.curto]))
 
 export interface TopClientesState {
   preset: PeriodoPreset

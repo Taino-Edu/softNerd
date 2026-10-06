@@ -34,9 +34,10 @@ public class ComandaService : IComandaService
     }
 
     // Constantes para evitar magic strings sensíveis a typo/case
-    private const string PaymentCrediario = "Crediario";
-    private const string PaymentPontos    = "Pontos";
-    private const string PaymentCashback  = "Cashback";
+    // Formas de pagamento: catálogo único em Models/PaymentMethod.cs
+    private const string PaymentCrediario = Models.MongoDB.PaymentMethod.Crediario;
+    private const string PaymentPontos    = Models.MongoDB.PaymentMethod.Pontos;
+    private const string PaymentCashback  = Models.MongoDB.PaymentMethod.Cashback;
 
     private readonly AppDbContext            _db;
     private readonly IEmailService           _email;
@@ -461,7 +462,7 @@ public class ComandaService : IComandaService
         return dto;
     }
 
-    public async Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = "Dinheiro", string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false,
+    public async Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = Models.MongoDB.PaymentMethod.Dinheiro, string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false,
         DateTime? crediarioVencimento = null)
     {
         // Mesma validação que a venda avulsa já fazia: sem isto a comanda gravava
@@ -653,9 +654,8 @@ public class ComandaService : IComandaService
 
         // ── Pontos de fidelidade ──────────────────────────────────────────────
         // Não acumula quando qualquer parte do pagamento usa cashback, pontos ou crediário.
-        if (comanda.User != null && paymentMethod != PaymentCrediario
-                                 && paymentMethod != PaymentPontos
-                                 && paymentMethod != PaymentCashback
+        // Só dinheiro de verdade gera pontos (catálogo: EntraNoCaixa)
+        if (comanda.User != null && Models.MongoDB.PaymentMethod.EntraNoCaixa(paymentMethod)
                                  && secondPaymentMethod != PaymentCashback)
         {
             // Base para acúmulo: exclui parcela paga em pontos no segundo método

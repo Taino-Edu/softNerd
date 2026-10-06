@@ -11,6 +11,7 @@ import {
   FileText, Lightbulb, ArrowUp, ArrowDown, Minus, Loader2, Sparkles, CircleHelp,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function toDateInput(d: Date) {
@@ -36,15 +37,8 @@ interface IntelligentAnalysis {
 }
 
 // ── Formas de pagamento ───────────────────────────────────────────────────────
-const FORMA_LABELS: Record<string, string> = {
-  Dinheiro:      'Dinheiro',
-  Pix:           'Pix',
-  CartaoCredito: 'Cartão de Crédito',
-  CartaoDebito:  'Cartão de Débito',
-  Crediario:     'Crediário',
-  Pontos:        'Pontos de Fidelidade',
-  Cashback:      'Cashback (Saldo)',
-}
+// Nomes das formas: catálogo único (lib/pagamentos)
+const FORMA_LABELS: Record<string, string> = Object.fromEntries(FORMAS_PAGAMENTO.map(f => [f.value, f.label]))
 
 const FORMA_ICONS: Record<string, React.ReactNode> = {
   Dinheiro:      <Banknote   className="w-4 h-4 text-emerald-400" />,

@@ -35,7 +35,7 @@ public interface IComandaService
     /// Se paymentMethod == "Crediario", cria um Crediario e envia email ao cliente.
     /// Suporta split payment: secondPaymentMethod + secondPaymentAmountInCents.
     /// </summary>
-    Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = "Dinheiro", string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false,
+    Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = Models.MongoDB.PaymentMethod.Dinheiro, string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false,
         DateTime? crediarioVencimento = null);
 
     /// <summary>Cancela a comanda sem cobrança.</summary>

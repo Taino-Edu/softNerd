@@ -8,6 +8,7 @@
 
 import { CrediariosDto, LancamentoCrediarioDto } from './api'
 import { agruparItens, totalUnidades } from './crediario'
+import { rotuloPagamento } from './pagamentos'
 
 async function getJsPDF() {
   const { default: jsPDF } = await import('jspdf')
@@ -35,12 +36,6 @@ const ORIGEM: Record<string, string> = {
   Legado:      'Compras anteriores',
 }
 
-const FORMA: Record<string, string> = {
-  Dinheiro:      'Dinheiro',
-  Pix:           'Pix',
-  CartaoCredito: 'Cartão de crédito',
-  CartaoDebito:  'Cartão de débito',
-}
 
 const CANAL: Record<string, string> = { app: 'App', email: 'E-mail', whatsapp: 'WhatsApp' }
 
@@ -165,7 +160,7 @@ export async function gerarSumulaCrediario(
   for (const p of c.pagamentos)
     linhas.push({
       quando: p.createdAt, tipo: 'Pagamento',
-      origem: (FORMA[p.formaPagamento] ?? p.formaPagamento) + (!paraCliente && p.observacao ? ` — ${p.observacao}` : ''),
+      origem: rotuloPagamento(p.formaPagamento) + (!paraCliente && p.observacao ? ` — ${p.observacao}` : ''),
       valor: -p.valorEmReais,
     })
   linhas.sort((a, b) => a.quando.localeCompare(b.quando))

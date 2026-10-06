@@ -8,6 +8,7 @@ import PercentPicker from '@/components/admin/PercentPicker'
 import { PageHeader } from '@/components/ui/PageHeader'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
+import { rotuloCurtoPagamento } from '@/lib/pagamentos'
 import {
   Clock, CheckCircle, XCircle, Package, User as UserIcon,
   LayoutList, RefreshCw, Loader2,
@@ -16,7 +17,9 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 
-const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'Débito', 'Crédito', 'Crediario']
+// Códigos do catálogo (lib/pagamentos). Antes eram textos ("Débito", "Crédito") que o
+// back gravava assim e nenhum relatório reconhecia.
+const PAYMENT_METHODS = ['Dinheiro', 'Pix', 'CartaoDebito', 'CartaoCredito', 'Crediario'] as const
 
 type ReservationCart = {
   groupId: string
@@ -1065,7 +1068,7 @@ export default function ReservasPage() {
                         ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
                         : 'bg-surface-700 text-gray-400 border-surface-500'
                     )}>
-                    {m}
+                    {rotuloCurtoPagamento(m)}
                   </button>
                 ))}
               </div>
@@ -1088,7 +1091,7 @@ export default function ReservasPage() {
                             ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
                             : 'bg-surface-800 text-gray-400 border-surface-500'
                         )}>
-                        {m}
+                        {rotuloCurtoPagamento(m)}
                       </button>
                     ))}
                   </div>
@@ -1101,7 +1104,7 @@ export default function ReservasPage() {
                   />
                   {homSubtotalCents > 0 && (
                     <p className="text-[11px] text-gray-500">
-                      Total do pedido: R$ {(homSubtotalCents / 100).toFixed(2).replace('.', ',')} · resto fica em {homPayment || '—'}
+                      Total do pedido: R$ {(homSubtotalCents / 100).toFixed(2).replace('.', ',')} · resto fica em {homPayment ? rotuloCurtoPagamento(homPayment) : '—'}
                     </p>
                   )}
                 </div>

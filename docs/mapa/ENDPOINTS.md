@@ -59,10 +59,10 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/analytics/clientes` | AdminOnly | `GetClienteInsights` (199) | `analyticsApi.clientes` | `app/admin/relatorios/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/TopClientes.tsx` |
-| GET | `/api/analytics/dashboard` | AdminOnly | `GetDashboard` (49) | `analyticsApi.dashboard` | — |
-| GET | `/api/analytics/extrato` | AdminOnly | `Extrato` (785) | `analyticsApi.extrato` | `app/admin/financeiro/page.tsx` |
-| GET | `/api/analytics/financeiro` | AdminOnly | `GetFinanceiro` (368) | `analyticsApi.financeiro` | `app/admin/dashboard/page.tsx`<br>`app/admin/financeiro/page.tsx`<br>`app/admin/relatorios/page.tsx` |
+| GET | `/api/analytics/clientes` | AdminOnly | `GetClienteInsights` (200) | `analyticsApi.clientes` | `app/admin/relatorios/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/TopClientes.tsx` |
+| GET | `/api/analytics/dashboard` | AdminOnly | `GetDashboard` (50) | `analyticsApi.dashboard` | — |
+| GET | `/api/analytics/extrato` | AdminOnly | `Extrato` (786) | `analyticsApi.extrato` | `app/admin/financeiro/page.tsx` |
+| GET | `/api/analytics/financeiro` | AdminOnly | `GetFinanceiro` (369) | `analyticsApi.financeiro` | `app/admin/dashboard/page.tsx`<br>`app/admin/financeiro/page.tsx`<br>`app/admin/relatorios/page.tsx` |
 
 ## Announcement
 

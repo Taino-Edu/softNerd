@@ -4,6 +4,7 @@
 
 using CardGameStore.Data;
 using CardGameStore.DTOs;
+using CardGameStore.Models.MongoDB;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -151,12 +152,12 @@ public class AnalyticsController : ControllerBase
             .ToList();
 
         // ── Formas de pagamento (vendas avulsas + comandas hoje) ─────────────────
-        var pix      = vendasHoje.Count(v => v.PaymentMethod == "Pix")
-                     + comandasHoje.Count(c => c.PaymentMethod == "Pix");
-        var cartao   = vendasHoje.Count(v => v.PaymentMethod is "CartaoCredito" or "CartaoDebito")
-                     + comandasHoje.Count(c => c.PaymentMethod is "CartaoCredito" or "CartaoDebito");
-        var dinheiro = vendasHoje.Count(v => v.PaymentMethod == "Dinheiro")
-                     + comandasHoje.Count(c => c.PaymentMethod == "Dinheiro");
+        var pix      = vendasHoje.Count(v => v.PaymentMethod == PaymentMethod.Pix)
+                     + comandasHoje.Count(c => c.PaymentMethod == PaymentMethod.Pix);
+        var cartao   = vendasHoje.Count(v => PaymentMethod.EhCartao(v.PaymentMethod))
+                     + comandasHoje.Count(c => PaymentMethod.EhCartao(c.PaymentMethod));
+        var dinheiro = vendasHoje.Count(v => v.PaymentMethod == PaymentMethod.Dinheiro)
+                     + comandasHoje.Count(c => c.PaymentMethod == PaymentMethod.Dinheiro);
 
         var comandasAbertas = await _db.Comandas.CountAsync(c => c.Status == ComandaStatus.Aberta);
 

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, fiscalApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
+import { SECOND_PAYMENT_METHODS, comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, fiscalApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
 import { usePreferences } from '@/hooks/usePreferences'
 import { startHub, stopHub, ComandaUpdatedEvent } from '@/lib/signalr'
 import { playGoalSound } from '@/lib/sounds'
@@ -23,6 +23,7 @@ import {
   Pencil, X, UserSearch, QrCode, Receipt, RotateCcw,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { rotuloCurtoPagamento } from '@/lib/pagamentos'
 
 const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 
@@ -474,15 +475,7 @@ function AdminOpenModal({
 
 // ── Card de Comanda ───────────────────────────────────────────────────────────
 
-// Métodos aceitos como segundo pagamento (Crediario não faz sentido como secundário)
-const SECOND_PAYMENT_METHODS = [
-  { value: 'Cashback',      label: 'Cashback (Saldo)' },
-  { value: 'Pontos',        label: 'Pontos de Fidelidade' },
-  { value: 'Dinheiro',      label: 'Dinheiro' },
-  { value: 'Pix',           label: 'Pix' },
-  { value: 'CartaoCredito', label: 'Cartão de Crédito' },
-  { value: 'CartaoDebito',  label: 'Cartão de Débito' },
-]
+// Segundo pagamento da comanda: SECOND_PAYMENT_METHODS de lib/api (catálogo em lib/pagamentos)
 
 // ── Modal: escolher conta de crediário ───────────────────────────────────────
 
@@ -1840,13 +1833,13 @@ export default function DashboardPage() {
   const totalFechado = fechadas.reduce((s, c) => s + c.totalInReais, 0)
 
   const paymentBreakdown = [
-    { key: 'Dinheiro',      label: 'Dinheiro',  color: 'text-accent-green' },
-    { key: 'Pix',           label: 'Pix',        color: 'text-brand-400' },
-    { key: 'CartaoCredito', label: 'Crédito',    color: 'text-amber-400' },
-    { key: 'CartaoDebito',  label: 'Débito',     color: 'text-blue-400' },
-    { key: 'Crediario',     label: 'Crediário',  color: 'text-red-400'    },
-    { key: 'Pontos',        label: 'Pontos',     color: 'text-amber-400'  },
-    { key: 'Cashback',      label: 'Cashback',   color: 'text-purple-400' },
+    { key: 'Dinheiro',      label: rotuloCurtoPagamento('Dinheiro'),  color: 'text-accent-green' },
+    { key: 'Pix',           label: rotuloCurtoPagamento('Pix'),        color: 'text-brand-400' },
+    { key: 'CartaoCredito', label: rotuloCurtoPagamento('CartaoCredito'),    color: 'text-amber-400' },
+    { key: 'CartaoDebito',  label: rotuloCurtoPagamento('CartaoDebito'),     color: 'text-blue-400' },
+    { key: 'Crediario',     label: rotuloCurtoPagamento('Crediario'),  color: 'text-red-400'    },
+    { key: 'Pontos',        label: rotuloCurtoPagamento('Pontos'),     color: 'text-amber-400'  },
+    { key: 'Cashback',      label: rotuloCurtoPagamento('Cashback'),   color: 'text-purple-400' },
   ].map(pm => ({
     ...pm,
     // Para split payment, calcula o valor real de cada método:

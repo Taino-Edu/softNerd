@@ -20,6 +20,7 @@ import {
 import PixReservaModal from '@/components/PixReservaModal'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
+import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
 
 const fmtBRL = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
 
@@ -42,15 +43,8 @@ const origemLabel = (origem: string) => ORIGEM_LABEL[origem] ?? 'Compra no balc�
 // ── Forma de pagamento ────────────────────────────────────────────────────────
 // Rótulos curtos para caber no card do histórico; cai no rótulo do admin se
 // aparecer um método novo que ainda não estiver mapeado aqui.
-const PM_SHORT: Record<string, string> = {
-  Dinheiro:      'Dinheiro',
-  Pix:           'Pix',
-  CartaoCredito: 'Crédito',
-  CartaoDebito:  'Débito',
-  Crediario:     'Crediário',
-  Pontos:        'Pontos',
-  Cashback:      'Cashback',
-}
+// Nomes curtos das formas: catálogo único (lib/pagamentos)
+const PM_SHORT: Record<string, string> = Object.fromEntries(FORMAS_PAGAMENTO.map(f => [f.value, f.curto]))
 const pmLabel = (key: string) =>
   PM_SHORT[key] ?? COMANDA_PAYMENT_METHODS.find(m => m.value === key)?.label ?? key
 

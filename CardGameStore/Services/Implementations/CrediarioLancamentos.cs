@@ -22,9 +22,8 @@ public static class CrediarioLancamentos
         catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
     }
 
-    /// <summary>Formas aceitas pra pagar uma conta de crediário (dinheiro de verdade entrando).</summary>
-    public static readonly string[] FormasDePagamento =
-        ["Dinheiro", "Pix", "CartaoCredito", "CartaoDebito"];
+    /// <summary>Formas aceitas pra pagar uma conta de crediário (dinheiro de verdade entrando) — vem do catálogo.</summary>
+    public static readonly string[] FormasDePagamento = Models.MongoDB.PaymentMethod.QuitamCrediario;
 
     public static DateTime HojeBrasil() => ParaBrasilia(DateTime.UtcNow).Date;
 

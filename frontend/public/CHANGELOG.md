@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.39.0] — 2026-10-07
+
+### Corrigido
+- **Venda de reserva gravada com forma de pagamento inválida**: na homologação de pré-venda, escolher Débito ou Crédito gravava os textos "Débito"/"Crédito" em vez dos códigos que o resto do sistema reconhece. Essas vendas ficavam fora da contagem de cartão do painel e apareciam como forma desconhecida nos relatórios por forma de pagamento. Havia 24 vendas assim (R$ 9.153,40) — são corrigidas sozinhas no deploy. A validação agora fica no registro da venda, então nenhum caminho consegue gravar forma inválida de novo
+
+### Mudado
+- **Formas de pagamento num catálogo único**: a lista de formas (e as regras de cada uma — precisa de cliente, gera pontos, quita crediário) estava copiada em vários lugares do sistema. Agora vem de um catálogo só, no servidor e no painel, com um teste que impede os dois de divergirem. Os nomes ficaram padronizados: "Crediário (30 dias)" virou "Crediário" (o prazo é escolhido na hora), "Pontos de Fidelidade" virou "Pontos" e "Cashback (Saldo)" virou "Cashback"
+
 ## [v1.38.2] — 2026-10-06
 
 ### Corrigido

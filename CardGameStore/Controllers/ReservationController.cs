@@ -877,7 +877,7 @@ public class ReservationController : ControllerBase
                 {
                     ClientName                 = primeiro.User?.Name,
                     UserId                     = primeiro.UserId,
-                    PaymentMethod              = req.PaymentMethod ?? "Dinheiro",
+                    PaymentMethod              = req.PaymentMethod ?? Models.MongoDB.PaymentMethod.Dinheiro,
                     SecondPaymentMethod        = req.SecondPaymentMethod,
                     SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
                     // Decidido pelo admin só agora, na homologação — o cliente nunca viu esse

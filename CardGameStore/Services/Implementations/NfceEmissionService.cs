@@ -517,7 +517,7 @@ public class NfceEmissionService : INfceEmissionService
         var teveCobrancaPix = await _db.PixCobrancas.AnyAsync(p => p.ComandaId == comandaId);
 
         return new DadosEmissao(
-            itens, comanda.PaymentMethod ?? "Dinheiro", comanda.User?.Cpf,
+            itens, comanda.PaymentMethod ?? PaymentMethod.Dinheiro, comanda.User?.Cpf,
             comanda.SecondPaymentMethod, comanda.SecondPaymentAmountInCents,
             comanda.TotalInCents, // já líquido de PointsApplied/DiscountInCents (ver ComandaService)
             teveCobrancaPix);
@@ -1511,12 +1511,12 @@ public class NfceEmissionService : INfceEmissionService
     /// sempre 17 diria que toda venda em Pix passou por gateway, o que não é verdade.</param>
     private static FormaPagamento MapFormaPagamento(string formaPagamento, bool pixDinamico = false) => formaPagamento switch
     {
-        "Dinheiro"      => FormaPagamento.fpDinheiro,
-        "Pix"           => pixDinamico
+        PaymentMethod.Dinheiro      => FormaPagamento.fpDinheiro,
+        PaymentMethod.Pix           => pixDinamico
             ? FormaPagamento.fpPagamentoInstantaneoPIXDinamico
             : FormaPagamento.fpPagamentoInstantaneoPIXEstatico,
-        "CartaoCredito" => FormaPagamento.fpCartaoCredito,
-        "CartaoDebito"  => FormaPagamento.fpCartaoDebito,
+        PaymentMethod.CartaoCredito => FormaPagamento.fpCartaoCredito,
+        PaymentMethod.CartaoDebito  => FormaPagamento.fpCartaoDebito,
         _               => FormaPagamento.fpOutro,
     };
 }

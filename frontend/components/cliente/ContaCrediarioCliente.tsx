@@ -11,6 +11,7 @@ import { ChevronDown, ChevronUp, FileText, Loader2 } from 'lucide-react'
 import { CrediariosDto } from '@/lib/api'
 import { agruparItens, totalUnidades } from '@/lib/crediario'
 import { gerarSumulaCrediario } from '@/lib/sumula-crediario'
+import { rotuloPagamento } from '@/lib/pagamentos'
 
 const brl = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 const dia = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
@@ -26,9 +27,6 @@ const ORIGEM: Record<string, string> = {
   Legado:      'Compras anteriores',
 }
 
-const FORMA: Record<string, string> = {
-  Dinheiro: 'Dinheiro', Pix: 'Pix', CartaoCredito: 'Cartão de crédito', CartaoDebito: 'Cartão de débito',
-}
 
 type Evento =
   | { tipo: 'compra'; quando: string; titulo: string; valor: number; estornada: boolean; itens: ReturnType<typeof agruparItens> }
@@ -60,7 +58,7 @@ export default function ContaCrediarioCliente({ c }: { c: CrediariosDto }) {
     ...c.pagamentos.map(p => ({
       tipo: 'pagamento' as const,
       quando: p.createdAt,
-      titulo: `Pagamento — ${FORMA[p.formaPagamento] ?? p.formaPagamento}`,
+      titulo: `Pagamento — ${rotuloPagamento(p.formaPagamento)}`,
       valor: p.valorEmReais,
     })),
   ].sort((a, b) => b.quando.localeCompare(a.quando))

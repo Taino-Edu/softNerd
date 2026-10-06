@@ -59,12 +59,17 @@ O servidor roda em UTC; a loja vive em Brasília. Toda data "do dia" tem que ser
 - Vencimento escolhido como data vale até 23:59:59 de Brasília.
 
 ### Formas de pagamento
-A mesma lista aparece em vários lugares — forma nova precisa entrar em todos:
-- Back: `Models/MongoDB/VendaAvulsa.cs` → `PaymentMethod` (valida comanda e PDV);
-  `CrediarioLancamentos.FormasDePagamento` (o que quita crediário — só dinheiro de verdade).
-- Front (`lib/api.ts`): `PAYMENT_METHODS`, `SECOND_PAYMENT_METHODS`, `COMANDA_PAYMENT_METHODS`,
-  `PAYMENT_NEEDS_USER`, `FORMAS_PAGAMENTO_CREDIARIO`.
-- Rótulos em PDF: `lib/relatorio.ts`, `lib/sumula-crediario.ts`, `components/cliente/ContaCrediarioCliente.tsx`.
+Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linha em cada:
+- Back: `CardGameStore/Models/PaymentMethod.cs` (`PaymentMethod.Catalogo`: código, rótulo, entra no caixa,
+  precisa cliente, usa saldo do cliente). Regras perguntam ao catálogo: `EntraNoCaixa`, `PrecisaCliente`,
+  `UsaSaldoDoCliente`, `QuitamCrediario`, `Normalizar` (nome legado → código).
+- Front: `frontend/lib/pagamentos.ts` (`FORMAS_PAGAMENTO`, `rotuloPagamento`, `rotuloCurtoPagamento`,
+  `opcoesPagamento`). As listas de cada tela em `lib/api.ts` (`PAYMENT_METHODS`, `COMANDA_PAYMENT_METHODS`,
+  `SECOND_PAYMENT_METHODS`, `FORMAS_PAGAMENTO_CREDIARIO`) são recortes dele — não escreva lista nova à mão.
+- O teste `PaymentMethodTests.CatalogoDoFront_EIgualAoDoBack` falha se os dois divergirem.
+- A validação fica no serviço (`VendaAvulsaService.RegisterAsync`), não só no controller: qualquer caminho
+  que registre venda (PDV, homologação de reserva) passa por ela.
+- Ícones e cores por forma continuam em cada tela (são visual da tela, não regra).
 
 ### Visual: tema claro e escuro
 - O tema claro é feito sobrescrevendo classes do Tailwind em `frontend/app/globals.css` (bloco `html.light`).

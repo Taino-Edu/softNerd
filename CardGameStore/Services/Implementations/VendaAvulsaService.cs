@@ -49,8 +49,40 @@ public class VendaAvulsaService : IVendaAvulsaService
         _hub          = hub;
     }
 
+    /// <summary>
+    /// Corrige vendas gravadas com nome de forma de pagamento em vez do código
+    /// ("Débito"/"Crédito", vindas da homologação de reserva). Idempotente: só
+    /// toca documentos com esses valores. Roda no startup.
+    /// </summary>
+    public static async Task<long> CorrigirFormasLegadasAsync(IMongoDatabase mongo)
+    {
+        var colecao = mongo.GetCollection<VendaAvulsa>(CollectionName);
+        long total = 0;
+        foreach (var (legado, codigo) in PaymentMethod.Legados)
+        {
+            total += (await colecao.UpdateManyAsync(
+                Builders<VendaAvulsa>.Filter.Eq(v => v.PaymentMethod, legado),
+                Builders<VendaAvulsa>.Update.Set(v => v.PaymentMethod, codigo))).ModifiedCount;
+            total += (await colecao.UpdateManyAsync(
+                Builders<VendaAvulsa>.Filter.Eq(v => v.SecondPaymentMethod, legado),
+                Builders<VendaAvulsa>.Update.Set(v => v.SecondPaymentMethod, codigo))).ModifiedCount;
+        }
+        return total;
+    }
+
     public async Task<VendaAvulsaDto> RegisterAsync(VendaAvulsaRequest request, Guid adminId, string adminName)
     {
+        // Validação aqui (e não só no controller do PDV): a homologação de reserva chama
+        // este método direto e chegou a gravar "Débito"/"Crédito", que nenhum relatório
+        // nem a NFC-e reconheciam. Nome legado vira o código certo; desconhecido é recusado.
+        request.PaymentMethod = PaymentMethod.Normalizar(request.PaymentMethod)
+            ?? throw new InvalidOperationException(
+                $"Forma de pagamento inválida: '{request.PaymentMethod}'. Use: {string.Join(", ", PaymentMethod.All)}.");
+        if (!string.IsNullOrWhiteSpace(request.SecondPaymentMethod))
+            request.SecondPaymentMethod = PaymentMethod.Normalizar(request.SecondPaymentMethod)
+                ?? throw new InvalidOperationException(
+                    $"Forma do segundo pagamento inválida: '{request.SecondPaymentMethod}'. Use: {string.Join(", ", PaymentMethod.All)}.");
+
         // Valida tudo antes de qualquer escrita: falha rápida evita decremento parcial de estoque
         var productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
         var products   = await _db.Products
@@ -169,7 +201,7 @@ public class VendaAvulsaService : IVendaAvulsaService
                 throw new InvalidOperationException("Valor do segundo pagamento deve ser positivo e menor que o total.");
             if (secondPm == request.PaymentMethod)
                 throw new InvalidOperationException("O segundo método de pagamento não pode ser igual ao principal.");
-            if (secondPm is PaymentMethod.Cashback or PaymentMethod.Pontos && !request.UserId.HasValue)
+            if (PaymentMethod.UsaSaldoDoCliente(secondPm) && !request.UserId.HasValue)
                 throw new InvalidOperationException("Cashback e Pontos como segundo pagamento exigem um cliente cadastrado selecionado.");
         }
 
@@ -249,7 +281,7 @@ public class VendaAvulsaService : IVendaAvulsaService
         // baixar a dívida no estorno e achar a venda a partir do crediário.
         Guid? crediarioIdVinculado = null;
         var pm = request.PaymentMethod;
-        if (pm is PaymentMethod.Crediario or PaymentMethod.Pontos or PaymentMethod.Cashback)
+        if (PaymentMethod.PrecisaCliente(pm))
         {
             if (!request.UserId.HasValue)
                 throw new InvalidOperationException(
@@ -559,8 +591,8 @@ public class VendaAvulsaService : IVendaAvulsaService
 
             // Retira os pontos de fidelidade ganhos na venda (1 ponto por R$1), sem
             // deixar o saldo negativo caso o cliente já tenha gasto.
-            var pontosGanhosNaVenda = venda.PaymentMethod is PaymentMethod.Crediario or PaymentMethod.Pontos or PaymentMethod.Cashback
-                ? 0                       // esses caminhos não acumulam fidelidade
+            var pontosGanhosNaVenda = !PaymentMethod.EntraNoCaixa(venda.PaymentMethod)
+                ? 0                       // só dinheiro de verdade acumula fidelidade
                 : venda.TotalInCents / 100;
 
             if (pontosDevolver > 0 || cashbackDevolver > 0 || pontosGanhosNaVenda > 0)

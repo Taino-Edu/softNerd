@@ -7,6 +7,7 @@
 // =============================================================================
 import axios from 'axios'
 import { clearAuth } from './auth'
+import { FORMAS_PAGAMENTO, opcoesPagamento } from './pagamentos'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
@@ -484,24 +485,20 @@ export interface ExtratoDto {
   linhas: ExtratoLinhaDto[]
 }
 
-export const PAYMENT_METHODS = [
-  { value: 'Pix',           label: 'Pix' },
-  { value: 'Dinheiro',      label: 'Dinheiro' },
-  { value: 'CartaoCredito', label: 'Cartão de Crédito' },
-  { value: 'CartaoDebito',  label: 'Cartão de Débito' },
-  { value: 'Crediario',     label: 'Crediário' },
-  { value: 'Pontos',        label: 'Pontos' },
-  { value: 'Cashback',      label: 'Cashback' },
-] as const
+// Formas de pagamento: catálogo único em lib/pagamentos.ts — as listas abaixo são
+// só recortes dele por tela (mantidas com os nomes antigos pra não mexer nos imports).
 
-// Métodos que requerem cliente cadastrado selecionado
-export const PAYMENT_NEEDS_USER = ['Crediario', 'Pontos', 'Cashback'] as const
+/** PDV: todas, Pix primeiro. */
+export const PAYMENT_METHODS = opcoesPagamento()
 
-// Métodos disponíveis como segundo pagamento (complemento via carteira do cliente)
-export const SECOND_PAYMENT_METHODS = [
-  { value: 'Cashback', label: 'Cashback (Saldo)' },
-  { value: 'Pontos',   label: 'Pontos de Fidelidade' },
-] as const
+/** Formas que exigem cliente cadastrado selecionado. */
+export const PAYMENT_NEEDS_USER: readonly string[] = FORMAS_PAGAMENTO.filter(f => f.precisaCliente).map(f => f.value)
+
+/** Segundo pagamento da comanda: tudo menos crediário. */
+export const SECOND_PAYMENT_METHODS = opcoesPagamento(
+  f => f.value !== 'Crediario',
+  ['Cashback', 'Pontos', 'Dinheiro', 'Pix', 'CartaoCredito', 'CartaoDebito'],
+)
 
 export const comandaApi = {
   dashboard:    () => api.get<ComandaDto[]>('/api/comanda/dashboard'),
@@ -630,12 +627,11 @@ export interface LancamentoCrediarioDto {
   itens: ItemCrediarioDto[]
 }
 
-export const FORMAS_PAGAMENTO_CREDIARIO = [
-  { value: 'Dinheiro',      label: 'Dinheiro' },
-  { value: 'Pix',           label: 'Pix' },
-  { value: 'CartaoCredito', label: 'Cartão de Crédito' },
-  { value: 'CartaoDebito',  label: 'Cartão de Débito' },
-] as const
+/** Quitar crediário: só dinheiro de verdade. */
+export const FORMAS_PAGAMENTO_CREDIARIO = opcoesPagamento(
+  f => f.entraNoCaixa,
+  ['Dinheiro', 'Pix', 'CartaoCredito', 'CartaoDebito'],
+)
 
 export interface CriarCrediarioManualRequest {
   userId: string
@@ -739,15 +735,11 @@ export const pagarCrediarioApi = {
       `/api/pagar/crediario/${token}/pix/${txid}`),
 }
 
-export const COMANDA_PAYMENT_METHODS = [
-  { value: 'Dinheiro',      label: 'Dinheiro' },
-  { value: 'Pix',           label: 'Pix' },
-  { value: 'CartaoCredito', label: 'Cartão de Crédito' },
-  { value: 'CartaoDebito',  label: 'Cartão de Débito' },
-  { value: 'Crediario',     label: 'Crediário (30 dias)' },
-  { value: 'Pontos',        label: 'Pontos de Fidelidade' },
-  { value: 'Cashback',      label: 'Cashback (Saldo)' },
-] as const
+/** Fechamento de comanda: todas, dinheiro primeiro. */
+export const COMANDA_PAYMENT_METHODS = opcoesPagamento(
+  undefined,
+  ['Dinheiro', 'Pix', 'CartaoCredito', 'CartaoDebito', 'Crediario', 'Pontos', 'Cashback'],
+)
 
 export interface EditarPagamentoVendaAvulsaRequest {
   paymentMethod: string

@@ -184,7 +184,7 @@ public class ComandaController : ControllerBase
         try
         {
             var adminId    = GetUserId();
-            var method     = request?.PaymentMethod ?? "Dinheiro";
+            var method     = request?.PaymentMethod ?? Models.MongoDB.PaymentMethod.Dinheiro;
             var obs        = request?.Observacao;
             var method2    = request?.SecondPaymentMethod;
             var amount2    = request?.SecondPaymentAmountInCents ?? 0;

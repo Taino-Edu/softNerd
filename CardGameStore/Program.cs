@@ -1336,6 +1336,20 @@ using (var scope = app.Services.CreateScope())
             logger.LogError(ex, "Crediário: falha ao converter contas antigas em lançamentos.");
         }
 
+        // Vendas gravadas com "Débito"/"Crédito" (homologação de reserva) → códigos certos.
+        // Mongo fora do ar não pode travar o start: só registra e segue.
+        try
+        {
+            var mongoDb   = scope.ServiceProvider.GetRequiredService<MongoDB.Driver.IMongoDatabase>();
+            var corrigidas = await CardGameStore.Services.Implementations.VendaAvulsaService.CorrigirFormasLegadasAsync(mongoDb);
+            if (corrigidas > 0)
+                logger.LogInformation("Pagamentos: {Qtd} forma(s) de pagamento legada(s) corrigida(s) em vendas avulsas.", corrigidas);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Pagamentos: não deu pra corrigir formas de pagamento legadas agora (Mongo indisponível?).");
+        }
+
         // Crediário: contas de antes do link de pagamento ganham o código delas.
         try
         {

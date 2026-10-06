@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { FinanceiroDto } from './api'
+import { FORMAS_PAGAMENTO } from './pagamentos'
 
 async function getJsPDF() {
   const { default: jsPDF } = await import('jspdf')
@@ -40,13 +41,7 @@ function fmtDate(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR')
 }
 
-const FORMA_LABEL: Record<string, string> = {
-  Dinheiro:      'Dinheiro',
-  Pix:           'Pix',
-  CartaoCredito: 'Cartão de Crédito',
-  CartaoDebito:  'Cartão de Débito',
-  Crediario:     'Crediário',
-}
+const FORMA_LABEL: Record<string, string> = Object.fromEntries(FORMAS_PAGAMENTO.map(f => [f.value, f.label]))
 
 // ── Helpers de desenho ────────────────────────────────────────────────────────
 

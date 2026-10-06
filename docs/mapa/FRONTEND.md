@@ -115,6 +115,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/deckRules.ts` | `MAX_CARDS`, `MAX_COPIES`, `copyLimit`, `analisarDeck`, `resumoDaAnalise` |
 | `lib/hooks.ts` | `useThrottle` |
 | `lib/notificacoes.ts` | `incrementBadge`, `clearBadge`, `tocarSom`, `pedirPermissaoNotificacao`, `notificarBrowser` |
+| `lib/pagamentos.ts` | `FORMAS_PAGAMENTO`, `infoPagamento`, `rotuloPagamento`, `rotuloCurtoPagamento`, `precisaCliente`, `opcoesPagamento` |
 | `lib/prazo.ts` | `fmtRestante` |
 | `lib/precoVitrine.ts` | `resolvePixPercent`, `calcPrecoVitrine` |
 | `lib/printConferencia.ts` | `CONFERENCIA_FORMATOS`, `printConferencia` |
