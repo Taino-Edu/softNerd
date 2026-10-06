@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.38.1] — 2026-10-06
+
+### Corrigido
+- **Histórico de vendas do PDV depois das 21h**: o "hoje" do histórico era calculado no horário de Londres — das 21h à meia-noite virava o dia seguinte. O rótulo "hoje" sumia, o botão "Hoje" levava pra um dia sem vendas e o calendário deixava escolher amanhã. Agora segue o calendário de Brasília
+
 ## [v1.38.0] — 2026-10-06
 
 ### Adicionado

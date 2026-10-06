@@ -1876,8 +1876,16 @@ function HistoricoTab({ history, loading, date, onDateChange, onVendaUpdate }: {
 
   const totalDia = history.reduce((s, v) => s + v.totalInReais, 0)
   const countDia = history.length
-  const today    = new Date().toISOString().slice(0, 10)
+  // Hoje no calendário de Brasília — toISOString dava a data UTC, que das 21h à
+  // meia-noite já é amanhã (o "Hoje" pulava pra um dia sem vendas)
+  const today    = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
   const isToday  = date === today
+  // Soma dias a uma data YYYY-MM-DD sem passar pelo fuso do computador
+  const somarDias = (d: string, n: number) => {
+    const x = new Date(`${d}T12:00:00Z`)
+    x.setUTCDate(x.getUTCDate() + n)
+    return x.toISOString().slice(0, 10)
+  }
 
   const labelData = isToday
     ? 'hoje'
@@ -1898,11 +1906,7 @@ function HistoricoTab({ history, loading, date, onDateChange, onVendaUpdate }: {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              const d = new Date(date + 'T12:00:00')
-              d.setDate(d.getDate() - 1)
-              onDateChange(d.toISOString().slice(0, 10))
-            }}
+            onClick={() => onDateChange(somarDias(date, -1))}
             className="w-8 h-8 rounded-lg bg-surface-700 border border-surface-500 hover:border-surface-400 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
           >‹</button>
           <input
@@ -1914,9 +1918,7 @@ function HistoricoTab({ history, loading, date, onDateChange, onVendaUpdate }: {
           />
           <button
             onClick={() => {
-              const d = new Date(date + 'T12:00:00')
-              d.setDate(d.getDate() + 1)
-              const next = d.toISOString().slice(0, 10)
+              const next = somarDias(date, 1)
               if (next <= today) onDateChange(next)
             }}
             disabled={date >= today}
