@@ -3,7 +3,7 @@
 ## [v1.39.1] — 2026-10-07
 
 ### Mudado
-- **Site mais leve**: o ícone do site (o mascote) era uma imagem de 428 KB baixada em todas as páginas, mostrada com no máximo 56 pixels. Agora há versões no tamanho certo — o favicon tem 2 KB e a imagem das telas, 9 KB. O logo da página inicial era um SVG de 139 KB com uma imagem embutida; virou WebP de 39 KB. Na primeira visita são cerca de 600 KB a menos, o que pesa no celular com internet fraca
+- **Site mais leve**: o ícone do site (o mascote) era uma imagem de 428 KB baixada em todas as páginas, mostrada com no máximo 56 pixels. Agora há versões no tamanho certo — o favicon tem 2 KB e a imagem das telas, 9 KB. O logo da página inicial era um SVG de 139 KB com uma imagem embutida; virou WebP de 39 KB. Na primeira visita são cerca de 500 KB a menos, o que pesa no celular com internet fraca
 - **Ícone do app no celular**: o app instalado usava como ícone o logo retangular (1600×900) declarado como quadrado, o que podia sair distorcido. Agora usa o mascote em 192 e 512 pixels, com uma versão própria pra Android (com margem, que não é cortada) e outra pro iPhone (o iPhone não aceitava o ícone em SVG que estava configurado)
 - **Ícone das notificações push**: era a imagem de 1600×900; agora é o mascote em 192 pixels
 
