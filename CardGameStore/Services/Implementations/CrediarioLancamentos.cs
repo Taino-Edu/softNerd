@@ -15,21 +15,15 @@ namespace CardGameStore.Services.Implementations;
 
 public static class CrediarioLancamentos
 {
-    private static readonly TimeZoneInfo BrazilZone = GetBrazilZone();
-    private static TimeZoneInfo GetBrazilZone()
-    {
-        try   { return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
-        catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
-    }
+    private static readonly TimeZoneInfo BrazilZone = Common.Brasilia.Zona;
 
     /// <summary>Formas aceitas pra pagar uma conta de crediário (dinheiro de verdade entrando) — vem do catálogo.</summary>
     public static readonly string[] FormasDePagamento = Models.MongoDB.PaymentMethod.QuitamCrediario;
 
-    public static DateTime HojeBrasil() => ParaBrasilia(DateTime.UtcNow).Date;
+    public static DateTime HojeBrasil() => Common.Brasilia.Hoje();
 
     /// <summary>Instante UTC (como vem do banco) no relógio de Brasília.</summary>
-    public static DateTime ParaBrasilia(DateTime utc) =>
-        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), BrazilZone);
+    public static DateTime ParaBrasilia(DateTime utc) => Common.Brasilia.ParaBrasilia(utc);
 
     /// <summary>
     /// Vencimento escolhido como data vale o dia inteiro no horário de Brasília. Antes a

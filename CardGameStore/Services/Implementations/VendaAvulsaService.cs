@@ -14,21 +14,11 @@ namespace CardGameStore.Services.Implementations;
 public class VendaAvulsaService : IVendaAvulsaService
 {
     // Fuso horário de Brasília — funciona em Linux (IANA) e Windows (ID legado).
-    private static readonly TimeZoneInfo BrazilZone = GetBrazilZone();
-    private static TimeZoneInfo GetBrazilZone()
-    {
-        try { return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
-        catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
-    }
+    // Fuso de Brasília: um lugar só (Common/Brasilia.cs)
+    private static readonly TimeZoneInfo BrazilZone = Common.Brasilia.Zona;
 
-    private static (DateTime InicioUtc, DateTime FimUtc) DiaBrasil(DateTime? dia = null)
-    {
-        var agora    = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BrazilZone);
-        var dataBr   = dia.HasValue ? dia.Value.Date : agora.Date;
-        var inicioUtc = TimeZoneInfo.ConvertTimeToUtc(
-            DateTime.SpecifyKind(dataBr, DateTimeKind.Unspecified), BrazilZone);
-        return (inicioUtc, inicioUtc.AddDays(1));
-    }
+    /// <summary>Intervalo UTC de um dia de Brasília — ver Common/Brasilia.DiaUtc.</summary>
+    private static (DateTime InicioUtc, DateTime FimUtc) DiaBrasil(DateTime? dia = null) => Common.Brasilia.DiaUtc(dia);
 
     private readonly AppDbContext                    _db;
     private readonly IMongoCollection<VendaAvulsa>  _collection;

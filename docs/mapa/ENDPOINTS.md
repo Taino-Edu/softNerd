@@ -59,10 +59,10 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/analytics/clientes` | AdminOnly | `GetClienteInsights` (200) | `analyticsApi.clientes` | `app/admin/relatorios/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/TopClientes.tsx` |
-| GET | `/api/analytics/dashboard` | AdminOnly | `GetDashboard` (50) | `analyticsApi.dashboard` | — |
-| GET | `/api/analytics/extrato` | AdminOnly | `Extrato` (786) | `analyticsApi.extrato` | `app/admin/financeiro/page.tsx` |
-| GET | `/api/analytics/financeiro` | AdminOnly | `GetFinanceiro` (369) | `analyticsApi.financeiro` | `app/admin/dashboard/page.tsx`<br>`app/admin/financeiro/page.tsx`<br>`app/admin/relatorios/page.tsx` |
+| GET | `/api/analytics/clientes` | AdminOnly | `GetClienteInsights` (196) | `analyticsApi.clientes` | `app/admin/relatorios/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/TopClientes.tsx` |
+| GET | `/api/analytics/dashboard` | AdminOnly | `GetDashboard` (46) | `analyticsApi.dashboard` | — |
+| GET | `/api/analytics/extrato` | AdminOnly | `Extrato` (782) | `analyticsApi.extrato` | `app/admin/financeiro/page.tsx` |
+| GET | `/api/analytics/financeiro` | AdminOnly | `GetFinanceiro` (365) | `analyticsApi.financeiro` | `app/admin/dashboard/page.tsx`<br>`app/admin/financeiro/page.tsx`<br>`app/admin/relatorios/page.tsx` |
 
 ## Announcement
 
@@ -237,7 +237,7 @@
 | PUT | `/api/fiscal/config` | AdminOnly | `SaveConfig` (64) | `fiscalApi.saveConfig` | `app/admin/fiscal/page.tsx` |
 | POST | `/api/fiscal/emitir/comanda/{id:guid}` | AdminOnly | `EmitirNotaComanda` (438) | `fiscalApi.emitirNotaComanda` | `app/admin/dashboard/page.tsx` |
 | POST | `/api/fiscal/emitir/venda-avulsa/{id}` | AdminOnly | `EmitirNotaVendaAvulsa` (452) | `fiscalApi.emitirNotaVendaAvulsa` | `app/admin/venda-avulsa/page.tsx` |
-| GET | `/api/fiscal/exportar-xmls` | AdminOnly | `ExportarXmls` (523) | `fiscalApi.exportarXmls` | `app/admin/fiscal/page.tsx` |
+| GET | `/api/fiscal/exportar-xmls` | AdminOnly | `ExportarXmls` (519) | `fiscalApi.exportarXmls` | `app/admin/fiscal/page.tsx` |
 | GET | `/api/fiscal/naturezas-operacao` | AdminOnly | `ListNaturezas` (253) | `fiscalApi.listNaturezas` | `app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx` |
 | POST | `/api/fiscal/naturezas-operacao` | AdminOnly | `CreateNatureza` (283) | `fiscalApi.createNatureza` | `app/admin/fiscal/page.tsx` |
 | DELETE | `/api/fiscal/naturezas-operacao/{id:guid}` | AdminOnly | `DeleteNatureza` (371) | `fiscalApi.removeNatureza` | `app/admin/fiscal/page.tsx` |
@@ -246,7 +246,7 @@
 | POST | `/api/fiscal/notas/{id:guid}/cancelar` | AdminOnly | `CancelarNota` (476) | `fiscalApi.cancelarNota` | `app/admin/fiscal/page.tsx` |
 | GET | `/api/fiscal/notas/{id:guid}/cupom` | AdminOnly | `ObterCupom` (500) | `fiscalApi.obterCupom` | `app/admin/fiscal/cupom/[id]/page.tsx` |
 | POST | `/api/fiscal/notas/{id:guid}/reprocessar` | AdminOnly | `ReprocessarNota` (466) | `fiscalApi.reprocessarNota` | `app/admin/fiscal/page.tsx` |
-| POST | `/api/fiscal/test-emissao-sefaz` | AdminOnly | `TestEmissaoSefaz` (545) | — | — |
+| POST | `/api/fiscal/test-emissao-sefaz` | AdminOnly | `TestEmissaoSefaz` (541) | — | — |
 
 ## Lgpd
 
@@ -269,12 +269,12 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/liga-mensal` | público | `GetRanking` (72) | `ligaMensalApi.ranking` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
-| GET | `/api/liga-mensal/manual` | AdminOnly | `GetManualEntries` (204) | `ligaMensalApi.manualList` | `app/admin/liga-mensal/page.tsx` |
-| POST | `/api/liga-mensal/manual` | AdminOnly | `CreateManualEntry` (219) | `ligaMensalApi.manualCreate` | `app/admin/liga-mensal/page.tsx` |
-| DELETE | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `DeleteManualEntry` (274) | `ligaMensalApi.manualDelete` | `app/admin/liga-mensal/page.tsx` |
-| PUT | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `UpdateManualEntry` (248) | `ligaMensalApi.manualUpdate` | `app/admin/liga-mensal/page.tsx` |
-| GET | `/api/liga-mensal/meses` | público | `GetMesesDisponiveis` (165) | `ligaMensalApi.meses` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
+| GET | `/api/liga-mensal` | público | `GetRanking` (68) | `ligaMensalApi.ranking` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
+| GET | `/api/liga-mensal/manual` | AdminOnly | `GetManualEntries` (200) | `ligaMensalApi.manualList` | `app/admin/liga-mensal/page.tsx` |
+| POST | `/api/liga-mensal/manual` | AdminOnly | `CreateManualEntry` (215) | `ligaMensalApi.manualCreate` | `app/admin/liga-mensal/page.tsx` |
+| DELETE | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `DeleteManualEntry` (270) | `ligaMensalApi.manualDelete` | `app/admin/liga-mensal/page.tsx` |
+| PUT | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `UpdateManualEntry` (244) | `ligaMensalApi.manualUpdate` | `app/admin/liga-mensal/page.tsx` |
+| GET | `/api/liga-mensal/meses` | público | `GetMesesDisponiveis` (161) | `ligaMensalApi.meses` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
 
 ## Marketplace
 
@@ -420,8 +420,8 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/relatorios/crediario` | AdminOnly | `Crediario` (160) | `relatorioApi.crediario` | `app/admin/relatorios/page.tsx` |
-| GET | `/api/relatorios/vendas` | AdminOnly | `Vendas` (48) | `relatorioApi.vendas` | `app/admin/relatorios/page.tsx` |
+| GET | `/api/relatorios/crediario` | AdminOnly | `Crediario` (156) | `relatorioApi.crediario` | `app/admin/relatorios/page.tsx` |
+| GET | `/api/relatorios/vendas` | AdminOnly | `Vendas` (44) | `relatorioApi.vendas` | `app/admin/relatorios/page.tsx` |
 
 ## Reservation
 

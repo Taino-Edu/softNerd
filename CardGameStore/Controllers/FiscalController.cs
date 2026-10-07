@@ -507,12 +507,8 @@ public class FiscalController : ControllerBase
 
     // Fuso horário de Brasília — funciona em Linux (IANA) e Windows (ID legado). Mesmo
     // padrão usado em ComandaService/VendaAvulsaService/RelatoriosController/AnalyticsController.
-    private static readonly TimeZoneInfo BrazilZone = GetBrazilZone();
-    private static TimeZoneInfo GetBrazilZone()
-    {
-        try { return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
-        catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
-    }
+    // Fuso de Brasília: um lugar só (Common/Brasilia.cs)
+    private static readonly TimeZoneInfo BrazilZone = Common.Brasilia.Zona;
 
     // ── GET /api/fiscal/exportar-xmls?inicio=&fim= ────────────────────────────
     // "Fim" no formulário é o ÚLTIMO DIA a incluir (inclusivo) — GerarZipAsync espera

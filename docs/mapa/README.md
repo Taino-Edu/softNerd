@@ -50,10 +50,9 @@ A coluna "No startup" do [BACKEND.md](BACKEND.md) mostra quais tabelas já têm 
 
 ### Datas e horário (fuso de Brasília)
 O servidor roda em UTC; a loja vive em Brasília. Toda data "do dia" tem que ser de Brasília.
-- **Back**: `CrediarioLancamentos.HojeBrasil()`, `ParaBrasilia(utc)`, `VencimentoFimDoDia(data)`.
-  Vários serviços têm a própria cópia de `BrazilZone`/`DiaBrasil` (ComandaService, VendaAvulsaService,
-  AnalyticsController, RelatoriosController, FiscalController, LigaMensalController, CurrencyService,
-  FiscalXmlExportBackgroundService) — se mudar a regra, mude em todas.
+- **Back**: `CardGameStore/Common/Brasilia.cs` — `Brasilia.Zona`, `Hoje()`, `Agora()`, `ParaBrasilia(utc)`,
+  `DiaUtc(dia)` (intervalo UTC de um dia de Brasília). Era copiado em 11 arquivos; não crie outro
+  `FindSystemTimeZoneById`. Vencimento escolhido como data: `CrediarioLancamentos.VencimentoFimDoDia`.
 - **Front**: `frontend/lib/format.ts` — `hojeBrasil()`, `dataISOBrasil()`, `somarDias()`, `dataBR()`, `dataHoraBR()`.
   **Nunca** `new Date().toISOString().slice(0, 10)` — das 21h à meia-noite dá o dia seguinte.
 - Vencimento escolhido como data vale até 23:59:59 de Brasília.

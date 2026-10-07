@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.39.3] — 2026-10-07
+
+### Mudado
+- **Fuso de Brasília num lugar só no servidor**: a regra de "que dia é hoje em Brasília" estava copiada em 11 arquivos (relatórios, financeiro, comanda, PDV, fiscal, liga mensal, crediário, e-mail). Agora é uma só. Sem mudança visível — evita que uma cópia fique diferente das outras. A emissão de NFC-e passou a usar a mesma regra, que também funciona se o servidor rodar em Windows
+
 ## [v1.39.2] — 2026-10-07
 
 ### Corrigido

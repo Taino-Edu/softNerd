@@ -113,7 +113,7 @@ public class NfceEmissionService : INfceEmissionService
 
     // Todo horário enviado à SEFAZ usa esse fuso explicitamente — nunca o fuso
     // do servidor (containers em nuvem tipicamente rodam em UTC por padrão).
-    private static readonly TimeZoneInfo FusoBrasil = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+    private static readonly TimeZoneInfo FusoBrasil = Common.Brasilia.Zona;
 
     private static DateTimeOffset AgoraBrasil() =>
         TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, FusoBrasil);

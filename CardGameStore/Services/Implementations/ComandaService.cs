@@ -13,25 +13,11 @@ public class ComandaService : IComandaService
 {
     // Fuso horário de Brasília (UTC-3 fixo; BR não usa horário de verão desde 2019).
     // Funciona em Linux (IANA) e Windows (ID legado).
-    private static readonly TimeZoneInfo BrazilZone = GetBrazilZone();
-    private static TimeZoneInfo GetBrazilZone()
-    {
-        try { return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
-        catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
-    }
+    // Fuso de Brasília: um lugar só (Common/Brasilia.cs)
+    private static readonly TimeZoneInfo BrazilZone = Common.Brasilia.Zona;
 
-    /// <summary>
-    /// Retorna o intervalo UTC correspondente a um dia no fuso de Brasília.
-    /// Ex.: dia 29/05 BR → [29/05 03:00 UTC, 30/05 03:00 UTC)
-    /// </summary>
-    private static (DateTime InicioUtc, DateTime FimUtc) DiaBrasil(DateTime? dia = null)
-    {
-        var agora    = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BrazilZone);
-        var dataBr   = dia.HasValue ? dia.Value.Date : agora.Date;
-        var inicioUtc = TimeZoneInfo.ConvertTimeToUtc(
-            DateTime.SpecifyKind(dataBr, DateTimeKind.Unspecified), BrazilZone);
-        return (inicioUtc, inicioUtc.AddDays(1));
-    }
+    /// <summary>Intervalo UTC de um dia de Brasília — ver Common/Brasilia.DiaUtc.</summary>
+    private static (DateTime InicioUtc, DateTime FimUtc) DiaBrasil(DateTime? dia = null) => Common.Brasilia.DiaUtc(dia);
 
     // Constantes para evitar magic strings sensíveis a typo/case
     // Formas de pagamento: catálogo único em Models/PaymentMethod.cs

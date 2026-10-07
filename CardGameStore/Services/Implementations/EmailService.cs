@@ -68,10 +68,7 @@ public class EmailService : IEmailService
     public async Task SendCrediarioAbertoAsync(string toEmail, string toName, decimal valor, DateTime vencimento)
     {
         // Vencimento é guardado no fim do dia em Brasília (23:59:59 daqui) — converte pra lá
-        var venc = TimeZoneInfo.ConvertTimeFromUtc(
-            DateTime.SpecifyKind(vencimento, DateTimeKind.Utc),
-            TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "E. South America Standard Time" : "America/Sao_Paulo"))
-            .ToString("dd/MM/yyyy");
+        var venc = Common.Brasilia.ParaBrasilia(vencimento).ToString("dd/MM/yyyy");
         var body = $"""
             <div style="font-family:sans-serif;max-width:500px">
               <h2 style="color:#7839F3">softNerd — Crediário Aberto</h2>

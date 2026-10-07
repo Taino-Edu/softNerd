@@ -113,6 +113,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |
 | `lib/crediario.ts` | `agruparItens`, `totalUnidades` |
 | `lib/deckRules.ts` | `MAX_CARDS`, `MAX_COPIES`, `copyLimit`, `analisarDeck`, `resumoDaAnalise` |
+| `lib/format.ts` | `brl`, `brlDeCentavos`, `numeroBR`, `hojeBrasil`, `dataISOBrasil`, `somarDias`, `dataBR`, `dataHoraBR` |
 | `lib/hooks.ts` | `useThrottle` |
 | `lib/notificacoes.ts` | `incrementBadge`, `clearBadge`, `tocarSom`, `pedirPermissaoNotificacao`, `notificarBrowser` |
 | `lib/pagamentos.ts` | `FORMAS_PAGAMENTO`, `infoPagamento`, `rotuloPagamento`, `rotuloCurtoPagamento`, `precisaCliente`, `opcoesPagamento` |

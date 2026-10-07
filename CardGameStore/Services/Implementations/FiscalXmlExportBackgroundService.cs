@@ -13,12 +13,8 @@ namespace CardGameStore.Services.Implementations;
 public class FiscalXmlExportBackgroundService : BackgroundService
 {
     // Fuso horário de Brasília — funciona em Linux (IANA) e Windows (ID legado).
-    private static readonly TimeZoneInfo BrazilZone = GetBrazilZone();
-    private static TimeZoneInfo GetBrazilZone()
-    {
-        try { return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
-        catch { return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
-    }
+    // Fuso de Brasília: um lugar só (Common/Brasilia.cs)
+    private static readonly TimeZoneInfo BrazilZone = Common.Brasilia.Zona;
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<FiscalXmlExportBackgroundService> _logger;
