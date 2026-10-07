@@ -9,13 +9,19 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/logo-santuario.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo-santuario.png",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -26,21 +32,39 @@
       "name": "Frente de Caixa",
       "short_name": "Caixa",
       "url": "/admin/venda-avulsa",
-      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any"
+        }
+      ]
     },
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "url": "/admin/dashboard",
-      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any"
+        }
+      ]
     },
     {
       "name": "Atendimento WhatsApp",
       "short_name": "WhatsApp",
       "url": "/admin/whatsapp",
-      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any"
+        }
+      ]
     }
   ],
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "lang": "pt-BR"
 }

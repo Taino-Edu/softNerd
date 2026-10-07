@@ -171,7 +171,7 @@ export default function MesaPage() {
       {/* Mascote — flutuando no gradiente, sem moldura */}
       <div className="relative flex justify-center py-4">
         <img
-          src="/logo-maikon.png"
+          src="/logo-maikon-128.png"
           alt="Mascote Maikon"
           className="w-32 h-32 object-contain drop-shadow-[0_10px_28px_rgba(0,0,0,0.35)]"
         />

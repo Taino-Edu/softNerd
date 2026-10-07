@@ -318,7 +318,7 @@ export default function Sidebar() {
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between bg-surface-800 border-b border-surface-500 px-4 py-3">
         <div className="flex items-center gap-2">
-          <img src="/logo-maikon.png" alt="Santuário Nerd" className="h-9" />
+          <img src="/logo-maikon-128.png" alt="Santuário Nerd" className="h-9" />
           <span className="text-xs text-brand-400 font-bold">Admin</span>
         </div>
         <button onClick={() => setMobileOpen(true)} className="text-gray-400 hover:text-white p-1">
@@ -341,7 +341,7 @@ export default function Sidebar() {
       )}>
         <div className="flex items-center justify-between px-6 py-6 shrink-0">
           <div className="flex items-center gap-3">
-            <img src="/logo-maikon.png" alt="Santuário Nerd" className="h-10 w-10 object-contain shrink-0" />
+            <img src="/logo-maikon-128.png" alt="Santuário Nerd" className="h-10 w-10 object-contain shrink-0" />
             <div>
               <p className="text-white text-base leading-tight">Santuário Nerd</p>
               <p className="text-[10px] text-brand-400 font-semibold tracking-wider uppercase">Admin</p>
@@ -361,7 +361,7 @@ export default function Sidebar() {
         collapsed ? 'w-[76px]' : 'w-[260px]',
       )}>
         <div className={clsx('py-7 shrink-0 flex items-center gap-3', collapsed ? 'px-0 justify-center' : 'px-6')}>
-          <img src="/logo-maikon.png" alt="Santuário Nerd" className="h-10 w-10 object-contain shrink-0" />
+          <img src="/logo-maikon-128.png" alt="Santuário Nerd" className="h-10 w-10 object-contain shrink-0" />
           {!collapsed && (
             <div className="min-w-0">
               <p className="text-white text-base leading-tight truncate">Santuário Nerd</p>

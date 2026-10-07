@@ -4,8 +4,8 @@ self.addEventListener('push', event => {
     self.registration.showNotification(data.title ?? 'Santuário Nerd', {
       body:  data.body  ?? '',
       image: data.image ?? undefined,
-      icon:  '/logo-santuario.png',
-      badge: '/logo-santuario.png',
+      icon:  '/icon-192.png',
+      badge: '/icon-192.png',
       tag:   'santuario-nerd-notif',
       data:  { url: data.link ?? '/cliente' },
     })

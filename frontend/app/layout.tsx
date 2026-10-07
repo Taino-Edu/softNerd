@@ -24,12 +24,14 @@ export const metadata: Metadata = {
   title: { default: 'Santuário Nerd', template: '%s — Santuário Nerd' },
   description: 'Sistema de gestão da loja de Card Games',
   manifest: '/manifest.json',
+  // Ícones no tamanho certo (o logo-maikon.png original tinha 428 KB e era baixado em toda página)
   icons: {
     icon: [
-      { url: '/logo-maikon.png', type: 'image/png' },
+      { url: '/icon-32.png',  type: 'image/png', sizes: '32x32' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
     ],
-    apple: '/logo-maikon.png',
-    shortcut: '/logo-maikon.png',
+    apple: '/apple-touch-icon.png',
+    shortcut: '/icon-32.png',
   },
   appleWebApp: {
     capable: true,
@@ -45,7 +47,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* iOS Safari PWA meta tags */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-touch-fullscreen" content="yes" />
-        <link rel="apple-touch-icon" href="/icon.svg" />
         {/* Aplica o tema salvo antes do primeiro render para evitar flash */}
         <script
           dangerouslySetInnerHTML={{

@@ -770,7 +770,7 @@ export default function ClientePage() {
       <header style={{ backgroundColor: C.navy }}>
         <div className="max-w-lg mx-auto px-5 pt-10 pb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo-maikon.png" alt="Santuário Nerd" className="w-10 h-10 object-contain drop-shadow-md" />
+            <img src="/logo-maikon-128.png" alt="Santuário Nerd" className="w-10 h-10 object-contain drop-shadow-md" />
             <div>
               <p className="text-white font-black text-base leading-tight">Santuário Nerd</p>
               {profile && (

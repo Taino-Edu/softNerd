@@ -423,7 +423,7 @@ export default function LandingPage() {
             <div className="relative shrink-0 w-full max-w-xs sm:max-w-sm md:max-w-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={site.logoUrl || '/logo-santuario.svg'}
+                src={site.logoUrl || '/logo-santuario.webp'}
                 alt={site.siteName}
                 className="w-full h-auto object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
               />
@@ -778,7 +778,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
             {/* Logo */}
             <div className="flex items-center gap-2.5">
-              <img src={site.logoUrl || '/logo-maikon.png'} alt={site.siteName} className="h-8 w-auto object-contain" />
+              <img src={site.logoUrl || '/logo-maikon-128.png'} alt={site.siteName} className="h-8 w-auto object-contain" />
               <div>
                 <p className="font-black text-sm leading-tight" style={{ color: C.navy }}>{site.siteName}</p>
                 <p className="text-[10px]" style={{ color: C.text }}>{site.addressLine}</p>
