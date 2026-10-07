@@ -12,8 +12,8 @@ import { CrediariosDto } from '@/lib/api'
 import { agruparItens, totalUnidades } from '@/lib/crediario'
 import { gerarSumulaCrediario } from '@/lib/sumula-crediario'
 import { rotuloPagamento } from '@/lib/pagamentos'
+import { brl } from '@/lib/format'
 
-const brl = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 const dia = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 const diaHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',

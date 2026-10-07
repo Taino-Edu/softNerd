@@ -12,13 +12,11 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
+import { brl as fmt } from '@/lib/format'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function toDateInput(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function fmt(v: number) {
-  return `R$ ${v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`
 }
 function fmtShort(v: number) {
   if (v >= 1000) return `R$${(v / 1000).toFixed(1)}k`

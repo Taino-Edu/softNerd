@@ -8,6 +8,7 @@ import {
   ChevronDown, SlidersHorizontal, RefreshCw, Eye,
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import { brl } from '@/lib/format'
 
 const C = { navy: '#0C3D5A', blue: '#3EC2F2', blue2: '#1A9DD4', yellow: '#FFE45E', bg: '#EBF7FD', white: '#FFFFFF', muted: '#4D8FAC', border: 'rgba(62,194,242,0.18)' }
 
@@ -206,7 +207,7 @@ function CardPreviewModal({ card, onClose, onAdd, qty, maxCopies, brlRate }: {
               <div className="rounded-lg p-2" style={{ backgroundColor: C.bg }}>
                 <p className="text-[10px] font-black mb-1" style={{ color: C.navy }}>Preço de mercado</p>
                 <p className="font-black text-sm" style={{ color: C.blue2 }}>${price.toFixed(2)} <span className="text-[10px] font-normal" style={{ color: C.muted }}>USD</span></p>
-                {brlRate && <p className="text-xs font-bold" style={{ color: '#16a34a' }}>R$ {(price * brlRate).toFixed(2)}</p>}
+                {brlRate && <p className="text-xs font-bold" style={{ color: '#16a34a' }}>{brl(price * brlRate)}</p>}
 
                 {/* Variantes */}
                 {card.allPrices && (
@@ -222,7 +223,7 @@ function CardPreviewModal({ card, onClose, onAdd, qty, maxCopies, brlRate }: {
                       <div key={v.l} className="rounded p-1" style={{ backgroundColor: C.white }}>
                         <p className="text-[9px]" style={{ color: C.muted }}>{v.l}</p>
                         <p className="text-[10px] font-bold" style={{ color: C.blue2 }}>${(v.p!.market ?? v.p!.mid)!.toFixed(2)}</p>
-                        {brlRate && <p className="text-[9px]" style={{ color: '#16a34a' }}>R$ {((v.p!.market ?? v.p!.mid)! * brlRate).toFixed(2)}</p>}
+                        {brlRate && <p className="text-[9px]" style={{ color: '#16a34a' }}>{brl((v.p!.market ?? v.p!.mid)! * brlRate)}</p>}
                       </div>
                     ))}
                   </div>

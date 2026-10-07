@@ -19,8 +19,8 @@ import { agruparItens, totalUnidades } from '@/lib/crediario'
 import { gerarSumulaCrediario } from '@/lib/sumula-crediario'
 import { AvisosAutomaticosButton, AvisarModal, UltimoAviso } from '@/components/admin/CrediarioAvisos'
 import clsx from 'clsx'
+import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
 
-const fmt     = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR')
 const fmtDateHour = (d: string) =>
   new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -50,7 +50,7 @@ function comprasDa(c: CrediariosDto): LancamentoCrediarioDto[] {
 
 interface ItemForm { nome: string; qty: string; preco: string }
 
-const hoje = () => new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+const hoje = () => hojeBrasil()
 
 function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [search, setSearch]         = useState('')
@@ -142,7 +142,7 @@ function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSucces
         dataVencimento:  dataVencimento || undefined,
         itens:           itensDto,
       })
-      toast.success(`Crediário de R$ ${valorNum.toFixed(2).replace('.', ',')} criado para ${selected.name}!`)
+      toast.success(`Crediário de ${brl(valorNum)} criado para ${selected.name}!`)
       onSuccess()
       onClose()
     } catch (err: unknown) {
@@ -223,7 +223,7 @@ function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                 {itens.map((it, idx) => (
                   <div key={idx} className="flex items-center gap-2 px-3 py-2 text-sm">
                     <span className="flex-1 text-white truncate">{it.nome}</span>
-                    <span className="text-gray-400 shrink-0">{it.qty}× R$ {parseFloat(it.preco.replace(',', '.')).toFixed(2).replace('.', ',')}</span>
+                    <span className="text-gray-400 shrink-0">{it.qty}× {brl(parseFloat(it.preco.replace(',', '.')))}</span>
                     <button type="button" onClick={() => removeItem(idx)} className="text-gray-400 hover:text-red-400 transition-colors shrink-0">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -231,7 +231,7 @@ function NovaDividaModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                 ))}
                 <div className="px-3 py-2 flex justify-between text-xs font-semibold text-accent-gold">
                   <span>Total calculado</span>
-                  <span>R$ {totalItens.toFixed(2).replace('.', ',')}</span>
+                  <span>{brl(totalItens)}</span>
                 </div>
               </div>
             )}
@@ -458,7 +458,7 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
                 />
                 {crediario.valorPagoEmReais > 0 && (
                   <p className="text-[10px] text-amber-400 mt-1">
-                    Já pago: R$ {crediario.valorPagoEmReais.toFixed(2).replace('.', ',')}
+                    Já pago: {brl(crediario.valorPagoEmReais)}
                   </p>
                 )}
               </div>
@@ -490,7 +490,7 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
                 </label>
                 {itens.length > 0 && (
                   <span className="text-xs text-gray-500">
-                    total itens: R$ {totalItens.toFixed(2).replace('.', ',')}
+                    total itens: {brl(totalItens)}
                   </span>
                 )}
               </div>
@@ -510,7 +510,7 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
                         {item.quantity}× {item.itemName}
                       </span>
                       <span className="text-xs text-accent-gold font-mono shrink-0">
-                        R$ {item.subtotalInReais.toFixed(2).replace('.', ',')}
+                        {brl(item.subtotalInReais)}
                       </span>
                       <button
                         type="button"

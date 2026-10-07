@@ -16,6 +16,7 @@ import {
   QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil, Tag, Trash2,
   AlertTriangle,
 } from 'lucide-react'
+import { brl } from '@/lib/format'
 
 // Códigos do catálogo (lib/pagamentos). Antes eram textos ("Débito", "Crédito") que o
 // back gravava assim e nenhum relatório reconhecia.
@@ -69,7 +70,7 @@ function CustomerGroupCard({ group, renderCard }: {
         <UserIcon className="w-3.5 h-3.5 text-brand-400 shrink-0" />
         <span className="text-xs font-bold text-white truncate flex-1">{group.name}</span>
         <span className="text-[10px] text-gray-400 shrink-0">
-          {group.carts.length} pedidos · R$ {group.total.toFixed(2).replace('.', ',')}
+          {group.carts.length} pedidos · {brl(group.total)}
         </span>
         {open ? <ChevronUp className="w-3.5 h-3.5 text-gray-500 shrink-0" />
               : <ChevronDown className="w-3.5 h-3.5 text-gray-500 shrink-0" />}
@@ -368,7 +369,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{product.name}</p>
                 <p className="text-[11px] text-gray-400">
-                  R$ {product.priceInReais.toFixed(2).replace('.', ',')} · estoque {product.stockQuantity}
+                  {brl(product.priceInReais)} · estoque {product.stockQuantity}
                 </p>
               </div>
               <button onClick={() => { setProduct(null); setProdSearch(''); setQty(1) }}
@@ -671,7 +672,7 @@ export default function ReservasPage() {
       })
       const oQue = data.itemCount > 1 ? `${data.itemCount} itens do carrinho homologados` : 'Pré-venda homologada'
       toast.success(data.discountInReais > 0
-        ? `${oQue} com desconto de R$ ${data.discountInReais.toFixed(2).replace('.', ',')}!`
+        ? `${oQue} com desconto de ${brl(data.discountInReais)}!`
         : `${oQue}!`)
       setHomModal(null)
       load()
@@ -742,7 +743,7 @@ export default function ReservasPage() {
               {cart.items.length > 1 ? `Carrinho com ${cart.items.length} itens` : r.productName}
             </p>
             <strong className="text-emerald-400 text-xs whitespace-nowrap">
-              R$ {cart.totalEmReais.toFixed(2).replace('.', ',')}
+              {brl(cart.totalEmReais)}
             </strong>
           </div>
 
@@ -763,7 +764,7 @@ export default function ReservasPage() {
                     {item.productName}{item.variantLabel ? ` · ${item.variantLabel}` : ''}
                   </p>
                   <p className="text-[10px] text-gray-500">
-                    {item.quantity}×{item.subtotalEmReais != null ? ` · R$ ${item.subtotalEmReais.toFixed(2).replace('.', ',')}` : ''}
+                    {item.quantity}×{item.subtotalEmReais != null ? ` · ${brl(item.subtotalEmReais)}` : ''}
                   </p>
                 </div>
                 <button onClick={() => openEditQty(item)} title="Corrigir quantidade"
@@ -859,8 +860,8 @@ export default function ReservasPage() {
         <div className="grid grid-cols-2 sm:flex sm:items-center sm:divide-x sm:divide-surface-500 gap-3 sm:gap-0">
           {[
             { label: 'Em aberto', value: String(totalEmAberto),                                    icon: LayoutList,   color: 'text-brand-400' },
-            { label: 'Já pago',   value: `R$ ${jaPagoValor.toFixed(2).replace('.', ',')}`,          icon: CheckCircle,  color: 'text-emerald-400' },
-            { label: 'A receber', value: `R$ ${aReceberValor.toFixed(2).replace('.', ',')}`,        icon: Wallet,       color: 'text-amber-400' },
+            { label: 'Já pago',   value: `${brl(jaPagoValor)}`,          icon: CheckCircle,  color: 'text-emerald-400' },
+            { label: 'A receber', value: `${brl(aReceberValor)}`,        icon: Wallet,       color: 'text-amber-400' },
             { label: 'Na fila',   value: String(totalNaFila),                                       icon: Users,        color: totalNaFila > 0 ? 'text-purple-400' : 'text-gray-500' },
           ].map((m, i) => (
             <div key={m.label} className={clsx(
@@ -1035,7 +1036,7 @@ export default function ReservasPage() {
                           {r.variantLabel && <span className="text-gray-500"> · {r.variantLabel}</span>}
                         </span>
                         <span className="text-xs text-gray-400 font-mono shrink-0">
-                          R$ {(r.subtotalEmReais ?? 0).toFixed(2).replace('.', ',')}
+                          {brl((r.subtotalEmReais ?? 0))}
                         </span>
                       </div>
                     ))}
@@ -1104,7 +1105,7 @@ export default function ReservasPage() {
                   />
                   {homSubtotalCents > 0 && (
                     <p className="text-[11px] text-gray-500">
-                      Total do pedido: R$ {(homSubtotalCents / 100).toFixed(2).replace('.', ',')} · resto fica em {homPayment ? rotuloCurtoPagamento(homPayment) : '—'}
+                      Total do pedido: {brl((homSubtotalCents / 100))} · resto fica em {homPayment ? rotuloCurtoPagamento(homPayment) : '—'}
                     </p>
                   )}
                 </div>
@@ -1148,9 +1149,9 @@ export default function ReservasPage() {
 
               {homSubtotalCents > 0 && homDiscountCents > 0 && (
                 <p className="text-[11px] text-gray-500 mt-2">
-                  Subtotal R$ {(homSubtotalCents / 100).toFixed(2).replace('.', ',')} − desconto
-                  R$ {(homDiscountCents / 100).toFixed(2).replace('.', ',')} = <span className="text-gray-300 font-semibold">
-                  R$ {(homTotalCents / 100).toFixed(2).replace('.', ',')}</span>
+                  Subtotal {brl((homSubtotalCents / 100))} − desconto
+                  {brl((homDiscountCents / 100))} = <span className="text-gray-300 font-semibold">
+                  {brl((homTotalCents / 100))}</span>
                 </p>
               )}
             </div>

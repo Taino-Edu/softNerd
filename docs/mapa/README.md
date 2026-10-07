@@ -54,7 +54,7 @@ O servidor roda em UTC; a loja vive em Brasília. Toda data "do dia" tem que ser
   Vários serviços têm a própria cópia de `BrazilZone`/`DiaBrasil` (ComandaService, VendaAvulsaService,
   AnalyticsController, RelatoriosController, FiscalController, LigaMensalController, CurrencyService,
   FiscalXmlExportBackgroundService) — se mudar a regra, mude em todas.
-- **Front**: `new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())`.
+- **Front**: `frontend/lib/format.ts` — `hojeBrasil()`, `dataISOBrasil()`, `somarDias()`, `dataBR()`, `dataHoraBR()`.
   **Nunca** `new Date().toISOString().slice(0, 10)` — das 21h à meia-noite dá o dia seguinte.
 - Vencimento escolhido como data vale até 23:59:59 de Brasília.
 
@@ -70,6 +70,12 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
 - A validação fica no serviço (`VendaAvulsaService.RegisterAsync`), não só no controller: qualquer caminho
   que registre venda (PDV, homologação de reserva) passa por ela.
 - Ícones e cores por forma continuam em cada tela (são visual da tela, não regra).
+
+### Dinheiro na tela
+- **Sempre** `brl(valor)` / `brlDeCentavos(centavos)` de `frontend/lib/format.ts` ("R$ 1.234,56").
+  Não escreva `toFixed(2).replace('.', ',')` nem `fmt` local — eram 17 cópias e ~100 soltos, alguns
+  mostrando "R$ 12.50" com ponto. `numeroBR(n)` quando precisar do número sem o "R$".
+- Campo de digitação de valor (input) é outra coisa: lá o texto é lido de volta, não use `brl`.
 
 ### Visual: tema claro e escuro
 - O tema claro é feito sobrescrevendo classes do Tailwind em `frontend/app/globals.css` (bloco `html.light`).

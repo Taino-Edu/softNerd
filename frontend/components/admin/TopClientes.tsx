@@ -14,8 +14,8 @@ import { analyticsApi, ClienteInsightDto, ClientesFiltro } from '@/lib/api'
 import { Star, Medal, Trophy, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
 import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
+import { brl as fmt } from '@/lib/format'
 
-const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 
 /** Data → 'YYYY-MM-DD' no fuso local (o backend interpreta como data de Brasília). */
 export function toDateInput(d: Date) {

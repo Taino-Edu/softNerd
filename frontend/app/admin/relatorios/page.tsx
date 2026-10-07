@@ -17,8 +17,8 @@ import {
   Users, Store, ClipboardList,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { brl as fmt } from '@/lib/format'
 
-const fmt     = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR')
 const fmtHour = (d: string) => new Date(d).toLocaleString('pt-BR', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',

@@ -11,10 +11,11 @@ import {
   Loader2, RefreshCw, Package,
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import { brl } from '@/lib/format'
 
 const NAVY = '#0C3D5A'
 
-function fmt(cents: number) { return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}` }
+function fmt(cents: number) { return `${brl((cents / 100))}` }
 
 export default function ReservationCartPage() {
   const router = useRouter()

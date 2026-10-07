@@ -11,6 +11,7 @@ import {
   Upload, Save, Loader2, AlertTriangle, CheckCircle,
   Plus, Trash2, Download, ShieldCheck, Star, RefreshCw, Ban, ScrollText, Printer,
 } from 'lucide-react'
+import { brlDeCentavos } from '@/lib/format'
 
 const STATUS_INFO: Record<string, { label: string; color: string }> = {
   PendenteEmissao:         { label: 'Pendente',              color: 'bg-gray-500/15 text-gray-400 border-gray-500/30' },
@@ -738,7 +739,7 @@ export default function FiscalPage() {
                         {info.label}
                       </span>
                       <span className="text-sm text-white font-semibold">
-                        R$ {(n.valorTotalEmCentavos / 100).toFixed(2)}
+                        {brlDeCentavos(n.valorTotalEmCentavos)}
                       </span>
                       {n.serie != null && n.numero != null && (
                         <span className="text-xs text-gray-500">Série {n.serie} · Nº {n.numero}</span>

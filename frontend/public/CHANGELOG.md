@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.39.2] — 2026-10-07
+
+### Corrigido
+- **Valores com ponto no lugar da vírgula**: algumas telas mostravam "R$ 12.50" — valor de inscrição de campeonato (admin e página pública), total das notas fiscais, crédito/débito de saldo do cliente, documento da LGPD e conversão de preço das cartas
+
+### Mudado
+- **Dinheiro com separador de milhar em todo o sistema**: valores a partir de mil aparecem como "R$ 1.234,56" (antes "R$ 1234,56"), igual aos PDFs. Toda formatação de dinheiro e de "hoje" passa por um lugar só — eram 17 cópias da mesma função e cerca de 100 formatações escritas à mão
+
 ## [v1.39.1] — 2026-10-07
 
 ### Mudado

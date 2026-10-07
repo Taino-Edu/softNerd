@@ -7,6 +7,7 @@ import {
   AlertCircle, Loader2, ChevronRight, ArrowLeft, MessageCircle,
 } from 'lucide-react'
 import Link from 'next/link'
+import { brl } from '@/lib/format'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -217,7 +218,7 @@ export default function ChampionshipPublicPage() {
               <Trophy className="w-3.5 h-3.5" /> Inscrição
             </div>
             <p className={`text-sm font-semibold ${ch.entryFeeInCents === 0 ? 'text-green-400' : 'text-accent-gold'}`}>
-              {ch.entryFeeInCents === 0 ? 'Gratuito' : `R$ ${ch.entryFeeInReais.toFixed(2)}`}
+              {ch.entryFeeInCents === 0 ? 'Gratuito' : brl(ch.entryFeeInReais)}
             </p>
           </div>
         </div>

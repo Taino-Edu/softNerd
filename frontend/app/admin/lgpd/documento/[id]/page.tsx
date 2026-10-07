@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import { brl } from '@/lib/format'
 
 interface DadosCadastrais {
   nome: string
@@ -191,7 +192,7 @@ export default function DocumentoLgpdPage() {
               <tbody>
                 <Row label="Pontos acumulados"      value={s.pontos} />
                 <Row label="Pontos expiram em"      value={s.pontosExpiraEm} />
-                <Row label="Cashback (crédito loja)" value={s.cashbackReais != null ? `R$ ${Number(s.cashbackReais).toFixed(2)}` : undefined} />
+                <Row label="Cashback (crédito loja)" value={s.cashbackReais != null ? brl(Number(s.cashbackReais)) : undefined} />
               </tbody>
             </table>
           )}

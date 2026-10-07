@@ -9,6 +9,7 @@
 import { CrediariosDto, LancamentoCrediarioDto } from './api'
 import { agruparItens, totalUnidades } from './crediario'
 import { rotuloPagamento } from './pagamentos'
+import { brl } from './format'
 
 async function getJsPDF() {
   const { default: jsPDF } = await import('jspdf')
@@ -39,7 +40,6 @@ const ORIGEM: Record<string, string> = {
 
 const CANAL: Record<string, string> = { app: 'App', email: 'E-mail', whatsapp: 'WhatsApp' }
 
-const brl = (v: number) => `R$ ${v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`
 const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   timeZone: 'America/Sao_Paulo',

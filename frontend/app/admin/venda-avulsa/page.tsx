@@ -17,6 +17,7 @@ import VariantPicker from '@/components/admin/VariantPicker'
 import ConferenciaButton from '@/components/admin/ConferenciaButton'
 import EscolherContaCrediarioModal from '@/components/admin/EscolherContaCrediarioModal'
 import PercentPicker from '@/components/admin/PercentPicker'
+import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
 
 interface CartItem {
   product: Product
@@ -498,7 +499,6 @@ const PAYMENT_ICONS_INNER: Record<string, React.ReactNode> = {
 
 const PAYMENT_ICONS = PAYMENT_ICONS_INNER
 
-const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 
 /** Após um registro com "Emitir cupom fiscal" marcado: abre o cupom sozinho se autorizou,
  * ou avisa o motivo se rejeitou/ficou pendente (SEFAZ fora do ar — o retry automático tenta de novo). */
@@ -873,7 +873,7 @@ function VendaWizard({
                       )}
                       {selectedUser.balanceInCents > 0 && (
                         <span className="text-[10px] text-accent-green">
-                          R$ {(selectedUser.balanceInCents / 100).toFixed(2).replace('.', ',')} cashback
+                          {brl((selectedUser.balanceInCents / 100))} cashback
                         </span>
                       )}
                     </div>
@@ -1198,7 +1198,7 @@ function VendaWizard({
                       )}
                       {!splitEnabled && m.value === 'Cashback' && selectedUser && selectedUser.balanceInCents > 0 && (
                         <span className="text-xs text-emerald-400/70 font-normal">
-                          R$ {(selectedUser.balanceInCents / 100).toFixed(2).replace('.', ',')} disp.
+                          {brl((selectedUser.balanceInCents / 100))} disp.
                         </span>
                       )}
                       {!splitEnabled && m.value === 'Pontos' && selectedUser && selectedUser.pointsBalance > 0 && (
@@ -1274,7 +1274,7 @@ function VendaWizard({
                       <div className="flex items-center gap-1.5 text-xs text-gray-400">
                         <span>Saldo disponível:</span>
                         <span className={clsx('font-bold', selectedUser.balanceInCents > 0 ? 'text-accent-green' : 'text-red-400')}>
-                          R$ {(selectedUser.balanceInCents / 100).toFixed(2).replace('.', ',')}
+                          {brl((selectedUser.balanceInCents / 100))}
                         </span>
                       </div>
                     )}
@@ -1314,7 +1314,7 @@ function VendaWizard({
                   )}
                   {payment === 'Cashback' && (
                     <span className={clsx('font-bold', selectedUser.balanceInCents > 0 ? 'text-accent-green' : 'text-red-400')}>
-                      R$ {(selectedUser.balanceInCents / 100).toFixed(2).replace('.', ',')}
+                      {brl((selectedUser.balanceInCents / 100))}
                     </span>
                   )}
                 </div>
@@ -1458,11 +1458,11 @@ export default function VendaAvulsaPage() {
   const [history, setHistory]       = useState<VendaAvulsaDto[]>([])
   const [histLoading, setHistLoad]  = useState(false)
   const [histDate, setHistDate]     = useState(() =>
-    new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+    hojeBrasil()
   )
 
   const todayStr = useMemo(
-    () => new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()),
+    () => hojeBrasil(),
     []
   )
 
@@ -1878,7 +1878,7 @@ function HistoricoTab({ history, loading, date, onDateChange, onVendaUpdate }: {
   const countDia = history.length
   // Hoje no calendário de Brasília — toISOString dava a data UTC, que das 21h à
   // meia-noite já é amanhã (o "Hoje" pulava pra um dia sem vendas)
-  const today    = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+  const today    = hojeBrasil()
   const isToday  = date === today
   // Soma dias a uma data YYYY-MM-DD sem passar pelo fuso do computador
   const somarDias = (d: string, n: number) => {

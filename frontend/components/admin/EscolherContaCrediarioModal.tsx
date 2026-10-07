@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { CreditCard, X, CheckCircle } from 'lucide-react'
 import clsx from 'clsx'
 import { CrediariosDto } from '@/lib/api'
+import { brl as fmt } from '@/lib/format'
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 /** Data (YYYY-MM-DD) no calendário de Brasília, daqui a `dias` dias — toISOString daria a data UTC,
  * que das 21h à meia-noite já é o dia seguinte. */

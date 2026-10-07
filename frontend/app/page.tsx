@@ -14,6 +14,7 @@ import {
   CreditCard, Award, QrCode, Shield, ChevronRight, ChevronLeft,
   Sun, Moon, Mail, Accessibility,
 } from 'lucide-react'
+import { brl } from '@/lib/format'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
 // pra não piscar/mudar nada enquanto o admin nunca tiver personalizado o site.
@@ -79,7 +80,7 @@ type Theme = { bg: string; card: string; cardAlt: string; border: string; blue: 
 /** Preço no Pix mostrado na vitrine — null quando a loja/o item não anuncia desconto. */
 type PixVitrine = { precoPix: number; pixPercent: number } | null
 
-function fmtBRL(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}` }
+function fmtBRL(v: number) { return `${brl(v)}` }
 function fmtPixPct(v: number) { return `${(Math.round(v * 10) / 10).toString().replace('.', ',')}%` }
 
 export default function LandingPage() {
@@ -1019,7 +1020,7 @@ function ChampionshipCard({ championship: c, onRegister, C }: { championship: Ch
         <div className="mt-auto pt-3 border-t flex items-center justify-between gap-2"
           style={{ borderColor: C.border }}>
           <span className="text-sm font-black" style={{ color: C.yellow }}>
-            R$ {(c.entryFeeInCents / 100).toFixed(2).replace('.', ',')}
+            {brl((c.entryFeeInCents / 100))}
           </span>
           <button
             onClick={onRegister}
@@ -1073,15 +1074,15 @@ function ProductCard({ product: p, onClick, C, pix }: { product: Product; onClic
           {p.isOnPromo && p.discountPriceInReais != null ? (
             <div className="flex flex-col">
               <span className="text-[10px] line-through" style={{ color: C.text }}>
-                R$ {p.priceInReais.toFixed(2).replace('.', ',')}
+                {brl(p.priceInReais)}
               </span>
               <span className="text-sm font-black" style={{ color: '#FF3B3B' }}>
-                R$ {p.discountPriceInReais.toFixed(2).replace('.', ',')}
+                {brl(p.discountPriceInReais)}
               </span>
             </div>
           ) : (
             <span className="text-sm font-black" style={{ color: C.yellow }}>
-              R$ {p.priceInReais.toFixed(2).replace('.', ',')}
+              {brl(p.priceInReais)}
             </span>
           )}
           <span className="text-[10px] font-medium" style={{ color: C.text }}>
@@ -1264,15 +1265,15 @@ function ProductModal({ product: p, onClose, C, pix }: { product: Product; onClo
               {p.isOnPromo && p.discountPriceInReais != null ? (
                 <div className="flex items-end gap-3">
                   <span className="text-3xl font-black leading-none" style={{ color: '#FF3B3B' }}>
-                    R$ {p.discountPriceInReais.toFixed(2).replace('.', ',')}
+                    {brl(p.discountPriceInReais)}
                   </span>
                   <span className="text-sm line-through mb-0.5" style={{ color: C.text }}>
-                    R$ {p.priceInReais.toFixed(2).replace('.', ',')}
+                    {brl(p.priceInReais)}
                   </span>
                 </div>
               ) : (
                 <span className="text-3xl font-black" style={{ color: C.yellow }}>
-                  R$ {p.priceInReais.toFixed(2).replace('.', ',')}
+                  {brl(p.priceInReais)}
                 </span>
               )}
 
@@ -1337,7 +1338,7 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
 
   const isLoggedIn = getRole() === 'Customer' || getRole() === 'Admin'
   const temTaxa    = championship.entryFeeInCents > 0
-  const taxaFmt    = `R$ ${(championship.entryFeeInCents / 100).toFixed(2).replace('.', ',')}`
+  const taxaFmt    = `${brl((championship.entryFeeInCents / 100))}`
 
   useEffect(() => {
     if (!isLoggedIn || !championship.game) return

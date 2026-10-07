@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { Product, ProductCategory } from './api'
+import { brl as fmt } from './format'
 
 async function getJsPDF() {
   const { default: jsPDF } = await import('jspdf')
@@ -29,9 +30,6 @@ const MR = 14
 const CW = PW - ML - MR
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmt(v: number) {
-  return `R$ ${v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`
-}
 function fmtDate(d: Date) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }

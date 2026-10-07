@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { Search, Loader2, Zap, Star, DollarSign, Database, PackagePlus, X, Check, PlusCircle, SlidersHorizontal, RefreshCw, TrendingUp, AlertTriangle } from 'lucide-react'
 import Image from 'next/image'
 import clsx from 'clsx'
+import { numeroBR } from '@/lib/format'
 
 // ── Modal: adicionar carta PRÓPRIA ao estoque (sem busca na API TCG) ──────────
 
@@ -356,12 +357,12 @@ function CardDetailModal({ card, brlRate, onClose, onAddStock }: {
               {usd ? (
                 <div className="flex items-baseline gap-3 flex-wrap">
                   <span className="text-2xl font-black text-accent-gold">${usd.toFixed(2)} <span className="text-sm font-normal text-gray-500">USD</span></span>
-                  {brl && <span className="text-lg font-bold text-green-400">R$ {brl.toFixed(2)}</span>}
+                  {brl && <span className="text-lg font-bold text-green-400">R$ {numeroBR(brl)}</span>}
                 </div>
               ) : (
                 <p className="text-gray-500 text-sm">Preço não disponível</p>
               )}
-              {brlRate && <p className="text-[10px] text-gray-600">Taxa: 1 USD = R$ {brlRate.toFixed(2)}</p>}
+              {brlRate && <p className="text-[10px] text-gray-600">Taxa: 1 USD = R$ {numeroBR(brlRate)}</p>}
             </div>
 
             {/* Variantes de preço (Pokemon) */}
@@ -373,7 +374,7 @@ function CardDetailModal({ card, brlRate, onClose, onAddStock }: {
                     <div key={v.label} className="bg-surface-800 rounded-lg p-2.5">
                       <p className="text-[10px] text-gray-500 mb-1">{v.label}</p>
                       <p className="text-sm font-bold text-accent-gold">${(v.p!.market ?? v.p!.mid)!.toFixed(2)}</p>
-                      {brlRate && <p className="text-xs text-green-400">R$ {((v.p!.market ?? v.p!.mid)! * brlRate).toFixed(2)}</p>}
+                      {brlRate && <p className="text-xs text-green-400">R$ {numeroBR((v.p!.market ?? v.p!.mid)! * brlRate)}</p>}
                     </div>
                   ))}
                 </div>
@@ -509,7 +510,7 @@ function CardItem({ card, brlRate, onDetail }: { card: CardCache; brlRate: numbe
               <DollarSign className="w-3 h-3" /><span className="font-bold text-sm">${price.toFixed(2)}</span>
               <span className="text-[10px] text-gray-500">USD</span>
             </div>
-            {brl && <p className="text-xs text-green-400 font-semibold">R$ {brl.toFixed(2)}</p>}
+            {brl && <p className="text-xs text-green-400 font-semibold">R$ {numeroBR(brl)}</p>}
           </div>
         ) : (
           <p className="text-[10px] text-gray-600">Sem preço</p>
@@ -711,7 +712,7 @@ export default function CartasPage() {
             <span className="text-gray-400">USD/BRL</span>
             {brlRate ? (
               <span className={clsx('font-bold', brlDegradada ? 'text-amber-400' : 'text-green-400')}>
-                R$ {brlRate.toFixed(2)}
+                R$ {numeroBR(brlRate)}
               </span>
             ) : (
               <span className="text-gray-600">–</span>

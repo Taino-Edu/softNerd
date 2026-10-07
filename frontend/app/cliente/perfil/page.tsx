@@ -21,8 +21,8 @@ import PixReservaModal from '@/components/PixReservaModal'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
 import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
+import { brl as fmtBRL, brl } from '@/lib/format'
 
-const fmtBRL = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
 
 /** Data com hora — "12/08/2026 às 14:32". Sem a hora, duas compras no mesmo dia
  *  ficam indistinguíveis pra quem quer conferir o que pagou e quando. */
@@ -572,7 +572,7 @@ export default function PerfilPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-base font-black text-gray-900">
-                    R$ {comandaAberta.totalInReais.toFixed(2).replace('.', ',')}
+                    {brl(comandaAberta.totalInReais)}
                   </p>
                   <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
                 </div>
@@ -593,7 +593,7 @@ export default function PerfilPage() {
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <p className="text-[10px] font-black text-[#42B6EE] uppercase tracking-wider mb-1">Gasto no Mês</p>
                 <p className="text-2xl font-black text-gray-900">
-                  R$ {consumoMensal.toFixed(2).replace('.', ',')}
+                  {brl(consumoMensal)}
                 </p>
               </div>
             </div>
@@ -655,7 +655,7 @@ export default function PerfilPage() {
                     <div className="text-right">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cashback</p>
                       <p className="text-sm font-black text-emerald-500">
-                        R$ {(profile.balanceInCents / 100).toFixed(2).replace('.', ',')}
+                        {brl((profile.balanceInCents / 100))}
                       </p>
                     </div>
                   )}
@@ -863,7 +863,7 @@ export default function PerfilPage() {
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
                           <Coins className="w-3.5 h-3.5 text-[#42B6EE]" />
-                          R$ {p.entryFeeInReais.toFixed(2)}
+                          {brl(p.entryFeeInReais)}
                         </div>
                       </div>
                     </div>
@@ -987,7 +987,7 @@ export default function PerfilPage() {
                         {dividasAbertas.length > 1 ? `${dividasAbertas.length} dívidas pendentes` : 'Dívida pendente'}
                       </p>
                       <p className="text-4xl font-black text-gray-900">
-                        R$ {totalDevido.toFixed(2).replace('.', ',')}
+                        {brl(totalDevido)}
                       </p>
                       {dividasAbertas.length > 1 && dividasAbertas[0].pagamentoToken && (
                         <Link
@@ -1046,7 +1046,7 @@ export default function PerfilPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-gray-900">
-                          R$ {(n.valorTotalEmCentavos / 100).toFixed(2).replace('.', ',')}
+                          {brl((n.valorTotalEmCentavos / 100))}
                         </p>
                         <p className="text-[11px] text-gray-400">
                           {new Date(n.emitidoEm ?? n.createdAt).toLocaleDateString('pt-BR')} · {n.status}

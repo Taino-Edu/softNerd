@@ -11,8 +11,8 @@ import {
   useTopClientes, TopClientesFilterBar, TopClientesList,
   DEFAULT_TOP_CLIENTES, TopClientesState,
 } from '@/components/admin/TopClientes'
+import { brl as fmt } from '@/lib/format'
 
-const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 
 export default function ClientesAnalisesPage() {
   // Aqui o padrão é 'Top 20' — a tela é dedicada, cabe mais que no card do dashboard.

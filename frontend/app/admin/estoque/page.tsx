@@ -10,6 +10,7 @@ import ImageUpload from '@/components/admin/ImageUpload'
 import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relatorio-estoque'
 import CameraScanner from '@/components/CameraScanner'
 import { startHub, stopHub } from '@/lib/signalr'
+import { brl } from '@/lib/format'
 
 // ── Drawer de detalhe do produto ─────────────────────────────────────────────
 function ProductDrawer({ product, onClose, onEdit, onStock }: {
@@ -129,19 +130,19 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Preço de Venda</span>
               <span className="text-lg font-black font-mono text-accent-gold">
-                R$ {product.priceInReais.toFixed(2).replace('.', ',')}
+                {brl(product.priceInReais)}
               </span>
             </div>
             {product.costPriceInCents > 0 && (
               <>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">Custo</span>
-                  <span className="text-sm font-mono text-red-400">R$ {product.costPriceInReais.toFixed(2).replace('.', ',')}</span>
+                  <span className="text-sm font-mono text-red-400">{brl(product.costPriceInReais)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">Margem</span>
                   <span className={`text-sm font-bold font-mono ${product.marginInReais >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {product.marginPercent.toFixed(1)}% · R$ {product.marginInReais.toFixed(2).replace('.', ',')}
+                    {product.marginPercent.toFixed(1)}% · {brl(product.marginInReais)}
                   </span>
                 </div>
                 <div className="h-1.5 bg-surface-600 rounded-full overflow-hidden">
@@ -179,7 +180,7 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
               <div className="flex items-center justify-between text-xs pt-1 border-t border-surface-500">
                 <span className="text-gray-500">Valor imobilizado</span>
                 <span className="font-mono font-semibold text-brand-400">
-                  R$ {valorImob.toFixed(2).replace('.', ',')}
+                  {brl(valorImob)}
                 </span>
               </div>
             )}
@@ -662,7 +663,7 @@ function ProductModal({
             const pct    = ((margin / cost) * 100).toFixed(1)
             return (
               <div className="rounded-lg bg-surface-700/60 px-4 py-2 text-sm flex gap-4 flex-wrap">
-                <span className="text-gray-400">Margem: <span className={margin >= 0 ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>R$ {margin.toFixed(2).replace('.', ',')} ({pct}%)</span></span>
+                <span className="text-gray-400">Margem: <span className={margin >= 0 ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>{brl(margin)} ({pct}%)</span></span>
               </div>
             )
           })()}
@@ -675,7 +676,7 @@ function ProductModal({
             />
             {(form.discountPriceInCents ?? 0) > 0 && (form.priceInCents ?? 0) > 0 && (form.discountPriceInCents ?? 0) < (form.priceInCents ?? 0) && (
               <p className="text-xs text-emerald-400 mt-1">
-                Desconto de R$ {(((form.priceInCents ?? 0) - (form.discountPriceInCents ?? 0)) / 100).toFixed(2).replace('.', ',')} · badge &quot;Promoção&quot; ativado
+                Desconto de {brl((((form.priceInCents ?? 0) - (form.discountPriceInCents ?? 0)) / 100))} · badge &quot;Promoção&quot; ativado
               </p>
             )}
             {(form.discountPriceInCents ?? 0) > 0 && (form.discountPriceInCents ?? 0) >= (form.priceInCents ?? 0) && (
@@ -1126,10 +1127,10 @@ export default function EstoquePage() {
                     {p.barcode ?? <span className="text-gray-400">—</span>}
                   </td>
                   <td className="px-4 py-3 font-mono text-gray-400 text-xs">
-                    {p.costPriceInCents > 0 ? `R$ ${p.costPriceInReais.toFixed(2).replace('.', ',')}` : '—'}
+                    {p.costPriceInCents > 0 ? `${brl(p.costPriceInReais)}` : '—'}
                   </td>
                   <td className="px-4 py-3 font-mono text-accent-gold font-semibold">
-                    R$ {p.priceInReais.toFixed(2).replace('.', ',')}
+                    {brl(p.priceInReais)}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">
                     {p.costPriceInCents > 0
@@ -1236,10 +1237,10 @@ export default function EstoquePage() {
 
               {/* Linha 2: preço + custo + margem */}
               <div className="flex items-center gap-3 text-xs flex-wrap">
-                <span className="text-accent-gold font-bold">R$ {p.priceInReais.toFixed(2).replace('.', ',')}</span>
+                <span className="text-accent-gold font-bold">{brl(p.priceInReais)}</span>
                 {p.costPriceInCents > 0 && (
                   <>
-                    <span className="text-gray-500">Custo: R$ {p.costPriceInReais.toFixed(2).replace('.', ',')}</span>
+                    <span className="text-gray-500">Custo: {brl(p.costPriceInReais)}</span>
                     <span className={p.marginInReais >= 0 ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
                       {p.marginPercent.toFixed(1)}%
                     </span>

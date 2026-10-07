@@ -13,6 +13,7 @@ import {
   QrCode, Copy, Share2,
 } from 'lucide-react'
 import Link from 'next/link'
+import { brl } from '@/lib/format'
 
 interface MyParticipation {
   participationId: string
@@ -172,7 +173,7 @@ function MeusCampeonatos() {
                   {gerandoPix === p.championshipId
                     ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     : <QrCode className="w-3.5 h-3.5" />}
-                  Pagar inscrição via Pix — R$ {p.entryFeeInReais.toFixed(2).replace('.', ',')}
+                  Pagar inscrição via Pix — {brl(p.entryFeeInReais)}
                   </button>
                 </>
               )
@@ -301,12 +302,12 @@ function ProductCard({ p, adding, onAdd }: {
             <div className="flex items-center justify-between mt-1 gap-1">
               {p.isOnPromo && p.discountPriceInReais != null && !outOfStock ? (
                 <div className="flex flex-col">
-                  <span className="text-[10px] line-through" style={{ color: C.muted }}>R$ {p.priceInReais.toFixed(2).replace('.', ',')}</span>
-                  <span className="text-sm font-black" style={{ color: '#FF3B3B' }}>R$ {p.discountPriceInReais.toFixed(2).replace('.', ',')}</span>
+                  <span className="text-[10px] line-through" style={{ color: C.muted }}>{brl(p.priceInReais)}</span>
+                  <span className="text-sm font-black" style={{ color: '#FF3B3B' }}>{brl(p.discountPriceInReais)}</span>
                 </div>
               ) : (
                 <span className="text-sm font-black" style={{ color: unavailable ? C.muted : C.blue2 }}>
-                  R$ {p.priceInReais.toFixed(2).replace('.', ',')}
+                  {brl(p.priceInReais)}
                 </span>
               )}
               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
@@ -326,7 +327,7 @@ function ProductCard({ p, adding, onAdd }: {
       {canWaitList && (
         <div className="px-3 pb-3 space-y-1.5">
           <span className="text-sm font-black" style={{ color: C.blue2 }}>
-            R$ {p.priceInReais.toFixed(2).replace('.', ',')}
+            {brl(p.priceInReais)}
           </span>
           <button
             onClick={handleWaitList}
@@ -391,7 +392,7 @@ function PixPagamentoCard({ pix }: { pix: PixCobrancaDto }) {
         <QrCode className="w-4 h-4" style={{ color: '#16a34a' }} />
         <h2 className="font-black text-sm flex-1" style={{ color: '#15803d' }}>Pagamento Pix</h2>
         <span className="text-lg font-black" style={{ color: '#15803d' }}>
-          R$ {pix.valorEmReais.toFixed(2).replace('.', ',')}
+          {brl(pix.valorEmReais)}
         </span>
       </div>
 
@@ -734,15 +735,15 @@ export default function ClientePage() {
                 {confirmItem.isOnPromo && confirmItem.discountPriceInReais != null ? (
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-xl font-black" style={{ color: '#FF3B3B' }}>
-                      R$ {confirmItem.discountPriceInReais.toFixed(2).replace('.', ',')}
+                      {brl(confirmItem.discountPriceInReais)}
                     </span>
                     <span className="text-sm line-through" style={{ color: C.muted }}>
-                      R$ {confirmItem.priceInReais.toFixed(2).replace('.', ',')}
+                      {brl(confirmItem.priceInReais)}
                     </span>
                   </div>
                 ) : (
                   <p className="text-xl font-black mt-1" style={{ color: C.blue2 }}>
-                    R$ {confirmItem.priceInReais.toFixed(2).replace('.', ',')}
+                    {brl(confirmItem.priceInReais)}
                   </p>
                 )}
               </div>
@@ -819,7 +820,7 @@ export default function ClientePage() {
               <div className="text-right">
                 <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: C.muted }}>Cashback</p>
                 <p className="text-base font-black" style={{ color: '#22c55e' }}>
-                  R$ {(profile.balanceInCents / 100).toFixed(2).replace('.', ',')}
+                  {brl((profile.balanceInCents / 100))}
                 </p>
               </div>
             )}
@@ -942,11 +943,11 @@ export default function ClientePage() {
                               {item.itemNameSnapshot}
                             </p>
                             <p className="text-xs mt-0.5 font-medium" style={{ color: C.muted }}>
-                              {item.quantity}× R$ {item.unitPriceInReais.toFixed(2).replace('.', ',')}
+                              {item.quantity}× {brl(item.unitPriceInReais)}
                             </p>
                           </div>
                           <span className="font-black text-sm shrink-0" style={{ color: C.blue2 }}>
-                            R$ {item.subtotalInReais.toFixed(2).replace('.', ',')}
+                            {brl(item.subtotalInReais)}
                           </span>
                         </div>
                         {idx < comanda.items.length - 1 && (
@@ -961,7 +962,7 @@ export default function ClientePage() {
                   <div className="flex justify-between items-center mt-4 pt-4 border-t" style={{ borderColor: C.border }}>
                     <span className="font-black text-xs uppercase tracking-wide" style={{ color: C.muted }}>Total</span>
                     <span className="text-2xl font-black" style={{ color: C.navy }}>
-                      R$ {netTotal.toFixed(2).replace('.', ',')}
+                      {brl(netTotal)}
                     </span>
                   </div>
                 )}
@@ -1121,7 +1122,7 @@ export default function ClientePage() {
                       {comanda.items.length} {comanda.items.length === 1 ? 'item' : 'itens'}
                     </p>
                     <p className="text-base font-black leading-tight text-white">
-                      R$ {netTotal.toFixed(2).replace('.', ',')}
+                      {brl(netTotal)}
                     </p>
                   </div>
                 </div>
@@ -1145,11 +1146,11 @@ export default function ClientePage() {
                             {item.itemNameSnapshot}
                           </p>
                           <p className="text-xs mt-0.5 font-medium" style={{ color: C.muted }}>
-                            {item.quantity}× R$ {item.unitPriceInReais.toFixed(2).replace('.', ',')}
+                            {item.quantity}× {brl(item.unitPriceInReais)}
                           </p>
                         </div>
                         <span className="font-black text-sm shrink-0" style={{ color: C.blue2 }}>
-                          R$ {item.subtotalInReais.toFixed(2).replace('.', ',')}
+                          {brl(item.subtotalInReais)}
                         </span>
                       </div>
                       {idx < comanda.items.length - 1 && (
@@ -1161,7 +1162,7 @@ export default function ClientePage() {
                 <div className="flex justify-between items-center mt-4 pt-4 border-t" style={{ borderColor: C.border }}>
                   <span className="font-black text-xs uppercase tracking-wide" style={{ color: C.muted }}>Total</span>
                   <span className="text-2xl font-black" style={{ color: C.navy }}>
-                    R$ {netTotal.toFixed(2).replace('.', ',')}
+                    {brl(netTotal)}
                   </span>
                 </div>
               </div>

@@ -10,8 +10,8 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { CheckCircle, Copy, Loader2, QrCode, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
 import { pagarCrediarioApi, PagamentoCrediarioPix, PagamentoCrediarioResumo } from '@/lib/api'
+import { brl } from '@/lib/format'
 
-const brl = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 const data = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
 function mensagemErro(err: unknown, padrao: string) {

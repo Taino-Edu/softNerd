@@ -5,6 +5,7 @@
 
 import { FinanceiroDto } from './api'
 import { FORMAS_PAGAMENTO } from './pagamentos'
+import { brl as fmt } from './format'
 
 async function getJsPDF() {
   const { default: jsPDF } = await import('jspdf')
@@ -28,9 +29,6 @@ const ML = 14
 const MR = 14
 const CW = PW - ML - MR
 
-function fmt(v: number) {
-  return `R$ ${v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`
-}
 function fmtDt(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',

@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Loader2, X, QrCode, Copy, CheckCircle, AlertTriangle } from 'lucide-react'
 import { PixCobrancaDto } from '@/lib/api'
+import { brl as fmt } from '@/lib/format'
 
-const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 
 interface CobrancaPixModalProps {
   clienteNome: string

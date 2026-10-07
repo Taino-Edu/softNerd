@@ -21,6 +21,7 @@ function vagaExpirada(p: { entryFeePaidAt?: string | null; inscricaoExpiraEm?: s
   return new Date(p.inscricaoExpiraEm).getTime() <= Date.now()
 }
 import clsx from 'clsx'
+import { brlDeCentavos } from '@/lib/format'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, string> = {
@@ -697,7 +698,7 @@ function ChampionshipCard({
           <div className="bg-surface-800 rounded-lg p-2.5">
             <p className="text-xs text-gray-500">Inscrição</p>
             <p className={clsx('font-medium', c.entryFeeInCents === 0 ? 'text-accent-green' : 'text-accent-gold')}>
-              {c.entryFeeInCents === 0 ? 'Grátis' : `R$ ${(c.entryFeeInCents / 100).toFixed(2)}`}
+              {c.entryFeeInCents === 0 ? 'Grátis' : brlDeCentavos(c.entryFeeInCents)}
             </p>
           </div>
         </div>

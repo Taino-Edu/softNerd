@@ -5,6 +5,7 @@ import { reservationApi, ReservationPixStatus } from '@/lib/api'
 import { QrCode, Copy, RefreshCw, Loader2, X, CheckCircle, MessageCircle } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
+import { brl } from '@/lib/format'
 
 /** Modal de pagamento Pix de um grupo de pré-venda.
  * Usado no perfil do cliente (pagar) e no admin (gerar/copiar o código pra mandar
@@ -81,7 +82,7 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
     const digits = clienteWhatsApp.replace(/\D/g, '')
     if (digits.length < 10) return null
     const fone = digits.startsWith('55') ? digits : `55${digits}`
-    const valor = pix.valorEmReais !== undefined ? `R$ ${pix.valorEmReais.toFixed(2).replace('.', ',')}` : ''
+    const valor = pix.valorEmReais !== undefined ? `${brl(pix.valorEmReais)}` : ''
     const msg = `Olá! Segue o Pix da sua pré-venda no Santuário Nerd:\n\nValor: ${valor}\n\nCódigo copia-e-cola:\n${pix.pixCopiaCola}\n\nQualquer dúvida é só chamar!`
     return `https://wa.me/${fone}?text=${encodeURIComponent(msg)}`
   })()
@@ -138,7 +139,7 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
             )}
             {pix?.valorEmReais !== undefined && (
               <p className={clsx('text-center text-lg font-black', dark ? 'text-white' : 'text-gray-900')}>
-                R$ {pix.valorEmReais.toFixed(2).replace('.', ',')}
+                {brl(pix.valorEmReais)}
               </p>
             )}
             <p className={clsx('text-center text-xs', dark ? 'text-gray-500' : 'text-gray-400')}>

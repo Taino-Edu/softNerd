@@ -12,6 +12,7 @@ import {
   AlertTriangle, TrendingDown, TrendingUp, DollarSign,
   X, Pencil, Trash2, FileText, Inbox, QrCode,
 } from 'lucide-react'
+import { brl } from '@/lib/format'
 
 type Transaction = {
   id: string
@@ -91,7 +92,7 @@ const sourceIcon: Record<string, string> = {
 }
 
 function fmtMoney(v: number) {
-  return `R$ ${Math.abs(v).toFixed(2).replace('.', ',')}`
+  return `${brl(Math.abs(v))}`
 }
 
 function fmtDate(d?: string) {

@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { ClienteInsightDto, FinanceiroDto, ComandaDto, RelatorioCrediarioDto } from './api'
+import { brl as fmt } from './format'
 
 async function getJsPDF() {
   const { default: jsPDF } = await import('jspdf')
@@ -24,9 +25,6 @@ const AMBER  = [180, 120, 0]   as [number, number, number]
 
 const PW = 210; const ML = 14; const MR = 14; const CW = PW - ML - MR
 
-function fmt(v: number) {
-  return `R$ ${v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`
-}
 function fmtDate(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('pt-BR')

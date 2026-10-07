@@ -8,12 +8,12 @@ import {
   Package, ShoppingBag, ChevronLeft,
   Sun, Moon, Search, Tag,
 } from 'lucide-react'
+import { brl as fmt } from '@/lib/format'
 
 const NAVY = '#0C3D5A'
 
 type Theme = { bg: string; card: string; border: string; blue: string; yellow: string; text: string; navy: string; muted: string; pix: string }
 
-function fmt(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}` }
 /** "3" → "3%" e "2.5" → "2,5%" (sem casa decimal à toa no caso comum). */
 function fmtPct(v: number) { return `${(Math.round(v * 10) / 10).toString().replace('.', ',')}%` }
 

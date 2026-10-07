@@ -6,6 +6,7 @@ import { Users, Search, Star, Plus, CreditCard, Clock, AlertCircle, Loader2, Wal
 import Link from 'next/link'
 import { Badge, BadgeTone } from '@/components/ui/Badge'
 import DeckViewerModal from '@/components/admin/DeckViewerModal'
+import { brl } from '@/lib/format'
 
 // ── Modal: Novo Cliente ───────────────────────────────────────────────────────
 function NovoClienteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (u: UserSummary) => void }) {
@@ -492,7 +493,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
     }
   }
 
-  const fmt  = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
+  const fmt  = (v: number) => `${brl(v)}`
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR')
   const fmtDateTime = (d: string) => new Date(d).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
@@ -884,8 +885,8 @@ export default function UsuariosPage() {
       const cents = Math.round(Number(balanceAmount) * 100) * (isCredit ? 1 : -1)
       const { data } = await userApi.adjustBalance(selected.id, cents, balanceReason || undefined)
       toast.success(isCredit
-        ? `R$ ${Number(balanceAmount).toFixed(2)} creditado para ${selected.name}!`
-        : `R$ ${Number(balanceAmount).toFixed(2)} debitado de ${selected.name}!`)
+        ? `${brl(Number(balanceAmount))} creditado para ${selected.name}!`
+        : `${brl(Number(balanceAmount))} debitado de ${selected.name}!`)
       setUsers(prev => prev.map(u => u.id === data.id ? data : u))
       setSelected(data)
       setBalanceAmount('')
@@ -1162,7 +1163,7 @@ export default function UsuariosPage() {
                       <PointsBadge user={u} />
                       {u.balanceInCents > 0 && (
                         <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0 font-bold">
-                          <Wallet className="w-3 h-3" /> R$ {(u.balanceInCents / 100).toFixed(2).replace('.', ',')}
+                          <Wallet className="w-3 h-3" /> {brl((u.balanceInCents / 100))}
                         </span>
                       )}
                       {crediarios[u.id] && <CreditBadge crediario={crediarios[u.id]} />}
@@ -1312,7 +1313,7 @@ export default function UsuariosPage() {
                     <Wallet className="w-4 h-4 text-emerald-400" /> Cashback
                   </p>
                   <span className="text-lg font-bold text-emerald-400">
-                    R$ {((selected.balanceInCents ?? 0) / 100).toFixed(2).replace('.', ',')}
+                    {brl(((selected.balanceInCents ?? 0) / 100))}
                   </span>
                 </div>
                 <div>

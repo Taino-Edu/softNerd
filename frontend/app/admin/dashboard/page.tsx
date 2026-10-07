@@ -24,8 +24,8 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { rotuloCurtoPagamento } from '@/lib/pagamentos'
+import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
 
-const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
 
 /** Após um fechamento com "Emitir cupom fiscal" marcado: abre o cupom sozinho se autorizou,
  * ou avisa o motivo se rejeitou/ficou pendente (SEFAZ fora do ar — o retry automático tenta de novo). */
@@ -43,7 +43,7 @@ function handleNotaFiscalResult(notaId?: string | null, status?: string | null, 
 }
 
 /** Data de hoje no fuso de Brasília como YYYY-MM-DD (nunca usa UTC). */
-const brToday = () => new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+const brToday = () => hojeBrasil()
 
 // ── Mini gráfico de barras (últimos 7 dias) ───────────────────────────────────
 const CHART_SCHEMES: Record<DashChartScheme, { melhor: string; acima: string; normal: string; abaixo: string; hoje: string }> = {
@@ -548,7 +548,7 @@ function CloseComandaModal({
         <div>
           <h3 className="font-semibold text-white text-lg">Fechar comanda</h3>
           <p className="text-gray-400 text-sm mt-1">
-            {comanda.userName} · <span className="text-accent-gold font-bold">{`R$ ${totalRestante.toFixed(2).replace('.', ',')}`}</span>
+            {comanda.userName} · <span className="text-accent-gold font-bold">{`${brl(totalRestante)}`}</span>
           </p>
           {(saldoPontos > 0 || saldoCashback > 0) && (
             <div className="flex gap-3 mt-2">
@@ -559,7 +559,7 @@ function CloseComandaModal({
               )}
               {saldoCashback > 0 && (
                 <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1">
-                  R$ {saldoCashback.toFixed(2).replace('.', ',')} cashback
+                  {brl(saldoCashback)} cashback
                 </span>
               )}
             </div>
@@ -600,7 +600,7 @@ function CloseComandaModal({
 
           {descontoCents > 0 && (
             <p className="text-xs text-accent-green mt-1">
-              Total após desconto: R$ {totalRestante.toFixed(2).replace('.', ',')}
+              Total após desconto: {brl(totalRestante)}
             </p>
           )}
         </div>
@@ -627,7 +627,7 @@ function CloseComandaModal({
                 <span className="flex-1">{pm.label}</span>
                 {splitEnabled && method === pm.value && (
                   <span className="text-xs font-mono text-white">
-                    R$ {primaryAmtReais > 0 ? primaryAmtReais.toFixed(2).replace('.', ',') : '—'}
+                    {primaryAmtReais > 0 ? brl(primaryAmtReais) : 'R$ —'}
                   </span>
                 )}
                 {!splitEnabled && pm.value === 'Crediario' && (
@@ -635,7 +635,7 @@ function CloseComandaModal({
                 )}
                 {!splitEnabled && pm.value === 'Cashback' && saldoCashback > 0 && (
                   <span className="text-xs text-emerald-400/70 font-normal">
-                    R$ {saldoCashback.toFixed(2).replace('.', ',')} disp.
+                    {brl(saldoCashback)} disp.
                   </span>
                 )}
                 {!splitEnabled && pm.value === 'Pontos' && saldoPontos > 0 && (
@@ -700,7 +700,7 @@ function CloseComandaModal({
                   onClick={() => setSecondAmtStr(Math.min(saldoCashback, totalRestante - 0.01).toFixed(2))}
                   className="mt-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
                 >
-                  Usar tudo (R$ {saldoCashback.toFixed(2).replace('.', ',')})
+                  Usar tudo ({brl(saldoCashback)})
                 </button>
               )}
               {secondMethod === 'Pontos' && saldoPontos > 0 && (
@@ -709,7 +709,7 @@ function CloseComandaModal({
                   onClick={() => setSecondAmtStr((Math.min(saldoPontos, Math.round(totalRestante * 100) - 1) / 100).toFixed(2))}
                   className="mt-1 text-xs text-amber-400 hover:text-amber-300 transition-colors"
                 >
-                  Usar tudo ({saldoPontos} pts = R$ {(saldoPontos / 100).toFixed(2).replace('.', ',')})
+                  Usar tudo ({saldoPontos} pts = {brl((saldoPontos / 100))})
                 </button>
               )}
             </div>
@@ -717,11 +717,11 @@ function CloseComandaModal({
               <div className="text-xs text-gray-400 pt-1 border-t border-surface-500 space-y-1">
                 <div className="flex justify-between">
                   <span>{SECOND_PAYMENT_METHODS.find(m => m.value === secondMethod)?.label}:</span>
-                  <span className="text-white font-mono">R$ {(secondAmtCents / 100).toFixed(2).replace('.', ',')}</span>
+                  <span className="text-white font-mono">{brl((secondAmtCents / 100))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{COMANDA_PAYMENT_METHODS.find(m => m.value === method)?.label ?? method}:</span>
-                  <span className="text-white font-mono">R$ {(primaryAmtCents / 100).toFixed(2).replace('.', ',')}</span>
+                  <span className="text-white font-mono">{brl((primaryAmtCents / 100))}</span>
                 </div>
               </div>
             )}
@@ -735,12 +735,12 @@ function CloseComandaModal({
         )}
         {method === 'Crediario' && splitEnabled && secondAmtCents > 0 && (
           <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-300">
-            R$ {(primaryAmtCents / 100).toFixed(2).replace('.', ',')} irá para o crediário. O restante já foi quitado.
+            {brl((primaryAmtCents / 100))} irá para o crediário. O restante já foi quitado.
           </div>
         )}
         {semSaldoCashback && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            Saldo insuficiente. Cliente tem R$ {saldoCashback.toFixed(2).replace('.', ',')} mas a comanda custa R$ {totalRestante.toFixed(2).replace('.', ',')}.
+            Saldo insuficiente. Cliente tem {brl(saldoCashback)} mas a comanda custa {brl(totalRestante)}.
           </div>
         )}
         {semSaldoPontos && (
@@ -750,7 +750,7 @@ function CloseComandaModal({
         )}
         {splitSemCashback && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            Cashback insuficiente. Cliente tem R$ {saldoCashback.toFixed(2).replace('.', ',')} mas foi solicitado R$ {(secondAmtCents / 100).toFixed(2).replace('.', ',')}.
+            Cashback insuficiente. Cliente tem {brl(saldoCashback)} mas foi solicitado {brl((secondAmtCents / 100))}.
           </div>
         )}
         {splitSemPontos && (
@@ -760,7 +760,7 @@ function CloseComandaModal({
         )}
         {splitEnabled && splitInvalido && secondAmtStr !== '' && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            O segundo valor deve ser maior que zero e menor que o total (R$ {totalRestante.toFixed(2).replace('.', ',')}).
+            O segundo valor deve ser maior que zero e menor que o total ({brl(totalRestante)}).
           </div>
         )}
 
