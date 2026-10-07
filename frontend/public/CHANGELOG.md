@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.39.5] — 2026-10-07
+
+### Mudado
+- **Inicialização do banco organizada**: o arquivo de partida do servidor tinha 1.475 linhas, quase 900 delas de SQL que prepara o banco a cada início. O SQL foi pra arquivos próprios (`postgres.sql` e `sqlite.sql`) e o registro dos serviços pra outro arquivo — o de partida ficou com 426 linhas. Sem mudança visível
+- **Fim de uma armadilha antiga**: um `{` ou `}` nesse SQL (até num comentário) impedia o servidor de subir. Agora o SQL roda direto no banco e as chaves não quebram mais nada
+- Teste novo: a preparação do banco roda duas vezes seguidas sem erro e cria o admin uma vez só
+
 ## [v1.39.4] — 2026-10-07
 
 ### Mudado

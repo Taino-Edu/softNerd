@@ -4,7 +4,7 @@
 
 ## Tabelas do PostgreSQL
 
-O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que já existe precisa de SQL no bloco de inicialização do `CardGameStore/Program.cs` — a coluna "No startup" mostra quais já têm (`criada` = CREATE TABLE IF NOT EXISTS, `colunas` = ALTER TABLE).
+O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que já existe precisa de SQL em `CardGameStore/Data/Inicializacao/` (postgres.sql e sqlite.sql) — a coluna "No startup" mostra quais já têm (`criada` = CREATE TABLE IF NOT EXISTS, `colunas` = ALTER TABLE).
 
 | Tabela | Classe | DbSet | No startup | Arquivo |
 |---|---|---|---|---|

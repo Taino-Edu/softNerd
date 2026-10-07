@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- SQL de inicialização (Data/InicializacaoBanco.cs) vai dentro da DLL -->
+    <EmbeddedResource Include="Data\Inicializacao\*.sql" LogicalName="CardGameStore.Data.Inicializacao.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Entity Framework Core -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">

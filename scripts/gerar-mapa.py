@@ -215,7 +215,9 @@ def libs_front():
 # ── Backend: tabelas, serviços, robôs ─────────────────────────────────────────
 
 def tabelas_backend():
-    program = ler(BACK / 'Program.cs')
+    # SQL de inicialização: Data/Inicializacao/*.sql + colunas do SQLite em InicializacaoBanco.cs
+    program = '\n'.join(ler(p) for p in sorted((BACK / 'Data' / 'Inicializacao').glob('*.sql')))
+    program += '\n' + ler(BACK / 'Data' / 'InicializacaoBanco.cs')
     ctx     = ler(BACK / 'Data' / 'AppDbContext.cs')
     out = []
     for p in sorted((BACK / 'Models').rglob('*.cs')):
@@ -236,8 +238,8 @@ def tabelas_backend():
 
 
 def servicos_backend():
-    program = ler(BACK / 'Program.cs')
-    registros = re.findall(r'builder\.Services\.Add(Scoped|Singleton|Transient|HostedService)<([\w, ]+)>\(\)', program)
+    program = ler(BACK / 'Program.cs') + ler(BACK / 'Configuration' / 'ServicosDaLoja.cs')
+    registros = re.findall(r'(?:builder\.Services|services)\.Add(Scoped|Singleton|Transient|HostedService)<([\w, ]+)>\(\)', program)
     impl_dir = BACK / 'Services' / 'Implementations'
     arquivos_impl = {p.stem: rel(p) for p in impl_dir.glob('*.cs')} if impl_dir.exists() else {}
     servicos, robos = [], []
@@ -307,7 +309,7 @@ def escrever_backend(tabelas, mongo, servicos, robos):
     linhas = ['# Mapa — Backend', '', AVISO,
               '## Tabelas do PostgreSQL', '',
               'O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que já existe '
-              'precisa de SQL no bloco de inicialização do `CardGameStore/Program.cs` — a coluna "No startup" '
+              'precisa de SQL em `CardGameStore/Data/Inicializacao/` (postgres.sql e sqlite.sql) — a coluna "No startup" '
               'mostra quais já têm (`criada` = CREATE TABLE IF NOT EXISTS, `colunas` = ALTER TABLE).', '',
               '| Tabela | Classe | DbSet | No startup | Arquivo |', '|---|---|---|---|---|']
     for t, c, arq, dbset, ddl in sorted(tabelas):

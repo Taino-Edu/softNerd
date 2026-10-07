@@ -39,12 +39,14 @@ Este README é escrito à mão — o script não mexe nele. Quando descobrir uma
 ### Banco de dados (tabela ou coluna nova)
 O banco usa `EnsureCreated`, **sem migrations**. Em produção o banco já existe, então:
 1. Crie/altere o modelo em `CardGameStore/Models/PostgreSQL/` e registre em `Data/AppDbContext.cs`.
-2. Adicione o SQL no bloco de inicialização de `CardGameStore/Program.cs`:
-   - bloco do **Postgres** (`CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`);
-   - bloco do **SQLite** (dev) — coluna nova vai na lista de `ALTER TABLE` que engole "duplicate column".
-3. Correção de dados que só pode rodar uma vez: use o padrão `app_migrations` (veja `crediario_vencimento_fim_do_dia` no `Program.cs`).
-4. **Nunca use `{` ou `}` nesse SQL, nem em comentário** — o EF trata como parâmetro e a API não sobe
-   (derruba o site no deploy). Build e testes não pegam isso: suba a API local antes de commitar.
+2. Adicione o SQL em `CardGameStore/Data/Inicializacao/` (roda a cada startup, via `Data/InicializacaoBanco.cs`):
+   - `postgres.sql` (produção) — `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`;
+   - `sqlite.sql` (dev) — tabela nova; coluna nova vai na lista `ColunasSqlite` do `InicializacaoBanco.cs`
+     (SQLite não tem `ADD COLUMN IF NOT EXISTS`, o erro de coluna duplicada é engolido).
+3. Correção de dados que só pode rodar uma vez: use o padrão `app_migrations` (veja `crediario_vencimento_fim_do_dia` no `postgres.sql`).
+4. Tudo precisa ser idempotente — o mesmo SQL roda em todo restart. Os `.sql` vão embutidos na DLL e
+   rodam direto na conexão, então `{` `}` não quebram mais (antes, dentro do `Program.cs`, derrubavam a API).
+   Mesmo assim: suba a API local antes de commitar — build e testes não executam o `postgres.sql`.
 
 A coluna "No startup" do [BACKEND.md](BACKEND.md) mostra quais tabelas já têm SQL no startup.
 
@@ -131,7 +133,7 @@ Mudou como uma compra entra no crediário? Mexa em **comanda e PDV juntos** — 
 
 1. `dotnet build CardGameStore` e `dotnet test tests/unit/CardGameStore.Tests`
 2. `npx tsc --noEmit -p frontend`
-3. Mexeu no `Program.cs`? Suba a API local e veja se ela inicia.
+3. Mexeu no `Program.cs` ou em `Data/Inicializacao/`? Suba a API local e veja se ela inicia.
 4. Atualize `frontend/public/CHANGELOG.md`.
 5. Mexeu em endpoint/tela/componente/tabela? `python scripts/gerar-mapa.py`.
 6. Na VPS (`srv1696954`): `cd /opt/santuarionerd && git pull origin main && bash deploy/update.sh`
