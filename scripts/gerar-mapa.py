@@ -129,45 +129,47 @@ def rota_para_regex(rota: str):
 
 
 def funcoes_api_ts():
-    """lib/api.ts: em que objeto/função fica cada linha (ex.: crediarioApi.avisoConfig)."""
-    arq = FRONT / 'lib' / 'api.ts'
-    if not arq.exists(): return arq, []
-    linhas = ler(arq).splitlines()
-    objeto, chave, mapa = None, None, []
-    for l in linhas:
-        mo = re.match(r'export const (\w+)\s*=\s*\{', l)
-        if mo: objeto, chave = mo.group(1), None
-        elif re.match(r'^\}', l): objeto = None
-        mk = re.match(r'\s{2}(\w+)\s*:\s*(?:async\s*)?\(', l)
-        if objeto and mk: chave = mk.group(1)
-        mapa.append(f'{objeto}.{chave}' if objeto and chave else None)
-    return arq, mapa
+    """lib/api/*.ts: em que objeto/função fica cada linha (ex.: crediarioApi.avisoConfig)."""
+    pasta = FRONT / 'lib' / 'api'
+    out = []
+    for arq in sorted(pasta.glob('*.ts')) if pasta.exists() else []:
+        linhas = ler(arq).splitlines()
+        objeto, chave, mapa = None, None, []
+        for l in linhas:
+            mo = re.match(r'export const (\w+)\s*=\s*\{', l)
+            if mo: objeto, chave = mo.group(1), None
+            elif re.match(r'^\}', l): objeto = None
+            mk = re.match(r'\s{2}(\w+)\s*:\s*(?:async\s*)?\(', l)
+            if objeto and mk: chave = mk.group(1)
+            mapa.append(f'{objeto}.{chave}' if objeto and chave else None)
+        out.append((rel(arq), linhas, mapa))
+    return out
 
 
 def usos_front(eps):
     fontes = {rel(p): ler(p) for p in arquivos(FRONT, ('.ts', '.tsx'))}
-    api_arq, api_mapa = funcoes_api_ts()
-    api_rel = rel(api_arq)
-    api_linhas = fontes.get(api_rel, '').splitlines()
+    api_arqs = funcoes_api_ts()
+    api_rels = {a[0] for a in api_arqs}
 
     for ep in eps:
         rx = rota_para_regex(ep['rota'])
         funcoes, arquivos_diretos = set(), set()
-        for i, l in enumerate(api_linhas):
-            if rx.search(l) and i < len(api_mapa) and api_mapa[i]:
-                # Mesma rota com métodos diferentes (GET lista, POST cria): confere o verbo da chamada
-                verbo = re.search(r'(?:api|axios)\.(get|post|put|patch|delete)', l)
-                if verbo and verbo.group(1).upper() != ep['verbo']:
-                    continue
-                funcoes.add(api_mapa[i])
+        for _, api_linhas, api_mapa in api_arqs:
+            for i, l in enumerate(api_linhas):
+                if rx.search(l) and api_mapa[i]:
+                    # Mesma rota com métodos diferentes (GET lista, POST cria): confere o verbo da chamada
+                    verbo = re.search(r'(?:api|axios)\.(get|post|put|patch|delete)', l)
+                    if verbo and verbo.group(1).upper() != ep['verbo']:
+                        continue
+                    funcoes.add(api_mapa[i])
         for caminho, txt in fontes.items():
-            if caminho != api_rel and rx.search(txt):
+            if caminho not in api_rels and rx.search(txt):
                 arquivos_diretos.add(caminho)
         telas = set()
         for f in funcoes:
             uso = re.compile(re.escape(f) + r'\b')
             for caminho, txt in fontes.items():
-                if caminho != api_rel and uso.search(txt):
+                if caminho not in api_rels and uso.search(txt):
                     telas.add(caminho)
         ep['funcoes'] = sorted(funcoes)
         ep['telas'] = sorted(telas | arquivos_diretos)
@@ -203,7 +205,7 @@ def componentes_front():
 
 def libs_front():
     out = []
-    for p in sorted((FRONT / 'lib').glob('*.ts')):
+    for p in sorted((FRONT / 'lib').rglob('*.ts')):
         txt = ler(p)
         exps = re.findall(r'export\s+(?:async\s+)?(?:function|const)\s+(\w+)', txt)
         out.append((rel(p), exps))
@@ -268,7 +270,7 @@ def escrever_endpoints(eps):
     linhas = ['# Mapa — Endpoints da API', '', AVISO,
               f'{len(eps)} endpoints em {len(por_ctrl)} controllers. "Quem" = política de acesso '
               '(`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).', '',
-              '"Função no front" é a chamada em `frontend/lib/api.ts`; "Telas" são os arquivos que usam essa função '
+              '"Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função '
               '(ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.', '']
     linhas.append('## Índice')
     linhas += [f'- [{c}](#{c.lower()}) ({len(v)})' for c, v in sorted(por_ctrl.items())]

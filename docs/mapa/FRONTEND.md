@@ -107,7 +107,22 @@ Mudou um componente? Confira as telas da última coluna.
 
 | Arquivo | Exporta |
 |---|---|
-| `lib/api.ts` | `api`, `categoryApi`, `ANNOUNCEMENT_TYPES`, `DEFAULT_DASHBOARD_PANELS`, `DEFAULT_PREFERENCES`, `authApi`, `announcementApi`, `PAYMENT_METHODS`, `PAYMENT_NEEDS_USER`, `SECOND_PAYMENT_METHODS`, `comandaApi`, `FORMAS_PAGAMENTO_CREDIARIO`, `crediarioApi`, `pagarCrediarioApi`, `COMANDA_PAYMENT_METHODS`, `vendaAvulsaApi`, `productApi`, `variantApi`, `perfisApi`, `userApi`, `tcgApi`, `deckApi`, `championshipApi`, `timerApi`, `aiApi` … (+18) |
+| `lib/api/auth.ts` | `authApi` |
+| `lib/api/campeonatos.ts` | `championshipApi`, `timerApi`, `ligaMensalApi` |
+| `lib/api/cartas.ts` | `tcgApi`, `deckApi`, `marketplaceApi` |
+| `lib/api/client.ts` | `api` |
+| `lib/api/comandas.ts` | `PAYMENT_METHODS`, `PAYMENT_NEEDS_USER`, `SECOND_PAYMENT_METHODS`, `comandaApi`, `COMANDA_PAYMENT_METHODS` |
+| `lib/api/comunicacao.ts` | `aiApi`, `notificationsApi`, `mensageriaApi`, `whatsappAdminApi`, `pushApi` |
+| `lib/api/crediario.ts` | `FORMAS_PAGAMENTO_CREDIARIO`, `crediarioApi`, `pagarCrediarioApi`, `contasReceberApi` |
+| `lib/api/fiscal.ts` | `fiscalApi`, `minhasNotasApi` |
+| `lib/api/index.ts` | — |
+| `lib/api/lgpd.ts` | `lgpdApi`, `lgpdAdminApi` |
+| `lib/api/produtos.ts` | `categoryApi`, `productApi`, `variantApi`, `uploadApi` |
+| `lib/api/relatorios.ts` | `analyticsApi`, `relatorioApi` |
+| `lib/api/reservas.ts` | `reservationApi` |
+| `lib/api/site.ts` | `ANNOUNCEMENT_TYPES`, `announcementApi`, `siteConfigApi` |
+| `lib/api/usuarios.ts` | `DEFAULT_DASHBOARD_PANELS`, `DEFAULT_PREFERENCES`, `perfisApi`, `userApi`, `publicProfileApi` |
+| `lib/api/vendas.ts` | `vendaAvulsaApi`, `minhasComprasApi` |
 | `lib/auth.ts` | `saveAuth`, `clearAuth`, `getRole`, `getUserName`, `getUserId`, `isAdmin`, `isOperator`, `isLoggedIn`, `getPermissions`, `hasPermission` |
 | `lib/colors.ts` | `mixHex`, `isDark`, `getContrastText` |
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |

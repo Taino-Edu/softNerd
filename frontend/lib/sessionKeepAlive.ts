@@ -58,7 +58,7 @@ export async function renovarSessao(idadeMinimaMs = JANELA_COMPARTILHADA_MS): Pr
       if (res.data) saveAuth(res.data)
       gravaNoStorage(Date.now())
     } catch {
-      // 401 real cai no interceptor do api.ts na próxima requisição, que decide
+      // 401 real cai no interceptor de lib/api/client.ts na próxima requisição, que decide
       // se desloga. Falha de rede aqui é só uma tentativa perdida.
     } finally {
       emAndamento = null

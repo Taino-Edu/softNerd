@@ -25,7 +25,7 @@ Este README é escrito à mão — o script não mexe nele. Quando descobrir uma
 | Parte | Onde | Observação |
 |---|---|---|
 | API (C#/.NET 8) | `CardGameStore/` | Controllers em `Controllers/`, regra de negócio em `Services/Implementations/` |
-| Front (Next.js 14) | `frontend/` | Telas em `app/`, peças reutilizáveis em `components/`, chamadas à API em `lib/api.ts` |
+| Front (Next.js 14) | `frontend/` | Telas em `app/`, peças reutilizáveis em `components/`, chamadas à API em `lib/api/` (um arquivo por assunto; as telas importam de `@/lib/api`) |
 | Banco principal | PostgreSQL | Modelos em `CardGameStore/Models/PostgreSQL/`, configuração em `Data/AppDbContext.cs` |
 | Vendas do balcão | MongoDB | `Models/MongoDB/VendaAvulsa.cs` |
 | Testes | `tests/unit/CardGameStore.Tests/` | `dotnet test tests/unit/CardGameStore.Tests` (SQLite em memória) |
@@ -63,7 +63,7 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
   precisa cliente, usa saldo do cliente). Regras perguntam ao catálogo: `EntraNoCaixa`, `PrecisaCliente`,
   `UsaSaldoDoCliente`, `QuitamCrediario`, `Normalizar` (nome legado → código).
 - Front: `frontend/lib/pagamentos.ts` (`FORMAS_PAGAMENTO`, `rotuloPagamento`, `rotuloCurtoPagamento`,
-  `opcoesPagamento`). As listas de cada tela em `lib/api.ts` (`PAYMENT_METHODS`, `COMANDA_PAYMENT_METHODS`,
+  `opcoesPagamento`). As listas de cada tela em `lib/api/comandas.ts` e `lib/api/crediario.ts` (`PAYMENT_METHODS`, `COMANDA_PAYMENT_METHODS`,
   `SECOND_PAYMENT_METHODS`, `FORMAS_PAGAMENTO_CREDIARIO`) são recortes dele — não escreva lista nova à mão.
 - O teste `PaymentMethodTests.CatalogoDoFront_EIgualAoDoBack` falha se os dois divergirem.
 - A validação fica no serviço (`VendaAvulsaService.RegisterAsync`), não só no controller: qualquer caminho

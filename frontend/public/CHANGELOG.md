@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.39.4] — 2026-10-07
+
+### Mudado
+- **Chamadas à API organizadas por assunto**: o arquivo com todas as chamadas do front ao servidor tinha 1.826 linhas. Agora é uma pasta com um arquivo por assunto (crediário, comandas, vendas, fiscal, relatórios etc.). Nenhuma tela muda — só fica mais fácil achar e mexer
+
 ## [v1.39.3] — 2026-10-07
 
 ### Mudado
