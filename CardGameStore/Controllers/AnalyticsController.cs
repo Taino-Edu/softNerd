@@ -93,13 +93,8 @@ public class AnalyticsController : ControllerBase
         var totalClientes    = await _db.Users.CountAsync(u => u.IsActive && u.Role == UserRole.Customer);
         var novosClientesMes = await _db.Users.CountAsync(u => u.IsActive && u.Role == UserRole.Customer && u.CreatedAt >= inicioMes);
 
-        var ultimasVisitas = await _db.Comandas
-            .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null)
-            .GroupBy(c => c.UserId)
-            .Select(g => new { UserId = g.Key, Ultima = g.Max(c => c.ClosedAt) })
-            .ToListAsync();
-
-        var clientesAtivos   = ultimasVisitas.Count(v => v.Ultima >= ha30Dias);
+        // Ativo = comprou nos últimos 30 dias, em comanda OU no balcão
+        var clientesAtivos   = (await UltimaCompraPorClienteAsync()).Values.Count(ultima => ultima >= ha30Dias);
         var clientesInativos = Math.Max(0, totalClientes - clientesAtivos);
 
         // ── Curva horária do dia ──────────────────────────────────────────────
@@ -272,16 +267,7 @@ public class AnalyticsController : ControllerBase
         // todo mundo que aparece ao consultar, por exemplo, janeiro. Também ignora o
         // filtro de forma e o toggle de PDV: quem comprou no balcão ontem não sumiu,
         // independente de como o ranking está recortado.
-        var ultimaVisita = (await _db.Comandas
-                .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null)
-                .GroupBy(c => c.UserId)
-                .Select(g => new { UserId = g.Key, Ultima = g.Max(c => c.ClosedAt)!.Value })
-                .ToListAsync())
-            .ToDictionary(x => x.UserId, x => x.Ultima);
-
-        foreach (var (userId, ultimaPdv) in await _vendas.UltimaVendaPorClienteAsync())
-            if (!ultimaVisita.TryGetValue(userId, out var atual) || ultimaPdv > atual)
-                ultimaVisita[userId] = ultimaPdv;
+        var ultimaVisita = await UltimaCompraPorClienteAsync();
 
         var insights = usuarios.Select(u =>
         {
@@ -325,6 +311,26 @@ public class AnalyticsController : ControllerBase
         public Guid UserId     { get; set; }
         public int  Visitas    { get; set; }
         public long GastoCents { get; set; }
+    }
+
+    /// <summary>
+    /// Última compra de cada cliente: comanda fechada OU venda no balcão, sem recorte de
+    /// período. Antes o painel olhava só comanda, e quem só compra no caixa contava como inativo.
+    /// </summary>
+    private async Task<Dictionary<Guid, DateTime>> UltimaCompraPorClienteAsync()
+    {
+        var ultima = (await _db.Comandas
+                .Where(c => c.Status == ComandaStatus.Fechada && c.ClosedAt != null)
+                .GroupBy(c => c.UserId)
+                .Select(g => new { UserId = g.Key, Ultima = g.Max(c => c.ClosedAt)!.Value })
+                .ToListAsync())
+            .ToDictionary(x => x.UserId, x => x.Ultima);
+
+        foreach (var (userId, ultimaPdv) in await _vendas.UltimaVendaPorClienteAsync())
+            if (!ultima.TryGetValue(userId, out var atual) || ultimaPdv > atual)
+                ultima[userId] = ultimaPdv;
+
+        return ultima;
     }
 
     /// <summary>

@@ -34,6 +34,38 @@ Este README é escrito à mão — o script não mexe nele. Quando descobrir uma
 
 ---
 
+## Mudança grande: sempre com volta
+
+Mudança grande de comportamento (regra de negócio, cálculo, permissão, fluxo de tela inteiro) entra
+**atrás de uma chave de funcionalidade**, com o jeito antigo guardado. Se der problema em produção, o dono
+desliga em **/admin/funcionalidades** ("Mudanças com volta", menu Configuração) e o sistema volta na hora,
+sem deploy e sem esperar CI.
+
+| Peça | Onde |
+|---|---|
+| Catálogo (fonte da verdade: código, textos, padrão, versão, data de revisão) | `CardGameStore/Configuration/Funcionalidades.cs` |
+| Consultar no back | `FuncionalidadesService.LigadaAsync(Funcionalidades.X)` (cache de 30 s, limpo ao mudar) |
+| Consultar no front | `useFuncionalidade('codigo')` em `frontend/lib/useFuncionalidade.ts` (`undefined` enquanto carrega; `false` se a API falhar) |
+| Estado mudado à mão | tabela `funcionalidades` (sem linha = padrão do catálogo); toda mudança vai pra auditoria |
+| Tela do dono | `frontend/app/admin/funcionalidades/page.tsx` |
+
+Como fazer:
+1. Crie a chave no catálogo (`Padrao: true` — a volta é pra emergência, não pra testar em produção),
+   com `OQueMuda` e `SeDesligar` escritos pra quem vai apertar o botão, e `RevisarEm` (~2 meses).
+2. Deixe o novo e o antigo **lado a lado** num lugar só, com o antigo copiado sem mudança e marcado
+   `// FALLBACK da chave "x" — apagar junto com a chave`. Ex.: `LigaMensalService.RankingPorJogador` ×
+   `RankingLegadoPorNome`; `OperatorPermissionMiddleware.Decidir(..., acessoPeloMenu)`.
+3. Teste **os dois caminhos** — e, quando fizer sentido, que dão o mesmo resultado no caso comum
+   (`CaminhoNovoEFallback_DaoOMesmoResultado_NoCasoComum`).
+4. Passou o `RevisarEm` sem problema: um PR apaga o antigo, a chave do catálogo e os testes do fallback.
+   A tela avisa quando chega a data.
+
+O que **não** precisa de chave: correção pequena e óbvia, texto, visual pontual, código novo que nada usa
+ainda. Mudança de banco não tem volta por chave — o SQL de inicialização só adiciona (nunca apaga
+coluna), então o código antigo continua funcionando com o banco novo.
+
+---
+
 ## Mudou X? Mude também Y
 
 ### Banco de dados (tabela ou coluna nova)
@@ -125,6 +157,25 @@ no `ChampionshipController`; rodadas e partidas ficam em `Services/Liga/` (`Suic
 - Tempo real: `Hubs/TorneioHub.cs` + `frontend/lib/useTorneioAoVivo.ts`. **Não troque por polling**: a loja
   inteira sai pelo mesmo IP e o limite de requisições é por IP.
 - Timer: `timers.championship_id` — a liguinha reinicia o timer do campeonato a cada rodada.
+
+### Liga Mensal
+- Regra em `Services/Liga/LigaMensalService.cs` (controller só recebe e responde); testes em `LigaMensalServiceTests`.
+- Pontos 10/7/5/3/1 por `Placement`; o mês é o de Brasília. A liguinha soma sozinha ao encerrar
+  (teste `TorneioEncerrado_SomaNaLigaMensal_ComOsPontosDaColocacao`).
+- Uma linha **por jogador** (id), não por nome; lançamento manual entra no jogador de mesmo nome só se houver um.
+  Chave `liga-mensal-por-jogador` (fallback: o cálculo antigo por nome).
+
+### Permissões do operador
+- `Middleware/OperatorPermissionMiddleware.cs` + `Permissao.RotasPrefixo` (`Models/PostgreSQL/Perfil.cs`).
+- Só **rota de admin** (`AdminOnly` / papel Operator) é conferida no mapa; rota pública ou de cliente vale pro
+  operador como pra qualquer logado. Chave `operador-acesso-pelo-menu` (fallback: tudo fora do mapa dava 403).
+- **Rota de admin nova**: ponha o prefixo no mapa da permissão da tela, ou — se for só do dono — na lista
+  `SoODonoDeProposito` do teste `TodaRotaAdminOnly_TemPermissaoQueAbre_OuEstaNaListaDoDono`. O teste falha
+  se esquecer (era assim que Liga Mensal, Pré-vendas e Mensageria davam "Sem permissão" pro operador).
+
+### Visitas do cliente
+- Visita = **dia** (Brasília) com comanda fechada **ou** compra no PDV: `Services/Implementations/VisitasDoCliente.cs`.
+  Histórico do cliente e "clientes ativos" do painel contam os dois; antes só comanda.
 
 ### Limite de requisições (rate limit)
 Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:

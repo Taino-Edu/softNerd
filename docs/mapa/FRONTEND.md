@@ -21,6 +21,7 @@
 | `/admin/financeiro` | `app/admin/financeiro/page.tsx` | — |
 | `/admin/fiscal/cupom/[id]` | `app/admin/fiscal/cupom/[id]/page.tsx` | — |
 | `/admin/fiscal` | `app/admin/fiscal/page.tsx` | `ui/PageHeader`, `ui/Switch` |
+| `/admin/funcionalidades` | `app/admin/funcionalidades/page.tsx` | `ui/Badge`, `ui/PageHeader`, `ui/Switch` |
 | `/admin/integracoes` | `app/admin/integracoes/page.tsx` | `ui/Badge`, `ui/PageHeader` |
 | `/admin/lgpd/documento/[id]` | `app/admin/lgpd/documento/[id]/page.tsx` | — |
 | `/admin/lgpd` | `app/admin/lgpd/page.tsx` | `ui/Badge`, `ui/PageHeader`, `ui/Table` |
@@ -104,9 +105,9 @@ Mudou um componente? Confira as telas da última coluna.
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
 | `liga/Relogio` | `Relogio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
 | `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
-| `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/usuarios/page.tsx` |
-| `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
-| `ui/Switch` | `Switch` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx` |
+| `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/usuarios/page.tsx` |
+| `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
+| `ui/Switch` | `Switch` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
 
 ## Bibliotecas (`frontend/lib`)
@@ -121,6 +122,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/comunicacao.ts` | `aiApi`, `notificationsApi`, `mensageriaApi`, `whatsappAdminApi`, `pushApi` |
 | `lib/api/crediario.ts` | `FORMAS_PAGAMENTO_CREDIARIO`, `crediarioApi`, `pagarCrediarioApi` |
 | `lib/api/fiscal.ts` | `fiscalApi`, `minhasNotasApi` |
+| `lib/api/funcionalidades.ts` | `funcionalidadesApi` |
 | `lib/api/index.ts` | — |
 | `lib/api/lgpd.ts` | `lgpdApi`, `lgpdAdminApi` |
 | `lib/api/liga.ts` | `torneioApi`, `segundosRestantes` |
@@ -135,7 +137,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |
 | `lib/crediario.ts` | `agruparItens`, `totalUnidades` |
 | `lib/deckRules.ts` | `MAX_CARDS`, `MAX_COPIES`, `copyLimit`, `analisarDeck`, `resumoDaAnalise` |
-| `lib/format.ts` | `brl`, `brlDeCentavos`, `numeroBR`, `hojeBrasil`, `dataISOBrasil`, `somarDias`, `dataBR`, `dataHoraBR` |
+| `lib/format.ts` | `brl`, `brlDeCentavos`, `numeroBR`, `hojeBrasil`, `dataISOBrasil`, `somarDias`, `diaBR`, `dataBR`, `dataHoraBR` |
 | `lib/hooks.ts` | `useThrottle` |
 | `lib/notificacoes.ts` | `incrementBadge`, `clearBadge`, `tocarSom`, `pedirPermissaoNotificacao`, `notificarBrowser` |
 | `lib/pagamentos.ts` | `FORMAS_PAGAMENTO`, `infoPagamento`, `rotuloPagamento`, `rotuloCurtoPagamento`, `precisaCliente`, `opcoesPagamento` |
@@ -150,5 +152,6 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |
 | `lib/sumula-crediario.ts` | `gerarSumulaCrediario` |
+| `lib/useFuncionalidade.ts` | `useFuncionalidade` |
 | `lib/useMontado.ts` | `useMontado` |
 | `lib/useTorneioAoVivo.ts` | `useTorneioAoVivo` |

@@ -24,6 +24,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j√
 | `decks` | `Deck` | `Decks` | criada | `CardGameStore/Models/PostgreSQL/Deck.cs` |
 | `external_transactions` | `ExternalTransaction` | `ExternalTransactions` | criada | `CardGameStore/Models/PostgreSQL/ExternalTransaction.cs` |
 | `fiscal_config` | `FiscalConfig` | `FiscalConfigs` | criada, colunas | `CardGameStore/Models/PostgreSQL/FiscalConfig.cs` |
+| `funcionalidades` | `FuncionalidadeEstado` | `FuncionalidadesEstado` | criada | `CardGameStore/Models/PostgreSQL/FuncionalidadeEstado.cs` |
 | `integration_configs` | `IntegrationConfig` | `IntegrationConfigs` | criada, colunas | `CardGameStore/Models/PostgreSQL/IntegrationConfig.cs` |
 | `lgpd_requests` | `LgpdRequest` | `LgpdRequests` | colunas | `CardGameStore/Models/PostgreSQL/LgpdRequest.cs` |
 | `liga_mensal_manual_entries` | `LigaMensalManualEntry` | `LigaMensalManualEntries` | criada | `CardGameStore/Models/PostgreSQL/LigaMensalManualEntry.cs` |
@@ -112,3 +113,5 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j√
 | Scoped | `CrediarioPixService` | `CardGameStore/Services/Implementations/CrediarioPixService.cs` |
 | Singleton | `IValidadorGoogle ‚Üí ValidadorGoogle` | `CardGameStore/Services/Implementations/LoginGoogle.cs` |
 | Scoped | `CardGameStore.Services.Liga.TorneioService` | `CardGameStore/Services/Liga/TorneioService.cs` |
+| Scoped | `CardGameStore.Services.Liga.LigaMensalService` | `CardGameStore/Services/Liga/LigaMensalService.cs` |
+| Scoped | `FuncionalidadesService` | `CardGameStore/Services/Implementations/FuncionalidadesService.cs` |

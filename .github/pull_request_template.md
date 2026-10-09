@@ -10,6 +10,8 @@
 - [ ] Data "do dia" no calendário de Brasília; cor nova com versão no `html.light`
 - [ ] Mudança visual: testei a tela local (tema claro e escuro, celular)
 - [ ] Dinheiro em texto pra pessoas usa `Common.Dinheiro.Brl` (back) / `brl` (front)
+- [ ] Mudança grande de comportamento? Entrou atrás de chave em `Configuration/Funcionalidades.cs`, com o jeito antigo e testes dos dois caminhos
+- [ ] Rota nova de admin? Prefixo em `Permissao.RotasPrefixo` (ou na lista do dono no teste)
 
 ## Como testei
 

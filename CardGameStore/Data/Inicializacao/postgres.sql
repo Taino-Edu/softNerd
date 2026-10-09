@@ -783,3 +783,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS login_bloqueado_ate TIMESTAMPTZ NULL;
 -- Entrar com Google (Services/Implementations/LoginGoogle.cs): uma conta Google por usuário
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(64) NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_google_sub ON users (google_sub) WHERE google_sub IS NOT NULL;
+
+-- Chaves de funcionalidade (Configuration/Funcionalidades.cs): só guarda as que o
+-- dono mudou à mão em /admin/funcionalidades; sem linha, vale o padrão do catálogo.
+CREATE TABLE IF NOT EXISTS funcionalidades (
+    codigo          VARCHAR(60) PRIMARY KEY,
+    ligada          BOOLEAN     NOT NULL,
+    alterada_em     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    alterada_por_id UUID        NULL
+);

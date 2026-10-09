@@ -78,4 +78,25 @@ public static class Permissao
         [QrCodes]     = ["/api/qrcode"],
         [Lgpd]        = ["/api/lgpd", "/api/audit"],
     };
+
+    /// <summary>
+    /// Rotas de telas que já estavam no menu do operador mas ficaram fora do mapa acima
+    /// (davam 403 até a v1.41.0). Só valem com a chave "operador-acesso-pelo-menu" ligada;
+    /// quando a chave for apagada, juntar com RotasPrefixo.
+    /// </summary>
+    public static readonly Dictionary<string, string[]> RotasPrefixoDesdeV141 = new()
+    {
+        [Estoque]     = ["/api/reservations", "/api/marketplace", "/api/upload"],
+        [Campeonatos] = ["/api/liga-mensal", "/api/torneios", "/api/deck"],
+        [Anuncios]    = ["/api/admin/mensageria", "/api/upload"],
+        [Financeiro]  = ["/api/contas-receber"],
+    };
+
+    /// <summary>O operador com estas permissões pode chamar esta rota de admin?</summary>
+    public static bool OperadorPode(IReadOnlyCollection<string> permissoes, string path, bool comRotasDesdeV141)
+    {
+        var mapas = comRotasDesdeV141 ? new[] { RotasPrefixo, RotasPrefixoDesdeV141 } : new[] { RotasPrefixo };
+        return mapas.Any(mapa => mapa.Any(par =>
+            permissoes.Contains(par.Key) && par.Value.Any(prefixo => path.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase))));
+    }
 }

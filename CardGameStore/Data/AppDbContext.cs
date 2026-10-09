@@ -82,6 +82,9 @@ public class AppDbContext : DbContext
     // ── Personalização da landing page ─────────────────────────────────────────
     public DbSet<SiteConfig>         SiteConfigs          { get; set; }
 
+    // ── Chaves de funcionalidade: mudança grande com volta (Configuration/Funcionalidades.cs) ──
+    public DbSet<FuncionalidadeEstado> FuncionalidadesEstado { get; set; }
+
     // -------------------------------------------------------------------------
     // OnModelCreating — Fluent API para configurações avançadas
     // -------------------------------------------------------------------------

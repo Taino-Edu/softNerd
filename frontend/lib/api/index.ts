@@ -19,6 +19,7 @@
 //   lgpd.ts          Pedidos LGPD (público e admin)
 //   comunicacao.ts   Assistente IA, notificações, push, mensageria, WhatsApp
 //   liga.ts          Liguinha: torneio suíço (rodadas, mesas, resultados)
+//   funcionalidades.ts  Chaves de funcionalidade (mudança grande com volta)
 // =============================================================================
 export * from './client'
 export * from './auth'
@@ -36,3 +37,4 @@ export * from './relatorios'
 export * from './lgpd'
 export * from './comunicacao'
 export * from './liga'
+export * from './funcionalidades'
