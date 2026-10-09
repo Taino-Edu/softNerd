@@ -5,10 +5,12 @@
 using CardGameStore.Data;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
+using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Liga;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CardGameStore.Tests.Services;
@@ -197,6 +199,31 @@ public class TorneioServiceTests
         final.PodioJson.Should().Contain("\"lugar\":1").And.Contain(tabela[0].Nome);
         // Parado, não "acabou": Finished faz o widget do admin tocar o alarme em loop
         (await amb.Db.Timers.AsNoTracking().SingleAsync()).State.Should().Be(TimerState.Stopped);
+    }
+
+    [Fact]
+    public async Task TorneioEncerrado_SomaNaLigaMensal_ComOsPontosDaColocacao()
+    {
+        var amb = Criar(4);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30);
+        foreach (var u in amb.Jogadores) await amb.Torneio.EntrarAsync(u.Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var rodadas = (await amb.Db.Championships.AsNoTracking().SingleAsync()).NumeroRodadas!.Value;
+        for (var r = 1; r <= rodadas; r++)
+        {
+            await FecharRodadaAsync(amb, r);
+            if (r < rodadas) await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        }
+
+        var tabela = await amb.Torneio.EncerrarAsync(amb.Ch.Id);
+
+        var funcionalidades = new FuncionalidadesService(amb.Db, new MemoryCache(new MemoryCacheOptions()));
+        var hoje = CardGameStore.Common.Brasilia.Hoje();
+        var liga = await new LigaMensalService(amb.Db, funcionalidades).RankingAsync(hoje.Year, hoje.Month);
+
+        liga.Ranking.Select(l => (l.UserId, l.TotalPoints, l.EventsPlayed)).Should().Equal(
+            tabela.Select(l => (l.UserId, LigaMensalService.PontosPorColocacao(l.Posicao), 1)));
+        liga.Ranking.Select(l => l.TotalPoints).Should().Equal(10, 7, 5, 3);
     }
 
     [Fact]

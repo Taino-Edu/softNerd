@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-268 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+271 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -19,6 +19,7 @@
 - [Crediarios](#crediarios) (14)
 - [Deck](#deck) (6)
 - [Fiscal](#fiscal) (15)
+- [Funcionalidades](#funcionalidades) (3)
 - [Lgpd](#lgpd) (8)
 - [LigaMensal](#ligamensal) (6)
 - [Marketplace](#marketplace) (7)
@@ -59,10 +60,10 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/analytics/clientes` | AdminOnly | `GetClienteInsights` (196) | `analyticsApi.clientes` | `app/admin/relatorios/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/TopClientes.tsx` |
+| GET | `/api/analytics/clientes` | AdminOnly | `GetClienteInsights` (191) | `analyticsApi.clientes` | `app/admin/relatorios/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/TopClientes.tsx` |
 | GET | `/api/analytics/dashboard` | AdminOnly | `GetDashboard` (46) | — | — |
-| GET | `/api/analytics/extrato` | AdminOnly | `Extrato` (782) | `analyticsApi.extrato` | `app/admin/financeiro/page.tsx` |
-| GET | `/api/analytics/financeiro` | AdminOnly | `GetFinanceiro` (365) | `analyticsApi.financeiro` | `app/admin/dashboard/page.tsx`<br>`app/admin/financeiro/page.tsx`<br>`app/admin/relatorios/page.tsx` |
+| GET | `/api/analytics/extrato` | AdminOnly | `Extrato` (788) | `analyticsApi.extrato` | `app/admin/financeiro/page.tsx` |
+| GET | `/api/analytics/financeiro` | AdminOnly | `GetFinanceiro` (371) | `analyticsApi.financeiro` | `app/admin/dashboard/page.tsx`<br>`app/admin/financeiro/page.tsx`<br>`app/admin/relatorios/page.tsx` |
 
 ## Announcement
 
@@ -251,6 +252,16 @@
 | POST | `/api/fiscal/notas/{id:guid}/reprocessar` | AdminOnly | `ReprocessarNota` (466) | `fiscalApi.reprocessarNota` | `app/admin/fiscal/page.tsx` |
 | POST | `/api/fiscal/test-emissao-sefaz` | AdminOnly | `TestEmissaoSefaz` (541) | — | — |
 
+## Funcionalidades
+
+`CardGameStore/Controllers/FuncionalidadesController.cs`
+
+| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
+|---|---|---|---|---|---|
+| GET | `/api/funcionalidades` | público | `Estado` (40) | `funcionalidadesApi.estado` | `lib/useFuncionalidade.ts` |
+| GET | `/api/funcionalidades/painel` | OwnerOnly | `Painel` (46) | `funcionalidadesApi.painel` | `app/admin/funcionalidades/page.tsx` |
+| PUT | `/api/funcionalidades/{codigo}` | OwnerOnly | `Definir` (62) | `funcionalidadesApi.definir` | `app/admin/funcionalidades/page.tsx` |
+
 ## Lgpd
 
 `CardGameStore/Controllers/LgpdController.cs`
@@ -272,12 +283,12 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/liga-mensal` | público | `GetRanking` (68) | `ligaMensalApi.ranking` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
-| GET | `/api/liga-mensal/manual` | AdminOnly | `GetManualEntries` (200) | `ligaMensalApi.manualList` | `app/admin/liga-mensal/page.tsx` |
-| POST | `/api/liga-mensal/manual` | AdminOnly | `CreateManualEntry` (215) | `ligaMensalApi.manualCreate` | `app/admin/liga-mensal/page.tsx` |
-| DELETE | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `DeleteManualEntry` (270) | `ligaMensalApi.manualDelete` | `app/admin/liga-mensal/page.tsx` |
-| PUT | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `UpdateManualEntry` (244) | `ligaMensalApi.manualUpdate` | `app/admin/liga-mensal/page.tsx` |
-| GET | `/api/liga-mensal/meses` | público | `GetMesesDisponiveis` (161) | `ligaMensalApi.meses` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
+| GET | `/api/liga-mensal` | público | `GetRanking` (36) | `ligaMensalApi.ranking` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
+| GET | `/api/liga-mensal/manual` | AdminOnly | `GetManualEntries` (49) | `ligaMensalApi.manualList` | `app/admin/liga-mensal/page.tsx` |
+| POST | `/api/liga-mensal/manual` | AdminOnly | `CreateManualEntry` (57) | `ligaMensalApi.manualCreate` | `app/admin/liga-mensal/page.tsx` |
+| DELETE | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `DeleteManualEntry` (74) | `ligaMensalApi.manualDelete` | `app/admin/liga-mensal/page.tsx` |
+| PUT | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `UpdateManualEntry` (66) | `ligaMensalApi.manualUpdate` | `app/admin/liga-mensal/page.tsx` |
+| GET | `/api/liga-mensal/meses` | público | `GetMesesDisponiveis` (43) | `ligaMensalApi.meses` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
 
 ## Marketplace
 
@@ -524,14 +535,14 @@
 | DELETE | `/api/user/me` | CustomerOrAdmin | `DeleteMe` (135) | `userApi.deleteMe` | — |
 | GET | `/api/user/me` | logado | `GetMe` (90) | `userApi.me` | `app/cliente/decks/[id]/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`components/CompleteProfileGuard.tsx` |
 | PUT | `/api/user/me` | CustomerOrAdmin | `UpdateMe` (105) | `userApi.updateMe` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/user/me/preferences` | logado | `GetPreferences` (410) | `userApi.getPreferences` | `contexts/PreferencesContext.tsx` |
-| PUT | `/api/user/me/preferences` | logado | `UpdatePreferences` (426) | `userApi.updatePreferences` | `contexts/PreferencesContext.tsx` |
-| DELETE | `/api/user/{id:guid}` | AdminOnly | `DeleteUser` (494) | `userApi.adminDelete` | `app/admin/usuarios/page.tsx` |
+| GET | `/api/user/me/preferences` | logado | `GetPreferences` (413) | `userApi.getPreferences` | `contexts/PreferencesContext.tsx` |
+| PUT | `/api/user/me/preferences` | logado | `UpdatePreferences` (429) | `userApi.updatePreferences` | `contexts/PreferencesContext.tsx` |
+| DELETE | `/api/user/{id:guid}` | AdminOnly | `DeleteUser` (497) | `userApi.adminDelete` | `app/admin/usuarios/page.tsx` |
 | GET | `/api/user/{id:guid}` | AdminOnly | `GetById` (159) | `userApi.getById` | `app/admin/venda-avulsa/page.tsx` |
 | PUT | `/api/user/{id:guid}` | AdminOnly | `AdminUpdateUser` (226) | `userApi.adminUpdate` | `app/admin/usuarios/page.tsx` |
 | POST | `/api/user/{id:guid}/balance` | AdminOnly | `AdjustBalance` (203) | `userApi.adjustBalance` | `app/admin/usuarios/page.tsx` |
 | GET | `/api/user/{id:guid}/historico` | AdminOnly | `GetHistorico` (279) | `userApi.historico` | `app/admin/usuarios/page.tsx` |
-| PUT | `/api/user/{id:guid}/perfil` | AdminOnly | `AtualizarPerfil` (447) | `userApi.adminUpdatePerfil` | `app/admin/usuarios/page.tsx` |
+| PUT | `/api/user/{id:guid}/perfil` | AdminOnly | `AtualizarPerfil` (450) | `userApi.adminUpdatePerfil` | `app/admin/usuarios/page.tsx` |
 | POST | `/api/user/{id:guid}/points` | AdminOnly | `AddPoints` (177) | `userApi.addPoints` | `app/admin/usuarios/page.tsx` |
 | PUT | `/api/user/{id:guid}/reset-password` | AdminOnly | `AdminResetPassword` (253) | `userApi.adminResetPassword` | `app/admin/usuarios/page.tsx` |
 

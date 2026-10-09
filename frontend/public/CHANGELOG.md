@@ -1,5 +1,22 @@
 # Changelog — Santuário Nerd
 
+## [v1.41.0] — 2026-10-09
+
+### Novo
+- **Mudanças com volta** (Configuração → Mudanças com volta, só o dono): toda mudança grande do sistema passa a entrar com um botão de liga/desliga. Se algo novo der problema na loja, é só desligar e o sistema volta ao jeito antigo na hora, sem esperar atualização. Cada chave explica o que muda ligada e desligada, mostra quem mexeu e quando, e avisa quando chega a hora de revisar. Toda mudança fica na auditoria
+
+### Corrigido
+- **Cliente com "0 visitas" que comprou na semana**: o histórico do cliente contava só comanda fechada — quem compra no caixa (PDV) aparecia com 0 visitas, sem primeira nem última visita, mesmo com milhares de reais gastos. Agora visita é cada dia em que o cliente fechou comanda ou comprou no balcão (duas compras no mesmo dia são uma visita)
+- **"Clientes ativos" do painel** também ignorava as compras no caixa: quem só compra no PDV contava como inativo. Agora conta os dois
+- **Operador barrado em telas do próprio menu**: Liga Mensal, painel da liguinha, Pré-vendas, Mercado de Cartas, Mensageria, Contas a Pagar/Receber e o envio de imagens apareciam no menu do operador com a permissão certa, mas davam "Sem permissão". Páginas públicas (como a Liga Mensal do site) também davam erro pro operador logado. Agora seguem as permissões do perfil dele. Entra com volta: **"Operador: acesso às telas do próprio menu"**
+- **Liga Mensal juntava jogadores com o mesmo nome**: dois "João Silva" viravam uma linha só e um deles perdia os pontos. Agora cada jogador tem a sua linha; um lançamento manual entra no jogador de mesmo nome só quando há um só (com homônimos, fica numa linha à parte em vez de chutar). Campeonato cancelado deixa de somar pontos. Entra com volta: **"Liga Mensal: ranking por jogador"**
+- **Liga Mensal com ano inválido** (ex.: digitado errado no endereço) dava erro no servidor; agora responde com a mensagem do problema
+
+### Mudado
+- Liga Mensal reorganizada: a regra saiu da porta de entrada da API pra um serviço próprio, com 26 testes novos (pontuação, mês de Brasília na virada das 21h, desempate, homônimos, lançamentos manuais e o caminho antigo). Um teste novo confere que o torneio da liguinha, ao encerrar, soma certo na Liga Mensal
+- Teste novo que falha se uma rota de admin for criada sem dizer qual permissão do operador abre ela
+- O robô que vigia o site a cada 30 min passa a conferir também a página de um campeonato e as chaves de funcionalidade
+
 ## [v1.40.0] — 2026-10-09
 
 ### Novo

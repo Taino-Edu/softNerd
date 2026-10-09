@@ -284,14 +284,14 @@ public class UserController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user == null) return NotFound(new { Message = "Usuário não encontrado." });
 
-        // Stats agregados diretamente no banco — não carrega todas as comandas em memória
-        var statsQuery = _db.Comandas
+        var comandasFechadas = _db.Comandas
             .Where(c => c.UserId == id && c.Status == ComandaStatus.Fechada);
 
-        var totalVisitas   = await statsQuery.CountAsync();
-        var totalGastoCmds = await statsQuery.SumAsync(c => (long)c.TotalInCents) / 100m;
-        var primeiraVisita = await statsQuery.MinAsync(c => (DateTime?)c.ClosedAt);
-        var ultimaVisita   = await statsQuery.MaxAsync(c => (DateTime?)c.ClosedAt);
+        var totalGastoCmds  = await comandasFechadas.SumAsync(c => (long)c.TotalInCents) / 100m;
+        var fechamentosUtc  = await comandasFechadas
+            .Where(c => c.ClosedAt != null)
+            .Select(c => c.ClosedAt!.Value)
+            .ToListAsync();
 
         var totalComandas = await _db.Comandas.CountAsync(c => c.UserId == id);
 
@@ -322,14 +322,17 @@ public class UserController : ControllerBase
 
         var totalGasto = totalGastoCmds + vendasAvulsas.Sum(v => v.TotalInReais);
 
+        // Comanda fechada e compra no balcão contam igual (Services/Implementations/VisitasDoCliente.cs)
+        var visitas = VisitasDoCliente.Resumir(fechamentosUtc.Concat(vendasAvulsas.Select(v => v.SoldAt)));
+
         var historico = new ClienteHistoricoDto
         {
             UserId         = user.Id,
             UserName       = user.Name,
-            TotalVisitas   = totalVisitas,
+            TotalVisitas   = visitas.Total,
             TotalGasto     = totalGasto,
-            PrimeiraVisita = primeiraVisita,
-            UltimaVisita   = ultimaVisita,
+            PrimeiraVisita = visitas.Primeira,
+            UltimaVisita   = visitas.Ultima,
             TotalComandas  = totalComandas,
             Page           = page,
             PageSize       = pageSize,

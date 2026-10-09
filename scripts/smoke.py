@@ -51,6 +51,8 @@ CHECAGENS = [
     ('Produtos',                        'GET',  f'{API}/api/product', {200}, None),
     ('Liga Mensal',                     'GET',  f'{API}/api/liga-mensal', {200}, None),
     ('Login responde (config Google)',  'GET',  f'{API}/api/auth/google/config', {200}, json_ok('clientId')),
+    # Chaves de "mudança com volta": se essa rota cair, o front não sabe qual jeito mostrar
+    ('Chaves de funcionalidade',        'GET',  f'{API}/api/funcionalidades', {200}, json_ok('liga-mensal-por-jogador')),
     # Torneio inexistente tem que dar 404 limpo — 500 aqui é erro de banco/rota
     ('Liguinha responde',               'GET',  f'{API}/api/torneios/{uuid.uuid4()}', {404}, None),
     # Rota protegida sem login tem que recusar (401), nunca abrir nem quebrar
@@ -65,6 +67,23 @@ if not args.so_api:
         ('Entrar (login do cliente)',   'GET', f'{SITE}/entrar', {200}, None),
         ('Painel (login)',              'GET', f'{SITE}/login', {200}, None),
     ]
+
+# Página de um campeonato (/campeonato/{id}) e a API dela. A lista pública só traz os
+# próximos; sem nenhum agendado, usa um id que não existe: a API tem que dar 404 limpo
+# (500 = erro de banco/rota) e a página tem que abrir e mostrar "não encontrado".
+st, corpo, _ = pedir('GET', f'{API}/api/championship')
+try:
+    campeonatos = json.loads(corpo) if st == 200 else []
+except ValueError:
+    campeonatos = []
+if campeonatos:
+    cid = campeonatos[0].get('id')
+    CHECAGENS.append(('Campeonato (API)', 'GET', f'{API}/api/championship/{cid}', {200}, json_ok('id')))
+else:
+    cid = uuid.uuid4()
+    CHECAGENS.append(('Campeonato inexistente (API)', 'GET', f'{API}/api/championship/{cid}', {404}, None))
+if not args.so_api:
+    CHECAGENS.append(('Página de um campeonato', 'GET', f'{SITE}/campeonato/{cid}', {200}, None))
 
 falhas, lentos, linhas = [], [], []
 for nome, metodo, url, aceitos, extra in CHECAGENS:

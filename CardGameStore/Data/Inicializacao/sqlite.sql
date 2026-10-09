@@ -93,3 +93,11 @@ CREATE TABLE IF NOT EXISTS torneio_partidas (
     fechada_em             TEXT    NULL
 );
 CREATE INDEX IF NOT EXISTS ix_torneio_partidas_rodada ON torneio_partidas (rodada_id);
+
+-- Chaves de funcionalidade (Configuration/Funcionalidades.cs)
+CREATE TABLE IF NOT EXISTS funcionalidades (
+    codigo          TEXT    NOT NULL PRIMARY KEY,
+    ligada          INTEGER NOT NULL,
+    alterada_em     TEXT    NOT NULL,
+    alterada_por_id TEXT    NULL
+);

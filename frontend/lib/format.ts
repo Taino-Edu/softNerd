@@ -45,6 +45,9 @@ export function somarDias(dia: string, dias: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** Dia sem hora "2026-12-01" → "01/12/2026". Não use dataBR nisso: ela lê como meia-noite UTC e mostra 30/11. */
+export const diaBR = (dia: string) => dia.slice(0, 10).split('-').reverse().join('/')
+
 /** Instante (ISO da API) → "07/10/2026". */
 export const dataBR = (iso: string | Date) =>
   new Date(iso).toLocaleDateString('pt-BR', { timeZone: FUSO })

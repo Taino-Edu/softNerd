@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Package, Trophy, Search, QrCode,
   LogOut, User, ShoppingBag, Users, Megaphone,
   Loader2, X, Menu, CreditCard, Store, Shield, TrendingUp, Tag, BarChart2, Info, UserCog, Settings, Timer, BookOpen, History,
-  Wallet, Plug, ClipboardList, MessageSquare, Receipt, Palette, ChevronsLeft, ChevronsRight, Award,
+  Wallet, Plug, ClipboardList, MessageSquare, Receipt, Palette, ChevronsLeft, ChevronsRight, Award, RotateCcw,
 } from 'lucide-react'
 import clsx from 'clsx'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -81,6 +81,7 @@ const sections = [
       { href: '/admin/fiscal',      label: 'Fiscal',            icon: Receipt, perm: null },
       { href: '/admin/integracoes', label: 'Integrações',       icon: Plug,    perm: null },
       { href: '/admin/perfis',      label: 'Perfis de Acesso',  icon: UserCog, perm: null },
+      { href: '/admin/funcionalidades', label: 'Mudanças com volta', icon: RotateCcw, perm: null },
     ],
   },
   {
