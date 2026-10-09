@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { clearAuth, getUserName, getRole, hasPermission } from '@/lib/auth'
+import { useMontado } from '@/lib/useMontado'
 import { authApi, notificationsApi, fiscalApi, whatsappAdminApi } from '@/lib/api'
 import {
   LayoutDashboard, Package, Trophy, Search, QrCode,
@@ -94,14 +95,17 @@ const sections = [
 ]
 
 function NavItems({ pathname, onClose, unreadCount, whatsappUnread, fiscalAlerta, collapsed = false }: { pathname: string; onClose?: () => void; unreadCount: number; whatsappUnread: number; fiscalAlerta: boolean; collapsed?: boolean }) {
-  const role = getRole()
+  // Perfil e permissões vêm de cookie: só depois de montar (senão o menu do servidor
+  // sai diferente do navegador e a hidratação falha)
+  const montado = useMontado()
+  const role = montado ? getRole() : ''
   const isAdmin = role === 'Admin'
 
   return (
     <nav className="flex-1 flex flex-col gap-1 px-3 pb-6 overflow-y-auto">
       {sections.map(({ label, items, adminOnly }) => {
         if (adminOnly && !isAdmin) return null
-        const visibleItems = items.filter(({ perm }) => perm === null || hasPermission(perm))
+        const visibleItems = montado ? items.filter(({ perm }) => perm === null || hasPermission(perm)) : []
         if (visibleItems.length === 0) return null
         return (
           <div key={label} className="mb-2">
@@ -242,7 +246,9 @@ export default function Sidebar() {
     router.push('/login')
   }
 
-  const role = getRole()
+  const montado = useMontado()
+  const role = montado ? getRole() : ''
+  const nomeUsuario = (montado ? getUserName() : '') || 'Admin'
   const roleLabel = role === 'Admin' ? 'Admin' : role === 'Operator' ? 'Operador' : role
 
   function renderFooter(isCollapsed: boolean) {
@@ -252,7 +258,7 @@ export default function Sidebar() {
       return (
         <div className="px-3 py-4 border-t border-surface-500 flex flex-col items-center gap-2">
           <div
-            title={`${getUserName() || 'Admin'} (${roleLabel})`}
+            title={`${nomeUsuario} (${roleLabel})`}
             className="w-10 h-10 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center shrink-0"
           >
             <User className="w-5 h-5 text-brand-400" />
@@ -281,7 +287,7 @@ export default function Sidebar() {
             <User className="w-5 h-5 text-brand-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{getUserName() || 'Admin'}</p>
+            <p className="text-sm font-semibold text-white truncate">{nomeUsuario}</p>
             <span className="badge-admin text-[10px]">{roleLabel}</span>
           </div>
         </div>

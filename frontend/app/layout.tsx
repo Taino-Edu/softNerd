@@ -42,7 +42,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={nunito.variable}>
+    // suppressHydrationWarning: o script abaixo põe a classe "light" antes do React montar (evita
+    // o flash do tema); a diferença no <html> é esperada e só vale pra este elemento.
+    <html lang="pt-BR" className={nunito.variable} suppressHydrationWarning>
       <head>
         {/* iOS Safari PWA meta tags */}
         <meta name="mobile-web-app-capable" content="yes" />
