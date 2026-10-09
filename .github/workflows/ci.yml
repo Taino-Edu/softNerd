@@ -1,10 +1,15 @@
 # =============================================================================
 # CI — roda em todo PR e em todo push no main
 #
-#   back   → compila a API e roda os testes (xUnit, SQLite em memória)
-#   front  → TypeScript + build de produção do Next
-#   mapa   → docs/mapa está atualizado? (CLAUDE.md: rode scripts/gerar-mapa.py
-#            depois de mexer em endpoint, tela, componente ou tabela)
+#   back        → compila a API e roda os testes (xUnit, SQLite em memória)
+#   front       → TypeScript + build de produção do Next
+#   mapa        → docs/mapa está atualizado? (CLAUDE.md: rode scripts/gerar-mapa.py
+#                 depois de mexer em endpoint, tela, componente ou tabela)
+#   integracao  → a API SOBE num Postgres de verdade rodando o SQL de inicialização
+#                 (o risco nº 1 do CLAUDE.md), passa no smoke e aguenta um torneio
+#                 de carga (scripts/carga-liguinha.py)
+#   docker      → as imagens de produção constroem (deploy faz o mesmo build na VPS)
+#   dependencias→ PR não pode trazer pacote com vulnerabilidade alta/crítica
 #
 # Não sobe nada: deploy é o workflow "Deploy produção", disparado à mão.
 # =============================================================================
@@ -90,3 +95,103 @@ jobs:
             git --no-pager diff --stat -- docs/mapa
             exit 1
           fi
+
+  integracao:
+    name: API sobe no Postgres + smoke + carga
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: cardgamestore
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s --health-timeout 5s --health-retries 20
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5000
+      ConnectionStrings__PostgreSQL: Host=localhost;Port=5432;Database=cardgamestore;Username=ci;Password=ci
+      MongoDbSettings__ConnectionString: mongodb://localhost:27017
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compilar a API
+        run: dotnet build CardGameStore -c Release
+
+      - name: Subir a API (roda Data/Inicializacao/postgres.sql no banco vazio)
+        run: |
+          nohup dotnet run --project CardGameStore -c Release --no-build > api.log 2>&1 &
+          for i in $(seq 1 60); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/health)" = "200" ]; then
+              echo "API no ar"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::A API não subiu em 2 minutos (SQL de inicialização? configuração?)"
+          tail -80 api.log; exit 1
+
+      - name: Subir de novo (o SQL de inicialização tem que ser idempotente)
+        run: |
+          pkill -f "CardGameStore" || true; sleep 2
+          nohup dotnet run --project CardGameStore -c Release --no-build > api2.log 2>&1 &
+          for i in $(seq 1 60); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/health)" = "200" ]; then
+              echo "API subiu de novo no mesmo banco"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::A API não subiu na segunda vez — algum SQL do startup não é idempotente"
+          tail -80 api2.log; exit 1
+
+      - name: Smoke
+        run: python scripts/smoke.py --api http://localhost:5000 --so-api
+
+      - name: Torneio de carga (16 jogadores)
+        run: python scripts/carga-liguinha.py --jogadores 16 --ritmo 0 --api http://localhost:5000
+
+      - name: Log da API (se falhou)
+        if: failure()
+        run: tail -150 api2.log 2>/dev/null || tail -150 api.log
+
+  docker:
+    name: Imagens de produção constroem
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Imagem da API
+        run: docker build -f CardGameStore/Dockerfile CardGameStore -t ci/api
+
+      - name: Imagem do front
+        run: docker build -f frontend/Dockerfile frontend --build-arg API_URL=https://santuarionerd.com.br -t ci/front
+
+  dependencias:
+    name: Dependências sem vulnerabilidade alta
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

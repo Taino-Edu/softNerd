@@ -156,10 +156,22 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
 
 ## Antes de subir
 
-O **CI** (`.github/workflows/ci.yml`) roda sozinho em todo PR e push no `main`: testes do back, TypeScript +
-build do front e mapa atualizado. PR só entra com ele verde. O **deploy** é o workflow "Deploy produção"
-(`.github/workflows/deploy.yml`), disparado à mão no GitHub — roda o `deploy/update.sh` na VPS e confere o `/health`.
-Na mão continua igual: `cd /opt/santuarionerd && git pull origin main && bash deploy/update.sh`.
+### Cadeia de proteção (GitHub)
+| Onde | O quê | Arquivo |
+|---|---|---|
+| Todo PR | testes do back, TypeScript + build do front, mapa atualizado | `.github/workflows/ci.yml` |
+| Todo PR | **API sobe num Postgres de verdade** (2×, prova que o SQL de inicialização é idempotente), smoke e torneio de carga com 16 jogadores | `ci.yml` → `integracao` |
+| Todo PR | imagens Docker de produção constroem; nenhuma dependência nova com vulnerabilidade alta | `ci.yml` → `docker`, `dependencias` |
+| PR, main e toda segunda | varredura de segurança do código (C# e TS) | `.github/workflows/codeql.yml` |
+| Toda semana | PRs de atualização de dependências (agrupados) | `.github/dependabot.yml` |
+| `main` | só entra por PR com o CI verde; sem push direto nem `--force` (vale pro admin também) | proteção de branch |
+| Deploy | à mão + aprovação; só do `main` com CI verde; roda o `update.sh`, espera o `/health` e passa o smoke | `.github/workflows/deploy.yml` |
+| Produção | **robô de smoke a cada 30 min**; se cair, abre alerta (issue `smoke`, chega por e-mail) e fecha quando volta | `.github/workflows/smoke.yml`, `scripts/smoke.py` |
+| Repositório | varredura de segredos com bloqueio do push; alertas e correções automáticas de dependências | configuração do GitHub |
+
+A chave do deploy só abre o porteiro `/usr/local/bin/santuario-ci` na VPS (aceita `ping`, `status`, `deploy`;
+log em `/var/log/santuario-ci.log`). Deploy na mão continua igual:
+`cd /opt/santuarionerd && git pull origin main && bash deploy/update.sh`.
 
 1. `dotnet build CardGameStore` e `dotnet test tests/unit/CardGameStore.Tests`
 2. `npx tsc --noEmit -p frontend`
