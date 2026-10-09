@@ -33,7 +33,18 @@ echo -e "${YELLOW}🔄 Atualizando SantuárioNerd...${NC}"
 # (Antes a volta era "git checkout <commit> && update.sh", mas o git pull daqui
 # trazia o main de novo e desfazia a volta sem avisar.)
 cd "$APP_DIR"
-VERSAO_ANTES=$(git rev-parse HEAD)
+
+# Backup dos bancos ANTES de qualquer mudança — pré-venda e vendas do site não
+# podem se perder. Falhou o backup, não tem deploy (set -e). Roda com o site no ar
+# (pg_dump e mongodump não travam ninguém). Fica em backups/, 7 dias.
+# Pular só em emergência:  SEM_BACKUP=1 bash deploy/update.sh
+if [ "${SEM_BACKUP:-0}" = "1" ]; then
+    echo -e "${YELLOW}⚠️  SEM_BACKUP=1 — deploy sem backup antes${NC}"
+else
+    echo -e "${YELLOW}💾 Backup antes do deploy...${NC}"
+    bash "$APP_DIR/deploy/backup.sh"
+fi
+
 git fetch origin
 if [ -n "${1:-}" ]; then
     echo -e "${YELLOW}⏪ Voltando pra versão $1${NC}"
@@ -54,8 +65,8 @@ docker compose -f docker-compose.prod.yml build --build-arg CACHEBUST="$(date +%
 # Nginx primeiro: é ele que manda o tráfego pra cópia nova durante a troca, então a
 # config nova (se mudou) tem que estar no ar antes.
 #
-# Recriar o nginx corta as conexões abertas por ~1 s, então só recria se algo em
-# deploy/nginx/ mudou neste pull. Precisa ser recriado (e não `nginx -s reload`):
+# Recriar o nginx corta as conexões abertas por ~1 s, então só recria se a config
+# que ele está usando difere da que está em deploy/nginx/. Precisa ser recriado (e não `nginx -s reload`):
 # nginx.conf/locations.conf entram como bind mount de ARQUIVO, que o Docker prende
 # ao inode; o `git pull` escreve outro arquivo e renomeia por cima (inode novo), e
 # o container continua vendo o antigo.
@@ -63,10 +74,19 @@ docker compose -f docker-compose.prod.yml build --build-arg CACHEBUST="$(date +%
 # Antes de recriar, valida a config num container descartável — esse sim pega o
 # inode atual. Config quebrada aborta o deploy com o nginx antigo ainda no ar,
 # em vez de derrubar o site num container que não sobe.
-if git -C "$APP_DIR" diff --quiet "$VERSAO_ANTES" HEAD -- deploy/nginx; then
+# Compara o que o nginx está USANDO com o arquivo em disco (e não o git diff do pull:
+# um "git pull" feito à mão antes deixaria o pull daqui vazio e o nginx com a config velha).
+nginx_igual_ao_disco() {
+    local par arquivo dentro
+    for par in "nginx.conf:/etc/nginx/conf.d/default.conf" "locations.conf:/etc/nginx/snippets/locations.conf"; do
+        arquivo="${par%%:*}"; dentro="${par#*:}"
+        docker exec santuarionerd_nginx cat "$dentro" 2>/dev/null | cmp -s - "nginx/$arquivo" || return 1
+    done
+}
+if nginx_igual_ao_disco; then
     echo -e "${GREEN}   nginx sem mudança — mantido no ar${NC}"
 else
-    echo -e "${YELLOW}🔁 nginx mudou — validando...${NC}"
+    echo -e "${YELLOW}🔁 config do nginx mudou — validando...${NC}"
     if docker run --rm \
         -v "$PWD/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
         -v "$PWD/nginx/locations.conf:/etc/nginx/snippets/locations.conf:ro" \

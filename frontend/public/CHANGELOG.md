@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.41.2] — 2026-10-09
+
+### Mudado
+- **Backup antes de toda atualização**: antes de mexer em qualquer coisa, a atualização copia os bancos (clientes, comandas, pré-vendas, vendas do site, crediário). Se a cópia falhar, a atualização nem começa. Além do backup diário que já existia
+- **Atualizar ficou mais simples**: quando uma mudança é aprovada no GitHub, a atualização se prepara sozinha e espera um "Aprovar" — dá pra aprovar pelo celular, na hora mais tranquila da loja. Cada atualização mede, pedido a pedido, se o site ficou fora do ar em algum momento
+
 ## [v1.41.1] — 2026-10-09
 
 ### Mudado
