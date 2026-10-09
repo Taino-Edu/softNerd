@@ -211,7 +211,7 @@ public class AuthController : ControllerBase
     /// <response code="401">Refresh token inválido ou expirado.</response>
     [HttpPost("refresh")]
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting("sessao")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
     [ProducesResponseType(401)]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenBody? request)

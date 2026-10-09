@@ -149,4 +149,5 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |
 | `lib/sumula-crediario.ts` | `gerarSumulaCrediario` |
+| `lib/useMontado.ts` | `useMontado` |
 | `lib/useTorneioAoVivo.ts` | `useTorneioAoVivo` |

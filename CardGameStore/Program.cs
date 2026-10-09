@@ -171,10 +171,16 @@ builder.Services.AddAuthorization(options =>
 // ---------------------------------------------------------------------------
 // 6. RATE LIMITING — Proteção contra força bruta e abuso de API
 //
-// "auth"  → endpoints de login/refresh: 5 tentativas/minuto por IP.
-//           Bloqueia ataques de força bruta sem afetar uso normal.
-// "api"   → demais endpoints: 200 req/minuto por IP.
-//           Evita scraping e abusos de bots.
+// Todas as políticas são POR IP (ou por usuário). AddFixedWindowLimiter, que era
+// usado antes, cria UM balde pro site inteiro: "auth" deixava 5 logins/renovações
+// por minuto somando TODOS os clientes — no dia de torneio, 16 de 24 jogadores
+// tomavam 429 ao entrar (scripts/carga-liguinha.py).
+//
+// "auth"    → login, cadastro, senha: 30/min por IP. A loja inteira sai pelo mesmo
+//             IP; com BCrypt, 30/min ainda torna força bruta inviável.
+// "sessao"  → renovação de sessão (/auth/refresh): 120/min por IP. Token aleatório
+//             de 256 bits, não há o que adivinhar — o limite é só contra abuso.
+// "api"     → endpoints públicos sensíveis: 200/min por IP.
 // ---------------------------------------------------------------------------
 builder.Services.AddRateLimiter(options =>
 {
@@ -186,11 +192,19 @@ builder.Services.AddRateLimiter(options =>
         ?? ctx.Connection.RemoteIpAddress?.ToString()
         ?? "unknown";
 
-    // Política global — protege TODOS os endpoints sem [EnableRateLimiting] explícito
-    // 300 req/min por IP é generoso o suficiente para uso legítimo
+    // Política global — protege TODOS os endpoints sem [EnableRateLimiting] explícito.
+    // 300 req/min por USUÁRIO logado; por IP só pra quem não está logado. Por IP puro,
+    // a loja inteira (PDV, comandas, painel e os celulares dos jogadores no torneio)
+    // dividia 300/min pelo mesmo wi-fi — no teste de carga o painel do organizador
+    // ficou bloqueado. Funciona porque UseRateLimiter roda depois da autenticação.
+    static string ChaveGlobal(HttpContext ctx) =>
+        ctx.User.FindFirst("sub")?.Value is string sub ? "u:" + sub
+        : ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is string id ? "u:" + id
+        : "ip:" + GetClientIp(ctx);
+
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
         context => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
-            GetClientIp(context),
+            ChaveGlobal(context),
             _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
             {
                 PermitLimit          = 300,
@@ -199,21 +213,19 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit           = 0
             }));
 
-    options.AddFixedWindowLimiter("auth", opt =>
-    {
-        opt.PermitLimit              = 5;
-        opt.Window                   = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder     = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit               = 0; // sem fila — rejeita imediatamente
-    });
+    static System.Threading.RateLimiting.RateLimitPartition<string> PorIp(HttpContext ctx, int porMinuto) =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(ctx),
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = porMinuto,
+                Window      = TimeSpan.FromMinutes(1),
+                QueueLimit  = 0, // sem fila — rejeita imediatamente
+            });
 
-    options.AddFixedWindowLimiter("api", opt =>
-    {
-        opt.PermitLimit          = 200;
-        opt.Window               = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit           = 10;
-    });
+    options.AddPolicy("auth",   ctx => PorIp(ctx, 30));
+    options.AddPolicy("sessao", ctx => PorIp(ctx, 120));
+    options.AddPolicy("api",    ctx => PorIp(ctx, 200));
 
     // Código de torneio: por USUÁRIO, não por IP — a loja inteira sai pelo mesmo IP no
     // dia do campeonato. 10 tentativas/min deixa errar a digitação e impede adivinhar.
@@ -404,9 +416,12 @@ if (app.Environment.IsDevelopment())
 // SSL gerenciado pelo reverse proxy (Nginx/Cloudflare) — não redirecionar aqui
 app.UseStaticFiles(); // serve wwwroot/uploads/* como arquivos estáticos
 app.UseCors("FrontendPolicy");
-app.UseRateLimiter();
 app.UseRequestTimeouts();
 app.UseAuthentication();
+// Depois da autenticação: políticas "por usuário" (torneio-codigo) precisam saber quem
+// é. Antes daqui ninguém está identificado e tudo caía no IP — no wi-fi da loja, 24
+// jogadores dividiam 10 entradas por minuto. Os limites por IP funcionam igual aqui.
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseOperatorPermissions();
 
