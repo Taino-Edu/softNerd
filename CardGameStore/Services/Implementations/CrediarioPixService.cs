@@ -128,9 +128,9 @@ public class CrediarioPixService
             else if (valorEmCentavos is int escolhido)
             {
                 if (escolhido < ValorMinimoEmCentavos)
-                    return CrediarioPixResultado.Falha($"O valor mínimo pra pagar por Pix é R$ {ValorMinimoEmCentavos / 100m:N2}.");
+                    return CrediarioPixResultado.Falha($"O valor mínimo pra pagar por Pix é {Common.Dinheiro.Brl(ValorMinimoEmCentavos / 100m)}.");
                 if (escolhido > crediario.SaldoRestanteEmCentavos)
-                    return CrediarioPixResultado.Falha($"O valor passa do que falta pagar nesta conta (R$ {crediario.SaldoRestanteEmReais:N2}).");
+                    return CrediarioPixResultado.Falha($"O valor passa do que falta pagar nesta conta ({Common.Dinheiro.Brl(crediario.SaldoRestanteEmReais)}).");
                 valor = escolhido;
             }
             else
@@ -232,7 +232,7 @@ public class CrediarioPixService
             {
                 var conferida = await _reconciliacao.ReconciliarAsync(pix, adminId);
                 if (conferida.PagoEm is not null)
-                    return $"O cliente acabou de pagar R$ {pix.ValorEmReais:N2} pela cobrança Pix desta conta e o pagamento já foi registrado. Recarregue a tela antes de lançar outro.";
+                    return $"O cliente acabou de pagar {Common.Dinheiro.Brl(pix.ValorEmReais)} pela cobrança Pix desta conta e o pagamento já foi registrado. Recarregue a tela antes de lançar outro.";
                 if (pix.Status != "ATIVA") continue; // o Inter já encerrou por conta própria
             }
 

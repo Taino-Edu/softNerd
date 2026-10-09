@@ -331,8 +331,8 @@ public class CrediarioAvisoService
 
         static decimal Soma(IEnumerable<Crediario> cs) => cs.Sum(c => c.SaldoRestanteEmReais);
         var partes = new List<string>();
-        if (vencemHoje.Count > 0) partes.Add($"{vencemHoje.Count} vence(m) hoje (R$ {Soma(vencemHoje):N2})");
-        if (vencidas.Count > 0)   partes.Add($"{vencidas.Count} em atraso (R$ {Soma(vencidas):N2})");
+        if (vencemHoje.Count > 0) partes.Add($"{vencemHoje.Count} vence(m) hoje ({Common.Dinheiro.Brl(Soma(vencemHoje))})");
+        if (vencidas.Count > 0)   partes.Add($"{vencidas.Count} em atraso ({Common.Dinheiro.Brl(Soma(vencidas))})");
         if (proximos3.Count > 0)  partes.Add($"{proximos3.Count} vence(m) nos próximos 3 dias");
         var corpo = string.Join(" · ", partes)
             + (clientesAvisados > 0 ? $". Lembrete enviado pra {clientesAvisados} cliente(s)." : ".");
@@ -402,7 +402,7 @@ public class CrediarioAvisoService
         for (var i = 0; i < ordenadas.Count; i++)
         {
             var c = ordenadas[i];
-            sb.Append($"• R$ {c.SaldoRestanteEmReais:N2} — {Situacao(c, hoje)}\n");
+            sb.Append($"• {Common.Dinheiro.Brl(c.SaldoRestanteEmReais)} — {Situacao(c, hoje)}\n");
             // Mais de uma conta: o link de cada uma vai logo abaixo dela
             if (ordenadas.Count > 1 && links[i] is not null)
                 sb.Append($"  Pagar por Pix: {links[i]}\n");
@@ -410,7 +410,7 @@ public class CrediarioAvisoService
 
         var total = todasDoCliente.Sum(c => c.SaldoRestanteEmReais);
         if (todasDoCliente.Count > contasDoAviso.Count || contasDoAviso.Count > 1)
-            sb.Append($"Total em aberto: R$ {total:N2}\n");
+            sb.Append($"Total em aberto: {Common.Dinheiro.Brl(total)}\n");
 
         if (ordenadas.Count == 1 && links[0] is not null)
             sb.Append($"\nPague por Pix na hora, por este link:\n{links[0]}\n");
@@ -429,9 +429,9 @@ public class CrediarioAvisoService
     {
         var linhas = contasDoAviso
             .OrderBy(c => c.DataVencimento)
-            .Select(c => $"R$ {c.SaldoRestanteEmReais:N2} {Situacao(c, hoje)}");
+            .Select(c => $"{Common.Dinheiro.Brl(c.SaldoRestanteEmReais)} {Situacao(c, hoje)}");
         var texto = string.Join(" · ", linhas);
-        if (todas.Count > 1) texto += $". Total em aberto: R$ {todas.Sum(c => c.SaldoRestanteEmReais):N2}";
+        if (todas.Count > 1) texto += $". Total em aberto: {Common.Dinheiro.Brl(todas.Sum(c => c.SaldoRestanteEmReais))}";
         return texto.Length > 500 ? texto[..500] : texto;
     }
 

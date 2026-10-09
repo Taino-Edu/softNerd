@@ -556,7 +556,7 @@ public class AnalyticsController : ControllerBase
             })
             .ToListAsync();
 
-        static string fmtReais(decimal v) => $"R$ {v:F2}".Replace('.', ',');
+        static string fmtReais(decimal v) => $"{Common.Dinheiro.Brl(v)}";
         var transacoesComanda = comandasPeriodo
             .SelectMany(c =>
             {

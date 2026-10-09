@@ -1,0 +1,92 @@
+# =============================================================================
+# CI — roda em todo PR e em todo push no main
+#
+#   back   → compila a API e roda os testes (xUnit, SQLite em memória)
+#   front  → TypeScript + build de produção do Next
+#   mapa   → docs/mapa está atualizado? (CLAUDE.md: rode scripts/gerar-mapa.py
+#            depois de mexer em endpoint, tela, componente ou tabela)
+#
+# Não sobe nada: deploy é o workflow "Deploy produção", disparado à mão.
+# =============================================================================
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  back:
+    name: Back (build + testes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restaurar pacotes
+        run: dotnet restore tests/unit/CardGameStore.Tests
+
+      - name: Compilar
+        run: dotnet build tests/unit/CardGameStore.Tests --no-restore -c Release
+
+      - name: Testes
+        run: dotnet test tests/unit/CardGameStore.Tests --no-build -c Release --logger "console;verbosity=minimal"
+
+  front:
+    name: Front (tipos + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit -p .
+
+      - name: Build de produção
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://santuarionerd.com.br
+          NEXT_TELEMETRY_DISABLED: '1'
+
+  mapa:
+    name: Mapa do sistema atualizado
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Gerar o mapa e comparar
+        run: |
+          python scripts/gerar-mapa.py
+          if ! git diff --quiet -- docs/mapa; then
+            echo "::error::docs/mapa desatualizado. Rode 'python scripts/gerar-mapa.py' e commite o resultado."
+            git --no-pager diff --stat -- docs/mapa
+            exit 1
+          fi

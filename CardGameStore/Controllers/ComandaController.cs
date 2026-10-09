@@ -361,7 +361,7 @@ public class ComandaController : ControllerBase
 
                 await _push.SendAsync(
                     comanda.UserId,
-                    $"Cobrança Pix — R$ {pix.ValorEmReais:N2}".Replace('.', ','),
+                    $"Cobrança Pix — {Common.Dinheiro.Brl(pix.ValorEmReais)}",
                     "Sua comanda está pronta pra pagar. Toque para abrir o Pix.",
                     "/cliente");
             }

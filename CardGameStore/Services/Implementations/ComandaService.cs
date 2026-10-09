@@ -470,7 +470,7 @@ public class ComandaService : IComandaService
 
         if (discountInCents > 0 && discountInCents > comanda.TotalInCents - comanda.PointsApplied)
             throw new InvalidOperationException(
-                $"O desconto (R$ {discountInCents / 100m:N2}) não pode ser maior que o total da comanda (R$ {(comanda.TotalInCents - comanda.PointsApplied) / 100m:N2}).");
+                $"O desconto ({Common.Dinheiro.Brl(discountInCents / 100m)}) não pode ser maior que o total da comanda ({Common.Dinheiro.Brl((comanda.TotalInCents - comanda.PointsApplied) / 100m)}).");
 
         // Total líquido: desconta pontos que o cliente já pré-pagou via ApplyPoints e o
         // desconto administrativo dado pelo Admin no fechamento.
@@ -493,7 +493,7 @@ public class ComandaService : IComandaService
             {
                 if (comanda.User.BalanceInCents < secondPaymentAmountInCents)
                     throw new InvalidOperationException(
-                        $"Saldo de cashback insuficiente. Cliente tem R$ {comanda.User.BalanceInCents / 100m:N2}, solicitado R$ {secondPaymentAmountInCents / 100m:N2}.");
+                        $"Saldo de cashback insuficiente. Cliente tem {Common.Dinheiro.Brl(comanda.User.BalanceInCents / 100m)}, solicitado {Common.Dinheiro.Brl(secondPaymentAmountInCents / 100m)}.");
                 comanda.User.BalanceInCents -= secondPaymentAmountInCents;
                 comanda.User.UpdatedAt       = DateTime.UtcNow;
                 _logger.LogInformation("Split: R$ {Val:N2} de cashback aplicado na comanda {Id}.", secondPaymentAmountInCents / 100m, comandaId);
@@ -623,7 +623,7 @@ public class ComandaService : IComandaService
 
             if (comanda.User.BalanceInCents < primaryAmt)
                 throw new InvalidOperationException(
-                    $"Saldo insuficiente. Cliente tem R$ {comanda.User.BalanceInCents / 100m:N2}, falta R$ {primaryAmt / 100m:N2}.");
+                    $"Saldo insuficiente. Cliente tem {Common.Dinheiro.Brl(comanda.User.BalanceInCents / 100m)}, falta {Common.Dinheiro.Brl(primaryAmt / 100m)}.");
 
             comanda.User.BalanceInCents -= primaryAmt;
             comanda.User.UpdatedAt       = DateTime.UtcNow;

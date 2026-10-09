@@ -276,7 +276,7 @@ public class CrediariosController : ControllerBase
             if (request.ValorEmCentavos.Value < crediario.ValorPagoEmCentavos)
                 return BadRequest(new
                 {
-                    Message = $"O novo valor (R$ {request.ValorEmCentavos.Value / 100m:N2}) não pode ser menor do que o valor já pago (R$ {crediario.ValorPagoEmCentavos / 100m:N2})."
+                    Message = $"O novo valor ({Common.Dinheiro.Brl(request.ValorEmCentavos.Value / 100m)}) não pode ser menor do que o valor já pago ({Common.Dinheiro.Brl(crediario.ValorPagoEmCentavos / 100m)})."
                 });
             crediario.ValorEmCentavos = request.ValorEmCentavos.Value;
         }
@@ -389,8 +389,8 @@ public class CrediariosController : ControllerBase
             return BadRequest(new
             {
                 Message = temSegundo
-                    ? $"Os dois pagamentos somam R$ {totalPago / 100m:N2} e passam do saldo restante de R$ {saldoAtual / 100m:N2}."
-                    : $"Pagamento de R$ {request.ValorEmCentavos / 100m:N2} excede o saldo restante de R$ {saldoAtual / 100m:N2}."
+                    ? $"Os dois pagamentos somam {Common.Dinheiro.Brl(totalPago / 100m)} e passam do saldo restante de {Common.Dinheiro.Brl(saldoAtual / 100m)}."
+                    : $"Pagamento de {Common.Dinheiro.Brl(request.ValorEmCentavos / 100m)} excede o saldo restante de {Common.Dinheiro.Brl(saldoAtual / 100m)}."
             });
 
         // O saldo vai mudar: QR Code gerado antes cobraria o valor velho. Derruba antes de
@@ -642,7 +642,7 @@ public class CrediariosController : ControllerBase
         if (crediario.ValorPagoEmCentavos > 0)
             return BadRequest(new
             {
-                Message = $"Não é possível excluir este crediário pois já possui R$ {crediario.ValorPagoEmCentavos / 100m:N2} registrados como pagos. " +
+                Message = $"Não é possível excluir este crediário pois já possui {Common.Dinheiro.Brl(crediario.ValorPagoEmCentavos / 100m)} registrados como pagos. " +
                           "Exclua apenas crediários sem nenhum pagamento registrado."
             });
 

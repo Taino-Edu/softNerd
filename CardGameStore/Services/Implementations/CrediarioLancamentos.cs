@@ -109,8 +109,8 @@ public static class CrediarioLancamentos
     {
         if (crediario.ValorEmCentavos - valor < crediario.ValorPagoEmCentavos)
             throw new InvalidOperationException(
-                $"O cliente já pagou R$ {crediario.ValorPagoEmCentavos / 100m:N2} nesta conta de crediário e, " +
-                $"sem esta compra, a dívida cairia para R$ {Math.Max(0, crediario.ValorEmCentavos - valor) / 100m:N2}. " +
+                $"O cliente já pagou {Common.Dinheiro.Brl(crediario.ValorPagoEmCentavos / 100m)} nesta conta de crediário e, " +
+                $"sem esta compra, a dívida cairia para {Common.Dinheiro.Brl(Math.Max(0, crediario.ValorEmCentavos - valor) / 100m)}. " +
                 "Acerte o crediário do cliente (devolução) antes de estornar.");
     }
 

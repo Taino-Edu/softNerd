@@ -131,6 +131,11 @@ Mudou como uma compra entra no crediário? Mexa em **comanda e PDV juntos** — 
 
 ## Antes de subir
 
+O **CI** (`.github/workflows/ci.yml`) roda sozinho em todo PR e push no `main`: testes do back, TypeScript +
+build do front e mapa atualizado. PR só entra com ele verde. O **deploy** é o workflow "Deploy produção"
+(`.github/workflows/deploy.yml`), disparado à mão no GitHub — roda o `deploy/update.sh` na VPS e confere o `/health`.
+Na mão continua igual: `cd /opt/santuarionerd && git pull origin main && bash deploy/update.sh`.
+
 1. `dotnet build CardGameStore` e `dotnet test tests/unit/CardGameStore.Tests`
 2. `npx tsc --noEmit -p frontend`
 3. Mexeu no `Program.cs` ou em `Data/Inicializacao/`? Suba a API local e veja se ela inicia.

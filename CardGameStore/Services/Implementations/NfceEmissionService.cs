@@ -540,7 +540,7 @@ public class NfceEmissionService : INfceEmissionService
 
         if (totalCentavos <= 0)
             throw new NadaAFaturarException(
-                $"{origem} tem valor total de R$ {totalCentavos / 100m:N2} — não é possível emitir " +
+                $"{origem} tem valor total de {Common.Dinheiro.Brl(totalCentavos / 100m)} — não é possível emitir " +
                 "NFC-e de valor zero. Confira se o desconto não zerou a venda inteira.");
     }
 

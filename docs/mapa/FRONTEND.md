@@ -69,6 +69,18 @@ Mudou um componente? Confira as telas da última coluna.
 
 | Componente | Exporta | Usado em |
 |---|---|---|
+| `CameraScanner` | `CameraScanner` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
+| `ClientProviders` | `ClientProviders` | `app/layout.tsx` |
+| `CompleteProfileGuard` | `CompleteProfileGuard` | `app/cliente/layout.tsx` |
+| `CookieBanner` | `CookieBanner` | `app/layout.tsx` |
+| `CookieSettingsButton` | `CookieSettingsButton` | `components/Footer.tsx` |
+| `Footer` | `Footer` | `app/layout.tsx` |
+| `LegalActions` | `LegalActions` | `app/privacidade/page.tsx`<br>`app/termos/page.tsx` |
+| `PWAInstallButton` | `PWAInstallButton` | `app/layout.tsx` |
+| `PixReservaModal` | `PixReservaModal` | `app/admin/reservas/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| `ThemeToggle` | `ThemeToggle` | `app/lgpd/page.tsx`<br>`app/privacidade/page.tsx`<br>`app/termos/page.tsx`<br>`components/admin/Sidebar.tsx` |
+| `TimerWidget` | `TimerWidget` | `app/admin/layout.tsx` |
+| `VLibrasController` | `VLibrasController` | `app/layout.tsx` |
 | `admin/AiChatWidget` | `AiChatWidget` | `app/admin/layout.tsx` |
 | `admin/CobrancaPixModal` | `CobrancaPixModal` | `app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/ConferenciaButton` | `ConferenciaButton` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
@@ -84,24 +96,12 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/VariantPicker` | `VariantPicker` | `app/admin/venda-avulsa/page.tsx` |
 | `admin/whatsapp/WhatsAppFloatingPanel` | `WhatsAppFloatingPanel` | `app/admin/layout.tsx` |
 | `admin/whatsapp/WhatsAppInbox` | `WhatsAppInbox` | `app/admin/whatsapp/page.tsx`<br>`app/janela/whatsapp/page.tsx` |
-| `CameraScanner` | `CameraScanner` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
-| `ClientProviders` | `ClientProviders` | `app/layout.tsx` |
-| `CompleteProfileGuard` | `CompleteProfileGuard` | `app/cliente/layout.tsx` |
-| `CookieBanner` | `CookieBanner` | `app/layout.tsx` |
-| `CookieSettingsButton` | `CookieSettingsButton` | `components/Footer.tsx` |
-| `Footer` | `Footer` | `app/layout.tsx` |
-| `LegalActions` | `LegalActions` | `app/privacidade/page.tsx`<br>`app/termos/page.tsx` |
-| `PixReservaModal` | `PixReservaModal` | `app/admin/reservas/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| `PWAInstallButton` | `PWAInstallButton` | `app/layout.tsx` |
-| `ThemeToggle` | `ThemeToggle` | `app/lgpd/page.tsx`<br>`app/privacidade/page.tsx`<br>`app/termos/page.tsx`<br>`components/admin/Sidebar.tsx` |
-| `TimerWidget` | `TimerWidget` | `app/admin/layout.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
 | `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`components/admin/CrediarioAvisos.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
-| `VLibrasController` | `VLibrasController` | `app/layout.tsx` |
 
 ## Bibliotecas (`frontend/lib`)
 

@@ -249,7 +249,7 @@ public class PixReconciliationService : IPixReconciliationService
                 .ExecuteUpdateAsync(u => u.SetProperty(c => c.ValorPagoEmCentavos, c => c.ValorPagoEmCentavos + excedente));
             await _db.Entry(destino).ReloadAsync();
 
-            var obs = $"{origem} — R$ {excedente / 100m:N2} acima do saldo virou crédito do cliente";
+            var obs = $"{origem} — {Common.Dinheiro.Brl(excedente / 100m)} acima do saldo virou crédito do cliente";
             if (ultimoPagamento is not null && ultimoPagamento.CrediarioId == destino.Id)
             {
                 ultimoPagamento.ValorEmCentavos += excedente;

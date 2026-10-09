@@ -1,0 +1,72 @@
+# =============================================================================
+# Deploy produção — SÓ À MÃO (Actions → "Deploy produção" → Run workflow)
+#
+# Faz o mesmo que se fazia por SSH: roda deploy/update.sh na VPS (git pull do
+# main + docker compose build/up + nginx validado). Depois confere o /health.
+#
+# Proteções:
+#   - só roda a partir do main, e só se o último CI do main passou
+#   - ambiente "producao" (Settings → Environments): pode exigir aprovação
+#   - a chave SSH do deploy é restrita na VPS a um único comando (o update.sh):
+#     mesmo vazada, não abre terminal nem roda outra coisa
+#
+# Segredos (Settings → Secrets → Actions, no ambiente "producao"):
+#   DEPLOY_HOST         IP da VPS
+#   DEPLOY_SSH_KEY      chave privada do deploy (só pra isso, não é a de ninguém)
+#   DEPLOY_KNOWN_HOSTS  linha do known_hosts da VPS (evita aceitar servidor falso)
+# =============================================================================
+name: Deploy produção
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    name: Subir pra produção
+    runs-on: ubuntu-latest
+    environment: producao
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: O CI do main passou?
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          conclusao=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main \
+            --event push --limit 1 --json conclusion,headSha -q '.[0].conclusion + " " + .[0].headSha')
+          echo "Último CI do main: $conclusao"
+          case "$conclusao" in
+            "success $GITHUB_SHA") ;;
+            *) echo "::error::O CI do commit $GITHUB_SHA no main ainda não passou (ou está rodando). Deploy cancelado."; exit 1 ;;
+          esac
+
+      - name: Rodar o update.sh na VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # A VPS ignora o comando pedido e roda só o update.sh (command= no authorized_keys)
+          ssh -i ~/.ssh/deploy -o BatchMode=yes -o StrictHostKeyChecking=yes "root@$DEPLOY_HOST" deploy
+
+      - name: A API voltou?
+        run: |
+          for i in $(seq 1 30); do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' https://santuarionerd.com.br/health || true)
+            if [ "$codigo" = "200" ]; then echo "/health respondeu 200"; exit 0; fi
+            echo "tentativa $i: /health = $codigo"; sleep 10
+          done
+          echo "::error::A API não respondeu 200 no /health em 5 minutos. Veja: docker logs santuarionerd_api --since 10m"
+          exit 1
