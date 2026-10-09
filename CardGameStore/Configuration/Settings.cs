@@ -19,6 +19,17 @@ public class JwtSettings
     public int MaxSessionsPerUser { get; set; } = 20;
 }
 
+/// <summary>
+/// "Entrar com Google" (Services/Implementations/LoginGoogle.cs). Só o Client ID — o
+/// fluxo de ID token não usa chave secreta. Vazio = desligado (o botão nem aparece).
+/// Em produção: variável de ambiente GoogleAuth__ClientId.
+/// </summary>
+public class GoogleAuthSettings
+{
+    public string ClientId { get; set; } = string.Empty;
+    public bool Ativo => !string.IsNullOrWhiteSpace(ClientId);
+}
+
 public class MongoDbSettings
 {
     public string ConnectionString { get; set; } = "mongodb://localhost:27017";

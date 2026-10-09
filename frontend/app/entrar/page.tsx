@@ -6,6 +6,7 @@ import { saveAuth } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
 import { Mail, KeyRound, Loader2, Gamepad2, ArrowLeft, UserPlus } from 'lucide-react'
 import Link from 'next/link'
+import GoogleLoginButton from '@/components/GoogleLoginButton'
 
 export default function EntrarPage() {
   return (
@@ -47,8 +48,14 @@ function EntrarForm() {
       saveAuth(data)
       toast.success(`Bem-vindo, ${data.userName}!`)
       router.push(await destinoDepoisDoLogin())
-    } catch {
-      toast.error('E-mail ou senha inválidos.')
+    } catch (err: unknown) {
+      const resp = (err as { response?: { status?: number; data?: { message?: string } } })?.response
+      if (resp?.status === 429) {
+        // Conta travada por senha errada (o servidor diz por quanto tempo) ou limite de tentativas
+        toast.error(resp.data?.message ?? 'Muitas tentativas. Aguarde 1 minuto e tente novamente.', { duration: 8000 })
+      } else {
+        toast.error('E-mail ou senha inválidos.')
+      }
     } finally {
       setLoading(false)
     }
@@ -106,6 +113,11 @@ function EntrarForm() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />}
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
+
+          {/* Escondido até o servidor ter GoogleAuth:ClientId */}
+          <GoogleLoginButton comOu
+            onEntrou={async data => { toast.success(`Bem-vindo, ${data.userName}!`); router.push(await destinoDepoisDoLogin()) }}
+            onErro={msg => toast.error(msg, { duration: 6000 })} />
 
           <div className="text-center text-sm text-gray-500">
             Ainda não é cliente?{' '}

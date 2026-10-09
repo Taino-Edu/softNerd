@@ -74,6 +74,26 @@ public class ComandaController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Cliente logado (com e-mail e senha) abre a comanda na mesa do QR Code. É o caminho
+    /// de quem tem senha: o QR Code sem senha não entra mais em conta protegida.
+    /// Reaproveita a comanda aberta se já houver uma.
+    /// </summary>
+    [HttpPost("abrir-na-mesa")]
+    [Authorize(Roles = "Customer")]
+    [ProducesResponseType(typeof(ComandaDto), 200)]
+    public async Task<IActionResult> AbrirNaMesa([FromBody] AbrirNaMesaRequest request)
+    {
+        try
+        {
+            return Ok(await _service.OpenComandaAsync(GetUserId(), request.TableIdentifier));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
     /// <summary>Dashboard do Admin: lista todas as comandas abertas/em andamento.</summary>
     [HttpGet("dashboard")]
     [Authorize(Policy = "AdminOnly")]
@@ -468,3 +488,5 @@ public class ComandaController : ControllerBase
         return id;
     }
 }
+
+public record AbrirNaMesaRequest([System.ComponentModel.DataAnnotations.MaxLength(50)] string? TableIdentifier);

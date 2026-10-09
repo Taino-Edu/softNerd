@@ -98,6 +98,9 @@ services:
       JwtSettings__Audience: "CardGameStore-Frontend"
       JwtSettings__AccessTokenExpirationMinutes: "60"
       JwtSettings__RefreshTokenExpirationDays: "30"
+      # Entrar com Google: Client ID público do Google Cloud Console (vazio = botão escondido).
+      # Pôr GOOGLE_CLIENT_ID=...apps.googleusercontent.com no .env da VPS e rodar o update.
+      GoogleAuth__ClientId: "${GOOGLE_CLIENT_ID:-}"
       # E-mail (Resend)
       SmtpSettings__Host: "${SMTP_HOST:-smtp.resend.com}"
       SmtpSettings__Port: "${SMTP_PORT:-587}"

@@ -86,6 +86,18 @@ public record SetupAccountRequest(
 
 /// <summary>Completa o perfil da conta logada (conta semi-criada de quick-login) — e-mail + senha.
 /// Diferente do setup-account (que acha a conta pelo CPF), aqui o usuário já está autenticado.</summary>
+/// <summary>Credential (ID token) devolvida pelo botão do Google. Mesa opcional: abre a comanda junto.</summary>
+public record LoginGoogleRequest(
+    [Required, MaxLength(4096)] string Credential,
+    [MaxLength(50)]             string? TableIdentifier = null
+);
+
+/// <summary>Quem entrou com Google completa o que o Google não manda: WhatsApp (e CPF, opcional).</summary>
+public record CompletarCadastroGoogleRequest(
+    [Required, MaxLength(20)]   string  WhatsApp,
+    [ValidCpf, MaxLength(14)]   string? Cpf = null
+);
+
 public record CompleteProfileRequest(
     [Required, EmailAddress]    string Email,
     [Required, MinLength(8)]    string Password
@@ -149,7 +161,9 @@ public record AuthResponse(
     /// </summary>
     Guid?    ComandaId   = null,
     /// <summary>Permissões do Operator. Null para Admin e Customer.</summary>
-    string[]? Permissions = null
+    string[]? Permissions = null,
+    /// <summary>Cookie de dispositivo conhecido (login com senha). Nunca vai no corpo da resposta.</summary>
+    string?   Dispositivo = null
 );
 
 /// <summary>

@@ -111,4 +111,5 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `IPixReconciliationService → PixReconciliationService` | `CardGameStore/Services/Implementations/PixReconciliationService.cs` |
 | Scoped | `CrediarioAvisoService` | `CardGameStore/Services/Implementations/CrediarioAvisoService.cs` |
 | Scoped | `CrediarioPixService` | `CardGameStore/Services/Implementations/CrediarioPixService.cs` |
+| Singleton | `IValidadorGoogle → ValidadorGoogle` | `CardGameStore/Services/Implementations/LoginGoogle.cs` |
 | Scoped | `CardGameStore.Services.Liga.TorneioService` | `CardGameStore/Services/Liga/TorneioService.cs` |

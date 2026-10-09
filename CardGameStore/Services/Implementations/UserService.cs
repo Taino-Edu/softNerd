@@ -71,7 +71,11 @@ public class UserService : IUserService
             BalanceInCents  = user.BalanceInCents,
             CreatedAt       = user.CreatedAt,
             HasPassword     = user.PasswordHash != null,
-            ProfileComplete = user.PasswordHash != null && user.Email != null,
+            // Completo = consegue entrar de novo e a loja consegue falar com ele: e-mail + senha,
+            // ou Google + WhatsApp (o Google já confirma o e-mail; WhatsApp é o que falta)
+            ProfileComplete = user.Email != null
+                              && (user.PasswordHash != null || (user.GoogleSub != null && user.WhatsApp != null)),
+            EntrouComGoogle = user.GoogleSub != null,
         };
     }
 
@@ -285,6 +289,8 @@ public class UserService : IUserService
         user.RefreshTokenExpiry     = null;
         user.PasswordResetToken     = null;
         user.PasswordResetTokenExpiry = null;
+        user.FalhasLogin            = 0;    // senha nova: destrava a conta
+        user.LoginBloqueadoAte      = null;
         user.UpdatedAt              = DateTime.UtcNow;
 
         // Senha trocada pelo admin tem que cortar os dispositivos já logados.

@@ -122,6 +122,7 @@ export default function PrivacidadePage() {
                   ['Histórico de comandas e compras', 'gestão do crediário e pontos'],
                   ['Participação em campeonatos', 'nome do deck, colocação'],
                   ['Saldo de pontos e cashback', 'programa de fidelidade'],
+                  ['Conta Google (opcional)', 'se você escolher "Entrar com Google": recebemos do Google só o seu nome, o e-mail confirmado e um código da conta — nunca a sua senha do Google'],
                   ['Endereço IP (hash SHA-256)', 'segurança e prevenção de abusos — nunca armazenamos o IP em texto puro'],
                 ].map(([key, val]) => (
                   <li key={key} className="flex gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -174,6 +175,7 @@ export default function PrivacidadePage() {
               <ul className="space-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
                 <li className="flex gap-2"><span className="text-[#42B6EE] shrink-0 mt-0.5">▸</span><span><strong style={{ color: 'var(--text-primary)' }}>APIs de cartas TCG</strong> (Pokémon, Magic, Yu-Gi-Oh!) — apenas para buscar informações de cartas. Nenhum dado pessoal é enviado.</span></li>
                 <li className="flex gap-2"><span className="text-[#42B6EE] shrink-0 mt-0.5">▸</span><span><strong style={{ color: 'var(--text-primary)' }}>Provedor de e-mail (SMTP)</strong> — notificações transacionais (redefinição de senha, confirmação de crediário).</span></li>
+                <li className="flex gap-2"><span className="text-[#42B6EE] shrink-0 mt-0.5">▸</span><span><strong style={{ color: 'var(--text-primary)' }}>Google</strong> — só se você usar &quot;Entrar com Google&quot;: o Google confirma quem você é e nos envia nome e e-mail. Não enviamos ao Google nenhum dado seu da loja.</span></li>
                 <li className="flex gap-2"><span className="text-[#42B6EE] shrink-0 mt-0.5">▸</span><span><strong style={{ color: 'var(--text-primary)' }}>Autoridades públicas</strong> — quando exigido por lei ou ordem judicial.</span></li>
               </ul>
             </Section>
@@ -232,7 +234,7 @@ export default function PrivacidadePage() {
               <div className="space-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
                 <div className="rounded-xl p-3 border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                   <p className="font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>Essenciais</p>
-                  <p>Necessários para autenticação e segurança da sessão. Não podem ser desativados.</p>
+                  <p>Necessários para autenticação e segurança da sessão — incluindo o que reconhece um aparelho onde você já entrou, para que tentativas de senha de outras pessoas não bloqueiem a sua conta nele. Não podem ser desativados.</p>
                 </div>
                 <div className="rounded-xl p-3 border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                   <p className="font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>Preferências</p>

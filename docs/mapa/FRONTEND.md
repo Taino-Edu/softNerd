@@ -48,14 +48,14 @@
 | `/cliente` | `app/cliente/page.tsx` | `cliente/NotificationBell` |
 | `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | — |
-| `/entrar` | `app/entrar/page.tsx` | — |
+| `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton` |
 | `/janela/whatsapp` | `app/janela/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox` |
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
 | `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio` |
 | `/liga` | `app/liga/page.tsx` | — |
 | `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio` |
 | `/login` | `app/login/page.tsx` | — |
-| `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | — |
+| `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
 | `/` | `app/page.tsx` | — |
 | `/perfil/[id]` | `app/perfil/[id]/page.tsx` | — |
@@ -78,6 +78,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `CookieBanner` | `CookieBanner` | `app/layout.tsx` |
 | `CookieSettingsButton` | `CookieSettingsButton` | `components/Footer.tsx` |
 | `Footer` | `Footer` | `app/layout.tsx` |
+| `GoogleLoginButton` | `GoogleLoginButton` | `app/entrar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
 | `LegalActions` | `LegalActions` | `app/privacidade/page.tsx`<br>`app/termos/page.tsx` |
 | `PWAInstallButton` | `PWAInstallButton` | `app/layout.tsx` |
 | `PixReservaModal` | `PixReservaModal` | `app/admin/reservas/page.tsx`<br>`app/cliente/perfil/page.tsx` |

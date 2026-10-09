@@ -23,9 +23,10 @@ export default function LoginPage() {
       toast.success(`Bem-vindo, ${data.userName}!`)
       router.push(data.role === 'Customer' ? '/cliente' : '/admin/dashboard')
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 429) {
-        toast.error('Muitas tentativas. Aguarde 1 minuto e tente novamente.')
+      const resp = (err as { response?: { status?: number; data?: { message?: string } } })?.response
+      if (resp?.status === 429) {
+        // Conta travada por senha errada (o servidor diz por quanto tempo) ou limite de tentativas
+        toast.error(resp.data?.message ?? 'Muitas tentativas. Aguarde 1 minuto e tente novamente.', { duration: 8000 })
       } else {
         toast.error('E-mail ou senha inválidos.')
       }

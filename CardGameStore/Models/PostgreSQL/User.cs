@@ -95,6 +95,19 @@ public class User
     [Column("password_reset_token_expiry")]
     public DateTime? PasswordResetTokenExpiry { get; set; }
 
+    /// <summary>Id da conta Google ligada ("sub" do token). Null = nunca entrou com Google.</summary>
+    [MaxLength(64)]
+    [Column("google_sub")]
+    public string? GoogleSub { get; set; }
+
+    /// <summary>Senhas erradas seguidas (zera ao acertar). Services/Implementations/ProtecaoLogin.cs.</summary>
+    [Column("falhas_login")]
+    public int FalhasLogin { get; set; }
+
+    /// <summary>Até quando o login com senha está travado pra aparelhos desconhecidos.</summary>
+    [Column("login_bloqueado_ate")]
+    public DateTime? LoginBloqueadoAte { get; set; }
+
     // -------------------------------------------------------------------------
     // Sistema de Pontos
     // -------------------------------------------------------------------------

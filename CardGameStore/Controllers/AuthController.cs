@@ -8,6 +8,7 @@
 // =============================================================================
 
 using CardGameStore.DTOs;
+using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using CardGameStore.Validation;
 using Microsoft.AspNetCore.Authorization;
@@ -55,6 +56,28 @@ public class AuthController : ControllerBase
     /// Grava accessToken e refreshToken como cookies HttpOnly,
     /// impedindo acesso via JavaScript (proteção contra XSS).
     /// </summary>
+    /// <summary>Cookie de dispositivo conhecido (ProtecaoLogin.cs): neste aparelho a conta não trava por senha errada.</summary>
+    private void SetDispositivoCookie(string? valor)
+    {
+        if (string.IsNullOrEmpty(valor)) return;
+        Response.Cookies.Append(ProtecaoLogin.CookieDispositivo, valor, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure   = !_env.IsDevelopment(),
+            SameSite = SameSiteMode.Lax,
+            Path     = "/api/auth",
+            MaxAge   = ProtecaoLogin.ValidadeDispositivo,
+        });
+    }
+
+    private string? DispositivoDoPedido() => Request.Cookies[ProtecaoLogin.CookieDispositivo];
+
+    private IActionResult RespostaContaBloqueada(ContaBloqueadaException ex)
+    {
+        Response.Headers["Retry-After"] = Math.Max(1, (int)(ex.AteUtc - DateTime.UtcNow).TotalSeconds).ToString();
+        return StatusCode(StatusCodes.Status429TooManyRequests, new { Message = ex.MensagemParaUsuario(), bloqueadoAte = ex.AteUtc });
+    }
+
     private void SetAuthCookies(string accessToken, string refreshToken)
     {
         // Secure = true em produção (HTTPS via Cloudflare). Em desenvolvimento HTTP local, false.
@@ -116,7 +139,7 @@ public class AuthController : ControllerBase
     /// <response code="401">Credenciais inválidas.</response>
     [HttpPost("login")]
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting("login")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
     [ProducesResponseType(401)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -126,7 +149,8 @@ public class AuthController : ControllerBase
 
         try
         {
-            var response = await _authService.LoginAsync(request);
+            var response = await _authService.LoginAsync(request, DispositivoDoPedido());
+            SetDispositivoCookie(response.Dispositivo);
             _logger.LogInformation("Login bem-sucedido para {Email}", request.Email);
             await _audit.LogAsync("LoginSucesso", "Auth", response.UserId.ToString(),
                 details: JsonSerializer.Serialize(new { email = request.Email, role = response.Role }),
@@ -141,6 +165,13 @@ public class AuthController : ControllerBase
                 details: JsonSerializer.Serialize(new { email = request.Email, motivo = ex.Message }),
                 httpContext: HttpContext);
             return Unauthorized(new { Message = "E-mail ou senha incorretos." });
+        }
+        catch (ContaBloqueadaException ex)
+        {
+            await _audit.LogAsync("LoginBloqueado", "Auth", null,
+                details: JsonSerializer.Serialize(new { email = request.Email, ate = ex.AteUtc }),
+                httpContext: HttpContext);
+            return RespostaContaBloqueada(ex);
         }
         catch (Exception ex)
         {
@@ -180,6 +211,18 @@ public class AuthController : ControllerBase
                 request.Name, request.TableIdentifier, response.ComandaId);
             SetAuthCookies(response.AccessToken, response.RefreshToken);
             return Ok(new SafeAuthResponse(response.ExpiresAt, response.Role, response.UserName, response.UserId, response.ComandaId, response.Permissions));
+        }
+        catch (QuickLoginRecusadoException ex)
+        {
+            _logger.LogWarning("Quick-login recusado ({Codigo}) na mesa {Mesa}", ex.Codigo, request.TableIdentifier);
+            await _audit.LogAsync("QuickLoginRecusado", "Auth", null,
+                details: JsonSerializer.Serialize(new { codigo = ex.Codigo, mesa = request.TableIdentifier }),
+                httpContext: HttpContext);
+            return StatusCode(StatusCodes.Status403Forbidden, new { Message = ex.Message, codigo = ex.Codigo });
+        }
+        catch (ContaBloqueadaException ex)
+        {
+            return RespostaContaBloqueada(ex);
         }
         catch (ArgumentException ex)
         {
@@ -280,17 +323,25 @@ public class AuthController : ControllerBase
 
     [HttpPost("client-login")]
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting("login")]
     public async Task<IActionResult> ClientLogin([FromBody] ClientLoginRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
         try
         {
-            var response = await _authService.ClientLoginAsync(request);
+            var response = await _authService.ClientLoginAsync(request, DispositivoDoPedido());
             SetAuthCookies(response.AccessToken, response.RefreshToken);
+            SetDispositivoCookie(response.Dispositivo);
             return Ok(new SafeAuthResponse(response.ExpiresAt, response.Role, response.UserName, response.UserId));
         }
         catch (UnauthorizedAccessException) { return Unauthorized(new { Message = "E-mail ou senha inválidos." }); }
+        catch (ContaBloqueadaException ex)
+        {
+            await _audit.LogAsync("LoginBloqueado", "Auth", null,
+                details: JsonSerializer.Serialize(new { email = request.Email, ate = ex.AteUtc }),
+                httpContext: HttpContext);
+            return RespostaContaBloqueada(ex);
+        }
     }
 
     [HttpPost("register")]
@@ -322,6 +373,53 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <response code="204">Perfil completado.</response>
     /// <response code="409">Conta já completa ou e-mail em uso.</response>
+    // =========================================================================
+    // ENTRAR COM GOOGLE — desligado enquanto GoogleAuth:ClientId estiver vazio
+    // =========================================================================
+
+    /// <summary>Client ID público (o botão do Google precisa dele). null = botão escondido.</summary>
+    [HttpGet("google/config")]
+    [AllowAnonymous]
+    public IActionResult GoogleConfig() => Ok(new { clientId = _authService.GoogleClientId });
+
+    [HttpPost("google")]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    public async Task<IActionResult> LoginGoogle([FromBody] LoginGoogleRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            var response = await _authService.LoginGoogleAsync(request);
+            SetAuthCookies(response.AccessToken, response.RefreshToken);
+            SetDispositivoCookie(response.Dispositivo);
+            await _audit.LogAsync("LoginGoogle", "Auth", response.UserId.ToString(), httpContext: HttpContext);
+            return Ok(new SafeAuthResponse(response.ExpiresAt, response.Role, response.UserName, response.UserId, response.ComandaId));
+        }
+        catch (KeyNotFoundException)                 { return NotFound(new { Message = "Login com Google desligado." }); }
+        catch (UnauthorizedAccessException ex)       { return Unauthorized(new { Message = ex.Message }); }
+        catch (LoginGoogleRecusadoException ex)      { return StatusCode(StatusCodes.Status403Forbidden, new { Message = ex.Message }); }
+    }
+
+    /// <summary>Quem entrou com Google informa o WhatsApp (e o CPF, se quiser).</summary>
+    [HttpPost("completar-cadastro")]
+    [Authorize]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> CompletarCadastroGoogle([FromBody] CompletarCadastroGoogleRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        var claim = User.FindFirst("sub") ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (claim == null || !Guid.TryParse(claim.Value, out var userId)) return Unauthorized();
+        try
+        {
+            await _authService.CompletarCadastroGoogleAsync(userId, request);
+            return NoContent();
+        }
+        catch (CadastroDuplicadoException ex)  { return Conflict(new { Message = ex.Message, campo = ex.Campo }); }
+        catch (KeyNotFoundException ex)        { return NotFound(new { Message = ex.Message }); }
+        catch (InvalidOperationException ex)   { return BadRequest(new { Message = ex.Message }); }
+    }
+
     [HttpPost("complete-profile")]
     [Authorize]
     [EnableRateLimiting("auth")]
