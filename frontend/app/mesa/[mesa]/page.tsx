@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authApi, comandaApi } from '@/lib/api'
-import { saveAuth, isLoggedIn } from '@/lib/auth'
+import { saveAuth, isLoggedIn, getRole } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
+import GoogleLoginButton from '@/components/GoogleLoginButton'
 import {
   User, Hash, MessageCircle, Loader2,
-  X, Shield, ChevronRight, ArrowLeft, Receipt
+  X, Shield, ChevronRight, ArrowLeft, Receipt, Lock
 } from 'lucide-react'
 
 const STORAGE_KEY = 'mesa-last-user'
@@ -64,7 +65,8 @@ export default function MesaPage() {
   const router  = useRouter()
   const mesa    = decodeURIComponent(params.mesa as string)
 
-  const [step, setStep]             = useState<'quick' | 'form' | 'loading'>('form')
+  // 'senha': o cadastro tem senha — o QR Code sem senha não entra nele, só e-mail e senha
+  const [step, setStep]             = useState<'quick' | 'form' | 'loading' | 'senha'>('form')
   const [savedUser, setSavedUser]   = useState<SavedUser | null>(null)
   const [name, setName]             = useState('')
   const [cpf, setCpf]               = useState('')
@@ -73,6 +75,8 @@ export default function MesaPage() {
   const [showPrivacy, setShowPrivacy] = useState(false)
   /** Já tem comanda aberta nesta conta: dá pra ir direto, sem reidentificar. */
   const [temComandaAberta, setTemComandaAberta] = useState(false)
+  /** Cliente já logado (com senha): abre a comanda da mesa direto pela conta. */
+  const [clienteLogado, setClienteLogado] = useState(false)
 
   useEffect(() => {
     try {
@@ -91,6 +95,7 @@ export default function MesaPage() {
   // de novo — abrir outra comanda pela mesa seria repetir o que já existe.
   useEffect(() => {
     if (!isLoggedIn()) return
+    setClienteLogado(getRole() === 'Customer')
     comandaApi.myComanda()
       .then(() => setTemComandaAberta(true))
       .catch(() => setTemComandaAberta(false))
@@ -139,8 +144,28 @@ export default function MesaPage() {
       toast.success('Entrada autorizada! Boas compras.', { icon: '🏰' })
       setTimeout(() => router.push('/cliente'), 800)
     } catch (err: any) {
-      setStep(isQuick ? 'quick' : 'form')
-      toast.error(err.response?.data?.message || 'Erro ao realizar login rápido.')
+      const codigo = err.response?.data?.codigo as string | undefined
+      if (codigo === 'precisaSenha') {
+        // Conta protegida por senha: o atalho salvo neste celular não serve mais pra ela
+        try { localStorage.removeItem(STORAGE_KEY) } catch {}
+        setSavedUser(null)
+        setStep('senha')
+        return
+      }
+      setStep(codigo === 'precisaCpf' ? 'form' : (isQuick ? 'quick' : 'form'))
+      toast.error(err.response?.data?.message || 'Erro ao realizar login rápido.', { duration: 6000 })
+    }
+  }
+
+  async function abrirPelaConta() {
+    setStep('loading')
+    try {
+      await comandaApi.abrirNaMesa(mesa)
+      toast.success('Comanda aberta! Boas compras.', { icon: '🏰' })
+      setTimeout(() => router.push('/cliente'), 800)
+    } catch (err: any) {
+      setStep('form')
+      toast.error(err.response?.data?.message || 'Não deu pra abrir a comanda.')
     }
   }
 
@@ -193,6 +218,46 @@ export default function MesaPage() {
             </div>
             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
           </Link>
+        )}
+
+        {/* Já logado (com senha) e sem comanda: abre pela conta, sem formulário */}
+        {clienteLogado && !temComandaAberta && step !== 'loading' && step !== 'senha' && (
+          <button onClick={abrirPelaConta}
+            className="mb-6 w-full flex items-center gap-3 rounded-2xl bg-blue-50 border border-blue-100 p-4 max-w-sm mx-auto transition-all active:scale-95 text-left">
+            <div className="w-10 h-10 rounded-full bg-[#3EC2F2]/15 flex items-center justify-center shrink-0">
+              <Receipt className="w-5 h-5 text-[#3EC2F2]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 text-sm">Abrir comanda na mesa {mesa}</p>
+              <p className="text-[11px] text-gray-500">Pela sua conta, sem preencher nada</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+          </button>
+        )}
+
+        {/* Conta com senha: o QR Code não entra, só e-mail e senha */}
+        {step === 'senha' && (
+          <div className="space-y-5 max-w-sm mx-auto text-center">
+            <div className="w-14 h-14 rounded-full bg-[#3EC2F2]/15 flex items-center justify-center mx-auto">
+              <Lock className="w-7 h-7 text-[#3EC2F2]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-gray-900">Sua conta é protegida</h2>
+              <p className="text-gray-500 text-sm mt-1">
+                Pra sua segurança, contas com senha ou ligadas ao Google só abrem comanda entrando por elas.
+                Depois de entrar, você volta pra esta mesa.
+              </p>
+            </div>
+            <Link href={`/entrar?returnTo=${encodeURIComponent(`/mesa/${mesa}`)}`}
+              className="w-full py-4 font-black text-gray-900 rounded-2xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all text-base shadow-lg"
+              style={{ background: 'linear-gradient(135deg, #FFE45E, #F5C518)' }}>
+              Entrar com e-mail e senha <ChevronRight className="w-5 h-5" />
+            </Link>
+            <button onClick={() => setStep('form')}
+              className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors py-2">
+              Não é a sua conta? Voltar
+            </button>
+          </div>
         )}
 
         {/* Loading */}
@@ -326,6 +391,15 @@ export default function MesaPage() {
                 <ArrowLeft className="w-3 h-3" /> Voltar
               </button>
             )}
+          </div>
+        )}
+
+        {/* Entrar com Google já abre a comanda desta mesa (escondido até ter Client ID) */}
+        {(step === 'form' || step === 'senha') && (
+          <div className="max-w-sm mx-auto mt-6">
+            <GoogleLoginButton comOu claro mesa={mesa} texto="continue_with"
+              onEntrou={() => { toast.success('Entrada autorizada! Boas compras.', { icon: '🏰' }); setTimeout(() => router.push('/cliente'), 800) }}
+              onErro={msg => toast.error(msg, { duration: 6000 })} />
           </div>
         )}
 

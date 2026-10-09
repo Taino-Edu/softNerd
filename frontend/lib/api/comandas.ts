@@ -70,6 +70,8 @@ export const comandaApi = {
   dashboard:    () => api.get<ComandaDto[]>('/api/comanda/dashboard'),
   history:      (data?: string) => api.get<ComandaDto[]>('/api/comanda/history', { params: data ? { data } : undefined }),
   myComanda:    () => api.get<ComandaDto>('/api/comanda/my'),
+  /** Cliente logado (e-mail e senha) abre a comanda na mesa do QR Code. */
+  abrirNaMesa:  (tableIdentifier: string) => api.post<ComandaDto>('/api/comanda/abrir-na-mesa', { tableIdentifier }),
   myHistory:    () => api.get<ComandaDto[]>('/api/comanda/my-history'),
   addItem:      (id: string, item: { productId?: string; cardCacheId?: string; variantId?: string; itemName: string; unitPriceInCents: number; quantity: number }) =>
     api.post<ComandaDto>(`/api/comanda/${id}/items`, item),

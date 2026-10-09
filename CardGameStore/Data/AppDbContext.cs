@@ -106,6 +106,12 @@ public class AppDbContext : DbContext
                   .HasFilter("cpf IS NOT NULL")
                   .HasDatabaseName("ix_users_cpf");
 
+            // Entrar com Google: uma conta Google por usuário
+            entity.HasIndex(u => u.GoogleSub)
+                  .IsUnique()
+                  .HasFilter("google_sub IS NOT NULL")
+                  .HasDatabaseName("ux_users_google_sub");
+
             entity.HasIndex(u => u.WhatsApp)
                   .HasDatabaseName("ix_users_whatsapp");
         });

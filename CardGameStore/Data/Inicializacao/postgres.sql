@@ -775,3 +775,11 @@ CREATE TABLE IF NOT EXISTS torneio_partidas (
     fechada_em             TIMESTAMPTZ  NULL
 );
 CREATE INDEX IF NOT EXISTS ix_torneio_partidas_rodada ON torneio_partidas (rodada_id);
+
+-- Bloqueio de conta por senha errada (Services/Implementations/ProtecaoLogin.cs)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS falhas_login        INTEGER     NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS login_bloqueado_ate TIMESTAMPTZ NULL;
+
+-- Entrar com Google (Services/Implementations/LoginGoogle.cs): uma conta Google por usuário
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(64) NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_google_sub ON users (google_sub) WHERE google_sub IS NOT NULL;

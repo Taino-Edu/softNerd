@@ -18,6 +18,8 @@ export interface UserProfile {
   /** Conta completa = senha + e-mail. Quick-login cria conta semi-criada (false) —
    * o site exige completar (CompleteProfileGuard) pra redefinição de senha funcionar. */
   hasPassword: boolean; profileComplete: boolean
+  /** Conta ligada ao Google: completar o cadastro pede WhatsApp, não senha. */
+  entrouComGoogle?: boolean
 }
 
 type PrefCorner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'

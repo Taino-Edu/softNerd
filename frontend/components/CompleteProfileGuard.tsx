@@ -10,9 +10,16 @@ import toast from 'react-hot-toast'
  * tem e-mail nem senha — e sem e-mail a redefinição de senha não funciona.
  * Montado no layout de /cliente: busca o perfil e, se incompleto, abre um modal
  * NÃO-dismissável exigindo e-mail + senha antes de usar a área do cliente.
+ *
+ * Conta criada pelo Google já tem e-mail confirmado e não precisa de senha: aí o
+ * que falta é o WhatsApp (e o CPF, opcional) — POST /api/auth/completar-cadastro.
  */
 export default function CompleteProfileGuard() {
   const [incomplete, setIncomplete] = useState(false)
+  /** Entrou com Google: pede WhatsApp/CPF em vez de e-mail/senha. */
+  const [google, setGoogle]         = useState(false)
+  const [whatsApp, setWhatsApp]     = useState('')
+  const [cpf, setCpf]               = useState('')
   const [email, setEmail]           = useState('')
   const [password, setPassword]     = useState('')
   const [confirm, setConfirm]       = useState('')
@@ -21,12 +28,28 @@ export default function CompleteProfileGuard() {
   useEffect(() => {
     if (!isLoggedIn()) return
     userApi.me()
-      .then(({ data }) => { if (!data.profileComplete) setIncomplete(true) })
+      .then(({ data }) => { if (!data.profileComplete) { setIncomplete(true); setGoogle(!!data.entrouComGoogle) } })
       .catch(() => { /* as páginas tratam os próprios erros de auth — aqui é melhor-esforço */ })
   }, [])
 
+  async function completarGoogle() {
+    if (whatsApp.replace(/\D/g, '').length < 10) { toast.error('Informe o WhatsApp com DDD.'); return }
+    setLoading(true)
+    try {
+      await authApi.completarCadastroGoogle(whatsApp, cpf.replace(/\D/g, '') || null)
+      toast.success('Cadastro completo!')
+      setIncomplete(false)
+    } catch (err) {
+      const data = (err as { response?: { data?: { Message?: string; message?: string } } })?.response?.data
+      toast.error(data?.Message ?? data?.message ?? 'Não foi possível salvar. Confira os dados e tente de novo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (google) { await completarGoogle(); return }
     if (password.length < 8) { toast.error('A senha precisa de pelo menos 8 caracteres.'); return }
     if (password !== confirm) { toast.error('As senhas não conferem.'); return }
 
@@ -58,11 +81,28 @@ export default function CompleteProfileGuard() {
           <MailCheck className="w-10 h-10 mx-auto" style={{ color: '#7C3AED' }} />
           <h2 className="text-lg font-black" style={{ color: '#0C3D5A' }}>Complete seu cadastro</h2>
           <p className="text-sm" style={{ color: '#4D8FAC' }}>
-            Sua conta foi criada rapidamente na loja (só nome e WhatsApp). Cadastre um e-mail e uma
-            senha — é o que garante seu acesso pelo site e a redefinição de senha se você esquecer.
+            {google
+              ? 'Você entrou com o Google. Falta só o seu WhatsApp — é por ele que a loja avisa de comanda, crediário e campeonato.'
+              : 'Sua conta foi criada rapidamente na loja (só nome e WhatsApp). Cadastre um e-mail e uma senha — é o que garante seu acesso pelo site e a redefinição de senha se você esquecer.'}
           </p>
         </div>
 
+        {google ? (
+          <>
+            <input
+              type="tel" required placeholder="WhatsApp com DDD"
+              value={whatsApp} onChange={e => setWhatsApp(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
+              style={inputStyle}
+            />
+            <input
+              type="tel" placeholder="CPF (opcional)"
+              value={cpf} onChange={e => setCpf(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
+              style={inputStyle}
+            />
+          </>
+        ) : (<>
         <input
           type="email" required placeholder="Seu e-mail"
           value={email} onChange={e => setEmail(e.target.value)}
@@ -81,6 +121,7 @@ export default function CompleteProfileGuard() {
           className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
           style={inputStyle}
         />
+        </>)}
 
         <button type="submit" disabled={loading}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-sm transition-all disabled:opacity-60"

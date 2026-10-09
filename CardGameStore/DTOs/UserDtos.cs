@@ -117,6 +117,8 @@ public class UserProfileDto
     /// <summary>Conta completa = tem senha E e-mail. Quick-login cria conta semi-criada
     /// (sem ambos) — o site exige completar no primeiro acesso.</summary>
     public bool      ProfileComplete { get; set; }
+    /// <summary>Conta ligada ao Google: completar o cadastro pede WhatsApp, não senha.</summary>
+    public bool      EntrouComGoogle { get; set; }
 }
 
 /// <summary>Request para ajustar saldo monetário de um usuário (Admin).</summary>

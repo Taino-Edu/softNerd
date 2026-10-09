@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-272 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+276 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -11,10 +11,10 @@
 - [Analytics](#analytics) (4)
 - [Announcement](#announcement) (5)
 - [Audit](#audit) (1)
-- [Auth](#auth) (12)
+- [Auth](#auth) (15)
 - [Category](#category) (4)
 - [Championship](#championship) (22)
-- [Comanda](#comanda) (19)
+- [Comanda](#comanda) (20)
 - [ContasReceber](#contasreceber) (15)
 - [Crediarios](#crediarios) (15)
 - [Deck](#deck) (6)
@@ -91,18 +91,21 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/auth/client-login` | público | `ClientLogin` (284) | `authApi.clientLogin` | `app/entrar/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/produtos/[id]/page.tsx` |
-| POST | `/api/auth/complete-profile` | logado | `CompleteProfile` (330) | `authApi.completeProfile` | `components/CompleteProfileGuard.tsx` |
-| POST | `/api/auth/cpf-lookup` | público | `CpfLookup` (254) | `authApi.cpfLookup` | `app/primeiro-acesso/page.tsx` |
-| POST | `/api/auth/forgot-password` | público | `ForgotPassword` (360) | `authApi.forgotPassword` | `app/reset-password/page.tsx` |
-| POST | `/api/auth/login` | público | `Login` (122) | `authApi.login` | `app/login/page.tsx` |
-| POST | `/api/auth/logout` | logado | `Logout` (406) | `authApi.logout` | `app/cliente/perfil/page.tsx`<br>`components/admin/Sidebar.tsx` |
-| POST | `/api/auth/quick-login` | público | `QuickLogin` (169) | `authApi.quickLogin` | `app/mesa/[mesa]/page.tsx` |
-| POST | `/api/auth/refresh` | público | `Refresh` (217) | — | `lib/sessionKeepAlive.ts` |
-| POST | `/api/auth/register` | público | `Register` (299) | `authApi.register` | `app/cadastro/page.tsx` |
-| POST | `/api/auth/reset-password` | público | `ResetPassword` (380) | `authApi.resetPassword` | `app/reset-password/page.tsx` |
-| POST | `/api/auth/setup-account` | público | `SetupAccount` (268) | `authApi.setupAccount` | `app/primeiro-acesso/page.tsx` |
-| POST | `/api/auth/test-email` | AdminOnly | `TestEmail` (428) | — | — |
+| POST | `/api/auth/client-login` | público | `ClientLogin` (327) | `authApi.clientLogin` | `app/entrar/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/produtos/[id]/page.tsx` |
+| POST | `/api/auth/completar-cadastro` | logado | `CompletarCadastroGoogle` (408) | `authApi.completarCadastroGoogle` | `components/CompleteProfileGuard.tsx` |
+| POST | `/api/auth/complete-profile` | logado | `CompleteProfile` (428) | `authApi.completeProfile` | `components/CompleteProfileGuard.tsx` |
+| POST | `/api/auth/cpf-lookup` | público | `CpfLookup` (297) | `authApi.cpfLookup` | `app/primeiro-acesso/page.tsx` |
+| POST | `/api/auth/forgot-password` | público | `ForgotPassword` (458) | `authApi.forgotPassword` | `app/reset-password/page.tsx` |
+| POST | `/api/auth/google` | público | `LoginGoogle` (388) | `authApi.google` | `components/GoogleLoginButton.tsx` |
+| GET | `/api/auth/google/config` | público | `GoogleConfig` (383) | `authApi.googleConfig` | `components/GoogleLoginButton.tsx` |
+| POST | `/api/auth/login` | público | `Login` (145) | `authApi.login` | `app/login/page.tsx` |
+| POST | `/api/auth/logout` | logado | `Logout` (504) | `authApi.logout` | `app/cliente/perfil/page.tsx`<br>`components/admin/Sidebar.tsx` |
+| POST | `/api/auth/quick-login` | público | `QuickLogin` (200) | `authApi.quickLogin` | `app/mesa/[mesa]/page.tsx` |
+| POST | `/api/auth/refresh` | público | `Refresh` (260) | — | `lib/sessionKeepAlive.ts` |
+| POST | `/api/auth/register` | público | `Register` (350) | `authApi.register` | `app/cadastro/page.tsx` |
+| POST | `/api/auth/reset-password` | público | `ResetPassword` (478) | `authApi.resetPassword` | `app/reset-password/page.tsx` |
+| POST | `/api/auth/setup-account` | público | `SetupAccount` (311) | `authApi.setupAccount` | `app/primeiro-acesso/page.tsx` |
+| POST | `/api/auth/test-email` | AdminOnly | `TestEmail` (526) | — | — |
 
 ## Category
 
@@ -150,25 +153,26 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
+| POST | `/api/comanda/abrir-na-mesa` | papéis Customer | `AbrirNaMesa` (85) | `comandaApi.abrirNaMesa` | `app/mesa/[mesa]/page.tsx` |
 | POST | `/api/comanda/admin-open` | AdminOnly | `AdminOpenComanda` (64) | `comandaApi.adminOpen` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/dashboard` | AdminOnly | `GetDashboard` (81) | `comandaApi.dashboard` | `app/admin/dashboard/page.tsx`<br>`app/admin/relatorios/page.tsx` |
-| GET | `/api/comanda/history` | AdminOnly | `GetHistory` (91) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/my` | logado | `GetMyComanda` (122) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
-| GET | `/api/comanda/my-history` | logado | `GetMyHistory` (111) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (395) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
-| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (408) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
-| GET | `/api/comanda/{id:guid}` | AdminOnly | `GetById` (102) | — | — |
-| DELETE | `/api/comanda/{id:guid}/apply-points` | logado | `RemovePoints` (288) | `comandaApi.removePoints` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
-| POST | `/api/comanda/{id:guid}/apply-points` | logado | `ApplyPoints` (266) | `comandaApi.applyPoints` | `app/cliente/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/cancel` | AdminOnly | `Cancel` (208) | `comandaApi.cancel` | `app/admin/dashboard/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/close` | AdminOnly | `Close` (182) | `comandaApi.close` | `app/admin/dashboard/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/editar` | AdminOnly | `EditarComanda` (250) | `comandaApi.editar` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/estornar` | AdminOnly | `Estornar` (223) | `comandaApi.estornar` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/items` | logado | `AddItem` (133) | `comandaApi.addItem` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
-| DELETE | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `RemoveItem` (152) | `comandaApi.removeItem` | `app/admin/dashboard/page.tsx` |
-| PATCH | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `UpdateItem` (164) | `comandaApi.updateItem` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (309) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (384) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/dashboard` | AdminOnly | `GetDashboard` (101) | `comandaApi.dashboard` | `app/admin/dashboard/page.tsx`<br>`app/admin/relatorios/page.tsx` |
+| GET | `/api/comanda/history` | AdminOnly | `GetHistory` (111) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/my` | logado | `GetMyComanda` (142) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
+| GET | `/api/comanda/my-history` | logado | `GetMyHistory` (131) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
+| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (415) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
+| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (428) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
+| GET | `/api/comanda/{id:guid}` | AdminOnly | `GetById` (122) | — | — |
+| DELETE | `/api/comanda/{id:guid}/apply-points` | logado | `RemovePoints` (308) | `comandaApi.removePoints` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
+| POST | `/api/comanda/{id:guid}/apply-points` | logado | `ApplyPoints` (286) | `comandaApi.applyPoints` | `app/cliente/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/cancel` | AdminOnly | `Cancel` (228) | `comandaApi.cancel` | `app/admin/dashboard/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/close` | AdminOnly | `Close` (202) | `comandaApi.close` | `app/admin/dashboard/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/editar` | AdminOnly | `EditarComanda` (270) | `comandaApi.editar` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/estornar` | AdminOnly | `Estornar` (243) | `comandaApi.estornar` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/items` | logado | `AddItem` (153) | `comandaApi.addItem` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
+| DELETE | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `RemoveItem` (172) | `comandaApi.removeItem` | `app/admin/dashboard/page.tsx` |
+| PATCH | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `UpdateItem` (184) | `comandaApi.updateItem` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (329) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (404) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
 
 ## ContasReceber
 

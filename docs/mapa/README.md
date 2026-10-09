@@ -132,6 +132,14 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
   os clientes). Use `AddPolicy` com partição por IP ou por usuário.
 - A loja inteira sai pelo mesmo IP (wi-fi): limite de quem está logado é por usuário. `UseRateLimiter` fica
   **depois** de `UseAuthentication`, senão ninguém está identificado e tudo cai no IP.
+- Senha errada: o bloqueio é **por conta** (`Services/Implementations/ProtecaoLogin.cs`, colunas
+  `users.falhas_login` / `login_bloqueado_ate`), com cookie de "dispositivo conhecido" que nunca trava. O limite
+  por IP de login (`"login"`, 100/min) é só teto contra robô. Login novo com senha? Use `ConferirSenhaAsync`.
+- **Entrar com Google**: `Services/Implementations/LoginGoogle.cs` + `AuthService.LoginGoogleAsync`; botão em
+  `frontend/components/GoogleLoginButton.tsx` (some sozinho sem Client ID). Liga com `GoogleAuth:ClientId`
+  (prod: `GOOGLE_CLIENT_ID` no `.env` da VPS). Só clientes; liga a conta pelo e-mail verificado (`users.google_sub`).
+- **QR Code da mesa** (`QuickLoginAsync`): nunca entra em conta com senha nem da equipe, exige WhatsApp (e CPF, se o
+  cadastro tiver) iguais ao cadastro e não sobrescreve nada. Quem tem senha abre comanda por `POST /api/comanda/abrir-na-mesa`.
 - Teste: `python scripts/carga-liguinha.py --jogadores 32` (só localhost; cria e apaga o campeonato de teste).
 
 ### Notificações pro cliente/admin

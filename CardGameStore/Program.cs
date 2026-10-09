@@ -50,6 +50,7 @@ var mongoSettings = builder.Configuration.GetSection("MongoDbSettings").Get<Mong
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
+builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("GoogleAuth"));
 builder.Services.AddOptions<TenantErpIntegrationOptions>()
     .Bind(builder.Configuration.GetSection(TenantErpIntegrationOptions.SectionName))
     .Validate(options => !options.Enabled || options.IsConfigured,
@@ -176,8 +177,10 @@ builder.Services.AddAuthorization(options =>
 // por minuto somando TODOS os clientes — no dia de torneio, 16 de 24 jogadores
 // tomavam 429 ao entrar (scripts/carga-liguinha.py).
 //
-// "auth"    → login, cadastro, senha: 30/min por IP. A loja inteira sai pelo mesmo
-//             IP; com BCrypt, 30/min ainda torna força bruta inviável.
+// "login"   → login com senha: 100/min por IP, só teto contra robô. Quem protege a
+//             senha é o bloqueio POR CONTA (ProtecaoLogin.cs), que não trava a loja
+//             inteira quando um cliente erra a senha no wi-fi compartilhado.
+// "auth"    → cadastro, CPF, senha esquecida, QR Code: 30/min por IP.
 // "sessao"  → renovação de sessão (/auth/refresh): 120/min por IP. Token aleatório
 //             de 256 bits, não há o que adivinhar — o limite é só contra abuso.
 // "api"     → endpoints públicos sensíveis: 200/min por IP.
@@ -223,6 +226,7 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit  = 0, // sem fila — rejeita imediatamente
             });
 
+    options.AddPolicy("login",  ctx => PorIp(ctx, 100));
     options.AddPolicy("auth",   ctx => PorIp(ctx, 30));
     options.AddPolicy("sessao", ctx => PorIp(ctx, 120));
     options.AddPolicy("api",    ctx => PorIp(ctx, 200));

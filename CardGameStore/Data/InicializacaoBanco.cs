@@ -37,6 +37,11 @@ public static class InicializacaoBanco
         "ALTER TABLE championship_participants ADD COLUMN desistiu_na_rodada INTEGER NULL;",
         "ALTER TABLE timers ADD COLUMN championship_id TEXT NULL;",
         "ALTER TABLE timers ADD COLUMN rodada INTEGER NULL;",
+        "ALTER TABLE users ADD COLUMN falhas_login INTEGER NOT NULL DEFAULT 0;",
+        "ALTER TABLE users ADD COLUMN login_bloqueado_ate TEXT NULL;",
+        "ALTER TABLE users ADD COLUMN google_sub TEXT NULL;",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_google_sub ON users (google_sub) WHERE google_sub IS NOT NULL;",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_championships_codigo_entrada ON championships (codigo_entrada) WHERE codigo_entrada IS NOT NULL;",
     ];
 
     public static async Task ExecutarAsync(IServiceProvider services, bool useSqlite)

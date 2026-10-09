@@ -10,7 +10,8 @@ namespace CardGameStore.Services.Interfaces;
 public interface IAuthService
 {
     /// <summary>Login completo (Admin / jogadores de campeonato).</summary>
-    Task<AuthResponse> LoginAsync(LoginRequest request);
+    /// <param name="dispositivo">Cookie de dispositivo conhecido: nele a conta não fica travada por senha errada.</param>
+    Task<AuthResponse> LoginAsync(LoginRequest request, string? dispositivo = null);
 
     /// <summary>
     /// Login rápido via QR Code (Customer).
@@ -43,7 +44,16 @@ public interface IAuthService
     Task<AuthResponse> SetupAccountAsync(SetupAccountRequest request);
 
     /// <summary>Login de cliente pelo site (email + senha).</summary>
-    Task<AuthResponse> ClientLoginAsync(ClientLoginRequest request);
+    Task<AuthResponse> ClientLoginAsync(ClientLoginRequest request, string? dispositivo = null);
+
+    /// <summary>Entrar com Google (Services/Implementations/LoginGoogle.cs). Cria ou liga a conta pelo e-mail verificado.</summary>
+    Task<AuthResponse> LoginGoogleAsync(LoginGoogleRequest request);
+
+    /// <summary>Conta do Google completa WhatsApp (obrigatório) e CPF (opcional).</summary>
+    Task CompletarCadastroGoogleAsync(Guid userId, CompletarCadastroGoogleRequest request);
+
+    /// <summary>Client ID público do Google, ou null se o login com Google está desligado.</summary>
+    string? GoogleClientId { get; }
 
     /// <summary>Cria uma conta nova de cliente pelo site, sem depender de CPF pré-cadastrado.</summary>
     Task<AuthResponse> RegisterAsync(RegisterRequest request);

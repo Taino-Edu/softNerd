@@ -29,6 +29,8 @@ public class AuthService : IAuthService
     private readonly IComandaService       _comandaService;
     private readonly IEmailService         _email;
     private readonly IHttpContextAccessor  _http;
+    private readonly IValidadorGoogle      _google;
+    private readonly GoogleAuthSettings    _googleCfg;
 
     public AuthService(
         AppDbContext db,
@@ -36,8 +38,12 @@ public class AuthService : IAuthService
         ILogger<AuthService> logger,
         IComandaService comandaService,
         IEmailService email,
-        IHttpContextAccessor http)
+        IHttpContextAccessor http,
+        IValidadorGoogle google,
+        IOptions<GoogleAuthSettings> googleCfg)
     {
+        _google         = google;
+        _googleCfg      = googleCfg.Value;
         _db             = db;
         _jwt            = jwt.Value;
         _logger         = logger;
@@ -49,18 +55,173 @@ public class AuthService : IAuthService
     // =========================================================================
     // LOGIN COMPLETO — Admin e jogadores de campeonato
     // =========================================================================
-    public async Task<AuthResponse> LoginAsync(LoginRequest request)
+    public async Task<AuthResponse> LoginAsync(LoginRequest request, string? dispositivo = null)
     {
         var user = await _db.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email && u.IsActive);
 
-        // PasswordHash pode ser null para clientes de quick-login.
-        // Verificar null antes de chamar BCrypt.Verify evita NullReferenceException.
-        if (user == null || user.PasswordHash == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            throw new UnauthorizedAccessException("E-mail ou senha inválidos.");
-
-        return await GenerateAuthResponseAsync(user);
+        await ConferirSenhaAsync(user, request.Password, dispositivo);
+        return await RespostaComDispositivoAsync(user!);
     }
+
+    /// <summary>
+    /// Confere a senha com o bloqueio por conta (ProtecaoLogin.cs). Lança
+    /// UnauthorizedAccessException (senha errada / e-mail que não existe) ou
+    /// ContaBloqueadaException (travada pra aparelho desconhecido).
+    /// </summary>
+    private async Task ConferirSenhaAsync(User? user, string senha, string? dispositivo)
+    {
+        // E-mail inexistente ou conta sem senha (quick-login): compara com um hash falso pra
+        // demorar o mesmo tanto — tempo de resposta não pode dizer quem tem conta.
+        if (user is null || user.PasswordHash is null)
+        {
+            BCrypt.Net.BCrypt.Verify(senha, ProtecaoLogin.HashFalso);
+            throw new UnauthorizedAccessException("E-mail ou senha inválidos.");
+        }
+
+        // Contagem sempre do banco: o objeto pode ter vindo de antes (mesmo contexto) com valor velho
+        var estado = await _db.Users.AsNoTracking().Where(u => u.Id == user.Id)
+            .Select(u => new { u.FalhasLogin, u.LoginBloqueadoAte }).FirstAsync();
+        user.FalhasLogin = estado.FalhasLogin;
+        user.LoginBloqueadoAte = estado.LoginBloqueadoAte;
+
+        var conhecido = ProtecaoLogin.DispositivoValido(dispositivo, user.Id, user.PasswordHash, _jwt.SecretKey);
+        var agora = DateTime.UtcNow;
+        // Travada: nem confere a senha (senão o bloqueio vira oráculo de "acertou")
+        if (!conhecido && user.LoginBloqueadoAte > agora)
+            throw new ContaBloqueadaException(user.LoginBloqueadoAte.Value);
+
+        if (BCrypt.Net.BCrypt.Verify(senha, user.PasswordHash))
+        {
+            if (user.FalhasLogin != 0 || user.LoginBloqueadoAte is not null)
+                await _db.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s
+                    .SetProperty(u => u.FalhasLogin, 0)
+                    .SetProperty(u => u.LoginBloqueadoAte, (DateTime?)null));
+            user.FalhasLogin = 0;
+            user.LoginBloqueadoAte = null;
+            return;
+        }
+
+        // Conta atômica: duas tentativas erradas ao mesmo tempo somam duas
+        await _db.Users.Where(u => u.Id == user.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.FalhasLogin, u => u.FalhasLogin + 1));
+        var falhas = await _db.Users.AsNoTracking().Where(u => u.Id == user.Id).Select(u => u.FalhasLogin).FirstAsync();
+        user.FalhasLogin = falhas;
+        var trava = ProtecaoLogin.Bloqueio(falhas);
+        if (trava > TimeSpan.Zero && !conhecido)
+        {
+            var ate = agora + trava;
+            await _db.Users.Where(u => u.Id == user.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.LoginBloqueadoAte, ate));
+            user.LoginBloqueadoAte = ate;
+            _logger.LogWarning("Conta {UserId} bloqueada por {Min} min após {Falhas} senhas erradas.",
+                user.Id, (int)trava.TotalMinutes, falhas);
+            throw new ContaBloqueadaException(ate);
+        }
+        throw new UnauthorizedAccessException("E-mail ou senha inválidos.");
+    }
+
+    // =========================================================================
+    // ENTRAR COM GOOGLE (LoginGoogle.cs)
+    // =========================================================================
+
+    public string? GoogleClientId => _googleCfg.Ativo ? _googleCfg.ClientId.Trim() : null;
+
+    public async Task<AuthResponse> LoginGoogleAsync(LoginGoogleRequest request)
+    {
+        if (!_googleCfg.Ativo) throw new KeyNotFoundException("Login com Google desligado.");
+
+        var g = await _google.ValidarAsync(request.Credential, _googleCfg.ClientId.Trim())
+            ?? throw new UnauthorizedAccessException("Não deu pra confirmar a conta do Google. Tente de novo.");
+        // E-mail não verificado pelo Google não prova nada: não liga conta nem cria cadastro
+        if (!g.EmailVerificado || string.IsNullOrWhiteSpace(g.Email))
+            throw new LoginGoogleRecusadoException("Essa conta do Google não tem o e-mail confirmado.");
+
+        var email = Identificadores.NormalizarEmail(g.Email)!;
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.GoogleSub == g.Sub)
+                ?? await _db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email);
+
+        if (user is null)
+        {
+            user = new User
+            {
+                Name      = string.IsNullOrWhiteSpace(g.Nome) ? email.Split('@')[0] : g.Nome.Trim(),
+                Email     = email,
+                GoogleSub = g.Sub,
+                Role      = UserRole.Customer,
+                IsActive  = true,
+            };
+            _db.Users.Add(user);
+            _logger.LogInformation("Nova conta criada pelo Google: {Email}", MaskEmail(email));
+        }
+        else
+        {
+            if (user.Role != UserRole.Customer)
+                throw new LoginGoogleRecusadoException("Contas da equipe entram com e-mail e senha.");
+            if (!user.IsActive)
+                throw new UnauthorizedAccessException("Conta desativada. Fale com a loja.");
+            // Já ligada a OUTRA conta Google (mesmo e-mail, sub diferente): não troca sozinho
+            if (user.GoogleSub is not null && user.GoogleSub != g.Sub)
+                throw new LoginGoogleRecusadoException("Esse e-mail já está ligado a outra conta do Google. Fale com a loja.");
+            if (user.GoogleSub is null)
+            {
+                // O Google garante que essa pessoa é dona do e-mail: liga sem criar cadastro duplicado.
+                // Mas o cadastro pelo site NÃO confirma e-mail: alguém pode ter criado conta com o
+                // e-mail dela e uma senha própria, esperando ela entrar com Google pra dividir a
+                // conta. Por isso, ao ligar, a senha antiga é apagada e toda sessão aberta cai —
+                // fica só quem provou ser dona do e-mail. Ela entra pelo Google ou cria senha nova
+                // em "Esqueci minha senha".
+                user.GoogleSub = g.Sub;
+                var tinhaSenha = user.PasswordHash is not null;
+                user.PasswordHash = null;
+                user.RefreshToken = null;
+                user.RefreshTokenExpiry = null;
+                await RevogarTodasAsSessoesAsync(user.Id);
+                _logger.LogInformation("Conta {UserId} ligada ao Google (senha antiga {Senha}, sessões revogadas).",
+                    user.Id, tinhaSenha ? "apagada" : "não havia");
+            }
+            // Entrou provando a identidade: zera as senhas erradas
+            user.FalhasLogin = 0;
+            user.LoginBloqueadoAte = null;
+            user.UpdatedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+
+        Guid? comandaId = null;
+        if (!string.IsNullOrWhiteSpace(request.TableIdentifier))
+            comandaId = (await _comandaService.OpenComandaAsync(user.Id, request.TableIdentifier)).Id;
+
+        return await GenerateAuthResponseAsync(user, comandaId) with
+        {
+            Dispositivo = ProtecaoLogin.GerarDispositivo(user.Id, user.PasswordHash, _jwt.SecretKey),
+        };
+    }
+
+    public async Task CompletarCadastroGoogleAsync(Guid userId, CompletarCadastroGoogleRequest request)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsActive)
+            ?? throw new KeyNotFoundException("Usuário não encontrado.");
+        if (user.GoogleSub is null)
+            throw new InvalidOperationException("Essa conta não entrou com Google.");
+
+        var whatsApp = Identificadores.NormalizarWhatsApp(request.WhatsApp)
+            ?? throw new InvalidOperationException("Informe um WhatsApp válido.");
+        var cpf = Identificadores.NormalizarCpf(request.Cpf);
+        await GarantirIdentificadoresLivresAsync(_db, null, cpf, whatsApp, ignorarUserId: userId);
+
+        user.WhatsApp = whatsApp;
+        if (cpf is not null && user.Cpf is null) user.Cpf = cpf;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("Cadastro do Google completado pelo cliente {UserId}", userId);
+    }
+
+    /// <summary>Login com senha deu certo: sessão + cookie de dispositivo conhecido (renovado a cada login).</summary>
+    private async Task<AuthResponse> RespostaComDispositivoAsync(User user) =>
+        await GenerateAuthResponseAsync(user) with
+        {
+            Dispositivo = ProtecaoLogin.GerarDispositivo(user.Id, user.PasswordHash, _jwt.SecretKey),
+        };
 
     // =========================================================================
     // LOGIN RÁPIDO — Customer via QR Code (CPF + WhatsApp)
@@ -71,17 +232,10 @@ public class AuthService : IAuthService
         // ponto na outra, e a busca crua criava um cadastro novo em vez de reencontrar o dele.
         var cpf      = Identificadores.NormalizarCpf(request.Cpf);
         var whatsApp = Identificadores.NormalizarWhatsApp(request.WhatsApp);
-        var hasCpf   = cpf is not null;
 
-        // Busca por CPF (preferido) ou WhatsApp quando CPF não informado
-        var user = hasCpf
-            ? await _db.Users.FirstOrDefaultAsync(u => u.Cpf != null
-                && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf)
-            : await _db.Users.FirstOrDefaultAsync(u => u.IsActive && u.WhatsApp != null
-                && u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
-                             .Replace("-", "").Replace("+", "") == whatsApp);
+        var user = await AcharContaDaMesaAsync(cpf, whatsApp);
 
-        if (user == null)
+        if (user is null)
         {
             user = new User
             {
@@ -92,37 +246,113 @@ public class AuthService : IAuthService
                 IsActive = true
             };
             _db.Users.Add(user);
-            _logger.LogInformation("Novo cliente criado via QR Code: {Name}", request.Name);
+            try
+            {
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("Novo cliente criado via QR Code: {Name}", request.Name);
+            }
+            catch (DbUpdateException)
+            {
+                // Corrida: outra mesa criou a mesma conta no mesmo instante. Ela agora existe
+                // e passa pela mesma conferência de qualquer conta existente.
+                _db.ChangeTracker.Clear();
+                user = await AcharContaDaMesaAsync(cpf, whatsApp) ?? throw new InvalidOperationException("Não deu pra criar o cadastro. Tente de novo.");
+                await ConferirContaDaMesaAsync(user, cpf, whatsApp);
+            }
         }
         else
         {
-            user.Name      = request.Name;
-            user.WhatsApp  = whatsApp ?? user.WhatsApp;
-            // Preenche CPF caso tenha sido informado agora e estava vazio
-            if (hasCpf && user.Cpf == null) user.Cpf = cpf;
-            user.UpdatedAt = DateTime.UtcNow;
-        }
-
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            _db.ChangeTracker.Clear();
-            user = hasCpf
-                ? await _db.Users.FirstOrDefaultAsync(u => u.IsActive && u.Cpf != null
-                    && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf)
-                : await _db.Users.FirstOrDefaultAsync(u => u.IsActive && u.WhatsApp != null
-                    && u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
-                                 .Replace("-", "").Replace("+", "") == whatsApp);
-            if (user == null) throw;
+            await ConferirContaDaMesaAsync(user, cpf, whatsApp);
         }
 
         var comanda = await _comandaService.OpenComandaAsync(user.Id, request.TableIdentifier);
         _logger.LogInformation("Comanda {ComandaId} associada ao quick-login de {Name}", comanda.Id, user.Name);
 
         return await GenerateAuthResponseAsync(user, comanda.Id);
+    }
+
+    /// <summary>CPF informado manda; sem CPF, procura pelo WhatsApp.</summary>
+    private async Task<User?> AcharContaDaMesaAsync(string? cpf, string? whatsApp)
+    {
+        if (cpf is not null)
+        {
+            var porCpf = await _db.Users.FirstOrDefaultAsync(u => u.Cpf != null
+                && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf);
+            if (porCpf is not null) return porCpf;
+        }
+        return whatsApp is null ? null : await _db.Users.FirstOrDefaultAsync(u => u.WhatsApp != null
+            && u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
+                         .Replace("-", "").Replace("+", "") == whatsApp);
+    }
+
+    /// <summary>
+    /// QR Code da mesa entra SEM senha — então só vale pra conta que nunca teve senha,
+    /// e os dados têm que bater com o cadastro. Antes bastava o CPF: quem soubesse o CPF
+    /// de alguém entrava na conta dele (até de operador/admin) e ainda trocava o nome e
+    /// o WhatsApp. Regras:
+    ///   - conta de operador/admin, ou cliente com senha → entra com e-mail e senha
+    ///   - WhatsApp tem que ser o do cadastro (cadastro sem WhatsApp → balcão)
+    ///   - conta com CPF exige o CPF (só o WhatsApp não basta)
+    ///   - nada do cadastro é sobrescrito; CPF só é preenchido se estava vazio
+    ///   - dado que não bate conta como senha errada (bloqueio por conta, ProtecaoLogin.cs)
+    /// </summary>
+    private async Task ConferirContaDaMesaAsync(User user, string? cpf, string? whatsApp)
+    {
+        // Conta com credencial forte (senha OU Google ligado) só entra provando ela. Ligar o
+        // Google apaga a senha — sem o GoogleSub aqui, a conta voltaria a abrir só com CPF+WhatsApp.
+        if (user.Role != UserRole.Customer || user.PasswordHash is not null || user.GoogleSub is not null || !user.IsActive)
+            throw new QuickLoginRecusadoException(
+                user.GoogleSub is not null && user.PasswordHash is null
+                    ? "Essa conta entra com o Google. Toque em \"Continuar com o Google\" pra abrir a comanda."
+                    : "Essa conta tem senha. Entre com seu e-mail e senha pra abrir a comanda.",
+                "precisaSenha");
+
+        var agora = DateTime.UtcNow;
+        var estado = await _db.Users.AsNoTracking().Where(u => u.Id == user.Id)
+            .Select(u => new { u.FalhasLogin, u.LoginBloqueadoAte }).FirstAsync();
+        if (estado.LoginBloqueadoAte > agora)
+            throw new ContaBloqueadaException(estado.LoginBloqueadoAte.Value);
+
+        if (string.IsNullOrEmpty(user.WhatsApp))
+            throw new QuickLoginRecusadoException(
+                "Não conseguimos confirmar esse cadastro pelo celular. Fale com o balcão.", "balcao");
+
+        var cpfDoCadastro = Identificadores.NormalizarCpf(user.Cpf);
+        var bate = Identificadores.NormalizarWhatsApp(user.WhatsApp) == whatsApp
+                && (cpfDoCadastro is null || cpfDoCadastro == cpf);
+        if (!bate)
+        {
+            await _db.Users.Where(u => u.Id == user.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.FalhasLogin, u => u.FalhasLogin + 1));
+            var falhas = await _db.Users.AsNoTracking().Where(u => u.Id == user.Id).Select(u => u.FalhasLogin).FirstAsync();
+            var trava = ProtecaoLogin.Bloqueio(falhas);
+            if (trava > TimeSpan.Zero)
+            {
+                var ate = agora + trava;
+                await _db.Users.Where(u => u.Id == user.Id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.LoginBloqueadoAte, ate));
+                _logger.LogWarning("Conta {UserId} bloqueada no QR Code após {Falhas} tentativas com dados que não batem.", user.Id, falhas);
+                throw new ContaBloqueadaException(ate);
+            }
+            throw new QuickLoginRecusadoException(
+                cpfDoCadastro is not null && cpf is null
+                    ? "Informe também o seu CPF pra confirmar o cadastro."
+                    : "Os dados não batem com o cadastro. Confira o CPF e o WhatsApp ou fale com o balcão.",
+                cpfDoCadastro is not null && cpf is null ? "precisaCpf" : "naoBate");
+        }
+
+        if (estado.FalhasLogin != 0)
+            await _db.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.FalhasLogin, 0).SetProperty(u => u.LoginBloqueadoAte, (DateTime?)null));
+
+        // Conta antiga sem CPF: completa (só se ninguém mais usa esse CPF — índice único protege)
+        if (cpfDoCadastro is null && cpf is not null)
+        {
+            user.Cpf = cpf;
+            user.UpdatedAt = DateTime.UtcNow;
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException) { _db.Entry(user).State = EntityState.Unchanged; user.Cpf = null; }
+        }
     }
 
     // =========================================================================
@@ -495,15 +725,13 @@ public class AuthService : IAuthService
                 "Este WhatsApp já tem cadastro. Faça login ou use \"Esqueci minha senha\".");
     }
 
-    public async Task<AuthResponse> ClientLoginAsync(ClientLoginRequest request)
+    public async Task<AuthResponse> ClientLoginAsync(ClientLoginRequest request, string? dispositivo = null)
     {
         var user = await _db.Users.FirstOrDefaultAsync(
             u => u.Email == request.Email.ToLowerInvariant() && u.IsActive && u.Role == UserRole.Customer);
 
-        if (user == null || user.PasswordHash == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            throw new UnauthorizedAccessException("E-mail ou senha inválidos.");
-
-        return await GenerateAuthResponseAsync(user);
+        await ConferirSenhaAsync(user, request.Password, dispositivo);
+        return await RespostaComDispositivoAsync(user!);
     }
 
     // =========================================================================
@@ -550,6 +778,8 @@ public class AuthService : IAuthService
         user.PasswordHash             = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         user.PasswordResetToken       = null;
         user.PasswordResetTokenExpiry = null;
+        user.FalhasLogin              = 0;    // senha nova: destrava
+        user.LoginBloqueadoAte        = null;
         user.RefreshToken             = null; // invalida sessões ativas
         user.RefreshTokenExpiry       = null;
         user.UpdatedAt                = DateTime.UtcNow;
