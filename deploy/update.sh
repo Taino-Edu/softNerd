@@ -63,39 +63,38 @@ cd "$APP_DIR/deploy"
 docker compose -f docker-compose.prod.yml build --build-arg CACHEBUST="$(date +%s)"
 
 # Nginx primeiro: é ele que manda o tráfego pra cópia nova durante a troca, então a
-# config nova (se mudou) tem que estar no ar antes.
+# config nova tem que estar no ar antes.
 #
-# Recriar o nginx corta as conexões abertas por ~1 s, então só recria se a config
-# que ele está usando difere da que está em deploy/nginx/. Precisa ser recriado (e não `nginx -s reload`):
-# nginx.conf/locations.conf entram como bind mount de ARQUIVO, que o Docker prende
-# ao inode; o `git pull` escreve outro arquivo e renomeia por cima (inode novo), e
-# o container continua vendo o antigo.
+# A pasta deploy/nginx/ é montada inteira em /etc/nginx/snippets (compose; o
+# conf.d/default.conf é só a entrada fixa nginx/entrada.conf), então o container sempre
+# enxerga os arquivos atuais: basta validar e dar "nginx -s reload", que troca a config
+# sem derrubar nenhuma conexão. Config quebrada: o "nginx -t" falha, o reload não
+# acontece, o deploy para e o nginx segue no ar com a config anterior.
 #
-# Antes de recriar, valida a config num container descartável — esse sim pega o
-# inode atual. Config quebrada aborta o deploy com o nginx antigo ainda no ar,
-# em vez de derrubar o site num container que não sobe.
-# Compara o que o nginx está USANDO com o arquivo em disco (e não o git diff do pull:
-# um "git pull" feito à mão antes deixaria o pull daqui vazio e o nginx com a config velha).
-nginx_igual_ao_disco() {
-    local par arquivo dentro
-    for par in "nginx.conf:/etc/nginx/conf.d/default.conf" "locations.conf:/etc/nginx/snippets/locations.conf"; do
-        arquivo="${par%%:*}"; dentro="${par#*:}"
-        docker exec santuarionerd_nginx cat "$dentro" 2>/dev/null | cmp -s - "nginx/$arquivo" || return 1
-    done
-}
-if nginx_igual_ao_disco; then
-    echo -e "${GREEN}   nginx sem mudança — mantido no ar${NC}"
+# Uma vez só, na troca de montagem (antes era arquivo por arquivo, que prendia o
+# container ao arquivo antigo): o nginx é recriado. Valida antes num container
+# descartável e solta as portas em 3 s (stop_grace_period).
+MONTAGENS_NGINX=$(docker inspect santuarionerd_nginx --format '{{range .Mounts}}{{println .Destination}}{{end}}' 2>/dev/null || true)
+if echo "$MONTAGENS_NGINX" | grep -qx "/etc/nginx/snippets"; then
+    echo -e "${YELLOW}🔁 Validando e recarregando o nginx...${NC}"
+    if docker exec santuarionerd_nginx nginx -t; then
+        docker exec santuarionerd_nginx nginx -s reload
+        echo -e "${GREEN}   nginx recarregado com a config atual (sem parar)${NC}"
+    else
+        echo -e "${YELLOW}   ⚠️  config do nginx inválida — deploy abortado, nginx segue com a config anterior${NC}"
+        exit 1
+    fi
 else
-    echo -e "${YELLOW}🔁 config do nginx mudou — validando...${NC}"
+    echo -e "${YELLOW}🔁 nginx na montagem antiga — validando e recriando (uma vez só)...${NC}"
     if docker run --rm \
-        -v "$PWD/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
-        -v "$PWD/nginx/locations.conf:/etc/nginx/snippets/locations.conf:ro" \
+        -v "$PWD/nginx/entrada.conf:/etc/nginx/conf.d/default.conf:ro" \
+        -v "$PWD/nginx:/etc/nginx/snippets:ro" \
         -v "$PWD/nginx/certs:/etc/nginx/certs:ro" \
         nginx:1.27-alpine nginx -t; then
         docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx
-        echo -e "${GREEN}   nginx recriado com a config atual${NC}"
+        echo -e "${GREEN}   nginx recriado na montagem nova${NC}"
     else
-        echo -e "${YELLOW}   ⚠️  nginx.conf inválido — deploy abortado, nginx anterior mantido no ar${NC}"
+        echo -e "${YELLOW}   ⚠️  config do nginx inválida — deploy abortado, nginx anterior mantido no ar${NC}"
         exit 1
     fi
 fi
