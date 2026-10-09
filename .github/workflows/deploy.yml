@@ -1,9 +1,13 @@
 # =============================================================================
-# Deploy produção — SÓ À MÃO (Actions → "Deploy produção" → Run workflow)
+# Deploy produção — começa SOZINHO depois do merge e ESPERA a aprovação do Taino
 #
-# Faz o mesmo que se fazia por SSH: roda deploy/update.sh na VPS (git pull do
-# main + docker compose build/up + nginx validado). Depois confere o /health e
-# passa o smoke (scripts/smoke.py) — mesmo robô que vigia produção a cada 30 min.
+# Fluxo: merge no main → CI verde → este workflow abre e fica "Waiting" no ambiente
+# "producao" → o GitHub avisa (e-mail/app) → Aprovar → sobe. Aprovar é escolher a
+# hora: não aprovou, não sobe. Também dá pra rodar à mão (Actions → Run workflow).
+#
+# Roda deploy/update.sh na VPS (backup dos bancos → git pull → build com o site no
+# ar → troca sem queda, deploy/rollout.sh). Enquanto isso o vigia mede se algum
+# pedido falhou; depois confere o /health e passa o smoke (scripts/smoke.py).
 #
 # Proteções:
 #   - só roda a partir do main, e só se o último CI do main passou
@@ -20,6 +24,12 @@
 name: Deploy produção
 
 on:
+  # Automático: quando o CI de um push no main termina (o job só segue se passou)
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # À mão, pelo botão Run workflow
   workflow_dispatch:
 
 concurrency:
@@ -36,21 +46,42 @@ jobs:
     runs-on: ubuntu-latest
     environment: producao
     timeout-minutes: 30
-    if: github.ref == 'refs/heads/main'
+    # Automático só quando o CI foi de um push no main e passou; à mão, só do main
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     steps:
-      - name: O CI do main passou?
+      - name: O CI do main passou? (e é a última versão)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # O update.sh sobe a ÚLTIMA versão do main. Só segue se o CI dela passou —
+          # se entrou outro merge depois, o deploy dele vem logo em seguida.
+          ultimo=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" -q .sha)
           conclusao=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main \
-            --event push --limit 1 --json conclusion,headSha -q '.[0].conclusion + " " + .[0].headSha')
-          echo "Último CI do main: $conclusao"
-          case "$conclusao" in
-            "success $GITHUB_SHA") ;;
-            *) echo "::error::O CI do commit $GITHUB_SHA no main ainda não passou (ou está rodando). Deploy cancelado."; exit 1 ;;
-          esac
+            --event push --commit "$ultimo" --limit 1 --json conclusion -q '.[0].conclusion')
+          echo "Último commit do main: $ultimo — CI: ${conclusao:-ainda não terminou}"
+          if [ "$conclusao" != "success" ]; then
+            echo "::error::O CI do último commit do main ($ultimo) não passou (ou está rodando). Deploy cancelado."
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Começar a vigiar o site (mede o deploy pedido a pedido)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          # Fica em segundo plano até o passo "Resultado do vigia". 0,5/s por rota:
+          # bem abaixo do limite de 200/min por IP da API (o smoke usa o mesmo IP).
+          nohup python scripts/vigia-deploy.py --segundos 1200 --por-segundo 0.5             --parar-quando-existir /tmp/vigia-parar > /tmp/vigia.txt 2>&1 &
 
       - name: Preparar a chave do deploy
         env:
@@ -94,9 +125,15 @@ jobs:
           echo "::error::A API não respondeu 200 no /health em 5 minutos. Veja: cd /opt/santuarionerd/deploy && docker compose -f docker-compose.prod.yml logs api --since 10m"
           exit 1
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: Resultado do vigia (o site caiu durante o deploy?)
+        if: always()
+        run: |
+          touch /tmp/vigia-parar
+          for i in $(seq 1 30); do grep -qE "nenhuma falha|pedidos falharam" /tmp/vigia.txt 2>/dev/null && break; sleep 1; done
+          cat /tmp/vigia.txt
+          { echo "### Vigia durante o deploy"; echo; sed -n '/^| Rota/,$p' /tmp/vigia.txt; } >> "$GITHUB_STEP_SUMMARY"
+          # Avisa sem derrubar o job: o deploy em si pode ter dado certo
+          grep -q "pedidos falharam" /tmp/vigia.txt && echo "::warning::Algum pedido falhou durante o deploy — veja a tabela do vigia no resumo" || true
 
       - name: Smoke em produção
         env:

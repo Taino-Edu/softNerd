@@ -216,7 +216,7 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
 | PR, main e toda segunda | varredura de segurança do código (C# e TS) | `.github/workflows/codeql.yml` |
 | Toda semana | PRs de atualização de dependências (agrupados) | `.github/dependabot.yml` |
 | `main` | só entra por PR com o CI verde; sem push direto nem `--force` (vale pro admin também) | proteção de branch |
-| Deploy | à mão + aprovação; só do `main` com CI verde; roda o `update.sh` (troca sem queda), espera o `/health` e passa o smoke | `.github/workflows/deploy.yml`, `deploy/rollout.sh` |
+| Deploy | **abre sozinho** quando o CI do `main` passa e espera a aprovação (aprovar = escolher a hora; também dá pra rodar à mão); só sobe a última versão do `main` com CI verde; `update.sh` faz **backup dos bancos antes** (sem backup, sem deploy), troca sem queda, e o vigia mede pedido a pedido; depois `/health` e smoke | `.github/workflows/deploy.yml`, `deploy/update.sh`, `deploy/rollout.sh` |
 | Produção | **robô de smoke a cada 30 min**; se cair, abre alerta (issue `smoke`, chega por e-mail) e fecha quando volta | `.github/workflows/smoke.yml`, `scripts/smoke.py` |
 | Repositório | varredura de segredos com bloqueio do push; alertas e correções automáticas de dependências | configuração do GitHub |
 
@@ -237,6 +237,9 @@ Regras que isso cria:
   `cd /opt/santuarionerd/deploy && docker compose -f docker-compose.prod.yml logs api --since 10m`.
 - Telão e celulares da liguinha reconectam sozinhos na troca (o tempo real cai e volta em segundos).
 - Medir uma troca: `python scripts/vigia-deploy.py --segundos 120` durante o deploy (só lê; pode em produção).
+- Todo deploy faz backup dos bancos antes (`deploy/backup.sh` → `backups/`, 7 dias). Emergência sem backup:
+  `SEM_BACKUP=1 bash deploy/update.sh`.
+- O nginx só é recriado se a config que ele está **usando** difere da do disco (corta conexões por ~1 s).
 - Voltar uma versão: `bash deploy/update.sh <commit>` (sem argumento volta pro `main`).
   Voltar pro deploy antigo (derruba e sobe, ~15 s fora): `DEPLOY_AZUL_VERDE=0 bash deploy/update.sh`.
 

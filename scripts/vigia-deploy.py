@@ -9,15 +9,18 @@ Só lê (GET e a negociação do tempo real): pode rodar contra produção.
 
 Uso:
   python scripts/vigia-deploy.py --segundos 120                       # produção
+  (o deploy.yml roda sozinho em todo deploy e põe o resultado no resumo)
   python scripts/vigia-deploy.py --site http://localhost:8088 --host santuarionerd.com.br
 Rode e, em outro terminal, dispare o deploy.
 """
-import argparse, collections, threading, time, urllib.error, urllib.request
+import argparse, collections, os, threading, time, urllib.error, urllib.request
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--site', default='https://santuarionerd.com.br')
 ap.add_argument('--host', default=None, help='cabeçalho Host (teste local atrás do nginx)')
-ap.add_argument('--segundos', type=int, default=120)
+ap.add_argument('--segundos', type=int, default=120, help='tempo máximo vigiando')
+ap.add_argument('--parar-quando-existir', default=None,
+                help='encerra antes do tempo quando este arquivo aparecer (o deploy.yml cria ao terminar)')
 ap.add_argument('--por-segundo', type=float, default=1,
                 help='pedidos por segundo em cada rota (acima de ~1 a API barra o IP com 429: 200/min)')
 args = ap.parse_args()
@@ -53,9 +56,13 @@ def pedir(metodo, caminho):
         return 0, (time.perf_counter() - t0) * 1000
 
 
+def acabou():
+    return time.time() >= fim or (args.parar_quando_existir and os.path.exists(args.parar_quando_existir))
+
+
 def vigiar(nome, metodo, caminho):
     intervalo = 1 / args.por_segundo
-    while time.time() < fim:
+    while not acabou():
         t = time.time()
         st, ms = pedir(metodo, caminho)
         with trava: resultados[nome].append((t, st, ms))

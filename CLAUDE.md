@@ -5,8 +5,9 @@ precisa mudar junto (banco sem migrations, fuso de Brasília, formas de pagament
 As listas de endpoints, telas, componentes e tabelas ficam em `docs/mapa/` e são geradas por
 `python scripts/gerar-mapa.py` — rode de novo depois de criar/mudar endpoint, tela, componente ou tabela.
 
-Fluxo: branch → PR → CI verde (testes, Postgres de verdade, carga, Docker, CodeQL) → merge → deploy pelo
-workflow "Deploy produção" (aprovação) → robô de smoke vigia a cada 30 min. Sem push direto no `main`.
+Fluxo: branch → PR → CI verde (testes, Postgres de verdade, carga, Docker, CodeQL) → merge → o deploy abre
+sozinho e espera a aprovação do Taino → backup dos bancos → troca sem queda (`deploy/rollout.sh`) → smoke →
+robô de smoke vigia a cada 30 min. Sem push direto no `main`.
 
 Regras que mais quebraram até hoje:
 - SQL de inicialização fica em `CardGameStore/Data/Inicializacao/` (postgres.sql + sqlite.sql) e roda em todo
