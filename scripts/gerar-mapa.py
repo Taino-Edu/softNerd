@@ -38,6 +38,12 @@ def arquivos(base: Path, exts):
                 yield Path(dirpath) / f
 
 
+def _posix(p: Path) -> str:
+    # Ordena pelo texto do caminho: Path no Windows compara sem maiúscula/minúscula e no
+    # Linux (CI) com — a ordem do mapa mudava de máquina pra máquina.
+    return p.as_posix()
+
+
 def rel(p: Path) -> str:
     return p.relative_to(RAIZ).as_posix()
 
@@ -69,7 +75,7 @@ def nome_auth(m) -> str:
 
 def endpoints_backend():
     eps = []
-    for arq in sorted((BACK / 'Controllers').glob('*.cs')):
+    for arq in sorted((BACK / 'Controllers').glob('*.cs'), key=_posix):
         linhas = ler(arq).splitlines()
         prefixo, auth_classe, controller = '', '', None
         pendentes = []          # atributos acumulados antes da próxima declaração
@@ -132,7 +138,7 @@ def funcoes_api_ts():
     """lib/api/*.ts: em que objeto/função fica cada linha (ex.: crediarioApi.avisoConfig)."""
     pasta = FRONT / 'lib' / 'api'
     out = []
-    for arq in sorted(pasta.glob('*.ts')) if pasta.exists() else []:
+    for arq in sorted(pasta.glob('*.ts'), key=_posix) if pasta.exists() else []:
         linhas = ler(arq).splitlines()
         objeto, chave, mapa = None, None, []
         for l in linhas:
@@ -180,7 +186,7 @@ def usos_front(eps):
 def paginas_front():
     app = FRONT / 'app'
     out = []
-    for p in sorted(app.rglob('page.tsx')):
+    for p in sorted(app.rglob('page.tsx'), key=_posix):
         partes = [x for x in p.parent.relative_to(app).parts if not (x.startswith('(') and x.endswith(')'))]
         url = '/' + '/'.join(partes)
         txt = ler(p)
@@ -193,7 +199,7 @@ def componentes_front():
     base = FRONT / 'components'
     fontes = {rel(p): ler(p) for p in arquivos(FRONT, ('.ts', '.tsx'))}
     out = []
-    for p in sorted(base.rglob('*.tsx')):
+    for p in sorted(base.rglob('*.tsx'), key=_posix):
         nome = p.relative_to(base).with_suffix('').as_posix()
         rx = re.compile(r"""from\s+['"]@/components/""" + re.escape(nome) + r"""['"]""")
         usado = sorted(c for c, t in fontes.items() if rx.search(t) and c != rel(p))
@@ -205,7 +211,7 @@ def componentes_front():
 
 def libs_front():
     out = []
-    for p in sorted((FRONT / 'lib').rglob('*.ts')):
+    for p in sorted((FRONT / 'lib').rglob('*.ts'), key=_posix):
         txt = ler(p)
         exps = re.findall(r'export\s+(?:async\s+)?(?:function|const)\s+(\w+)', txt)
         out.append((rel(p), exps))
@@ -216,11 +222,11 @@ def libs_front():
 
 def tabelas_backend():
     # SQL de inicialização: Data/Inicializacao/*.sql + colunas do SQLite em InicializacaoBanco.cs
-    program = '\n'.join(ler(p) for p in sorted((BACK / 'Data' / 'Inicializacao').glob('*.sql')))
+    program = '\n'.join(ler(p) for p in sorted((BACK / 'Data' / 'Inicializacao').glob('*.sql'), key=_posix))
     program += '\n' + ler(BACK / 'Data' / 'InicializacaoBanco.cs')
     ctx     = ler(BACK / 'Data' / 'AppDbContext.cs')
     out = []
-    for p in sorted((BACK / 'Models').rglob('*.cs')):
+    for p in sorted((BACK / 'Models').rglob('*.cs'), key=_posix):
         txt = ler(p)
         for m in re.finditer(r'\[Table\("(\w+)"\)\]\s*public\s+class\s+(\w+)', txt):
             tabela, classe = m.group(1), m.group(2)
@@ -231,7 +237,7 @@ def tabelas_backend():
             out.append((tabela, classe, rel(p), dbset.group(1) if dbset else '—', ', '.join(ddl) or '—'))
     # MongoDB
     mongo = []
-    for p in sorted((BACK / 'Models' / 'MongoDB').glob('*.cs')) if (BACK / 'Models' / 'MongoDB').exists() else []:
+    for p in sorted((BACK / 'Models' / 'MongoDB').glob('*.cs'), key=_posix) if (BACK / 'Models' / 'MongoDB').exists() else []:
         for c in re.findall(r'public\s+class\s+(\w+)', ler(p)):
             mongo.append((c, rel(p)))
     return out, mongo

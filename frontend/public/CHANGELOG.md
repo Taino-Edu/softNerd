@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.40.0] — 2026-10-09
+
+### Corrigido
+- **Valores com ponto em mensagens do servidor**: o servidor de produção roda sem idioma configurado e escrevia dinheiro no formato americano — o cliente recebia "R$ 30.00" no WhatsApp e no e-mail do crediário, e o mesmo valia pra mensagens de erro na tela (crediário, cashback, desconto, Pix), e-mail de inscrição em campeonato e respostas do assistente. Agora todo texto pra pessoas sai "R$ 1.234,56". O Pix e a nota fiscal continuam com ponto, como os sistemas deles exigem. Achado pelo CI novo, que roda os testes no Linux
+
 ## [v1.39.5] — 2026-10-07
 
 ### Mudado

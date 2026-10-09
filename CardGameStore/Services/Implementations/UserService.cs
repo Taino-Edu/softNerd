@@ -122,7 +122,7 @@ public class UserService : IUserService
         var novoSaldo = user.BalanceInCents + request.AmountInCents;
         if (novoSaldo < 0)
             throw new InvalidOperationException(
-                $"Saldo insuficiente. Disponível: R$ {user.BalanceInCents / 100m:N2}, débito solicitado: R$ {Math.Abs(request.AmountInCents) / 100m:N2}.");
+                $"Saldo insuficiente. Disponível: {Common.Dinheiro.Brl(user.BalanceInCents / 100m)}, débito solicitado: {Common.Dinheiro.Brl(Math.Abs(request.AmountInCents) / 100m)}.");
 
         user.BalanceInCents = novoSaldo;
         user.UpdatedAt      = DateTime.UtcNow;

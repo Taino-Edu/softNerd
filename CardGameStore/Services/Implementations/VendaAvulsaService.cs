@@ -255,7 +255,7 @@ public class VendaAvulsaService : IVendaAvulsaService
         }
 
         var paymentSummary = secondPm != null
-            ? $"{request.PaymentMethod} + {secondPm} (R$ {secondAmt / 100m:N2})"
+            ? $"{request.PaymentMethod} + {secondPm} ({Common.Dinheiro.Brl(secondAmt / 100m)})"
             : request.PaymentMethod;
         _logger.LogInformation(
             "Venda avulsa {Id} registrada por {Admin}: {Count} item(ns), R$ {Total:F2} (desconto R$ {Desc:F2}), {Payment}",
@@ -387,7 +387,7 @@ public class VendaAvulsaService : IVendaAvulsaService
                         .SetProperty(u => u.UpdatedAt, DateTime.UtcNow));
                 if (rows == 0)
                     throw new InvalidOperationException(
-                        $"Saldo insuficiente. Cliente tem R$ {user.BalanceInCents / 100m:N2}, método principal custa R$ {primaryAmt / 100m:N2}.");
+                        $"Saldo insuficiente. Cliente tem {Common.Dinheiro.Brl(user.BalanceInCents / 100m)}, método principal custa {Common.Dinheiro.Brl(primaryAmt / 100m)}.");
                 _logger.LogInformation(
                     "Usuário {UserId} usou R$ {Valor:N2} de cashback (principal) em venda avulsa.", userId, primaryAmt / 100m);
             }
@@ -402,7 +402,7 @@ public class VendaAvulsaService : IVendaAvulsaService
                         .SetProperty(u => u.UpdatedAt, DateTime.UtcNow));
                 if (rows == 0)
                     throw new InvalidOperationException(
-                        $"Saldo cashback insuficiente para o segundo pagamento. Disponível: R$ {user.BalanceInCents / 100m:N2}.");
+                        $"Saldo cashback insuficiente para o segundo pagamento. Disponível: {Common.Dinheiro.Brl(user.BalanceInCents / 100m)}.");
                 _logger.LogInformation("Usuário {UserId} usou R$ {Amt:N2} de cashback como segundo pagamento.", userId, secondAmt / 100m);
             }
             else if (secondPm == PaymentMethod.Pontos)
@@ -437,7 +437,7 @@ public class VendaAvulsaService : IVendaAvulsaService
                         .SetProperty(u => u.UpdatedAt, DateTime.UtcNow));
                 if (rows == 0)
                     throw new InvalidOperationException(
-                        $"Saldo cashback insuficiente para o segundo pagamento. Disponível: R$ {user.BalanceInCents / 100m:N2}.");
+                        $"Saldo cashback insuficiente para o segundo pagamento. Disponível: {Common.Dinheiro.Brl(user.BalanceInCents / 100m)}.");
                 _logger.LogInformation("Usuário {UserId} usou R$ {Amt:N2} de cashback como segundo pagamento.", userId, secondAmt / 100m);
             }
             else if (secondPm == PaymentMethod.Pontos)

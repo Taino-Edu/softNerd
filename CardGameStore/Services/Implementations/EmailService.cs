@@ -80,7 +80,7 @@ public class EmailService : IEmailService
               <table style="width:100%;border-collapse:collapse;margin:16px 0">
                 <tr>
                   <td style="padding:8px;color:#666">Valor</td>
-                  <td style="padding:8px;font-weight:bold;color:#111">R$ {valor:N2}</td>
+                  <td style="padding:8px;font-weight:bold;color:#111">{Common.Dinheiro.Brl(valor)}</td>
                 </tr>
                 <tr style="background:#f9f9f9">
                   <td style="padding:8px;color:#666">Vencimento</td>
@@ -95,7 +95,7 @@ public class EmailService : IEmailService
             </div>
             """;
 
-        await SendAsync(toEmail, toName, $"Crediário aberto — R$ {valor:N2} vence em {venc}", body);
+        await SendAsync(toEmail, toName, $"Crediário aberto — {Common.Dinheiro.Brl(valor)} vence em {venc}", body);
     }
 
     public async Task SendCrediarioLembreteAsync(string toEmail, string toName, string assunto, string mensagem)
@@ -121,7 +121,7 @@ public class EmailService : IEmailService
               <h2 style="color:#00F0A8">softNerd — Crediário Quitado</h2>
               <p>Olá, <strong>{toName}</strong>!</p>
               <p>
-                Seu crediário de <strong>R$ {valor:N2}</strong> foi quitado com sucesso.
+                Seu crediário de <strong>{Common.Dinheiro.Brl(valor)}</strong> foi quitado com sucesso.
                 Obrigado pelo pagamento!
               </p>
               <p style="color:#888;font-size:12px">softNerd — Sistema de Gestão</p>
@@ -150,7 +150,7 @@ public class EmailService : IEmailService
                 </tr>
                 <tr>
                   <td style="padding:8px;color:#666">Taxa de Inscrição</td>
-                  <td style="padding:8px;font-weight:bold">R$ {entryFee:N2}</td>
+                  <td style="padding:8px;font-weight:bold">{Common.Dinheiro.Brl(entryFee)}</td>
                 </tr>
               </table>
               <p>Apareça na loja no dia do evento. Boa sorte!</p>

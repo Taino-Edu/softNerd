@@ -214,7 +214,7 @@ public class GeminiChatService : IAiChatService
         // ── Formas de pagamento mais usadas (30 dias) ─────────────────────────
         var pagamentos30dias = vendasAvulsas30dias
             .GroupBy(v => v.PaymentMethod)
-            .Select(g => new { metodo = g.Key, total = $"R$ {g.Sum(v => v.TotalInCents / 100m):N2}", qtd = g.Count() })
+            .Select(g => new { metodo = g.Key, total = $"{Common.Dinheiro.Brl(g.Sum(v => v.TotalInCents / 100m))}", qtd = g.Count() })
             .OrderByDescending(g => g.qtd)
             .Take(5)
             .ToList();
@@ -223,11 +223,11 @@ public class GeminiChatService : IAiChatService
         var ctx = new
         {
             dataHora               = agora.ToString("dd/MM/yyyy HH:mm") + " (UTC — Brasil = UTC-3)",
-            vendasHoje             = $"R$ {totalHoje:N2}",
-            vendasTotais30dias     = $"R$ {totalVendasMes:N2}",
-            vendasAvulsas30dias    = $"R$ {totalVendasAvulsas30:N2}",
+            vendasHoje             = $"{Common.Dinheiro.Brl(totalHoje)}",
+            vendasTotais30dias     = $"{Common.Dinheiro.Brl(totalVendasMes)}",
+            vendasAvulsas30dias    = $"{Common.Dinheiro.Brl(totalVendasAvulsas30)}",
             comandasAbertas,
-            ticketMedio30dias      = $"R$ {ticketMedio:N2}",
+            ticketMedio30dias      = $"{Common.Dinheiro.Brl(ticketMedio)}",
             totalClientes,
             clientesAtivos30dias   = clientesAtivos,
             clientesInativos30dias = Math.Max(0, totalClientes - clientesAtivos),
@@ -251,7 +251,7 @@ public class GeminiChatService : IAiChatService
             crediarios = crediarios.Select((c, index) => new
             {
                 cliente    = $"Cliente #{index + 1}",
-                valor      = $"R$ {c.Valor:N2}",
+                valor      = $"{Common.Dinheiro.Brl(c.Valor)}",
                 vencimento = c.DataVencimento.ToString("dd/MM/yyyy"),
                 vencido    = c.DataVencimento < agora,
             }),
