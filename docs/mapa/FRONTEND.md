@@ -119,7 +119,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/client.ts` | `api` |
 | `lib/api/comandas.ts` | `PAYMENT_METHODS`, `PAYMENT_NEEDS_USER`, `SECOND_PAYMENT_METHODS`, `comandaApi`, `COMANDA_PAYMENT_METHODS` |
 | `lib/api/comunicacao.ts` | `aiApi`, `notificationsApi`, `mensageriaApi`, `whatsappAdminApi`, `pushApi` |
-| `lib/api/crediario.ts` | `FORMAS_PAGAMENTO_CREDIARIO`, `crediarioApi`, `pagarCrediarioApi`, `contasReceberApi` |
+| `lib/api/crediario.ts` | `FORMAS_PAGAMENTO_CREDIARIO`, `crediarioApi`, `pagarCrediarioApi` |
 | `lib/api/fiscal.ts` | `fiscalApi`, `minhasNotasApi` |
 | `lib/api/index.ts` | — |
 | `lib/api/lgpd.ts` | `lgpdApi`, `lgpdAdminApi` |

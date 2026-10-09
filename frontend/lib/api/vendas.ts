@@ -96,8 +96,6 @@ export const vendaAvulsaApi = {
       secondPaymentAmountInCents,
       emitirNotaFiscal,
     }),
-  recent: (limit = 50) =>
-    api.get<VendaAvulsaDto[]>('/api/venda-avulsa/recent', { params: { limit } }),
   byDate: (date: string) =>
     api.get<VendaAvulsaDto[]>('/api/venda-avulsa/by-date', { params: { date } }),
   backfillCosts: () =>

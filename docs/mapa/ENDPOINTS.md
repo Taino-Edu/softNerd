@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-276 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+268 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -16,7 +16,7 @@
 - [Championship](#championship) (22)
 - [Comanda](#comanda) (20)
 - [ContasReceber](#contasreceber) (15)
-- [Crediarios](#crediarios) (15)
+- [Crediarios](#crediarios) (14)
 - [Deck](#deck) (6)
 - [Fiscal](#fiscal) (15)
 - [Lgpd](#lgpd) (8)
@@ -30,11 +30,10 @@
 - [Perfis](#perfis) (6)
 - [Product](#product) (10)
 - [ProductVariant](#productvariant) (5)
-- [ProductWaitList](#productwaitlist) (8)
 - [PublicProfile](#publicprofile) (1)
 - [Push](#push) (3)
 - [Relatorios](#relatorios) (2)
-- [Reservation](#reservation) (14)
+- [Reservation](#reservation) (15)
 - [SiteConfig](#siteconfig) (2)
 - [Tcg](#tcg) (8)
 - [TenantErpIntegration](#tenanterpintegration) (6)
@@ -61,7 +60,7 @@
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
 | GET | `/api/analytics/clientes` | AdminOnly | `GetClienteInsights` (196) | `analyticsApi.clientes` | `app/admin/relatorios/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/TopClientes.tsx` |
-| GET | `/api/analytics/dashboard` | AdminOnly | `GetDashboard` (46) | `analyticsApi.dashboard` | — |
+| GET | `/api/analytics/dashboard` | AdminOnly | `GetDashboard` (46) | — | — |
 | GET | `/api/analytics/extrato` | AdminOnly | `Extrato` (782) | `analyticsApi.extrato` | `app/admin/financeiro/page.tsx` |
 | GET | `/api/analytics/financeiro` | AdminOnly | `GetFinanceiro` (365) | `analyticsApi.financeiro` | `app/admin/dashboard/page.tsx`<br>`app/admin/financeiro/page.tsx`<br>`app/admin/relatorios/page.tsx` |
 
@@ -83,7 +82,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/audit` | AdminOnly | `List` (37) | `lgpdAdminApi.listAudit` | `app/admin/lgpd/page.tsx` |
+| GET | `/api/audit` | AdminOnly | `List` (37) | — | `app/admin/lgpd/page.tsx` |
 
 ## Auth
 
@@ -131,20 +130,20 @@
 | POST | `/api/championship/participants/{participantId:guid}/cobrar` | OwnerOnly | `CobrarInscricao` (418) | `championshipApi.cobrarInscricao` | `app/admin/campeonatos/page.tsx` |
 | PUT | `/api/championship/participants/{participantId:guid}/pagamento` | AdminOnly | `MarcarPagamentoInscricao` (488) | — | — |
 | DELETE | `/api/championship/{id:guid}` | AdminOnly | `Delete` (78) | `championshipApi.delete` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
-| GET | `/api/championship/{id:guid}` | público | `GetById` (97) | `championshipApi.get` | `app/campeonato/[id]/page.tsx` |
+| GET | `/api/championship/{id:guid}` | público | `GetById` (97) | — | `app/campeonato/[id]/page.tsx` |
 | PUT | `/api/championship/{id:guid}` | AdminOnly | `Update` (200) | `championshipApi.update` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
 | POST | `/api/championship/{id:guid}/admin-register` | OwnerOnly | `AdminRegister` (521) | `championshipApi.adminRegister` | `app/admin/campeonatos/page.tsx` |
-| PUT | `/api/championship/{id:guid}/image` | AdminOnly | `SetImage` (678) | `championshipApi.setImage` | — |
-| POST | `/api/championship/{id:guid}/my-inscription/pix` | logado | `GerarPixInscricao` (341) | `championshipApi.pixInscricao` | `app/cliente/page.tsx` |
+| PUT | `/api/championship/{id:guid}/image` | AdminOnly | `SetImage` (678) | — | — |
+| POST | `/api/championship/{id:guid}/my-inscription/pix` | logado | `GerarPixInscricao` (341) | — | `app/cliente/page.tsx` |
 | POST | `/api/championship/{id:guid}/my-inscription/pix/verificar` | logado | `VerificarPixInscricao` (458) | `championshipApi.verificarPixInscricao` | `app/cliente/page.tsx`<br>`app/page.tsx` |
 | GET | `/api/championship/{id:guid}/participants` | logado | `GetParticipants` (134) | `championshipApi.participants` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx` |
 | DELETE | `/api/championship/{id:guid}/participants/{participantId:guid}` | AdminOnly | `RemoveParticipant` (610) | `championshipApi.removeParticipant` | `app/admin/campeonatos/page.tsx` |
 | PUT | `/api/championship/{id:guid}/participants/{participantId:guid}/placement` | AdminOnly | `SetPlacement` (660) | `championshipApi.setPlacement` | `app/admin/liga-mensal/page.tsx` |
 | PATCH | `/api/championship/{id:guid}/podio` | AdminOnly | `SetPodio` (757) | `championshipApi.setPodio` | `app/admin/campeonatos/page.tsx` |
 | GET | `/api/championship/{id:guid}/preinscricoes` | AdminOnly | `GetPreInscricoes` (717) | `championshipApi.getPreInscricoes` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
-| POST | `/api/championship/{id:guid}/preinscricoes` | público | `AddPreInscricao` (698) | `championshipApi.addPreInscricao` | `app/campeonato/[id]/page.tsx` |
+| POST | `/api/championship/{id:guid}/preinscricoes` | público | `AddPreInscricao` (698) | — | `app/campeonato/[id]/page.tsx` |
 | DELETE | `/api/championship/{id:guid}/preinscricoes/{preInscricaoId:guid}` | AdminOnly | `DeletePreInscricao` (742) | `championshipApi.deletePreInscricao` | `app/admin/campeonatos/page.tsx` |
-| POST | `/api/championship/{id:guid}/register` | logado | `Register` (237) | `championshipApi.register`<br>`championshipApi.selfRegister` | `app/page.tsx` |
+| POST | `/api/championship/{id:guid}/register` | logado | `Register` (237) | `championshipApi.selfRegister` | `app/page.tsx` |
 | PUT | `/api/championship/{id:guid}/status` | AdminOnly | `UpdateStatus` (634) | `championshipApi.setStatus` | `app/admin/campeonatos/page.tsx` |
 
 ## Comanda
@@ -180,21 +179,21 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/contas-receber` | AdminOnly | `List` (37) | `contasReceberApi.list` | `app/admin/contas-receber/page.tsx` |
-| POST | `/api/contas-receber` | AdminOnly | `Create` (116) | `contasReceberApi.create` | `app/admin/contas-receber/page.tsx` |
-| POST | `/api/contas-receber/import-ofx` | AdminOnly | `ImportOfx` (180) | `contasReceberApi.importOfx` | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
-| GET | `/api/contas-receber/integracoes` | AdminOnly | `GetIntegracoes` (221) | `contasReceberApi.integracoes` | `app/admin/integracoes/page.tsx` |
+| GET | `/api/contas-receber` | AdminOnly | `List` (37) | — | `app/admin/contas-receber/page.tsx` |
+| POST | `/api/contas-receber` | AdminOnly | `Create` (116) | — | `app/admin/contas-receber/page.tsx` |
+| POST | `/api/contas-receber/import-ofx` | AdminOnly | `ImportOfx` (180) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
+| GET | `/api/contas-receber/integracoes` | AdminOnly | `GetIntegracoes` (221) | — | `app/admin/integracoes/page.tsx` |
 | POST | `/api/contas-receber/integracoes/inter/certificado` | AdminOnly | `UploadCertificado` (429) | — | `app/admin/integracoes/page.tsx` |
 | GET | `/api/contas-receber/integracoes/inter/status` | AdminOnly | `InterStatus` (411) | — | `app/admin/integracoes/page.tsx` |
 | POST | `/api/contas-receber/integracoes/inter/sync` | AdminOnly | `InterSync` (378) | — | `app/admin/integracoes/page.tsx` |
-| PUT | `/api/contas-receber/integracoes/{source}` | AdminOnly | `SaveIntegracao` (245) | `contasReceberApi.saveIntegracao` | `app/admin/integracoes/page.tsx` |
+| PUT | `/api/contas-receber/integracoes/{source}` | AdminOnly | `SaveIntegracao` (245) | — | `app/admin/integracoes/page.tsx` |
 | POST | `/api/contas-receber/integracoes/{source}/token` | AdminOnly | `SaveToken` (275) | — | — |
 | GET | `/api/contas-receber/notas-destinadas` | AdminOnly | `NotasDestinadas` (357) | — | `app/admin/contas-receber/page.tsx` |
-| GET | `/api/contas-receber/sefaz-status` | AdminOnly | `SefazStatus` (292) | `contasReceberApi.sefazStatus` | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
+| GET | `/api/contas-receber/sefaz-status` | AdminOnly | `SefazStatus` (292) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
 | POST | `/api/contas-receber/sefaz/sync` | AdminOnly | `SefazSync` (323) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
-| GET | `/api/contas-receber/summary` | AdminOnly | `Summary` (75) | `contasReceberApi.summary` | `app/admin/contas-receber/page.tsx` |
-| DELETE | `/api/contas-receber/{id:guid}` | AdminOnly | `Delete` (168) | `contasReceberApi.remove` | `app/admin/contas-receber/page.tsx` |
-| PUT | `/api/contas-receber/{id:guid}` | AdminOnly | `Update` (140) | `contasReceberApi.update` | `app/admin/contas-receber/page.tsx` |
+| GET | `/api/contas-receber/summary` | AdminOnly | `Summary` (75) | — | `app/admin/contas-receber/page.tsx` |
+| DELETE | `/api/contas-receber/{id:guid}` | AdminOnly | `Delete` (168) | — | `app/admin/contas-receber/page.tsx` |
+| PUT | `/api/contas-receber/{id:guid}` | AdminOnly | `Update` (140) | — | `app/admin/contas-receber/page.tsx` |
 
 ## Crediarios
 
@@ -204,19 +203,18 @@
 |---|---|---|---|---|---|
 | GET | `/api/crediarios` | AdminOnly | `GetAll` (170) | `crediarioApi.list` | `app/admin/crediario/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | POST | `/api/crediarios` | AdminOnly | `CriarManual` (63) | `crediarioApi.criarManual` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (532) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
-| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (541) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
-| GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (234) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/crediarios/meu` | logado | `GetMeu` (213) | — | — |
+| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (511) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (520) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (213) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
 | GET | `/api/crediarios/por-cliente` | AdminOnly | `GetPorCliente` (127) | `crediarioApi.porCliente` | `app/admin/crediario/page.tsx` |
 | GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (195) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
-| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (630) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
-| PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (257) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (597) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
-| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (575) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
-| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (345) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (489) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (514) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
+| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (609) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
+| PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (236) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (576) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (554) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
+| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (324) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (468) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (493) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
 
 ## Deck
 
@@ -246,7 +244,7 @@
 | GET | `/api/fiscal/naturezas-operacao` | AdminOnly | `ListNaturezas` (253) | `fiscalApi.listNaturezas` | `app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx` |
 | POST | `/api/fiscal/naturezas-operacao` | AdminOnly | `CreateNatureza` (283) | `fiscalApi.createNatureza` | `app/admin/fiscal/page.tsx` |
 | DELETE | `/api/fiscal/naturezas-operacao/{id:guid}` | AdminOnly | `DeleteNatureza` (371) | `fiscalApi.removeNatureza` | `app/admin/fiscal/page.tsx` |
-| PUT | `/api/fiscal/naturezas-operacao/{id:guid}` | AdminOnly | `UpdateNatureza` (330) | `fiscalApi.updateNatureza` | — |
+| PUT | `/api/fiscal/naturezas-operacao/{id:guid}` | AdminOnly | `UpdateNatureza` (330) | — | — |
 | GET | `/api/fiscal/notas` | AdminOnly | `ListNotas` (383) | `fiscalApi.listNotas` | `app/admin/fiscal/page.tsx` |
 | POST | `/api/fiscal/notas/{id:guid}/cancelar` | AdminOnly | `CancelarNota` (476) | `fiscalApi.cancelarNota` | `app/admin/fiscal/page.tsx` |
 | GET | `/api/fiscal/notas/{id:guid}/cupom` | AdminOnly | `ObterCupom` (500) | `fiscalApi.obterCupom` | `app/admin/fiscal/cupom/[id]/page.tsx` |
@@ -260,13 +258,13 @@
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
 | POST | `/api/lgpd/consent` | público | `RecordConsent` (209) | `lgpdApi.recordConsent` | `components/CookieBanner.tsx` |
-| POST | `/api/lgpd/request` | público | `CreateRequest` (68) | `lgpdApi.submitRequest` | `app/lgpd/page.tsx` |
-| GET | `/api/lgpd/request/{id}` | público | `GetRequest` (168) | `lgpdApi.getRequest` | `app/lgpd/page.tsx` |
+| POST | `/api/lgpd/request` | público | `CreateRequest` (68) | — | `app/lgpd/page.tsx` |
+| GET | `/api/lgpd/request/{id}` | público | `GetRequest` (168) | — | `app/lgpd/page.tsx` |
 | GET | `/api/lgpd/requests` | AdminOnly | `ListRequests` (253) | `lgpdAdminApi.listRequests` | `app/admin/dashboard/page.tsx`<br>`app/admin/lgpd/page.tsx` |
 | GET | `/api/lgpd/requests/{id}/attachment` | AdminOnly | `DownloadAttachment` (413) | — | `app/admin/lgpd/page.tsx` |
 | POST | `/api/lgpd/requests/{id}/attachment` | AdminOnly | `UploadAttachment` (368) | — | `app/admin/lgpd/page.tsx` |
 | GET | `/api/lgpd/requests/{id}/relatorio` | AdminOnly | `GerarRelatorio` (450) | — | `app/admin/lgpd/documento/[id]/page.tsx` |
-| PUT | `/api/lgpd/requests/{id}/respond` | AdminOnly | `RespondRequest` (299) | `lgpdAdminApi.respond` | `app/admin/lgpd/page.tsx` |
+| PUT | `/api/lgpd/requests/{id}/respond` | AdminOnly | `RespondRequest` (299) | — | `app/admin/lgpd/page.tsx` |
 
 ## LigaMensal
 
@@ -289,7 +287,7 @@
 |---|---|---|---|---|---|
 | GET | `/api/marketplace` | público | `GetAll` (51) | `marketplaceApi.list` | `app/admin/marketplace/page.tsx`<br>`app/cliente/mercado/page.tsx` |
 | POST | `/api/marketplace` | AdminOnly | `Create` (113) | `marketplaceApi.create` | `app/admin/marketplace/page.tsx` |
-| GET | `/api/marketplace/mine` | logado | `GetMine` (93) | `marketplaceApi.mine` | — |
+| GET | `/api/marketplace/mine` | logado | `GetMine` (93) | — | — |
 | DELETE | `/api/marketplace/{id:guid}` | logado | `Delete` (176) | `marketplaceApi.remove` | `app/admin/marketplace/page.tsx` |
 | PUT | `/api/marketplace/{id:guid}` | logado | `Update` (144) | `marketplaceApi.update` | `app/admin/marketplace/page.tsx` |
 | POST | `/api/marketplace/{id:guid}/interest` | logado | `ToggleInterest` (195) | `marketplaceApi.toggleInterest` | `app/cliente/mercado/page.tsx` |
@@ -352,7 +350,7 @@
 |---|---|---|---|---|---|
 | GET | `/api/perfis` | papéis Admin | `GetAll` (74) | `perfisApi.list` | `app/admin/perfis/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | POST | `/api/perfis` | papéis Admin | `Create` (102) | `perfisApi.create` | `app/admin/perfis/page.tsx` |
-| GET | `/api/perfis/permissoes` | papéis Admin | `ListPermissoes` (42) | `perfisApi.permissoes` | — |
+| GET | `/api/perfis/permissoes` | papéis Admin | `ListPermissoes` (42) | — | — |
 | DELETE | `/api/perfis/{id:guid}` | papéis Admin | `Delete` (163) | `perfisApi.delete` | `app/admin/perfis/page.tsx` |
 | GET | `/api/perfis/{id:guid}` | papéis Admin | `GetById` (90) | — | — |
 | PUT | `/api/perfis/{id:guid}` | papéis Admin | `Update` (134) | `perfisApi.update` | `app/admin/perfis/page.tsx` |
@@ -367,7 +365,7 @@
 | POST | `/api/product` | AdminOnly | `Create` (97) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx` |
 | GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (56) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
 | GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (78) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
-| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (87) | `productApi.lowStock` | — |
+| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (87) | — | — |
 | GET | `/api/product/store` | logado | `GetAllStore` (46) | `productApi.listStore` | `app/cliente/page.tsx` |
 | DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (125) | `productApi.deactivate` | `app/admin/estoque/page.tsx` |
 | GET | `/api/product/{id:guid}` | público | `GetById` (67) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/page.tsx` |
@@ -385,21 +383,6 @@
 | POST | `/api/products/{productId:guid}/variants/bulk` | AdminOnly | `BulkCreate` (60) | `variantApi.bulk` | `app/admin/estoque/page.tsx` |
 | DELETE | `/api/products/{productId:guid}/variants/{variantId:guid}` | AdminOnly | `Delete` (119) | `variantApi.remove` | `app/admin/estoque/page.tsx` |
 | PUT | `/api/products/{productId:guid}/variants/{variantId:guid}` | AdminOnly | `Update` (99) | `variantApi.update` | `app/admin/estoque/page.tsx` |
-
-## ProductWaitList
-
-`CardGameStore/Controllers/ProductWaitListController.cs`
-
-| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
-|---|---|---|---|---|---|
-| GET | `/api/products/waitlist/mine` | logado | `GetMine` (122) | — | — |
-| GET | `/api/products/waitlist/pre-venda/pendentes` | AdminOnly | `CountPreVendaPendentes` (153) | `reservationApi.filaPendentesCount` | `app/admin/dashboard/page.tsx` |
-| DELETE | `/api/products/{productId:guid}/waitlist` | logado | `Leave` (97) | — | — |
-| GET | `/api/products/{productId:guid}/waitlist` | AdminOnly | `GetList` (169) | — | — |
-| POST | `/api/products/{productId:guid}/waitlist` | logado | `Join` (60) | — | — |
-| GET | `/api/products/{productId:guid}/waitlist/my` | logado | `MyPosition` (43) | — | — |
-| DELETE | `/api/products/{productId:guid}/waitlist/{entryId:guid}` | AdminOnly | `RemoveEntry` (221) | — | — |
-| POST | `/api/products/{productId:guid}/waitlist/{entryId:guid}/notify` | AdminOnly | `NotifyEntry` (192) | — | — |
 
 ## PublicProfile
 
@@ -434,20 +417,21 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/reservations` | AdminOnly | `GetAll` (555) | `reservationApi.list` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
-| POST | `/api/reservations` | logado | `Create` (106) | `reservationApi.create` | `app/cliente/page.tsx` |
-| POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (276) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
-| POST | `/api/reservations/cart` | logado | `CreateCart` (184) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (815) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
-| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (991) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (1038) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (935) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (961) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/mine` | logado | `GetMine` (79) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (480) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (791) | `reservationApi.homologar` | — |
-| PUT | `/api/reservations/{id:guid}/quantity` | AdminOnly | `UpdateQuantity` (684) | `reservationApi.updateQuantity` | `app/admin/reservas/page.tsx` |
-| PUT | `/api/reservations/{id:guid}/status` | AdminOnly | `UpdateStatus` (601) | `reservationApi.updateStatus` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
+| GET | `/api/products/waitlist/pre-venda/pendentes` | AdminOnly | `CountPreVendaPendentes` (84) | `reservationApi.filaPendentesCount` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/reservations` | AdminOnly | `GetAll` (574) | `reservationApi.list` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
+| POST | `/api/reservations` | logado | `Create` (125) | `reservationApi.create` | `app/cliente/page.tsx` |
+| POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (295) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
+| POST | `/api/reservations/cart` | logado | `CreateCart` (203) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (834) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
+| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (1010) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (1057) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (954) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (980) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/mine` | logado | `GetMine` (98) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (499) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (810) | — | — |
+| PUT | `/api/reservations/{id:guid}/quantity` | AdminOnly | `UpdateQuantity` (703) | `reservationApi.updateQuantity` | `app/admin/reservas/page.tsx` |
+| PUT | `/api/reservations/{id:guid}/status` | AdminOnly | `UpdateStatus` (620) | `reservationApi.updateStatus` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
 
 ## SiteConfig
 
@@ -469,7 +453,7 @@
 | DELETE | `/api/tcg/cards/{tcgCardId}/cache` | AdminOnly | `InvalidateCache` (166) | — | — |
 | POST | `/api/tcg/cards/{tcgCardId}/refresh` | AdminOnly | `RefreshCache` (157) | — | — |
 | POST | `/api/tcg/purge-cache` | AdminOnly | `PurgeCache` (175) | — | — |
-| GET | `/api/tcg/search` | logado | `Search` (45) | `tcgApi.search`<br>`tcgApi.searchAdvanced`<br>`tcgApi.searchByCode` | `app/admin/cartas/page.tsx`<br>`app/cliente/decks/[id]/page.tsx` |
+| GET | `/api/tcg/search` | logado | `Search` (45) | `tcgApi.searchAdvanced`<br>`tcgApi.searchByCode` | `app/admin/cartas/page.tsx`<br>`app/cliente/decks/[id]/page.tsx` |
 | GET | `/api/tcg/sets` | logado | `GetSets` (148) | `tcgApi.sets` | `app/admin/cartas/page.tsx`<br>`app/cliente/decks/[id]/page.tsx` |
 | POST | `/api/tcg/sync` | AdminOnly | `SyncSet` (188) | — | — |
 
@@ -560,7 +544,7 @@
 | POST | `/api/venda-avulsa` | AdminOnly | `Register` (45) | `vendaAvulsaApi.register` | `app/admin/venda-avulsa/page.tsx` |
 | POST | `/api/venda-avulsa/backfill-costs` | AdminOnly | `BackfillCosts` (155) | `vendaAvulsaApi.backfillCosts` | `app/admin/financeiro/page.tsx` |
 | GET | `/api/venda-avulsa/by-date` | AdminOnly | `GetByDate` (84) | `vendaAvulsaApi.byDate` | `app/admin/venda-avulsa/page.tsx` |
-| GET | `/api/venda-avulsa/recent` | AdminOnly | `GetRecent` (72) | `vendaAvulsaApi.recent` | — |
+| GET | `/api/venda-avulsa/recent` | AdminOnly | `GetRecent` (72) | — | — |
 | POST | `/api/venda-avulsa/{id}/estornar` | AdminOnly | `Estornar` (127) | `vendaAvulsaApi.estornar` | `app/admin/venda-avulsa/page.tsx` |
 | PATCH | `/api/venda-avulsa/{id}/pagamento` | AdminOnly | `EditarPagamento` (106) | `vendaAvulsaApi.editarPagamento` | `app/admin/venda-avulsa/page.tsx` |
 

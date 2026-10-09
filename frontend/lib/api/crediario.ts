@@ -203,23 +203,3 @@ export const pagarCrediarioApi = {
     api.get<{ status: string; pagoEm: string | null; quitado: boolean; saldoRestanteEmReais: number; saldoTodasEmReais: number; aviso: string | null }>(
       `/api/pagar/crediario/${token}/pix/${txid}`),
 }
-
-// ── Contas a Receber / Pagar ──────────────────────────────────────────────────
-export const contasReceberApi = {
-  list:      (params?: { type?: string; status?: string; source?: string; search?: string; page?: number }) =>
-               api.get('/api/contas-receber', { params }),
-  summary:   ()                                    => api.get('/api/contas-receber/summary'),
-  create:    (body: { type: string; amount: number; description: string; dueDate?: string; category?: string; supplier?: string; notes?: string }) =>
-               api.post('/api/contas-receber', body),
-  update:    (id: string, body: Partial<{ description: string; amount: number; dueDate: string; status: string; category: string; supplier: string; notes: string }>) =>
-               api.put(`/api/contas-receber/${id}`, body),
-  remove:    (id: string)                          => api.delete(`/api/contas-receber/${id}`),
-  importOfx: (file: File)                          => {
-               const form = new FormData(); form.append('file', file)
-               return api.post('/api/contas-receber/import-ofx', form, { headers: { 'Content-Type': 'multipart/form-data' } })
-             },
-  integracoes:   ()                                => api.get('/api/contas-receber/integracoes'),
-  saveIntegracao:(source: string, body: { clientId?: string; clientSecret?: string; cnpj?: string; isActive?: boolean }) =>
-                  api.put(`/api/contas-receber/integracoes/${source}`, body),
-  sefazStatus:  ()                                 => api.get('/api/contas-receber/sefaz-status'),
-}

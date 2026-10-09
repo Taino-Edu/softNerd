@@ -74,6 +74,25 @@ public class ReservationController : ControllerBase
     }
 
     // GET /api/reservations/mine — pré-vendas e fila do usuário logado
+    /// <summary>
+    /// Quantos clientes esperam na fila de pré-venda (contador do dashboard). URL antiga
+    /// mantida: veio do ProductWaitListController, que foi removido — a lista de espera
+    /// virou fila de reservas (kind "fila") na migração "waitlist_to_fila".
+    /// </summary>
+    [HttpGet("/api/products/waitlist/pre-venda/pendentes")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> CountPreVendaPendentes()
+    {
+        // Só conta produto que ainda existe/está ativo — senão o número no dashboard fica
+        // "mentindo" pro Maikon contando fila de produto que já saiu de pré-venda ou foi desativado.
+        var count = await _db.ProductReservations
+            .Where(r => r.Kind == "fila" && r.Status == "waiting"
+                     && r.Product!.IsPreVenda && r.Product!.IsActive)
+            .CountAsync();
+
+        return Ok(new { Count = count });
+    }
+
     [HttpGet("mine")]
     [Authorize]
     public async Task<IActionResult> GetMine()

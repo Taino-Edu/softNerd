@@ -22,8 +22,12 @@
   - dados que não batem contam como senha errada: na 5ª a conta trava
 - **Login e renovação de sessão limitados pro site inteiro**: o limite contra força bruta valia como um balde só — 5 logins, cadastros ou renovações de sessão por minuto somando TODOS os clientes. Num teste com 24 jogadores entrando juntos, 16 eram barrados; e a renovação automática de sessão disputava esse mesmo balde. Agora o limite é por IP (30/min pra login e cadastro) e a renovação de sessão tem o seu próprio (120/min)
 - **Loja inteira dividindo o mesmo limite de uso**: o limite geral (300 requisições/min) contava por IP, e no wi-fi da loja o PDV, as comandas e os celulares dos clientes dividiam o mesmo IP. Agora cada usuário logado tem o seu; por IP só quem não está logado. Testado com 48 jogadores num torneio de 6 rodadas, todos no mesmo IP, sem nenhum bloqueio
+- **Mensagem pra "quem está em lista de espera" não chegava a ninguém**: quando a lista de espera virou a fila de pré-venda, os nomes foram pra fila nova, mas a mensageria continuou lendo a lista antiga (vazia). Agora ela lê a fila de pré-venda (só de produtos em pré-venda ativos)
 - **Erro no carregamento das telas do admin** (só aparecia no console): o menu lateral lia o perfil antes da hora e o React refazia a tela inteira. Corrigido junto com o aviso do tema claro
 - **Valores com ponto em mensagens do servidor**: o servidor de produção roda sem idioma configurado e escrevia dinheiro no formato americano — o cliente recebia "R$ 30.00" no WhatsApp e no e-mail do crediário, e o mesmo valia pra mensagens de erro na tela (crediário, cashback, desconto, Pix), e-mail de inscrição em campeonato e respostas do assistente. Agora todo texto pra pessoas sai "R$ 1.234,56". O Pix e a nota fiscal continuam com ponto, como os sistemas deles exigem. Achado pelo CI novo, que roda os testes no Linux
+
+### Removido
+- Código sem uso: a lista de espera antiga (8 rotas — o contador de fila de pré-venda do painel continua no mesmo endereço), a consulta antiga de crediário do cliente (`/api/crediarios/meu`), 26 chamadas do site que nenhuma tela usava e 14 migrations do banco (18 arquivos) que nunca rodavam (o banco é preparado pelos arquivos de SQL de inicialização)
 
 ## [v1.39.5] — 2026-10-07
 
