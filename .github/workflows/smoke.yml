@@ -1,0 +1,73 @@
+# =============================================================================
+# Robô de smoke — produção está de pé? (a cada 30 min)
+#
+# Roda scripts/smoke.py contra https://santuarionerd.com.br. Se falhar, abre um
+# alerta (issue com o rótulo "smoke") — o GitHub manda e-mail pro dono do repo.
+# Se já houver alerta aberto, comenta nele em vez de abrir outro. Quando volta,
+# fecha o alerta sozinho.
+#
+# Obs.: o GitHub desliga agendamentos de repositório público depois de 60 dias
+# sem nenhum commit. Se o robô sumir, é só rodar uma vez à mão (Run workflow).
+# =============================================================================
+name: Robô de smoke
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: smoke-producao
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  smoke:
+    name: Produção de pé?
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Smoke em produção (com uma segunda tentativa)
+        id: smoke
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          # Uma falha isolada (rede do runner, reinício do deploy) não vira alerta:
+          # só alerta se falhar duas vezes seguidas, com 1 min entre elas.
+          if python scripts/smoke.py > saida.txt 2>&1; then cat saida.txt; exit 0; fi
+          cat saida.txt; echo "falhou — tentando de novo em 60 s"; sleep 60
+          python scripts/smoke.py > saida.txt 2>&1 && { cat saida.txt; exit 0; }
+          cat saida.txt; exit 1
+
+      - name: Abrir ou atualizar o alerta
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create smoke --color B60205 --description "Robô de smoke: produção com problema" 2>/dev/null || true
+          corpo="$(printf 'O robô de smoke achou problema em produção (%s UTC).\n\n```\n%s\n```\n\nExecução: %s/%s/actions/runs/%s\n\nPrimeiro passo: `docker logs santuarionerd_api --since 30m` na VPS.' \
+            "$(date -u '+%d/%m %H:%M')" "$(cat saida.txt)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          aberto=$(gh issue list --label smoke --state open --json number -q '.[0].number')
+          if [ -n "$aberto" ]; then
+            gh issue comment "$aberto" --body "$corpo"
+          else
+            gh issue create --title "🔴 Produção com problema (robô de smoke)" --label smoke --body "$corpo"
+          fi
+
+      - name: Fechar o alerta se voltou
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --label smoke --state open --json number -q '.[].number'); do
+            gh issue close "$n" --comment "✅ Voltou: o robô de smoke passou em $(date -u '+%d/%m %H:%M') UTC."
+          done

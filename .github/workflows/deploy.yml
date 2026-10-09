@@ -2,18 +2,20 @@
 # Deploy produção — SÓ À MÃO (Actions → "Deploy produção" → Run workflow)
 #
 # Faz o mesmo que se fazia por SSH: roda deploy/update.sh na VPS (git pull do
-# main + docker compose build/up + nginx validado). Depois confere o /health.
+# main + docker compose build/up + nginx validado). Depois confere o /health e
+# passa o smoke (scripts/smoke.py) — mesmo robô que vigia produção a cada 30 min.
 #
 # Proteções:
 #   - só roda a partir do main, e só se o último CI do main passou
-#   - ambiente "producao" (Settings → Environments): pode exigir aprovação
-#   - a chave SSH do deploy é restrita na VPS a um único comando (o update.sh):
-#     mesmo vazada, não abre terminal nem roda outra coisa
+#   - ambiente "producao": só aceita o main e exige aprovação do Taino
+#   - a chave SSH do deploy é presa na VPS ao porteiro /usr/local/bin/santuario-ci,
+#     que só aceita "ping", "status" e "deploy" (registra tudo em
+#     /var/log/santuario-ci.log): mesmo vazada, não abre terminal nem roda outra coisa
 #
-# Segredos (Settings → Secrets → Actions, no ambiente "producao"):
+# Segredos (no ambiente "producao"):
 #   DEPLOY_HOST         IP da VPS
 #   DEPLOY_SSH_KEY      chave privada do deploy (só pra isso, não é a de ninguém)
-#   DEPLOY_KNOWN_HOSTS  linha do known_hosts da VPS (evita aceitar servidor falso)
+#   DEPLOY_KNOWN_HOSTS  digital da VPS (evita aceitar servidor falso)
 # =============================================================================
 name: Deploy produção
 
@@ -48,9 +50,10 @@ jobs:
             *) echo "::error::O CI do commit $GITHUB_SHA no main ainda não passou (ou está rodando). Deploy cancelado."; exit 1 ;;
           esac
 
-      - name: Rodar o update.sh na VPS
+      - uses: actions/checkout@v4
+
+      - name: Preparar a chave do deploy
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
@@ -58,8 +61,28 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          # A VPS ignora o comando pedido e roda só o update.sh (command= no authorized_keys)
-          ssh -i ~/.ssh/deploy -o BatchMode=yes -o StrictHostKeyChecking=yes "root@$DEPLOY_HOST" deploy
+
+      - name: A VPS atende? (ping + versão no ar antes)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy -o BatchMode=yes -o StrictHostKeyChecking=yes root@$DEPLOY_HOST"
+          $SSH ping
+          $SSH status | tee antes.txt
+          {
+            echo "### Antes do deploy"
+            echo '```'
+            cat antes.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rodar o update.sh na VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          # O porteiro só roda o update.sh pra esse pedido (command= no authorized_keys)
+          ssh -i ~/.ssh/deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 \
+            "root@$DEPLOY_HOST" deploy
 
       - name: A API voltou?
         run: |
@@ -70,3 +93,24 @@ jobs:
           done
           echo "::error::A API não respondeu 200 no /health em 5 minutos. Veja: docker logs santuarionerd_api --since 10m"
           exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Smoke em produção
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python scripts/smoke.py
+
+      - name: Como voltar (se algo falhou)
+        if: failure()
+        run: |
+          {
+            echo "### ⚠️ Deploy com problema"
+            echo "O banco só ganha colunas e tabelas novas, então voltar a versão é seguro. Na VPS:"
+            echo '```'
+            echo 'cd /opt/santuarionerd && git checkout <commit-anterior> && bash deploy/update.sh'
+            echo '```'
+            echo 'O commit anterior está em "Antes do deploy", acima. Depois de resolver: git checkout main.'
+          } >> "$GITHUB_STEP_SUMMARY"
