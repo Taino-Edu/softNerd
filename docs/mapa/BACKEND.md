@@ -42,7 +42,9 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j√
 | `products` | `Product` | `Products` | colunas | `CardGameStore/Models/PostgreSQL/Product.cs` |
 | `push_subscriptions` | `PushSubscription` | `PushSubscriptions` | criada | `CardGameStore/Models/PostgreSQL/PushSubscription.cs` |
 | `site_config` | `SiteConfig` | `SiteConfigs` | criada, colunas | `CardGameStore/Models/PostgreSQL/SiteConfig.cs` |
-| `timers` | `TimerEntity` | `Timers` | criada | `CardGameStore/Models/PostgreSQL/Timer.cs` |
+| `timers` | `TimerEntity` | `Timers` | criada, colunas | `CardGameStore/Models/PostgreSQL/Timer.cs` |
+| `torneio_partidas` | `TorneioPartida` | `TorneioPartidas` | criada | `CardGameStore/Models/PostgreSQL/Torneio.cs` |
+| `torneio_rodadas` | `TorneioRodada` | `TorneioRodadas` | criada | `CardGameStore/Models/PostgreSQL/Torneio.cs` |
 | `user_sessions` | `UserSession` | `UserSessions` | criada | `CardGameStore/Models/PostgreSQL/UserSession.cs` |
 | `users` | `User` | `Users` | colunas | `CardGameStore/Models/PostgreSQL/User.cs` |
 | `whatsapp_conversations` | `WhatsAppConversation` | `WhatsAppConversations` | criada, colunas | `CardGameStore/Models/PostgreSQL/WhatsAppConversation.cs` |
@@ -109,3 +111,4 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j√
 | Scoped | `IPixReconciliationService ‚Üí PixReconciliationService` | `CardGameStore/Services/Implementations/PixReconciliationService.cs` |
 | Scoped | `CrediarioAvisoService` | `CardGameStore/Services/Implementations/CrediarioAvisoService.cs` |
 | Scoped | `CrediarioPixService` | `CardGameStore/Services/Implementations/CrediarioPixService.cs` |
+| Scoped | `CardGameStore.Services.Liga.TorneioService` | `CardGameStore/Services/Liga/TorneioService.cs` |

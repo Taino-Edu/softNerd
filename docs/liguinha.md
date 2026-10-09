@@ -9,6 +9,8 @@ timer vinculado ao campeonato do dia, contando cada rodada sozinho.
 
 ---
 
+**Status:** fase 1 pronta (v1.40.0) — torneio rodando de ponta a ponta. Fases 2 e 3 no fim do documento.
+
 ## 1. Princípio: o torneio é uma camada em cima do campeonato
 
 Nada do que já existe é refeito. O campeonato continua sendo o dono da inscrição, do pagamento e da

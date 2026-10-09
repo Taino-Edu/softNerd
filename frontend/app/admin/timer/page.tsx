@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { Plus, Trash2, Play, Pause, RotateCcw, Volume2, PlayCircle, Settings, BellRing } from 'lucide-react'
 import { TimerDto } from '@/lib/api'
+import { Switch } from '@/components/ui/Switch'
 import { useTimers, fmtTempo, tocarPreview } from '@/contexts/TimerContext'
 
 const SONS = [
@@ -174,6 +175,10 @@ export default function TimerPage() {
   const [newMin,   setNewMin]   = useState('30')
   const [newSound, setNewSound] = useState('bell')
   const [newWarn,  setNewWarn]  = useState('60')
+  // "É de campeonato?": liga ao campeonato do dia; a liguinha reinicia o timer a cada rodada
+  const [deCampeonato, setDeCampeonato] = useState(false)
+  const [opcoesCamp,   setOpcoesCamp]   = useState<{ id: string; name: string }[]>([])
+  const [campEscolhido, setCampEscolhido] = useState('')
 
   async function createTimer() {
     try {
@@ -182,10 +187,20 @@ export default function TimerPage() {
         durationSeconds: (parseInt(newMin) || 30) * 60,
         soundPreset:     newSound,
         warnAtSeconds:   parseInt(newWarn) || 60,
+        deCampeonato,
+        championshipId:  deCampeonato && campEscolhido ? campEscolhido : null,
       })
       setShowNew(false)
       setNewName('Rodada 1')
-    } catch { toast.error('Erro ao criar timer') }
+      setDeCampeonato(false)
+      setOpcoesCamp([])
+      setCampEscolhido('')
+    } catch (e) {
+      const data = (e as { response?: { data?: { message?: string; opcoes?: { id: string; name: string }[] } } })?.response?.data
+      // Mais de um campeonato hoje: o servidor devolve a lista pra escolher
+      if (data?.opcoes?.length) { setOpcoesCamp(data.opcoes); setCampEscolhido(data.opcoes[0].id) }
+      toast.error(data?.message ?? 'Erro ao criar timer')
+    }
   }
 
   return (
@@ -240,6 +255,23 @@ export default function TimerPage() {
                   <PlayCircle className="w-4 h-4" /> Testar
                 </button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-300">É de campeonato?</span>
+                <Switch ligado={deCampeonato} onChange={setDeCampeonato} label="Timer de campeonato" />
+              </div>
+              {deCampeonato && (
+                <p className="text-xs text-gray-400">
+                  Liga ao campeonato de hoje. No torneio suíço, ele reinicia sozinho a cada rodada gerada,
+                  com esse tempo.
+                </p>
+              )}
+              {deCampeonato && opcoesCamp.length > 0 && (
+                <select className="input w-full" value={campEscolhido} onChange={e => setCampEscolhido(e.target.value)}>
+                  {opcoesCamp.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              )}
             </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setShowNew(false)} className="btn-secondary">Cancelar</button>

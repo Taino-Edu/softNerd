@@ -30,6 +30,41 @@ public class TimerController : ControllerBase
             SoundPreset     = req.SoundPreset,
             WarnAtSeconds   = req.WarnAtSeconds,
         };
+
+        // "É de campeonato?": liga ao campeonato do dia (Brasília). A liguinha reinicia
+        // esse timer a cada rodada gerada, com o tempo de rodada do campeonato.
+        if (req.DeCampeonato)
+        {
+            Championship? ch;
+            if (req.ChampionshipId is Guid escolhido)
+            {
+                ch = await _db.Championships.FindAsync(escolhido);
+                if (ch is null) return NotFound(new { message = "Campeonato não encontrado." });
+            }
+            else
+            {
+                var (inicio, fim) = Common.Brasilia.DiaUtc();
+                var doDia = await _db.Championships
+                    .Where(c => c.StartDate >= inicio && c.StartDate < fim
+                             && (c.Status == ChampionshipStatus.Inscricoes || c.Status == ChampionshipStatus.EmAndamento
+                                 || c.Status == ChampionshipStatus.Planejado))
+                    .OrderBy(c => c.StartDate)
+                    .Select(c => new { c.Id, c.Name })
+                    .ToListAsync();
+                if (doDia.Count == 0)
+                    return BadRequest(new { message = "Nenhum campeonato marcado pra hoje." });
+                if (doDia.Count > 1)
+                    return Conflict(new { message = "Tem mais de um campeonato hoje. Escolha qual.", opcoes = doDia });
+                ch = await _db.Championships.FindAsync(doDia[0].Id);
+            }
+
+            if (await _db.Timers.AnyAsync(x => x.ChampionshipId == ch!.Id))
+                return Conflict(new { message = "Esse campeonato já tem um timer." });
+
+            t.ChampionshipId = ch!.Id;
+            ch.MinutosRodada = Math.Clamp(req.DurationSeconds / 60, 5, 180);
+        }
+
         _db.Timers.Add(t);
         await _db.SaveChangesAsync();
         return StatusCode(201, ToDto(t));
@@ -120,6 +155,8 @@ public class TimerController : ControllerBase
         soundPreset     = t.SoundPreset,
         warnAtSeconds   = t.WarnAtSeconds,
         createdAt       = t.CreatedAt,
+        championshipId  = t.ChampionshipId,
+        rodada          = t.Rodada,
     };
 }
 
@@ -127,7 +164,9 @@ public record TimerCreateRequest(
     string Name,
     int    DurationSeconds,
     string SoundPreset   = "bell",
-    int    WarnAtSeconds = 60);
+    int    WarnAtSeconds = 60,
+    bool   DeCampeonato  = false,
+    Guid?  ChampionshipId = null);
 
 public record TimerUpdateRequest(
     string  Action,

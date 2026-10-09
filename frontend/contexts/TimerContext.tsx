@@ -15,7 +15,7 @@
 import {
   createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode,
 } from 'react'
-import { timerApi, TimerDto } from '@/lib/api'
+import { timerApi, TimerDto, NovoTimerRequest } from '@/lib/api'
 import { isLoggedIn, getRole } from '@/lib/auth'
 
 // ── Áudio ─────────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ interface TimerContextValue {
   alarmando:   Set<string>
   recarregar:  () => Promise<void>
   acao:        (id: string, action: string, extra?: Record<string, unknown>) => Promise<void>
-  criar:       (t: { name: string; durationSeconds: number; soundPreset: string; warnAtSeconds: number }) => Promise<void>
+  criar:       (t: NovoTimerRequest) => Promise<void>
   remover:     (id: string) => Promise<void>
   silenciar:   (id: string) => void
 }
@@ -234,7 +234,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setTimers(prev => prev.map(t => t.id === id ? data as TimerDto : t))
   }, [pararAlarme])
 
-  const criar = useCallback(async (t: { name: string; durationSeconds: number; soundPreset: string; warnAtSeconds: number }) => {
+  const criar = useCallback(async (t: NovoTimerRequest) => {
     const { data } = await timerApi.create(t)
     setTimers(prev => [...prev, data as TimerDto])
   }, [])

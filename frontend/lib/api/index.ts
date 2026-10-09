@@ -18,6 +18,7 @@
 //   relatorios.ts    Analytics, financeiro e relatórios
 //   lgpd.ts          Pedidos LGPD (público e admin)
 //   comunicacao.ts   Assistente IA, notificações, push, mensageria, WhatsApp
+//   liga.ts          Liguinha: torneio suíço (rodadas, mesas, resultados)
 // =============================================================================
 export * from './client'
 export * from './auth'
@@ -34,3 +35,4 @@ export * from './fiscal'
 export * from './relatorios'
 export * from './lgpd'
 export * from './comunicacao'
+export * from './liga'

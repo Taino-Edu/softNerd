@@ -7,6 +7,7 @@
 | URL | Arquivo | Componentes usados |
 |---|---|---|
 | `/admin/anuncios` | `app/admin/anuncios/page.tsx` | `admin/ImageUpload`, `ui/PageHeader` |
+| `/admin/campeonatos/[id]/torneio` | `app/admin/campeonatos/[id]/torneio/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio`, `ui/Switch` |
 | `/admin/campeonatos` | `app/admin/campeonatos/page.tsx` | `admin/ConferenciaDecksModal`, `admin/DeckViewerModal`, `ui/Badge` |
 | `/admin/cartas` | `app/admin/cartas/page.tsx` | — |
 | `/admin/categorias` | `app/admin/categorias/page.tsx` | `ui/Badge`, `ui/Table` |
@@ -33,7 +34,7 @@
 | `/admin/reservas` | `app/admin/reservas/page.tsx` | `PixReservaModal`, `admin/PercentPicker`, `ui/PageHeader` |
 | `/admin/site` | `app/admin/site/page.tsx` | `ui/PageHeader` |
 | `/admin/sobre` | `app/admin/sobre/page.tsx` | `ui/PageHeader` |
-| `/admin/timer` | `app/admin/timer/page.tsx` | — |
+| `/admin/timer` | `app/admin/timer/page.tsx` | `ui/Switch` |
 | `/admin/usuarios` | `app/admin/usuarios/page.tsx` | `admin/DeckViewerModal`, `ui/Badge` |
 | `/admin/venda-avulsa` | `app/admin/venda-avulsa/page.tsx` | `admin/ConferenciaButton`, `admin/EscolherContaCrediarioModal`, `admin/PercentPicker`, `admin/VariantPicker`, `ui/PageHeader` |
 | `/admin/whatsapp` | `app/admin/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox`, `ui/PageHeader` |
@@ -50,7 +51,9 @@
 | `/entrar` | `app/entrar/page.tsx` | — |
 | `/janela/whatsapp` | `app/janela/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox` |
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
+| `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio` |
 | `/liga` | `app/liga/page.tsx` | — |
+| `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio` |
 | `/login` | `app/login/page.tsx` | — |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | — |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
@@ -98,9 +101,11 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/whatsapp/WhatsAppInbox` | `WhatsAppInbox` | `app/admin/whatsapp/page.tsx`<br>`app/janela/whatsapp/page.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
+| `liga/Relogio` | `Relogio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
+| `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
-| `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`components/admin/CrediarioAvisos.tsx` |
+| `ui/Switch` | `Switch` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
 
 ## Bibliotecas (`frontend/lib`)
@@ -117,6 +122,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/fiscal.ts` | `fiscalApi`, `minhasNotasApi` |
 | `lib/api/index.ts` | — |
 | `lib/api/lgpd.ts` | `lgpdApi`, `lgpdAdminApi` |
+| `lib/api/liga.ts` | `torneioApi`, `segundosRestantes` |
 | `lib/api/produtos.ts` | `categoryApi`, `productApi`, `variantApi`, `uploadApi` |
 | `lib/api/relatorios.ts` | `analyticsApi`, `relatorioApi` |
 | `lib/api/reservas.ts` | `reservationApi` |
@@ -143,3 +149,4 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |
 | `lib/sumula-crediario.ts` | `gerarSumulaCrediario` |
+| `lib/useTorneioAoVivo.ts` | `useTorneioAoVivo` |

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Trophy, Medal, Award, Loader2, Layers, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Trophy, Medal, Award, Loader2, Layers, ChevronDown, Swords } from 'lucide-react'
 import { ligaMensalApi, LigaMensalDto, LigaMensalMesDto } from '@/lib/api'
 
 const MEDAL_COLOR = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-brand-400']
@@ -36,6 +36,9 @@ export default function LigaMensalPage() {
         <Link href="/"
           className="flex items-center gap-1.5 text-sm font-medium text-gray-300 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" /> Voltar
+        </Link>
+        <Link href="/liga/jogar" className="ml-auto btn-primary text-sm py-1.5">
+          <Swords className="w-4 h-4" /> Sou jogador
         </Link>
       </nav>
 

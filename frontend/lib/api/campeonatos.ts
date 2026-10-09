@@ -24,6 +24,14 @@ export interface TimerDto {
   id: string; name: string; durationSeconds: number; pausedRemaining: number | null
   state: 'stopped' | 'running' | 'paused' | 'finished'
   startedAt: string | null; soundPreset: string; warnAtSeconds: number
+  /** Timer de campeonato (liguinha): reinicia sozinho a cada rodada gerada. */
+  championshipId?: string | null; rodada?: number | null
+}
+
+export interface NovoTimerRequest {
+  name: string; durationSeconds: number; soundPreset: string; warnAtSeconds: number
+  /** "É de campeonato?" — liga ao campeonato do dia (ou ao escolhido). */
+  deCampeonato?: boolean; championshipId?: string | null
 }
 
 export interface PodioItem { lugar: number; nome: string }
@@ -98,8 +106,7 @@ export const championshipApi = {
 
 export const timerApi = {
   list:   () => api.get<TimerDto[]>('/api/timers'),
-  create: (t: { name: string; durationSeconds: number; soundPreset: string; warnAtSeconds: number }) =>
-    api.post<TimerDto>('/api/timers', t),
+  create: (t: NovoTimerRequest) => api.post<TimerDto>('/api/timers', t),
   update: (id: string, req: { action: string; name?: string; durationSeconds?: number; soundPreset?: string; warnAtSeconds?: number; fromRemaining?: number }) =>
     api.put<TimerDto>(`/api/timers/${id}`, req),
   remove: (id: string) => api.delete(`/api/timers/${id}`),

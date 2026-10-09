@@ -215,6 +215,20 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueLimit           = 10;
     });
 
+    // Código de torneio: por USUÁRIO, não por IP — a loja inteira sai pelo mesmo IP no
+    // dia do campeonato. 10 tentativas/min deixa errar a digitação e impede adivinhar.
+    options.AddPolicy("torneio-codigo", ctx =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            ctx.User.FindFirst("sub")?.Value
+                ?? ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? GetClientIp(ctx),
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window      = TimeSpan.FromMinutes(1),
+                QueueLimit  = 0,
+            }));
+
     // Evolution/n8n fala com um único IP da rede Docker; bucket separado evita
     // que um pico de mensagens consuma o limite dos clientes do site.
     options.AddFixedWindowLimiter("automation", opt =>
@@ -398,6 +412,7 @@ app.UseOperatorPermissions();
 
 app.MapControllers();
 app.MapHub<ComandaHub>("/hubs/comanda");
+app.MapHub<TorneioHub>("/hubs/torneio");
 
 // /health — sem autenticação, sem rate limit
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

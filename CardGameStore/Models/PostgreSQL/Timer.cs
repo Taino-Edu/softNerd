@@ -32,6 +32,14 @@ public class TimerEntity
     [Column("warn_at_seconds")]
     public int WarnAtSeconds { get; set; } = 60;
 
+    /// <summary>Timer de campeonato: reinicia sozinho a cada rodada gerada (liguinha).</summary>
+    [Column("championship_id")]
+    public Guid? ChampionshipId { get; set; }
+
+    /// <summary>Rodada que este timer está contando.</summary>
+    [Column("rodada")]
+    public int? Rodada { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
