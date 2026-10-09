@@ -58,7 +58,9 @@ services:
       args:
         API_URL: https://santuarionerd.com.br
     image: santuarionerd_frontend:latest
-    container_name: santuarionerd_frontend
+    # Sem container_name: na troca sem queda (deploy/rollout.sh) existem duas cópias
+    # por alguns segundos, e nome fixo não deixa. Logs: docker compose logs frontend
+    stop_grace_period: 15s
     networks:
       - cardgame_network
     restart: unless-stopped
@@ -81,7 +83,11 @@ services:
       context: ../CardGameStore
       dockerfile: Dockerfile
     image: santuarionerd_api:latest
-    container_name: santuarionerd_api
+    # Sem container_name: na troca sem queda (deploy/rollout.sh) existem duas cópias
+    # por alguns segundos, e nome fixo não deixa. Logs: docker compose logs api
+    # 35 s pra terminar o que está fazendo ao desligar (o .NET espera até 30 s pelas
+    # requisições em andamento; o padrão do Docker, 10 s, cortava venda no meio).
+    stop_grace_period: 35s
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5000

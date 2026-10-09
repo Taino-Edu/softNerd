@@ -91,7 +91,7 @@ jobs:
             if [ "$codigo" = "200" ]; then echo "/health respondeu 200"; exit 0; fi
             echo "tentativa $i: /health = $codigo"; sleep 10
           done
-          echo "::error::A API não respondeu 200 no /health em 5 minutos. Veja: docker logs santuarionerd_api --since 10m"
+          echo "::error::A API não respondeu 200 no /health em 5 minutos. Veja: cd /opt/santuarionerd/deploy && docker compose -f docker-compose.prod.yml logs api --since 10m"
           exit 1
 
       - uses: actions/setup-python@v5
@@ -110,7 +110,8 @@ jobs:
             echo "### ⚠️ Deploy com problema"
             echo "O banco só ganha colunas e tabelas novas, então voltar a versão é seguro. Na VPS:"
             echo '```'
-            echo 'cd /opt/santuarionerd && git checkout <commit-anterior> && bash deploy/update.sh'
+            echo 'cd /opt/santuarionerd && bash deploy/update.sh <commit-anterior>'
             echo '```'
-            echo 'O commit anterior está em "Antes do deploy", acima. Depois de resolver: git checkout main.'
+            echo 'O commit anterior está em "Antes do deploy", acima. Depois de resolver, um update.sh sem argumento volta pro main.'
+            echo 'Se o problema for a troca sem queda em si: DEPLOY_AZUL_VERDE=0 bash deploy/update.sh (jeito antigo, ~15 s fora).'
           } >> "$GITHUB_STEP_SUMMARY"

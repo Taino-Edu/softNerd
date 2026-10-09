@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.41.1] — 2026-10-09
+
+### Mudado
+- **Atualização sem tirar o site do ar**: até agora, cada atualização deixava o site e o painel fora por uns 15 segundos — quem fechasse uma comanda ou finalizasse uma venda nesse instante via erro. Agora a versão nova sobe ao lado da que está no ar, só recebe clientes depois de responder que está pronta, e a antiga termina o que estava fazendo antes de sair. Se a nova não subir, a antiga continua no ar e nada muda. Dá pra atualizar com a loja aberta
+- O telão e os celulares da liguinha só piscam a conexão e voltam sozinhos
+
+### Corrigido
+- **"Voltar pra versão anterior" não voltava**: a instrução de emergência do deploy trocava a versão, mas o script de atualização puxava a última de novo e desfazia a volta sem avisar. Agora é um comando só: `bash deploy/update.sh <versão>`
+- Ao desligar, a API tinha só 10 segundos pra terminar o que estava fazendo (o padrão do Docker) e podia cortar uma venda no meio; agora tem 35
+
 ## [v1.41.0] — 2026-10-09
 
 ### Novo

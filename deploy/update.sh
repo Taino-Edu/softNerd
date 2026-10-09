@@ -27,38 +27,70 @@ APP_DIR="/opt/santuarionerd"
 
 echo -e "${YELLOW}🔄 Atualizando SantuárioNerd...${NC}"
 
-# Puxa última versão do GitHub
+# Puxa a versão: a última do main ou, pra VOLTAR, a que for pedida:
+#   bash deploy/update.sh            → último main
+#   bash deploy/update.sh <commit>   → essa versão (sem argumento depois, volta pro main)
+# (Antes a volta era "git checkout <commit> && update.sh", mas o git pull daqui
+# trazia o main de novo e desfazia a volta sem avisar.)
 cd "$APP_DIR"
-git pull origin main
+VERSAO_ANTES=$(git rev-parse HEAD)
+git fetch origin
+if [ -n "${1:-}" ]; then
+    echo -e "${YELLOW}⏪ Voltando pra versão $1${NC}"
+    git checkout --detach "$1"
+else
+    git checkout main
+    git pull origin main
+fi
 
 # Copia .env para pasta deploy
 cp "$APP_DIR/.env" "$APP_DIR/deploy/.env"
 
-# Rebuild e redeploy — CACHEBUST força o Docker a recompilar o Next.js
+# Rebuild — CACHEBUST força o Docker a recompilar o Next.js. Enquanto constrói,
+# o site segue no ar com as imagens antigas.
 cd "$APP_DIR/deploy"
 docker compose -f docker-compose.prod.yml build --build-arg CACHEBUST="$(date +%s)"
-docker compose -f docker-compose.prod.yml up -d
 
-# Recria o nginx — nginx.conf/locations.conf entram como bind mount de ARQUIVO,
-# que o Docker prende ao inode. O `git pull` não edita no lugar: escreve outro
-# arquivo e renomeia por cima, gerando inode novo. O container continua preso ao
-# antigo, então nem `up -d` (definição do serviço não mudou) nem `nginx -s reload`
-# (o container sequer enxerga o arquivo novo) adiantam. Só recriando.
+# Nginx primeiro: é ele que manda o tráfego pra cópia nova durante a troca, então a
+# config nova (se mudou) tem que estar no ar antes.
+#
+# Recriar o nginx corta as conexões abertas por ~1 s, então só recria se algo em
+# deploy/nginx/ mudou neste pull. Precisa ser recriado (e não `nginx -s reload`):
+# nginx.conf/locations.conf entram como bind mount de ARQUIVO, que o Docker prende
+# ao inode; o `git pull` escreve outro arquivo e renomeia por cima (inode novo), e
+# o container continua vendo o antigo.
 #
 # Antes de recriar, valida a config num container descartável — esse sim pega o
 # inode atual. Config quebrada aborta o deploy com o nginx antigo ainda no ar,
 # em vez de derrubar o site num container que não sobe.
-echo -e "${YELLOW}🔁 Validando nginx.conf...${NC}"
-if docker run --rm \
-    -v "$PWD/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
-    -v "$PWD/nginx/locations.conf:/etc/nginx/snippets/locations.conf:ro" \
-    -v "$PWD/nginx/certs:/etc/nginx/certs:ro" \
-    nginx:1.27-alpine nginx -t; then
-    docker compose -f docker-compose.prod.yml up -d --force-recreate nginx
-    echo -e "${GREEN}   nginx recriado com a config atual${NC}"
+if git -C "$APP_DIR" diff --quiet "$VERSAO_ANTES" HEAD -- deploy/nginx; then
+    echo -e "${GREEN}   nginx sem mudança — mantido no ar${NC}"
 else
-    echo -e "${YELLOW}   ⚠️  nginx.conf inválido — deploy abortado, nginx anterior mantido no ar${NC}"
-    exit 1
+    echo -e "${YELLOW}🔁 nginx mudou — validando...${NC}"
+    if docker run --rm \
+        -v "$PWD/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+        -v "$PWD/nginx/locations.conf:/etc/nginx/snippets/locations.conf:ro" \
+        -v "$PWD/nginx/certs:/etc/nginx/certs:ro" \
+        nginx:1.27-alpine nginx -t; then
+        docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx
+        echo -e "${GREEN}   nginx recriado com a config atual${NC}"
+    else
+        echo -e "${YELLOW}   ⚠️  nginx.conf inválido — deploy abortado, nginx anterior mantido no ar${NC}"
+        exit 1
+    fi
+fi
+
+# Troca SEM tirar o site do ar (deploy/rollout.sh): a cópia nova sobe ao lado da
+# antiga e só depois de saudável a antiga sai.
+# Volta pro jeito antigo (derruba e sobe, ~15 s de site fora):  DEPLOY_AZUL_VERDE=0 bash deploy/update.sh
+if [ "${DEPLOY_AZUL_VERDE:-1}" = "1" ]; then
+    # Bancos e o resto: sobe o que estiver parado, sem recriar nada que está no ar
+    docker compose -f docker-compose.prod.yml up -d --no-recreate
+    bash rollout.sh api
+    bash rollout.sh frontend
+else
+    echo -e "${YELLOW}⚠️  DEPLOY_AZUL_VERDE=0 — jeito antigo: recria tudo (site fora por alguns segundos)${NC}"
+    docker compose -f docker-compose.prod.yml up -d
 fi
 
 # Limpa imagens antigas
