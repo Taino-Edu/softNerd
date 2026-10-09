@@ -63,3 +63,33 @@ CREATE TABLE IF NOT EXISTS crediario_avisos (
 CREATE INDEX IF NOT EXISTS ix_crediario_avisos_crediario ON crediario_avisos (crediario_id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_crediario_avisos_marco
     ON crediario_avisos (crediario_id, marco, vencimento_referencia) WHERE marco IS NOT NULL;
+
+-- Liguinha (docs/liguinha.md) — colunas novas em ColunasSqlite (InicializacaoBanco.cs)
+CREATE TABLE IF NOT EXISTS torneio_rodadas (
+    id              TEXT    NOT NULL PRIMARY KEY,
+    championship_id TEXT    NOT NULL REFERENCES championships(id) ON DELETE CASCADE,
+    numero          INTEGER NOT NULL,
+    status          TEXT    NOT NULL DEFAULT 'Aberta',
+    iniciada_em     TEXT    NOT NULL,
+    fechada_em      TEXT    NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_torneio_rodadas_numero ON torneio_rodadas (championship_id, numero);
+CREATE TABLE IF NOT EXISTS torneio_partidas (
+    id                     TEXT    NOT NULL PRIMARY KEY,
+    rodada_id              TEXT    NOT NULL REFERENCES torneio_rodadas(id) ON DELETE CASCADE,
+    mesa                   INTEGER NOT NULL,
+    participante_a_id      TEXT    NOT NULL REFERENCES championship_participants(id) ON DELETE CASCADE,
+    participante_b_id      TEXT    NULL     REFERENCES championship_participants(id) ON DELETE CASCADE,
+    deck_a_id              TEXT    NULL,
+    deck_a_nome            TEXT    NULL,
+    deck_b_id              TEXT    NULL,
+    deck_b_nome            TEXT    NULL,
+    report_a               TEXT    NULL,
+    report_b               TEXT    NULL,
+    resultado              TEXT    NULL,
+    vitorias_a             INTEGER NOT NULL DEFAULT 0,
+    vitorias_b             INTEGER NOT NULL DEFAULT 0,
+    resolvido_por_admin_id TEXT    NULL,
+    fechada_em             TEXT    NULL
+);
+CREATE INDEX IF NOT EXISTS ix_torneio_partidas_rodada ON torneio_partidas (rodada_id);

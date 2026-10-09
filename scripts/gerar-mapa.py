@@ -245,13 +245,13 @@ def tabelas_backend():
 
 def servicos_backend():
     program = ler(BACK / 'Program.cs') + ler(BACK / 'Configuration' / 'ServicosDaLoja.cs')
-    registros = re.findall(r'(?:builder\.Services|services)\.Add(Scoped|Singleton|Transient|HostedService)<([\w, ]+)>\(\)', program)
-    impl_dir = BACK / 'Services' / 'Implementations'
-    arquivos_impl = {p.stem: rel(p) for p in impl_dir.glob('*.cs')} if impl_dir.exists() else {}
+    registros = re.findall(r'(?:builder\.Services|services)\.Add(Scoped|Singleton|Transient|HostedService)<([\w., ]+)>\(\)', program)
+    # Implementations/ + subpastas por assunto (ex.: Services/Liga/)
+    arquivos_impl = {p.stem: rel(p) for p in (BACK / 'Services').rglob('*.cs') if 'Interfaces' not in p.parts}
     servicos, robos = [], []
     for tipo, alvo in registros:
         nomes = [x.strip() for x in alvo.split(',')]
-        impl = nomes[-1]
+        impl = nomes[-1].split('.')[-1]
         caminho = arquivos_impl.get(impl, '—')
         if caminho == '—':
             for stem, c in arquivos_impl.items():

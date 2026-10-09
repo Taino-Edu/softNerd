@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-257 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+272 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -39,6 +39,7 @@
 - [Tcg](#tcg) (8)
 - [TenantErpIntegration](#tenanterpintegration) (6)
 - [Timer](#timer) (4)
+- [Torneio](#torneio) (15)
 - [Upload](#upload) (3)
 - [User](#user) (15)
 - [VendaAvulsa](#vendaavulsa) (6)
@@ -219,7 +220,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/deck` | logado | `GetMyDecks` (42) | `deckApi.list` | `app/cliente/decks/page.tsx`<br>`app/page.tsx` |
+| GET | `/api/deck` | logado | `GetMyDecks` (42) | `deckApi.list` | `app/cliente/decks/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/page.tsx` |
 | POST | `/api/deck` | logado | `Create` (93) | `deckApi.create` | `app/cliente/decks/[id]/page.tsx` |
 | GET | `/api/deck/user/{userId:guid}` | AdminOnly | `GetByUser` (156) | `deckApi.getByUser` | `app/admin/campeonatos/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | DELETE | `/api/deck/{id:guid}` | logado | `Delete` (139) | `deckApi.delete` | `app/cliente/decks/page.tsx` |
@@ -489,8 +490,30 @@
 |---|---|---|---|---|---|
 | GET | `/api/timers` | papéis Admin,Operator | `List` (20) | `timerApi.list` | `contexts/TimerContext.tsx` |
 | POST | `/api/timers` | papéis Admin,Operator | `Create` (24) | `timerApi.create` | `contexts/TimerContext.tsx` |
-| DELETE | `/api/timers/{id:guid}` | papéis Admin,Operator | `Delete` (91) | `timerApi.remove` | `contexts/TimerContext.tsx` |
-| PUT | `/api/timers/{id:guid}` | papéis Admin,Operator | `Update` (39) | `timerApi.update` | `contexts/TimerContext.tsx` |
+| DELETE | `/api/timers/{id:guid}` | papéis Admin,Operator | `Delete` (126) | `timerApi.remove` | `contexts/TimerContext.tsx` |
+| PUT | `/api/timers/{id:guid}` | papéis Admin,Operator | `Update` (74) | `timerApi.update` | `contexts/TimerContext.tsx` |
+
+## Torneio
+
+`CardGameStore/Controllers/TorneioController.cs`
+
+| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
+|---|---|---|---|---|---|
+| GET | `/api/torneios/ativos` | logado | `Ativos` (99) | `torneioApi.ativos` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/entrar` | logado | `Entrar` (91) | `torneioApi.entrar` | `app/liga/jogar/page.tsx` |
+| GET | `/api/torneios/{id:guid}` | público | `Publico` (125) | `torneioApi.publico` | `app/liga/torneio/[id]/page.tsx` |
+| POST | `/api/torneios/{id:guid}/codigo` | AdminOnly | `NovoCodigo` (44) | `torneioApi.novoCodigo` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| POST | `/api/torneios/{id:guid}/desistir` | logado | `Desistir` (115) | `torneioApi.desistir` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/{id:guid}/encerrar` | AdminOnly | `Encerrar` (83) | `torneioApi.encerrar` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| GET | `/api/torneios/{id:guid}/minha-mesa` | logado | `MinhaMesa` (103) | `torneioApi.minhaMesa` | `app/liga/jogar/page.tsx` |
+| GET | `/api/torneios/{id:guid}/painel` | AdminOnly | `Painel` (31) | `torneioApi.painel` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| PUT | `/api/torneios/{id:guid}/participantes/{participantId:guid}/check-in` | AdminOnly | `CheckIn` (49) | `torneioApi.checkIn` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| POST | `/api/torneios/{id:guid}/participantes/{participantId:guid}/desistencia` | AdminOnly | `Desistencia` (74) | `torneioApi.desistencia` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| PUT | `/api/torneios/{id:guid}/partidas/{partidaId:guid}` | AdminOnly | `Resolver` (66) | `torneioApi.resolver` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| POST | `/api/torneios/{id:guid}/partidas/{partidaId:guid}/resultado` | logado | `LancarResultado` (107) | `torneioApi.lancar` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/{id:guid}/preparar` | AdminOnly | `Preparar` (36) | `torneioApi.preparar` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| POST | `/api/torneios/{id:guid}/rodadas` | AdminOnly | `GerarRodada` (58) | `torneioApi.gerarRodada` | `app/admin/campeonatos/[id]/torneio/page.tsx` |
+| GET | `/api/torneios/{id:guid}/rodadas/{numero:int}` | público | `Rodada` (129) | — | — |
 
 ## Upload
 

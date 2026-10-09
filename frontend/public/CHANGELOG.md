@@ -2,6 +2,16 @@
 
 ## [v1.40.0] — 2026-10-09
 
+### Novo
+- **Liguinha: torneio suíço dentro do site** (fase 1). Substitui o app de fora que a loja usava:
+  - **Organizador** (Campeonatos → Torneio): escolhe melhor de 1 ou 3 e o tempo de rodada, abre o check-in e recebe um código de 5 letras (ex.: C4YN2). Gera cada rodada com um clique — quem tem a mesma pontuação joga entre si, sem repetir adversário, e o bye vai pro último colocado. Vê o que cada jogador lançou, resolve divergências, registra desistência e encerra
+  - **Jogador** (santuarionerd.com/liga/jogar, feito pro celular): digita o código, escolhe o deck (dos "Meus decks" ou digitando), vê a mesa, o oponente e o relógio da rodada, e lança "Venci / Empatei / Perdi". Se os dois lançarem igual a partida fecha sozinha; se divergirem, vai pro organizador
+  - **Telão** (/liga/torneio/…): relógio grande, mesas e classificação ao vivo, sem login — dá pra deixar numa TV da loja
+  - Tudo atualiza na hora em todas as telas, sem precisar recarregar
+  - Classificação no padrão do Play! Pokémon: 3 pontos a vitória, 1 o empate, desempate pela % de vitórias dos adversários (OWP)
+  - Ao encerrar, a colocação de cada um e o pódio são gravados e **a Liga Mensal soma sozinha** (10/7/5/3/1, como sempre)
+- **Timer de campeonato**: ao criar um timer, a opção "É de campeonato?" liga ele ao campeonato do dia. No torneio, ele reinicia sozinho a cada rodada. Se o organizador não criar, o torneio cria um
+
 ### Corrigido
 - **Valores com ponto em mensagens do servidor**: o servidor de produção roda sem idioma configurado e escrevia dinheiro no formato americano — o cliente recebia "R$ 30.00" no WhatsApp e no e-mail do crediário, e o mesmo valia pra mensagens de erro na tela (crediário, cashback, desconto, Pix), e-mail de inscrição em campeonato e respostas do assistente. Agora todo texto pra pessoas sai "R$ 1.234,56". O Pix e a nota fiscal continuam com ponto, como os sistemas deles exigem. Achado pelo CI novo, que roda os testes no Linux
 

@@ -27,6 +27,16 @@ public static class InicializacaoBanco
         "ALTER TABLE crediarios ADD COLUMN pagamento_token TEXT NULL;",
         "ALTER TABLE pix_cobrancas ADD COLUMN crediario_ids_json TEXT NULL;",
         "ALTER TABLE championship_participants ADD COLUMN inscricao_expira_em TEXT NULL;",
+        "ALTER TABLE championships ADD COLUMN formato TEXT NOT NULL DEFAULT 'Livre';",
+        "ALTER TABLE championships ADD COLUMN codigo_entrada TEXT NULL;",
+        "ALTER TABLE championships ADD COLUMN melhor_de INTEGER NOT NULL DEFAULT 1;",
+        "ALTER TABLE championships ADD COLUMN minutos_rodada INTEGER NOT NULL DEFAULT 50;",
+        "ALTER TABLE championships ADD COLUMN numero_rodadas INTEGER NULL;",
+        "ALTER TABLE championships ADD COLUMN rodada_atual INTEGER NOT NULL DEFAULT 0;",
+        "ALTER TABLE championship_participants ADD COLUMN check_in_em TEXT NULL;",
+        "ALTER TABLE championship_participants ADD COLUMN desistiu_na_rodada INTEGER NULL;",
+        "ALTER TABLE timers ADD COLUMN championship_id TEXT NULL;",
+        "ALTER TABLE timers ADD COLUMN rodada INTEGER NULL;",
     ];
 
     public static async Task ExecutarAsync(IServiceProvider services, bool useSqlite)

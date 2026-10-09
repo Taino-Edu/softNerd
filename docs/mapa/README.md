@@ -117,6 +117,15 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
 
 Mudou como uma compra entra no crediário? Mexa em **comanda e PDV juntos** — os dois têm o mesmo fluxo.
 
+### Liguinha (torneio suíço)
+Arquitetura e APIs em [docs/liguinha.md](../liguinha.md). Camada em cima do campeonato: inscrição e Pix seguem
+no `ChampionshipController`; rodadas e partidas ficam em `Services/Liga/` (`Suico.cs` = motor puro com testes,
+`TorneioService.cs` = regras e concorrência). Ao encerrar, a classificação vira `Placement` e a Liga Mensal soma.
+- Telas: `/liga/jogar` (jogador), `/liga/torneio/[id]` (telão), `/admin/campeonatos/[id]/torneio` (organizador).
+- Tempo real: `Hubs/TorneioHub.cs` + `frontend/lib/useTorneioAoVivo.ts`. **Não troque por polling**: a loja
+  inteira sai pelo mesmo IP e o limite de requisições é por IP.
+- Timer: `timers.championship_id` — a liguinha reinicia o timer do campeonato a cada rodada.
+
 ### Notificações pro cliente/admin
 - Sininho: tabela `notifications` (`Models/PostgreSQL/Notification.cs`).
 - Push no celular: `IPushService`. E-mail: `IEmailService` (`EmailService.cs`).

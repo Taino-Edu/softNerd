@@ -47,6 +47,10 @@ public class AppDbContext : DbContext
     public DbSet<AuditLog>      AuditLogs      { get; set; }
     public DbSet<TimerEntity>   Timers         { get; set; }
 
+    // Liguinha — rodadas e partidas do torneio suíço
+    public DbSet<TorneioRodada>  TorneioRodadas  { get; set; }
+    public DbSet<TorneioPartida> TorneioPartidas { get; set; }
+
     // ── Marketplace ────────────────────────────────────────────────────────────
     public DbSet<CardListing>     CardListings     { get; set; }
     public DbSet<ListingInterest> ListingInterests { get; set; }
@@ -275,7 +279,46 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(c => c.StartDate)
                   .HasDatabaseName("ix_championships_start_date");
+
+            entity.Property(c => c.Formato).HasConversion<string>();
         });
+
+        // =====================================================================
+        // LIGUINHA — rodadas e partidas (Models/PostgreSQL/Torneio.cs)
+        // =====================================================================
+        modelBuilder.Entity<TorneioRodada>(entity =>
+        {
+            entity.Property(r => r.Status).HasConversion<string>();
+            // Dois cliques em "gerar rodada" criam uma só
+            entity.HasIndex(r => new { r.ChampionshipId, r.Numero })
+                  .IsUnique()
+                  .HasDatabaseName("ux_torneio_rodadas_numero");
+            entity.HasOne(r => r.Championship)
+                  .WithMany()
+                  .HasForeignKey(r => r.ChampionshipId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TorneioPartida>(entity =>
+        {
+            entity.Property(p => p.ReportA).HasConversion<string>();
+            entity.Property(p => p.ReportB).HasConversion<string>();
+            entity.Property(p => p.Resultado).HasConversion<string>();
+            entity.HasIndex(p => p.RodadaId).HasDatabaseName("ix_torneio_partidas_rodada");
+            entity.HasOne(p => p.Rodada)
+                  .WithMany(r => r.Partidas)
+                  .HasForeignKey(p => p.RodadaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(p => p.ParticipanteA)
+                  .WithMany()
+                  .HasForeignKey(p => p.ParticipanteAId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(p => p.ParticipanteB)
+                  .WithMany()
+                  .HasForeignKey(p => p.ParticipanteBId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
 
         // =====================================================================
         // CHAMPIONSHIP PARTICIPANT

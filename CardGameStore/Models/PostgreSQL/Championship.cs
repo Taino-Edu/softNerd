@@ -74,6 +74,34 @@ public class Championship
     public ChampionshipStatus Status { get; set; } = ChampionshipStatus.Planejado;
 
     // -------------------------------------------------------------------------
+    // Liguinha — torneio suíço (Models/PostgreSQL/Torneio.cs, docs/liguinha.md)
+    // -------------------------------------------------------------------------
+
+    /// <summary>Livre = só colocação final, como sempre foi. Suico = rodadas e partidas no sistema.</summary>
+    [Column("formato")]
+    public FormatoTorneio Formato { get; set; } = FormatoTorneio.Livre;
+
+    /// <summary>Código que o jogador digita no celular pra entrar (ex.: KX7P2).</summary>
+    [MaxLength(8)]
+    [Column("codigo_entrada")]
+    public string? CodigoEntrada { get; set; }
+
+    /// <summary>1 ou 3.</summary>
+    [Column("melhor_de")]
+    public int MelhorDe { get; set; } = 1;
+
+    [Column("minutos_rodada")]
+    public int MinutosRodada { get; set; } = 50;
+
+    /// <summary>Rodadas suíças planejadas (null = ainda não iniciou).</summary>
+    [Column("numero_rodadas")]
+    public int? NumeroRodadas { get; set; }
+
+    /// <summary>Rodada em andamento (0 = torneio não começou).</summary>
+    [Column("rodada_atual")]
+    public int RodadaAtual { get; set; }
+
+    // -------------------------------------------------------------------------
     // Auditoria
     // -------------------------------------------------------------------------
 
@@ -211,6 +239,14 @@ public class ChampionshipParticipant
 
     [ForeignKey(nameof(ComandaId))]
     public Comanda? Comanda { get; set; }
+
+    /// <summary>Quando entrou pelo código no dia (liguinha). Só quem fez check-in é emparelhado.</summary>
+    [Column("check_in_em")]
+    public DateTime? CheckInEm { get; set; }
+
+    /// <summary>Rodada em que desistiu (null = segue jogando). Continua contando como oponente no desempate.</summary>
+    [Column("desistiu_na_rodada")]
+    public int? DesistiuNaRodada { get; set; }
 }
 
 /// <summary>Estados possíveis de um campeonato.</summary>

@@ -727,3 +727,51 @@ WHERE refresh_token IS NOT NULL
   AND refresh_token_expiry IS NOT NULL
   AND refresh_token_expiry > NOW()
 ON CONFLICT (token_hash) DO NOTHING;
+
+-- Liguinha (docs/liguinha.md): torneio suíço em cima do campeonato.
+-- Campeonato antigo fica 'Livre' (só colocação final, como sempre foi).
+ALTER TABLE championships             ADD COLUMN IF NOT EXISTS formato            VARCHAR(20) NOT NULL DEFAULT 'Livre';
+ALTER TABLE championships             ADD COLUMN IF NOT EXISTS codigo_entrada     VARCHAR(8)  NULL;
+ALTER TABLE championships             ADD COLUMN IF NOT EXISTS melhor_de          INTEGER     NOT NULL DEFAULT 1;
+ALTER TABLE championships             ADD COLUMN IF NOT EXISTS minutos_rodada     INTEGER     NOT NULL DEFAULT 50;
+ALTER TABLE championships             ADD COLUMN IF NOT EXISTS numero_rodadas     INTEGER     NULL;
+ALTER TABLE championships             ADD COLUMN IF NOT EXISTS rodada_atual       INTEGER     NOT NULL DEFAULT 0;
+ALTER TABLE championship_participants ADD COLUMN IF NOT EXISTS check_in_em        TIMESTAMPTZ NULL;
+ALTER TABLE championship_participants ADD COLUMN IF NOT EXISTS desistiu_na_rodada INTEGER     NULL;
+ALTER TABLE timers                    ADD COLUMN IF NOT EXISTS championship_id    UUID        NULL
+    REFERENCES championships(id) ON DELETE SET NULL;
+ALTER TABLE timers                    ADD COLUMN IF NOT EXISTS rodada             INTEGER     NULL;
+
+-- Código de entrada não repete entre campeonatos (null fica livre)
+CREATE UNIQUE INDEX IF NOT EXISTS ux_championships_codigo_entrada
+    ON championships (codigo_entrada) WHERE codigo_entrada IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS torneio_rodadas (
+    id              UUID        PRIMARY KEY,
+    championship_id UUID        NOT NULL REFERENCES championships(id) ON DELETE CASCADE,
+    numero          INTEGER     NOT NULL,
+    status          VARCHAR(20) NOT NULL DEFAULT 'Aberta',
+    iniciada_em     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fechada_em      TIMESTAMPTZ NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_torneio_rodadas_numero ON torneio_rodadas (championship_id, numero);
+
+CREATE TABLE IF NOT EXISTS torneio_partidas (
+    id                     UUID         PRIMARY KEY,
+    rodada_id              UUID         NOT NULL REFERENCES torneio_rodadas(id) ON DELETE CASCADE,
+    mesa                   INTEGER      NOT NULL,
+    participante_a_id      UUID         NOT NULL REFERENCES championship_participants(id) ON DELETE CASCADE,
+    participante_b_id      UUID         NULL     REFERENCES championship_participants(id) ON DELETE CASCADE,
+    deck_a_id              UUID         NULL,
+    deck_a_nome            VARCHAR(200) NULL,
+    deck_b_id              UUID         NULL,
+    deck_b_nome            VARCHAR(200) NULL,
+    report_a               VARCHAR(20)  NULL,
+    report_b               VARCHAR(20)  NULL,
+    resultado              VARCHAR(20)  NULL,
+    vitorias_a             INTEGER      NOT NULL DEFAULT 0,
+    vitorias_b             INTEGER      NOT NULL DEFAULT 0,
+    resolvido_por_admin_id UUID         NULL,
+    fechada_em             TIMESTAMPTZ  NULL
+);
+CREATE INDEX IF NOT EXISTS ix_torneio_partidas_rodada ON torneio_partidas (rodada_id);

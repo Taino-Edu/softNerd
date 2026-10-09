@@ -8,6 +8,7 @@ import {
   ChevronDown, ChevronUp, UserPlus, Trash2, Medal, Search, ImagePlus, Edit2, MessageCircle, Award, Link2, Eye,
   ClipboardCheck,
 } from 'lucide-react'
+import Link from 'next/link'
 import ConferenciaDecksModal from '@/components/admin/ConferenciaDecksModal'
 import DeckViewerModal from '@/components/admin/DeckViewerModal'
 import { getRole } from '@/lib/auth'
@@ -716,14 +717,24 @@ function ChampionshipCard({
             </span>
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-          {canAddParticipants && (
-            <button
-              onClick={() => setShowAdd(true)}
-              className="flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
-            >
-              <UserPlus className="w-3.5 h-3.5" /> Adicionar
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {c.status !== 'Cancelado' && (
+              <Link
+                href={`/admin/campeonatos/${c.id}/torneio`}
+                className="flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
+              >
+                <Swords className="w-3.5 h-3.5" /> Torneio
+              </Link>
+            )}
+            {canAddParticipants && (
+              <button
+                onClick={() => setShowAdd(true)}
+                className="flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
+              >
+                <UserPlus className="w-3.5 h-3.5" /> Adicionar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Painel expandido */}

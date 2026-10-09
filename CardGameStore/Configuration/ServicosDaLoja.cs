@@ -182,6 +182,9 @@ public static class ServicosDaLoja
         services.AddScoped<CrediarioPixService>();
         services.AddHostedService<CrediarioAvisoBackgroundService>();
 
+        // Liguinha — torneio suíço em cima do campeonato (docs/liguinha.md)
+        services.AddScoped<CardGameStore.Services.Liga.TorneioService>();
+
         return services;
     }
 }
