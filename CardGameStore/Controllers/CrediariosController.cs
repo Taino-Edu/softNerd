@@ -207,27 +207,6 @@ public class CrediariosController : ControllerBase
     }
 
     // -------------------------------------------------------------------------
-    // GET /api/crediarios/meu — crediário aberto do cliente
-    // -------------------------------------------------------------------------
-    [HttpGet("meu")]
-    public async Task<ActionResult<CrediariosDto>> GetMeu()
-    {
-        var userId    = GetUserId();
-        var crediario = await _db.Crediarios
-            .Include(c => c.User)
-            .Include(c => c.Pagamentos)
-            .Include(c => c.Lancamentos)
-            .Include(c => c.Avisos)
-            .Where(c => c.UserId == userId && c.Status == CrediariosStatus.Aberto)
-            .FirstOrDefaultAsync();
-
-        if (crediario == null)
-            return NotFound(new { Message = "Nenhum crediário em aberto." });
-
-        return Ok(MapToDto(crediario));
-    }
-
-    // -------------------------------------------------------------------------
     // GET /api/crediarios/historico — todo o histórico de crediários do cliente
     // -------------------------------------------------------------------------
     [HttpGet("historico")]

@@ -99,7 +99,6 @@ export interface PerfilDto {
 
 export const perfisApi = {
   list:       ()                                    => api.get<PerfilDto[]>('/api/perfis'),
-  permissoes: ()                                    => api.get<{ key: string; label: string }[]>('/api/perfis/permissoes'),
   create:     (nome: string, permissoes: string[])  => api.post<PerfilDto>('/api/perfis', { nome, permissoes }),
   update:     (id: string, data: { nome?: string; permissoes?: string[] }) =>
     api.put<PerfilDto>(`/api/perfis/${id}`, data),

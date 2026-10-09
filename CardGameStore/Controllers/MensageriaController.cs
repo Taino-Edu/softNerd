@@ -146,8 +146,12 @@ public class MensageriaController : ControllerBase
                 .Where(c => c.Status == CrediariosStatus.Aberto)
                 .Select(c => c.UserId),
 
-            "waitlist" => _db.ProductWaitLists
-                .Select(w => w.UserId!.Value)
+            // Fila de pré-venda (kind "fila"). Antes lia product_waitlist, que a migração
+            // "waitlist_to_fila" esvaziou — o filtro mandava mensagem pra ninguém.
+            "waitlist" => _db.ProductReservations
+                .Where(r => r.Kind == "fila" && r.Status == "waiting"
+                         && r.Product!.IsPreVenda && r.Product!.IsActive)
+                .Select(r => r.UserId)
                 .Distinct(),
 
             "top_points" => _db.Users

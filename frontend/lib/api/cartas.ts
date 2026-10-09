@@ -79,9 +79,6 @@ export interface TcgSearchParams {
 }
 
 export const tcgApi = {
-  search: (name: string, game?: string, page = 1, pageSize = 30, setId?: string, rarity?: string, cardType?: string, extra?: Omit<TcgSearchParams, 'name'|'game'|'page'|'pageSize'|'setId'|'rarity'|'cardType'>) =>
-    api.get<{ items: CardCache[]; totalCount: number; totalPages: number }>('/api/tcg/search',
-      { params: { name, game, page, pageSize, ...(setId ? { setId } : {}), ...(rarity ? { rarity } : {}), ...(cardType ? { cardType } : {}), ...extra } }),
   searchAdvanced: (params: TcgSearchParams) =>
     api.get<{ items: CardCache[]; totalCount: number; totalPages: number }>('/api/tcg/search',
       { params }),
@@ -145,7 +142,6 @@ export interface MarketplaceInterestDto {
 export const marketplaceApi = {
   list: (params?: { page?: number; pageSize?: number; game?: string; search?: string; status?: string; sellerId?: string }) =>
     api.get<MarketplacePageDto>('/api/marketplace', { params }),
-  mine: () => api.get<CardListingDto[]>('/api/marketplace/mine'),
   create: (req: CreateListingRequest) => api.post<CardListingDto>('/api/marketplace', req),
   update: (id: string, req: Partial<CreateListingRequest & { status: string }>) =>
     api.put<CardListingDto>(`/api/marketplace/${id}`, req),

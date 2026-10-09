@@ -81,11 +81,6 @@ export const reservationApi = {
     paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
     discountPercent?: number; discountInCents?: number
   }) => api.post<HomologarResult>(`/api/reservations/group/${groupId}/homologar`, body),
-  /** Homologa só um item de um carrinho — a tela usa sempre o de grupo. */
-  homologar: (id: string, body: {
-    paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
-    discountPercent?: number; discountInCents?: number
-  }) => api.post<HomologarResult>(`/api/reservations/${id}/homologar`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),
   /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */

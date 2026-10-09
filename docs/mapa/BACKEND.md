@@ -38,7 +38,6 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j√
 | `product_categories` | `ProductCategory` | `ProductCategories` | colunas | `CardGameStore/Models/PostgreSQL/ProductCategory.cs` |
 | `product_reservations` | `ProductReservation` | `ProductReservations` | criada, colunas | `CardGameStore/Models/PostgreSQL/ProductReservation.cs` |
 | `product_variants` | `ProductVariant` | `ProductVariants` | criada | `CardGameStore/Models/PostgreSQL/ProductVariant.cs` |
-| `product_waitlist` | `ProductWaitList` | `ProductWaitLists` | criada, colunas | `CardGameStore/Models/PostgreSQL/ProductWaitList.cs` |
 | `products` | `Product` | `Products` | colunas | `CardGameStore/Models/PostgreSQL/Product.cs` |
 | `push_subscriptions` | `PushSubscription` | `PushSubscriptions` | criada | `CardGameStore/Models/PostgreSQL/PushSubscription.cs` |
 | `site_config` | `SiteConfig` | `SiteConfigs` | criada, colunas | `CardGameStore/Models/PostgreSQL/SiteConfig.cs` |

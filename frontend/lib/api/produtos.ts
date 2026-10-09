@@ -58,7 +58,6 @@ export const productApi = {
   create:      (p: Partial<Product>) => api.post<Product>('/api/product', p),
   update:      (id: string, p: Partial<Product>) => api.put<Product>(`/api/product/${id}`, p),
   deactivate:  (id: string)         => api.delete(`/api/product/${id}`),
-  lowStock:    ()                   => api.get<Product[]>('/api/product/low-stock'),
   adjustStock: (id: string, delta: number) => api.patch(`/api/product/${id}/stock`, { delta }),
 }
 

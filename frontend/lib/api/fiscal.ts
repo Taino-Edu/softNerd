@@ -71,8 +71,6 @@ export const fiscalApi = {
   listNaturezas:  ()                                => api.get<NaturezaOperacaoDto[]>('/api/fiscal/naturezas-operacao'),
   createNatureza: (body: { descricao: string; cfop: string; csosn?: string; percentualCreditoSn?: number; isPadrao: boolean }) =>
                    api.post<NaturezaOperacaoDto>('/api/fiscal/naturezas-operacao', body),
-  updateNatureza: (id: string, body: { descricao: string; cfop: string; csosn?: string; percentualCreditoSn?: number; isPadrao: boolean }) =>
-                   api.put<NaturezaOperacaoDto>(`/api/fiscal/naturezas-operacao/${id}`, body),
   removeNatureza: (id: string)                      => api.delete(`/api/fiscal/naturezas-operacao/${id}`),
 
   exportarXmls: (inicio: string, fim: string) =>

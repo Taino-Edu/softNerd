@@ -59,19 +59,13 @@ export const championshipApi = {
   update:           (id: string, c: Partial<Championship>) => api.put<Championship>(`/api/championship/${id}`, c),
   myParticipations: () => api.get<MyParticipation[]>('/api/championship/my-participations'),
   listAll:          (search?: string) => api.get<Championship[]>('/api/championship/admin/all', { params: search ? { search } : {} }),
-  get:              (id: string) => api.get<Championship>(`/api/championship/${id}`),
   create:           (c: Partial<Championship>) => api.post<Championship>('/api/championship', c),
   delete:           (id: string) => api.delete(`/api/championship/${id}`),
-  register:         (id: string, userId: string, deckName?: string) =>
-    api.post(`/api/championship/${id}/register`, { userId, deckName }),
   /** Inscreve o PRÓPRIO usuário logado (o backend usa o token, não confia em userId do corpo).
    *  Em campeonato pago, o backend já devolve o Pix obrigatório na mesma operação. */
   selfRegister:     (id: string, deckName?: string, deckId?: string) =>
     api.post<{ participant: ChampionshipParticipant; pix: PixCobrancaDto | null }>(
       `/api/championship/${id}/register`, { deckName, deckId }),
-  /** Gera a cobrança Pix da taxa de inscrição do próprio usuário. Só funciona depois de inscrito. */
-  pixInscricao:     (id: string) =>
-    api.post<PixCobrancaDto>(`/api/championship/${id}/my-inscription/pix`),
   /** Pergunta ao Inter se a taxa caiu e, se caiu, confirma a inscrição na hora.
    *  Mesmo caminho de baixa do robô de conciliação — só que sem esperar o ciclo dele. */
   verificarPixInscricao: (id: string) =>
@@ -90,10 +84,6 @@ export const championshipApi = {
   /** Gera a cobrança da inscrição, mostra na conta do jogador e manda notificação. */
   cobrarInscricao:  (participantId: string) =>
     api.post<PixCobrancaDto & { message: string }>(`/api/championship/participants/${participantId}/cobrar`),
-  setImage:         (id: string, imageUrl: string | null) =>
-    api.put<Championship>(`/api/championship/${id}/image`, { imageUrl }),
-  addPreInscricao:  (id: string, nome: string, whatsApp: string, deckId?: string, deckName?: string) =>
-    api.post<ChampionshipPreInscricao>(`/api/championship/${id}/preinscricoes`, { nome, whatsApp, deckId, deckName }),
   getPreInscricoes: (id: string) =>
     api.get<ChampionshipPreInscricao[]>(`/api/championship/${id}/preinscricoes`),
   deletePreInscricao: (championshipId: string, preInscricaoId: string) =>

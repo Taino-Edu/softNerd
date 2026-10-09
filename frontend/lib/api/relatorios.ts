@@ -116,7 +116,6 @@ export interface ClientesFiltro {
 }
 
 export const analyticsApi = {
-  dashboard: () => api.get('/api/analytics/dashboard'),
   /** Extrato do período: cada entrada de dinheiro com origem, incluindo as estornadas. */
   extrato: (inicio?: string, fim?: string) =>
     api.get<ExtratoDto>('/api/analytics/extrato', { params: { inicio: inicio || undefined, fim: fim || undefined } }),
