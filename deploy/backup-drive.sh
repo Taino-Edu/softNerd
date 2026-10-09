@@ -83,12 +83,17 @@ fi
 
 # Descobre o nome real do volume de uploads (o compose prefixa com o nome do
 # projeto, ex.: deploy_api_uploads) — primeiro pelo container, depois na lista
-UPLOADS_VOLUME=$(docker inspect santuarionerd_api \
-  --format '{{range .Mounts}}{{if eq .Destination "/app/wwwroot/uploads"}}{{.Name}}{{end}}{{end}}' 2>/dev/null || true)
+# (a api não tem nome fixo de container desde a troca sem queda — deploy/rollout.sh)
+API_ID=$(docker compose -f "$(dirname "$0")/docker-compose.prod.yml" ps -q api 2>/dev/null | head -1 || true)
+UPLOADS_VOLUME=""
+if [ -n "$API_ID" ]; then
+  UPLOADS_VOLUME=$(docker inspect "$API_ID" \
+    --format '{{range .Mounts}}{{if eq .Destination "/app/wwwroot/uploads"}}{{.Name}}{{end}}{{end}}' 2>/dev/null || true)
+fi
 if [ -z "$UPLOADS_VOLUME" ]; then
   UPLOADS_VOLUME=$(docker volume ls --format '{{.Name}}' | grep -E '(^|_)api_uploads$' | head -1 || true)
 fi
-[ -n "$UPLOADS_VOLUME" ] || die "Volume api_uploads não encontrado. O container santuarionerd_api está rodando?"
+[ -n "$UPLOADS_VOLUME" ] || die "Volume api_uploads não encontrado. A api está rodando? (docker compose -f deploy/docker-compose.prod.yml ps api)"
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

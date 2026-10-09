@@ -216,9 +216,29 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
 | PR, main e toda segunda | varredura de segurança do código (C# e TS) | `.github/workflows/codeql.yml` |
 | Toda semana | PRs de atualização de dependências (agrupados) | `.github/dependabot.yml` |
 | `main` | só entra por PR com o CI verde; sem push direto nem `--force` (vale pro admin também) | proteção de branch |
-| Deploy | à mão + aprovação; só do `main` com CI verde; roda o `update.sh`, espera o `/health` e passa o smoke | `.github/workflows/deploy.yml` |
+| Deploy | à mão + aprovação; só do `main` com CI verde; roda o `update.sh` (troca sem queda), espera o `/health` e passa o smoke | `.github/workflows/deploy.yml`, `deploy/rollout.sh` |
 | Produção | **robô de smoke a cada 30 min**; se cair, abre alerta (issue `smoke`, chega por e-mail) e fecha quando volta | `.github/workflows/smoke.yml`, `scripts/smoke.py` |
 | Repositório | varredura de segredos com bloqueio do push; alertas e correções automáticas de dependências | configuração do GitHub |
+
+### Troca sem queda (azul-verde)
+O deploy não derruba mais o site: `deploy/update.sh` constrói as imagens com o site no ar e chama
+`deploy/rollout.sh` pra `api` e `frontend` — a cópia nova sobe **ao lado** da antiga, o rollout pergunta
+direto a ela (`/health`, `/manifest.json`) até responder (máx. 45 s; senão apaga a nova e para, com a antiga
+no ar), espera o nginx enxergar a nova e só então desliga a antiga com calma (até 35 s pra terminar o que
+estava fazendo). O nginx reenvia pra outra cópia o pedido que bater numa que está saindo.
+
+Regras que isso cria:
+- **Robô novo espera ≥ 1 min antes da primeira volta** (`await Task.Delay(TimeSpan.FromMinutes(1), ct)`
+  antes do `while`). As duas cópias ficam juntas por menos de 1 min; assim nunca rodam robô em dobro.
+  O teste `TodoRobo_EsperaPeloMenos1MinutoAntesDaPrimeiraVolta` falha se esquecer.
+- **SQL de inicialização continua só adicionando** (já era regra): a cópia nova roda o SQL enquanto a antiga
+  ainda atende com o código velho.
+- `api` e `frontend` **não têm nome fixo de container**. Logs:
+  `cd /opt/santuarionerd/deploy && docker compose -f docker-compose.prod.yml logs api --since 10m`.
+- Telão e celulares da liguinha reconectam sozinhos na troca (o tempo real cai e volta em segundos).
+- Medir uma troca: `python scripts/vigia-deploy.py --segundos 120` durante o deploy (só lê; pode em produção).
+- Voltar uma versão: `bash deploy/update.sh <commit>` (sem argumento volta pro `main`).
+  Voltar pro deploy antigo (derruba e sobe, ~15 s fora): `DEPLOY_AZUL_VERDE=0 bash deploy/update.sh`.
 
 A chave do deploy só abre o porteiro `/usr/local/bin/santuario-ci` na VPS (aceita `ping`, `status`, `deploy`;
 log em `/var/log/santuario-ci.log`). Deploy na mão continua igual:
