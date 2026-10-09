@@ -239,7 +239,12 @@ Regras que isso cria:
 - Medir uma troca: `python scripts/vigia-deploy.py --segundos 120` durante o deploy (só lê; pode em produção).
 - Todo deploy faz backup dos bancos antes (`deploy/backup.sh` → `backups/`, 7 dias). Emergência sem backup:
   `SEM_BACKUP=1 bash deploy/update.sh`.
-- O nginx só é recriado se a config que ele está **usando** difere da do disco (corta conexões por ~1 s).
+- **Nginx**: a pasta `deploy/nginx/` é montada inteira em `/etc/nginx/snippets`; o `conf.d/default.conf` é só
+  `deploy/nginx/entrada.conf` (1 linha fixa que inclui `snippets/nginx.conf` — não mexer). Todo deploy faz `nginx -t` +
+  `nginx -s reload`: troca a config sem derrubar conexão; config quebrada para o deploy e o nginx segue com a anterior.
+  Mexa em `nginx.conf` (servers, resolver) e `locations.conf` (rotas).
+- `/_next/image` está **fechado** (nginx 404 + `images.unoptimized` no `next.config.js`): falha crítica no Next 14.
+  Reabrir só no Next 15.5.24+.
 - Voltar uma versão: `bash deploy/update.sh <commit>` (sem argumento volta pro `main`).
   Voltar pro deploy antigo (derruba e sobe, ~15 s fora): `DEPLOY_AZUL_VERDE=0 bash deploy/update.sh`.
 

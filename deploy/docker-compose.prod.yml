@@ -22,12 +22,19 @@ services:
   nginx:
     image: nginx:1.27-alpine
     container_name: santuarionerd_nginx
+    # Só é recriado na troca de montagem (uma vez); 3 s pra soltar as portas em vez de 10
+    stop_grace_period: 3s
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/locations.conf:/etc/nginx/snippets/locations.conf:ro
+      # A PASTA inteira em snippets/ (não arquivo por arquivo): montagem de arquivo prende o
+      # container ao arquivo antigo depois do git pull e obrigava a recriar o nginx (~10 s de
+      # pedidos parados). Com a pasta, o update.sh só valida e faz "nginx -s reload".
+      # O default.conf é só uma entrada fixa de 1 linha que inclui snippets/nginx.conf —
+      # nunca muda, então não tem problema ele ficar preso.
+      - ./nginx/entrada.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx:/etc/nginx/snippets:ro
       - ./nginx/certs:/etc/nginx/certs:ro
       - api_uploads:/var/www/uploads:ro
     depends_on:
