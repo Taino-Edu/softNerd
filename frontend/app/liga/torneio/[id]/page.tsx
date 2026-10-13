@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2 } from 'lucide-react'
-import { torneioApi, TorneioPublicoDto } from '@/lib/api'
+import { torneioApi, TorneioPublicoDto, rodadaComecou } from '@/lib/api'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
 import Relogio from '@/components/liga/Relogio'
 import TabelaTorneio from '@/components/liga/TabelaTorneio'
@@ -57,6 +57,11 @@ export default function TelaoTorneioPage() {
         </header>
 
         {!encerrado && t.rodadaAtual > 0 && <Relogio timer={t.timer} grande />}
+        {!encerrado && t.rodadaAtual > 0 && !rodadaComecou(t.timer, t.rodadaAtual) && t.mesas.some(m => !m.resultado) && (
+          <p className="text-center text-lg md:text-xl font-semibold text-white bg-surface-800 border border-surface-500 rounded-2xl py-3">
+            Pareamentos da rodada {t.rodadaAtual} saíram — vá pra sua mesa e monte o setup
+          </p>
+        )}
 
         {encerrado && t.classificacao.length > 0 && (
           <section className="grid grid-cols-3 gap-3 max-w-2xl mx-auto">
@@ -78,9 +83,11 @@ export default function TelaoTorneioPage() {
               <div className="grid sm:grid-cols-2 gap-2">
                 {t.mesas.map(m => (
                   <div key={m.partidaId} className="bg-surface-800 border border-surface-500 rounded-xl p-3 flex items-center gap-3">
-                    <span className="w-10 h-10 rounded-lg bg-surface-700 flex items-center justify-center font-bold text-white shrink-0">
-                      {m.b ? m.mesa : '—'}
-                    </span>
+                    {m.aguardandoMesa
+                      ? <span className="px-2 h-10 rounded-lg bg-surface-700 flex items-center justify-center text-xs font-semibold txt-alerta shrink-0 text-center leading-tight">aguarda<br />mesa</span>
+                      : <span className="w-10 h-10 rounded-lg bg-surface-700 flex items-center justify-center font-bold text-white shrink-0">
+                          {m.b ? m.mesa : '—'}
+                        </span>}
                     <span className="flex-1 min-w-0 text-sm">
                       <span className="block text-white truncate">{m.a.nome}</span>
                       <span className="block text-gray-400 truncate">{m.b ? `× ${m.b.nome}` : 'bye'}</span>

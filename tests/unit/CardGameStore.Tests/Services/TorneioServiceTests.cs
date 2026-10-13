@@ -2,6 +2,7 @@
 // TorneioServiceTests.cs — Liguinha de ponta a ponta (Services/Liga/TorneioService.cs)
 // =============================================================================
 
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
@@ -17,7 +18,8 @@ namespace CardGameStore.Tests.Services;
 
 public class TorneioServiceTests
 {
-    private sealed record Ambiente(AppDbContext Db, TorneioService Torneio, Championship Ch, List<User> Jogadores);
+    private sealed record Ambiente(AppDbContext Db, TorneioService Torneio, Championship Ch, List<User> Jogadores,
+        FuncionalidadesService Funcionalidades);
 
     private static Ambiente Criar(int jogadores, int taxaEmCentavos = 0)
     {
@@ -45,7 +47,16 @@ public class TorneioServiceTests
         clients.Setup(c => c.Group(It.IsAny<string>())).Returns(new Mock<IClientProxy>().Object);
         hub.Setup(h => h.Clients).Returns(clients.Object);
 
-        return new(db, new TorneioService(db, hub.Object, NullLogger<TorneioService>.Instance), ch, users);
+        var funcionalidades = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        return new(db, new TorneioService(db, hub.Object, NullLogger<TorneioService>.Instance, funcionalidades), ch, users,
+            funcionalidades);
+    }
+
+    private static async Task<int> InscreverEEntrarTodosAsync(Ambiente amb, int lugares = 24)
+    {
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30, lugares);
+        foreach (var u in amb.Jogadores) await amb.Torneio.EntrarAsync(u.Id, ch.CodigoEntrada!, null, null);
+        return amb.Jogadores.Count;
     }
 
     /// <summary>Lança o mesmo resultado pelos dois lados: A sempre vence (ordem determinística).</summary>
@@ -170,11 +181,14 @@ public class TorneioServiceTests
 
         await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
 
-        // Timer criado e contando com o tempo da rodada
+        // Timer criado com o tempo da rodada, PARADO até o organizador começar a rodada
         var timer = await amb.Db.Timers.AsNoTracking().SingleAsync();
         timer.ChampionshipId.Should().Be(amb.Ch.Id);
-        timer.State.Should().Be(TimerState.Running);
+        timer.State.Should().Be(TimerState.Stopped);
         timer.DurationSeconds.Should().Be(30 * 60);
+        await amb.Torneio.ComecarRodadaAsync(amb.Ch.Id);
+        timer = await amb.Db.Timers.AsNoTracking().SingleAsync();
+        timer.State.Should().Be(TimerState.Running);
         timer.Rodada.Should().Be(1);
 
         var rodadas = (await amb.Db.Championships.AsNoTracking().SingleAsync()).NumeroRodadas!.Value;
@@ -224,6 +238,139 @@ public class TorneioServiceTests
         liga.Ranking.Select(l => (l.UserId, l.TotalPoints, l.EventsPlayed)).Should().Equal(
             tabela.Select(l => (l.UserId, LigaMensalService.PontosPorColocacao(l.Posicao), 1)));
         liga.Ranking.Select(l => l.TotalPoints).Should().Equal(10, 7, 5, 3);
+    }
+
+    // ── Pedidos do Maikon (13/10/2026) ───────────────────────────────────────
+
+    [Fact]
+    public async Task SoltarPareamentos_NaoLigaORelogio_SoComecarRodadaLiga()
+    {
+        var amb = Criar(4);
+        await InscreverEEntrarTodosAsync(amb);
+
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+
+        var timer = await amb.Db.Timers.AsNoTracking().SingleAsync();
+        timer.Should().Match<TimerEntity>(t => t.State == TimerState.Stopped && t.StartedAt == null
+                                            && t.Rodada == 1 && t.DurationSeconds == 30 * 60);
+
+        await amb.Torneio.ComecarRodadaAsync(amb.Ch.Id);
+
+        timer = await amb.Db.Timers.AsNoTracking().SingleAsync();
+        timer.State.Should().Be(TimerState.Running);
+        timer.StartedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ComecarRodada_DuasVezes_409_ENaoReiniciaORelogio()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        await amb.Torneio.ComecarRodadaAsync(amb.Ch.Id);
+        var inicio = (await amb.Db.Timers.AsNoTracking().SingleAsync()).StartedAt;
+
+        var acao = () => amb.Torneio.ComecarRodadaAsync(amb.Ch.Id);
+
+        (await acao.Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409);
+        (await amb.Db.Timers.AsNoTracking().SingleAsync()).StartedAt.Should().Be(inicio);
+    }
+
+    [Fact]
+    public async Task ComecarRodada_AntesDeSoltarPareamentos_Recusa()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+
+        await FluentActions.Awaiting(() => amb.Torneio.ComecarRodadaAsync(amb.Ch.Id))
+            .Should().ThrowAsync<TorneioException>();
+    }
+
+    [Fact]
+    public async Task Fallback_ChaveDesligada_SoltarPareamentosLigaORelogioNaHora()
+    {
+        var amb = Criar(2);
+        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LiguinhaRelogioSeparado, false, Guid.NewGuid());
+        await InscreverEEntrarTodosAsync(amb);
+
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+
+        (await amb.Db.Timers.AsNoTracking().SingleAsync()).State.Should().Be(TimerState.Running);
+    }
+
+    [Fact]
+    public async Task Lugares_QuemPassaDaLojaFicaAguardandoMesa_SemBarrarNinguem()
+    {
+        var amb = Criar(30);                      // 15 mesas de jogo
+        await InscreverEEntrarTodosAsync(amb, lugares: 24);   // cabem 12
+
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesas = (await amb.Torneio.PainelAsync(amb.Ch.Id)).Mesas;
+
+        mesas.Should().HaveCount(15);
+        mesas.Where(m => !m.AguardandoMesa).Select(m => m.Mesa).Should().Equal(Enumerable.Range(1, 12));
+        mesas.Where(m => m.AguardandoMesa).Select(m => m.Mesa).Should().Equal(13, 14, 15);
+    }
+
+    [Fact]
+    public async Task Lugares_PadraoE24_EBye_NuncaFicaAguardandoMesa()
+    {
+        var amb = Criar(3);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30);
+        foreach (var u in amb.Jogadores) await amb.Torneio.EntrarAsync(u.Id, ch.CodigoEntrada!, null, null);
+
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var painel = await amb.Torneio.PainelAsync(amb.Ch.Id);
+
+        painel.Lugares.Should().Be(24);
+        painel.Mesas.Should().OnlyContain(m => !m.AguardandoMesa);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(401)]
+    public async Task Lugares_ForaDaFaixa_Recusa(int lugares)
+    {
+        var amb = Criar(2);
+
+        await FluentActions.Awaiting(() => amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30, lugares))
+            .Should().ThrowAsync<TorneioException>();
+    }
+
+    [Fact]
+    public async Task CheckInProprio_InscritoFazComUmToque_SemCodigo()
+    {
+        var amb = Criar(1);
+        await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30);
+        amb.Db.ChampionshipParticipants.Add(new ChampionshipParticipant
+            { ChampionshipId = amb.Ch.Id, UserId = amb.Jogadores[0].Id, PlayerNumber = 1 });
+        await amb.Db.SaveChangesAsync();
+
+        await amb.Torneio.CheckInProprioAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+
+        (await amb.Db.ChampionshipParticipants.AsNoTracking().SingleAsync()).CheckInEm.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task CheckInProprio_QuemNaoEstaInscrito_404()
+    {
+        var amb = Criar(1);
+        await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30);
+
+        (await FluentActions.Awaiting(() => amb.Torneio.CheckInProprioAsync(amb.Jogadores[0].Id, amb.Ch.Id))
+            .Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task CheckInProprio_AntesDeAbrirOCheckIn_Recusa()
+    {
+        var amb = Criar(1);
+        amb.Db.ChampionshipParticipants.Add(new ChampionshipParticipant
+            { ChampionshipId = amb.Ch.Id, UserId = amb.Jogadores[0].Id, PlayerNumber = 1 });
+        await amb.Db.SaveChangesAsync();
+
+        await FluentActions.Awaiting(() => amb.Torneio.CheckInProprioAsync(amb.Jogadores[0].Id, amb.Ch.Id))
+            .Should().ThrowAsync<TorneioException>();
     }
 
     [Fact]

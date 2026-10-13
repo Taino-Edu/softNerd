@@ -8,9 +8,9 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers } from 'lucide-react'
+import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers, Hand } from 'lucide-react'
 import {
-  torneioApi, deckApi, DeckListDto, MinhaMesaDto, ResultadoJogador, TorneioResumoDto,
+  torneioApi, deckApi, DeckListDto, MinhaMesaDto, ResultadoJogador, TorneioResumoDto, rodadaComecou,
 } from '@/lib/api'
 import { isLoggedIn } from '@/lib/auth'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
@@ -116,17 +116,28 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
         <section className="space-y-2">
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Seus torneios</h2>
           {ativos.map(t => (
-            <button key={t.id} onClick={() => onEntrou(t.id)}
-              className="w-full text-left bg-surface-800 border border-surface-500 rounded-xl p-4 flex items-center gap-3">
-              <Trophy className="w-5 h-5 text-brand-400 shrink-0" />
-              <span className="flex-1 min-w-0">
-                <span className="block font-semibold text-white truncate">{t.nome}</span>
-                <span className="block text-xs text-gray-400">
-                  {t.rodadaAtual > 0 ? `Rodada ${t.rodadaAtual}${t.numeroRodadas ? ` de ${t.numeroRodadas}` : ''}` : 'Aguardando início'}
-                  {t.checkIn ? ' · check-in feito' : ''}
+            <div key={t.id} className="bg-surface-800 border border-surface-500 rounded-xl p-4 flex items-center gap-3">
+              <button onClick={() => onEntrou(t.id)} className="flex-1 min-w-0 text-left flex items-center gap-3">
+                <Trophy className="w-5 h-5 text-brand-400 shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block font-semibold text-white truncate">{t.nome}</span>
+                  <span className="block text-xs text-gray-400">
+                    {t.rodadaAtual > 0 ? `Rodada ${t.rodadaAtual}${t.numeroRodadas ? ` de ${t.numeroRodadas}` : ''}` : 'Aguardando início'}
+                    {t.checkIn ? ' · check-in feito' : ' · sem check-in'}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
+              {!t.checkIn && (
+                <button
+                  onClick={async () => {
+                    try { await torneioApi.checkInProprio(t.id); onEntrou(t.id) }
+                    catch (e) { setErro(mensagemDe(e, 'Não deu pra fazer o check-in.')) }
+                  }}
+                  className="btn-primary text-sm shrink-0">
+                  <Hand className="w-4 h-4" /> Estou aqui
+                </button>
+              )}
+            </div>
           ))}
         </section>
       )}
@@ -202,6 +213,14 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
     }
   }
 
+  const [marcando, setMarcando] = useState(false)
+  async function estouAqui() {
+    setMarcando(true)
+    try { await torneioApi.checkInProprio(torneioId); recarregar() }
+    catch (e) { setErro(mensagemDe(e, 'Não deu pra fazer o check-in.')) }
+    finally { setMarcando(false) }
+  }
+
   async function desistir() {
     if (!confirm('Sair do torneio? Você não joga as próximas rodadas.')) return
     try { await torneioApi.desistir(torneioId); recarregar() }
@@ -245,14 +264,26 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
         <p className="bg-surface-800 border border-surface-500 rounded-2xl p-5 text-sm text-gray-300">
           Você saiu do torneio na rodada {dados.desistiuNaRodada}. Fale com o organizador se foi engano.
         </p>
+      ) : dados.participanteId && !dados.checkIn && !mesa ? (
+        <div className="bg-surface-800 border border-surface-500 rounded-2xl p-5 space-y-3 text-center">
+          <p className="text-sm text-gray-300">
+            Você está inscrito. Chegou na loja? Toque abaixo pra fazer o check-in
+            {t.rodadaAtual > 0 ? ' — você entra na próxima rodada.' : '.'}
+          </p>
+          <button onClick={estouAqui} disabled={marcando} className="btn-primary w-full justify-center py-3 text-base">
+            {marcando ? <Loader2 className="w-5 h-5 animate-spin" /> : <Hand className="w-5 h-5" />} Estou aqui
+          </button>
+        </div>
       ) : t.rodadaAtual === 0 ? (
         <div className="bg-surface-800 border border-surface-500 rounded-2xl p-5 flex items-center gap-3">
           <CheckCircle2 className="w-6 h-6 txt-ok shrink-0" />
-          <p className="text-sm text-gray-300">Check-in feito{dados.deck ? ` com ${dados.deck}` : ''}. Assim que a rodada 1 sair, sua mesa aparece aqui.</p>
+          <p className="text-sm text-gray-300">Check-in feito{dados.deck ? ` com ${dados.deck}` : ''}. Assim que os pareamentos saírem, sua mesa aparece aqui.</p>
         </div>
       ) : !mesa ? (
         <p className="bg-surface-800 border border-surface-500 rounded-2xl p-5 text-sm text-gray-300">
-          Você não está nesta rodada. Se chegou agora, avise o organizador — você entra na próxima.
+          {dados.checkIn
+            ? 'Check-in feito! Você chegou depois dos pareamentos desta rodada — entra na próxima, sem precisar fazer mais nada.'
+            : 'Você não está nesta rodada. Se chegou agora, avise o organizador — você entra na próxima.'}
         </p>
       ) : !oponente ? (
         <div className="bg-surface-800 border border-surface-500 rounded-2xl p-5 text-center">
@@ -261,10 +292,23 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
         </div>
       ) : (
         <div className="bg-surface-800 border border-surface-500 rounded-2xl p-5 space-y-4">
-          <div className="text-center">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mesa</p>
-            <p className="text-5xl font-bold text-white leading-tight">{mesa.mesa}</p>
-          </div>
+          {mesa.aguardandoMesa ? (
+            <div className="text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mesa</p>
+              <p className="text-2xl font-bold txt-alerta leading-tight">Aguardando mesa livre</p>
+              <p className="text-xs text-gray-400">A loja está cheia: o organizador chama vocês quando uma mesa liberar.</p>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mesa</p>
+              <p className="text-5xl font-bold text-white leading-tight">{mesa.mesa}</p>
+            </div>
+          )}
+          {!mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual) && (
+            <p className="text-sm text-center text-gray-300 bg-surface-700 rounded-xl p-3">
+              Vá pra mesa e monte o setup. O relógio começa quando o organizador mandar.
+            </p>
+          )}
           <div className="bg-surface-700 rounded-xl p-3 text-center">
             <p className="text-xs text-gray-400">Seu oponente</p>
             <p className="text-lg font-semibold text-white">{oponente.nome}</p>

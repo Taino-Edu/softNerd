@@ -1,5 +1,23 @@
 # Changelog — Santuário Nerd
 
+## [v1.44.0] — 2026-10-13
+
+### Mais rápido
+- **Fotos leves**: as fotos de produto, banner, campeonato e anúncio vão pro site no tamanho em que aparecem na tela e em WebP. A página inicial baixava quase **4 MB** — 3,6 MB só de foto, PNGs de até 1,6 MB mostrados com 190 px — e agora fica abaixo de 1 MB. Exemplo real: a foto do booster Caos Ascendente caiu de **1,6 MB pra 78 KB**, sem diferença visível
+- Vale pras fotos que já estão no site: nada muda no cadastro dos produtos nem no jeito de enviar foto
+- Fotos dos cards abaixo da tela só carregam quando a pessoa rola até elas; o primeiro banner carrega antes de tudo
+
+### Mudança com volta
+- Chave **"Site: fotos leves"** em `/admin/funcionalidades`. Desligada, o site volta a mandar a foto original
+
+## [v1.43.0] — 2026-10-13
+
+### Liguinha (pedidos do Maikon)
+- **Soltar pareamentos sem ligar o relógio**: "Soltar pareamentos" só distribui as mesas; o relógio corre quando o organizador clica em **Começar rodada** — dá tempo de montar o setup. Com volta em "Mudanças com volta"
+- **Lugares da loja** (padrão 24) na configuração do torneio: quem passar disso aparece como **aguardando mesa** e joga quando uma liberar — ninguém fica de fora da inscrição
+- **Status do resultado** na tela do organizador: aguardando resultado → aguardando confirmação de Fulano → **Aprovado** / divergente
+- **Check-in com um toque**: quem já está inscrito toca em **Estou aqui**, sem digitar código (o código continua valendo)
+
 ## [v1.42.1] — 2026-10-13
 
 ### Corrigido

@@ -38,6 +38,7 @@ public static class Funcionalidades
     public const string LigaMensalPorJogador = "liga-mensal-por-jogador";
     public const string OperadorAcessoPeloMenu = "operador-acesso-pelo-menu";
     public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
+    public const string LiguinhaRelogioSeparado = "liguinha-relogio-separado";
     public const string FotosLeves = "fotos-leves";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
@@ -72,6 +73,15 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.42.1",
             RevisarEm:  new DateOnly(2026, 12, 15)),
+
+        new(LiguinhaRelogioSeparado,
+            Nome:       "Liguinha: soltar pareamentos sem ligar o relógio",
+            OQueMuda:   "\"Soltar pareamentos\" só distribui as mesas; o relógio da rodada só corre quando o " +
+                        "organizador clica em \"Começar rodada\" — dá tempo de todo mundo montar o setup.",
+            SeDesligar: "Volta ao jeito da primeira versão: gerar a rodada já liga o relógio na hora.",
+            Padrao:     true,
+            Desde:      "v1.43.0",
+            RevisarEm:  new DateOnly(2027, 1, 15)),
 
         new(FotosLeves,
             Nome:       "Site: fotos leves",

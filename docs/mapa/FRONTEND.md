@@ -125,7 +125,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/funcionalidades.ts` | `funcionalidadesApi` |
 | `lib/api/index.ts` | — |
 | `lib/api/lgpd.ts` | `lgpdApi`, `lgpdAdminApi` |
-| `lib/api/liga.ts` | `torneioApi`, `segundosRestantes` |
+| `lib/api/liga.ts` | `torneioApi`, `rodadaComecou`, `segundosRestantes` |
 | `lib/api/produtos.ts` | `categoryApi`, `productApi`, `variantApi`, `uploadApi` |
 | `lib/api/relatorios.ts` | `analyticsApi`, `relatorioApi` |
 | `lib/api/reservas.ts` | `reservationApi` |
@@ -138,6 +138,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/crediario.ts` | `agruparItens`, `totalUnidades` |
 | `lib/deckRules.ts` | `MAX_CARDS`, `MAX_COPIES`, `copyLimit`, `analisarDeck`, `resumoDaAnalise` |
 | `lib/format.ts` | `brl`, `brlDeCentavos`, `numeroBR`, `hojeBrasil`, `dataISOBrasil`, `somarDias`, `diaBR`, `dataBR`, `dataHoraBR` |
+| `lib/fotoLeve.ts` | `fotoLeve` |
 | `lib/hooks.ts` | `useThrottle` |
 | `lib/notificacoes.ts` | `incrementBadge`, `clearBadge`, `tocarSom`, `pedirPermissaoNotificacao`, `notificarBrowser` |
 | `lib/pagamentos.ts` | `FORMAS_PAGAMENTO`, `infoPagamento`, `rotuloPagamento`, `rotuloCurtoPagamento`, `precisaCliente`, `opcoesPagamento` |

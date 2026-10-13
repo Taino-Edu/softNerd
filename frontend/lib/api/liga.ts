@@ -19,6 +19,8 @@ export interface MesaDto {
   partidaId: string; mesa: number; a: JogadorMesa; b: JogadorMesa | null
   reportA: ResultadoPartida | null; reportB: ResultadoPartida | null
   resultado: ResultadoPartida | null; divergente: boolean
+  /** Mesa além dos lugares da loja: joga quando uma liberar. */
+  aguardandoMesa: boolean
 }
 
 export interface TimerTorneioDto {
@@ -30,6 +32,7 @@ export interface TorneioPublicoDto {
   id: string; nome: string; jogo: string; status: string; formato: string
   melhorDe: number; minutosRodada: number; numeroRodadas: number | null; rodadaAtual: number
   mesas: MesaDto[]; classificacao: LinhaTabela[]; timer: TimerTorneioDto | null
+  lugares: number
 }
 
 export interface ParticipantePainel {
@@ -43,6 +46,7 @@ export interface PainelTorneioDto {
   rodadasSugeridas: number
   participantes: ParticipantePainel[]; mesas: MesaDto[]; classificacao: LinhaTabela[]
   timer: TimerTorneioDto | null
+  lugares: number
 }
 
 export interface MinhaMesaDto {
@@ -58,13 +62,15 @@ export interface TorneioResumoDto {
 export const torneioApi = {
   // Organizador
   painel:      (id: string) => api.get<PainelTorneioDto>(`/api/torneios/${id}/painel`),
-  preparar:    (id: string, body: { melhorDe: number; minutosRodada: number }) =>
+  preparar:    (id: string, body: { melhorDe: number; minutosRodada: number; lugares?: number }) =>
     api.post<{ codigoEntrada: string }>(`/api/torneios/${id}/preparar`, body),
   novoCodigo:  (id: string) => api.post<{ codigoEntrada: string }>(`/api/torneios/${id}/codigo`),
   checkIn:     (id: string, participantId: string, presente: boolean) =>
     api.put(`/api/torneios/${id}/participantes/${participantId}/check-in`, { presente }),
+  /** Solta os pareamentos (mesas) da próxima rodada. O relógio só corre com comecarRodada. */
   gerarRodada: (id: string, numeroRodadas?: number) =>
     api.post<{ numero: number }>(`/api/torneios/${id}/rodadas`, { numeroRodadas: numeroRodadas ?? null }),
+  comecarRodada: (id: string) => api.post(`/api/torneios/${id}/rodadas/atual/comecar`),
   resolver:    (id: string, partidaId: string, resultado: ResultadoPartida) =>
     api.put(`/api/torneios/${id}/partidas/${partidaId}`, { resultado }),
   desistencia: (id: string, participantId: string) =>
@@ -75,6 +81,8 @@ export const torneioApi = {
   entrar:      (body: { codigo: string; deckId?: string | null; deckNome?: string | null }) =>
     api.post<{ championshipId: string; nome: string }>('/api/torneios/entrar', body),
   ativos:      () => api.get<TorneioResumoDto[]>('/api/torneios/ativos'),
+  /** "Estou aqui": check-in de quem já está inscrito, sem código. */
+  checkInProprio: (id: string) => api.post(`/api/torneios/${id}/check-in`),
   minhaMesa:   (id: string) => api.get<MinhaMesaDto>(`/api/torneios/${id}/minha-mesa`),
   lancar:      (id: string, partidaId: string, resultado: ResultadoJogador) =>
     api.post(`/api/torneios/${id}/partidas/${partidaId}/resultado`, { resultado }),
@@ -82,6 +90,12 @@ export const torneioApi = {
 
   // Público (telão)
   publico:     (id: string) => api.get<TorneioPublicoDto>(`/api/torneios/${id}`),
+}
+
+/** O relógio da rodada atual já foi disparado? (false = pareamentos soltos, esperando o "Começar rodada") */
+export function rodadaComecou(t: TimerTorneioDto | null, rodadaAtual: number): boolean {
+  if (!t || rodadaAtual === 0) return false
+  return t.rodada === rodadaAtual && t.state !== 'stopped'
 }
 
 /** Segundos que faltam no timer da rodada (mesma conta do servidor). */

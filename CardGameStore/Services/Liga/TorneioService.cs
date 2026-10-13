@@ -13,9 +13,11 @@
 
 using System.Security.Cryptography;
 using System.Text.Json;
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
+using CardGameStore.Services.Implementations;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,12 +41,15 @@ public class TorneioService
     private readonly AppDbContext _db;
     private readonly IHubContext<TorneioHub> _hub;
     private readonly ILogger<TorneioService> _logger;
+    private readonly FuncionalidadesService _funcionalidades;
 
-    public TorneioService(AppDbContext db, IHubContext<TorneioHub> hub, ILogger<TorneioService> logger)
+    public TorneioService(AppDbContext db, IHubContext<TorneioHub> hub, ILogger<TorneioService> logger,
+        FuncionalidadesService funcionalidades)
     {
         _db = db;
         _hub = hub;
         _logger = logger;
+        _funcionalidades = funcionalidades;
     }
 
     // =========================================================================
@@ -52,10 +57,11 @@ public class TorneioService
     // =========================================================================
 
     /// <summary>Liga o modo suíço e gera o código de entrada. Pode ser chamado de novo pra mudar a configuração.</summary>
-    public async Task<Championship> PrepararAsync(Guid championshipId, int melhorDe, int minutosRodada)
+    public async Task<Championship> PrepararAsync(Guid championshipId, int melhorDe, int minutosRodada, int? lugares = null)
     {
         if (melhorDe is not (1 or 3)) throw new TorneioException("Melhor de 1 ou de 3.");
         if (minutosRodada is < 5 or > 180) throw new TorneioException("Tempo de rodada entre 5 e 180 minutos.");
+        if (lugares is < 2 or > 400) throw new TorneioException("Lugares na loja entre 2 e 400.");
 
         var ch = await CampeonatoAsync(championshipId);
         if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
@@ -64,6 +70,7 @@ public class TorneioService
         ch.Formato = FormatoTorneio.Suico;
         ch.MelhorDe = melhorDe;
         ch.MinutosRodada = minutosRodada;
+        if (lugares is not null) ch.Lugares = lugares.Value;
         ch.CodigoEntrada ??= await NovoCodigoAsync();
         await _db.SaveChangesAsync();
         await AvisarAsync(championshipId, "checkin");
@@ -86,6 +93,27 @@ public class TorneioService
             .FirstOrDefaultAsync(x => x.Id == participantId && x.ChampionshipId == championshipId)
             ?? throw new TorneioException("Participante não encontrado.", 404);
         p.CheckInEm = presente ? (p.CheckInEm ?? DateTime.UtcNow) : null;
+        await _db.SaveChangesAsync();
+        await AvisarAsync(championshipId, "checkin");
+    }
+
+    /// <summary>
+    /// "Estou aqui": quem já está inscrito faz o check-in pela própria conta, sem digitar o
+    /// código (a inscrição já liga a conta ao campeonato). O código continua valendo pra quem
+    /// ainda não se inscreveu.
+    /// </summary>
+    public async Task CheckInProprioAsync(Guid userId, Guid championshipId)
+    {
+        var ch = await CampeonatoAsync(championshipId);
+        if (ch.Formato != FormatoTorneio.Suico) throw new TorneioException("O organizador ainda não abriu o check-in.");
+        if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
+            throw new TorneioException("Esse torneio já foi encerrado.");
+
+        var p = await _db.ChampionshipParticipants.FirstOrDefaultAsync(x => x.ChampionshipId == championshipId && x.UserId == userId)
+            ?? throw new TorneioException("Você não está inscrito neste torneio.", 404);
+        if (p.DesistiuNaRodada is not null) throw new TorneioException("Você saiu deste torneio. Fale com o organizador.");
+
+        p.CheckInEm ??= DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await AvisarAsync(championshipId, "checkin");
     }
@@ -159,9 +187,31 @@ public class TorneioService
             throw new TorneioException("Essa rodada acabou de ser gerada. Atualize a tela.", 409);
         }
 
-        await ReiniciarTimerAsync(ch, numero);
+        // Pokémon e afins: cada um monta o setup antes de o relógio correr. Com a chave ligada,
+        // soltar os pareamentos só deixa o relógio pronto (cheio, parado); quem dispara é o
+        // ComecarRodadaAsync. Desligada: liga na hora, como na primeira versão.
+        if (await _funcionalidades.LigadaAsync(Funcionalidades.LiguinhaRelogioSeparado))
+            await PrepararTimerAsync(ch, numero);
+        else
+            await ReiniciarTimerAsync(ch, numero);
         await AvisarAsync(championshipId, "rodada");
         return rodada;
+    }
+
+    /// <summary>Liga o relógio da rodada atual (depois de soltar os pareamentos).</summary>
+    public async Task ComecarRodadaAsync(Guid championshipId)
+    {
+        var ch = await CampeonatoAsync(championshipId);
+        if (ch.RodadaAtual == 0) throw new TorneioException("Solte os pareamentos da primeira rodada antes.");
+        if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
+            throw new TorneioException("Torneio encerrado.");
+
+        var timer = await _db.Timers.AsNoTracking().FirstOrDefaultAsync(t => t.ChampionshipId == championshipId);
+        if (timer is not null && timer.Rodada == ch.RodadaAtual && timer.State == TimerState.Running)
+            throw new TorneioException($"A rodada {ch.RodadaAtual} já começou.", 409);
+
+        await ReiniciarTimerAsync(ch, ch.RodadaAtual);
+        await AvisarAsync(championshipId, "rodada");
     }
 
     /// <summary>Organizador define ou corrige o resultado (vale até o torneio encerrar).</summary>
@@ -368,6 +418,9 @@ public class TorneioService
 
     public async Task<List<MesaDto>> MesasAsync(Guid championshipId, int numero, bool comReports)
     {
+        // Mesas que cabem na loja; as de número maior jogam quando uma liberar
+        var mesasNaLoja = Math.Max(1, await _db.Championships.Where(c => c.Id == championshipId)
+            .Select(c => c.Lugares).FirstOrDefaultAsync() / 2);
         var partidas = await _db.TorneioPartidas
             .Where(p => p.Rodada.ChampionshipId == championshipId && p.Rodada.Numero == numero)
             .OrderBy(p => p.Mesa)
@@ -385,7 +438,8 @@ public class TorneioService
             p.Id, p.Mesa, p.A, p.B,
             comReports ? p.ReportA : null, comReports ? p.ReportB : null,
             p.Resultado,
-            Divergente: p.ReportA != null && p.ReportB != null && p.ReportA != p.ReportB && p.Resultado == null))
+            Divergente: p.ReportA != null && p.ReportB != null && p.ReportA != p.ReportB && p.Resultado == null,
+            AguardandoMesa: p.B != null && p.Mesa > mesasNaLoja))
             .ToList();
     }
 
@@ -399,7 +453,8 @@ public class TorneioService
             ch.NumeroRodadas, ch.RodadaAtual,
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: false) : [],
             await ClassificacaoAsync(championshipId),
-            TimerDto.De(timer));
+            TimerDto.De(timer),
+            ch.Lugares);
     }
 
     public async Task<PainelDto> PainelAsync(Guid championshipId)
@@ -420,7 +475,8 @@ public class TorneioService
             participantes,
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: true) : [],
             await ClassificacaoAsync(championshipId),
-            TimerDto.De(timer));
+            TimerDto.De(timer),
+            ch.Lugares);
     }
 
     /// <summary>Tela do jogador: torneio, minha mesa na rodada atual, o que cada um lançou.</summary>
@@ -506,6 +562,24 @@ public class TorneioService
     /// Timer do campeonato: reinicia com o tempo da rodada e já sai contando.
     /// Sem timer ligado ao campeonato, cria um — o organizador não precisa lembrar.
     /// </summary>
+    /// <summary>Relógio da rodada pronto mas parado, com o tempo cheio — o telão mostra o tempo todo.</summary>
+    private async Task PrepararTimerAsync(Championship ch, int rodada)
+    {
+        var timer = await _db.Timers.FirstOrDefaultAsync(t => t.ChampionshipId == ch.Id);
+        if (timer is null)
+        {
+            timer = new TimerEntity { Name = ch.Name.Length > 80 ? ch.Name[..80] : ch.Name, ChampionshipId = ch.Id };
+            _db.Timers.Add(timer);
+        }
+        timer.DurationSeconds = ch.MinutosRodada * 60;
+        timer.Rodada = rodada;
+        timer.State = TimerState.Stopped;
+        timer.StartedAt = null;
+        timer.PausedRemaining = null;
+        timer.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
     private async Task ReiniciarTimerAsync(Championship ch, int rodada)
     {
         var timer = await _db.Timers.FirstOrDefaultAsync(t => t.ChampionshipId == ch.Id);
@@ -565,9 +639,11 @@ public sealed record LinhaTabela(
 
 public sealed record JogadorMesa(Guid ParticipanteId, Guid UserId, string Nome, string? Deck);
 
+/// <param name="AguardandoMesa">Mesa além dos lugares da loja: joga quando uma liberar.</param>
 public sealed record MesaDto(
     Guid PartidaId, int Mesa, JogadorMesa A, JogadorMesa? B,
-    ResultadoPartida? ReportA, ResultadoPartida? ReportB, ResultadoPartida? Resultado, bool Divergente);
+    ResultadoPartida? ReportA, ResultadoPartida? ReportB, ResultadoPartida? Resultado, bool Divergente,
+    bool AguardandoMesa = false);
 
 public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada)
 {
@@ -577,7 +653,8 @@ public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? P
 
 public sealed record TorneioPublicoDto(
     Guid Id, string Nome, string Jogo, string Status, string Formato, int MelhorDe, int MinutosRodada,
-    int? NumeroRodadas, int RodadaAtual, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer);
+    int? NumeroRodadas, int RodadaAtual, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
+    int Lugares = 24);
 
 public sealed record ParticipantePainel(
     Guid Id, Guid UserId, int PlayerNumber, string Nome, string? Deck, DateTime? CheckInEm, int? DesistiuNaRodada, bool Pago);
@@ -585,7 +662,8 @@ public sealed record ParticipantePainel(
 public sealed record PainelDto(
     Guid Id, string Nome, string Status, string Formato, string? CodigoEntrada, int MelhorDe, int MinutosRodada,
     int? NumeroRodadas, int RodadaAtual, int RodadasSugeridas,
-    List<ParticipantePainel> Participantes, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer);
+    List<ParticipantePainel> Participantes, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
+    int Lugares = 24);
 
 public sealed record MinhaMesaDto(
     TorneioPublicoDto Torneio, Guid? ParticipanteId, bool CheckIn, int? DesistiuNaRodada, string? Deck,
