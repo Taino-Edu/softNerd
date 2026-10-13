@@ -38,6 +38,7 @@ public static class Funcionalidades
     public const string LigaMensalPorJogador = "liga-mensal-por-jogador";
     public const string OperadorAcessoPeloMenu = "operador-acesso-pelo-menu";
     public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
+    public const string FotosLeves = "fotos-leves";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -71,6 +72,15 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.42.1",
             RevisarEm:  new DateOnly(2026, 12, 15)),
+
+        new(FotosLeves,
+            Nome:       "Site: fotos leves",
+            OQueMuda:   "As fotos de produto, banner e campeonato vão pro site no tamanho em que aparecem e em WebP: " +
+                        "a página inicial cai de ~4 MB pra menos de 1 MB e abre bem mais rápido no celular.",
+            SeDesligar: "Volta a mandar a foto original, do tamanho em que foi enviada (PNG de até 2 MB por foto).",
+            Padrao:     true,
+            Desde:      "v1.44.0",
+            RevisarEm:  new DateOnly(2027, 1, 15)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

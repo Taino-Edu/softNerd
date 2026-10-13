@@ -9,6 +9,7 @@ import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
 import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
+import { fotoLeve } from '@/lib/fotoLeve'
 
 const NAVY = '#0C3D5A'
 const BLUE = '#3EC2F2'
@@ -204,7 +205,7 @@ export default function ProductPage() {
             <div className="rounded-2xl overflow-hidden border flex items-center justify-center"
               style={{ backgroundColor: C.card, borderColor: C.border, aspectRatio: '1' }}>
               {mainImg
-                ? <img src={mainImg} alt={product.name} className="w-full h-full object-contain p-6" />
+                ? <img src={fotoLeve(mainImg, 960)} alt={product.name} className="w-full h-full object-contain p-6" />
                 : <Package className="w-20 h-20 opacity-10" style={{ color: C.navy }} />
               }
             </div>
@@ -214,7 +215,7 @@ export default function ProductPage() {
                   <button key={i} onClick={() => setMainImg(url)}
                     className="shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all"
                     style={{ borderColor: mainImg === url ? BLUE : C.border, backgroundColor: C.card }}>
-                    <img src={url} alt="" className="w-full h-full object-contain p-1" />
+                    <img src={fotoLeve(url, 160)} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
                   </button>
                 ))}
               </div>

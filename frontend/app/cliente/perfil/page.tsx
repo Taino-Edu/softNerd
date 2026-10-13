@@ -22,6 +22,7 @@ import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
 import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
 import { brl as fmtBRL, brl } from '@/lib/format'
+import { fotoLeve } from '@/lib/fotoLeve'
 
 
 /** Data com hora — "12/08/2026 às 14:32". Sem a hora, duas compras no mesmo dia
@@ -889,7 +890,7 @@ export default function PerfilPage() {
                           <div key={r.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
                             <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 overflow-hidden">
                               {r.productImageUrl
-                                ? <img src={r.productImageUrl} alt={r.productName} className="w-full h-full object-cover" />
+                                ? <img src={fotoLeve(r.productImageUrl, 160)} alt={r.productName} className="w-full h-full object-cover" loading="lazy" />
                                 : <Package className="w-5 h-5 text-amber-400" />}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -938,7 +939,7 @@ export default function PerfilPage() {
                           <div key={f.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
                             <div className="w-11 h-11 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0 overflow-hidden">
                               {f.productImageUrl
-                                ? <img src={f.productImageUrl} alt={f.productName} className="w-full h-full object-cover" />
+                                ? <img src={fotoLeve(f.productImageUrl, 160)} alt={f.productName} className="w-full h-full object-cover" loading="lazy" />
                                 : <Package className="w-5 h-5 text-purple-400" />}
                             </div>
                             <div className="flex-1 min-w-0">

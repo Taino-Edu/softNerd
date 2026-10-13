@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { brl } from '@/lib/format'
+import { fotoLeve } from '@/lib/fotoLeve'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -178,7 +179,7 @@ export default function ChampionshipPublicPage() {
         {ch.imageUrl
           ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={ch.imageUrl} alt={ch.name} className="w-full h-full object-cover" />
+            <img src={fotoLeve(ch.imageUrl, 1280)} alt={ch.name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <Trophy className="w-16 h-16 text-gray-700" />

@@ -9,6 +9,7 @@ import {
   Sun, Moon, Search, Tag,
 } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
+import { fotoLeve } from '@/lib/fotoLeve'
 
 const NAVY = '#0C3D5A'
 
@@ -40,7 +41,7 @@ function ProductCard({ p, C, pix }: { p: Product; C: Theme; pix: { precoPix: num
       <div className="w-full aspect-square overflow-hidden flex items-center justify-center p-3"
         style={{ backgroundColor: C.bg }}>
         {p.imageUrl
-          ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" />
+          ? <img src={fotoLeve(p.imageUrl, 480)} alt={p.name} className="w-full h-full object-contain" loading="lazy" decoding="async" />
           : <Package className="w-10 h-10 opacity-20" style={{ color: C.blue }} />
         }
       </div>

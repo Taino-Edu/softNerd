@@ -191,6 +191,7 @@ public static class ServicosDaLoja
 
         // Chaves de funcionalidade: mudança grande com volta (Configuration/Funcionalidades.cs)
         services.AddScoped<FuncionalidadesService>();
+        services.AddSingleton<FotosLeves>();
 
         return services;
     }
