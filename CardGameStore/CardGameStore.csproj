@@ -45,7 +45,7 @@
 
     <!-- Health Checks -->
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.31" />
-    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="8.0.1" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
 
     <!-- Fotos leves: miniatura WebP das fotos enviadas (Services/Implementations/FotosLeves.cs).
          O pacote Linux.NoDependencies traz a lib nativa sem precisar instalar nada na imagem Docker. -->
