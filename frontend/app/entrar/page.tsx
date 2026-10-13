@@ -20,7 +20,9 @@ function EntrarForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   /** Null = ninguém pediu destino; aí decidimos pela comanda aberta. */
-  const returnTo = searchParams.get('returnTo')
+  // Só caminho do próprio site: "https://..." ou "//outro.site" virariam redirecionamento pra fora
+  const pedido = searchParams.get('returnTo')
+  const returnTo = pedido && pedido.startsWith('/') && !pedido.startsWith('//') && !pedido.startsWith('/\\') ? pedido : null
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)

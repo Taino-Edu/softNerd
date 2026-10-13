@@ -1070,6 +1070,36 @@ public class AuthServiceTests
         (await act.Should().ThrowAsync<QuickLoginRecusadoException>()).Which.Codigo.Should().Be("balcao");
     }
 
+    [Theory]
+    [InlineData("5517991122890")]
+    [InlineData("+55 (17) 99112-2890")]
+    public async Task QuickLogin_WhatsAppSalvoCom55_AchaAContaENaoCriaOutra(string zapSalvo)
+    {
+        // Bug: a mesa só comparava sem o 55 e criava uma conta nova, sem e-mail — a pessoa
+        // caía no "Complete seu cadastro" e o e-mail dela já estava na conta verdadeira.
+        var (db, service, id) = await ContaDaMesaAsync(cpf: null, zap: zapSalvo);
+
+        var r = await service.QuickLoginAsync(new QuickLoginRequest("Cliente", null, ZapVitima, "2"));
+
+        r.UserId.Should().Be(id);
+        (await db.Users.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CompleteProfile_EmailDeOutraConta_AvisaQueEOCampoEmail()
+    {
+        var (db, service, _) = await ContaDaMesaAsync();
+        var semEmail = new User { Name = "Conta da mesa", WhatsApp = "11977776666", Role = UserRole.Customer, IsActive = true };
+        db.Users.Add(semEmail);
+        await db.SaveChangesAsync();
+        var emailDaOutra = (await db.Users.AsNoTracking().FirstAsync(u => u.Email != null)).Email!;
+
+        var act = () => service.CompleteProfileAsync(semEmail.Id, new CompleteProfileRequest(emailDaOutra, "Senha!123"));
+
+        (await act.Should().ThrowAsync<CadastroDuplicadoException>()).Which.Campo.Should().Be("email");
+        (await db.Users.AsNoTracking().SingleAsync(u => u.Id == semEmail.Id)).PasswordHash.Should().BeNull();
+    }
+
     [Fact]
     public async Task QuickLogin_CincoTentativasErradas_TravaAConta()
     {

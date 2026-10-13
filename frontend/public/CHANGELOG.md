@@ -8,6 +8,17 @@
 - **Status do resultado** na tela do organizador: aguardando resultado → aguardando confirmação de Fulano → **Aprovado** / divergente
 - **Check-in com um toque**: quem já está inscrito toca em **Estou aqui**, sem digitar código (o código continua valendo)
 
+## [v1.42.1] — 2026-10-13
+
+### Corrigido
+- **Cliente preso no "Complete seu cadastro"**: quem abria a comanda pela mesa e digitava um e-mail que já tinha conta ficava travado no aviso, sem conseguir ver a comanda. Agora o aviso explica que o e-mail já tem conta e tem o botão **"Agora não"**: a pessoa segue usando a comanda e o aviso volta só na próxima visita. Conta que já tem e-mail chega com ele preenchido — falta só a senha
+- **Loop ao abrir a comanda pela mesa**: quem já estava logado via o botão "Abrir comanda pela sua conta" e, embaixo, o formulário de nome/CPF/WhatsApp de novo. Preenchendo o formulário, caía em "conta protegida → entrar → volta pra mesa → formulário" sem fim. Agora, logado, a mesa mostra só o botão (com o nome de quem está logado) e um "Não é você? Sair". E quem entra pela conta protegida volta pra mesa com a comanda **já aberta**, sem mais um toque
+- O "Entrar" só volta pra páginas do próprio site depois do login (um link malicioso não consegue mais mandar a pessoa pra outro site)
+- **QR Code da mesa criava conta repetida**: cadastro antigo salvo com o 55 do país no WhatsApp ("+55 17 9…") não era reconhecido pela mesa, que abria uma conta nova, sem e-mail — era daí que vinha o pedido de cadastro pra quem já tinha cadastro. Agora a mesa acha a conta com ou sem o 55
+
+### Mudança com volta
+- O "Agora não" fica atrás da chave **"Cliente: Complete seu cadastro com Agora não"** em `/admin/funcionalidades`. Desligada, o aviso volta a ser obrigatório
+
 ## [v1.42.0] — 2026-10-13
 
 ### Segurança

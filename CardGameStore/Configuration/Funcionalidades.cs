@@ -37,6 +37,7 @@ public static class Funcionalidades
 {
     public const string LigaMensalPorJogador = "liga-mensal-por-jogador";
     public const string OperadorAcessoPeloMenu = "operador-acesso-pelo-menu";
+    public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
     public const string LiguinhaRelogioSeparado = "liguinha-relogio-separado";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
@@ -61,6 +62,16 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.41.0",
             RevisarEm:  new DateOnly(2026, 12, 1)),
+
+        new(CadastroCompletoPodeAdiar,
+            Nome:       "Cliente: \"Complete seu cadastro\" com \"Agora não\"",
+            OQueMuda:   "O aviso pra cadastrar e-mail e senha tem o botão \"Agora não\": quem abriu a comanda pela " +
+                        "mesa segue usando a comanda e o aviso volta na próxima visita ao site.",
+            SeDesligar: "Volta o aviso obrigatório: a pessoa só usa a área do cliente depois de cadastrar e-mail e senha " +
+                        "(quem digitar um e-mail que já tem conta fica presa no aviso).",
+            Padrao:     true,
+            Desde:      "v1.42.1",
+            RevisarEm:  new DateOnly(2026, 12, 15)),
 
         new(LiguinhaRelogioSeparado,
             Nome:       "Liguinha: soltar pareamentos sem ligar o relógio",
