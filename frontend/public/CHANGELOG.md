@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.42.0] — 2026-10-13
+
+### Segurança
+- **Site atualizado pro Next.js 15 e React 19**: a base do site saiu da versão 14, que não recebe mais correções, e zera os alertas de segurança que restavam no Next (travamentos, desvio de requisições e cache). As bibliotecas de produção do site ficam **sem nenhum alerta conhecido**
+- O otimizador de imagens segue desligado de propósito: nada no site precisa dele, e fechado é uma porta a menos
+
+### Mudado
+- Nada muda pra quem usa: as telas foram conferidas uma a uma depois da atualização
+
 ## [v1.41.4] — 2026-10-13
 
 ### Segurança
