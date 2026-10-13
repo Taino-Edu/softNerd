@@ -14,10 +14,10 @@ const nextConfig = {
 
   // Permite imagens de CDNs de TCG (Pokémon, Magic, etc.)
   images: {
-    // Otimizador de imagens DESLIGADO: o /_next/image do Next 14 tem falha crítica de
-    // execução remota de código (corrigida só no 15.5.24). As cartas já vêm otimizadas
-    // dos sites delas; sem o otimizador, o <Image> usa a URL original. O nginx também
-    // bloqueia /_next/image. Religar só depois de subir pro Next 15.5.24+.
+    // Otimizador de imagens DESLIGADO de propósito: o /_next/image já teve falha crítica
+    // de execução remota de código (Next 14; corrigida no 15.5.24) e nada aqui precisa
+    // dele — as cartas já vêm otimizadas dos sites delas e o <Image> usa a URL original.
+    // Fechado = menos superfície de ataque e menos CPU. O nginx também bloqueia a rota.
     unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'images.pokemontcg.io' },

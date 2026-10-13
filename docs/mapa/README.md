@@ -25,7 +25,7 @@ Este README é escrito à mão — o script não mexe nele. Quando descobrir uma
 | Parte | Onde | Observação |
 |---|---|---|
 | API (C#/.NET 8) | `CardGameStore/` | Controllers em `Controllers/`, regra de negócio em `Services/Implementations/` |
-| Front (Next.js 14) | `frontend/` | Telas em `app/`, peças reutilizáveis em `components/`, chamadas à API em `lib/api/` (um arquivo por assunto; as telas importam de `@/lib/api`) |
+| Front (Next.js 15, React 19) | `frontend/` | Telas em `app/`, peças reutilizáveis em `components/`, chamadas à API em `lib/api/` (um arquivo por assunto; as telas importam de `@/lib/api`) |
 | Banco principal | PostgreSQL | Modelos em `CardGameStore/Models/PostgreSQL/`, configuração em `Data/AppDbContext.cs` |
 | Vendas do balcão | MongoDB | `Models/MongoDB/VendaAvulsa.cs` |
 | Testes | `tests/unit/CardGameStore.Tests/` | `dotnet test tests/unit/CardGameStore.Tests` (SQLite em memória) |
@@ -243,8 +243,10 @@ Regras que isso cria:
   `deploy/nginx/entrada.conf` (1 linha fixa que inclui `snippets/nginx.conf` — não mexer). Todo deploy faz `nginx -t` +
   `nginx -s reload`: troca a config sem derrubar conexão; config quebrada para o deploy e o nginx segue com a anterior.
   Mexa em `nginx.conf` (servers, resolver) e `locations.conf` (rotas).
-- `/_next/image` está **fechado** (nginx 404 + `images.unoptimized` no `next.config.js`): falha crítica no Next 14.
-  Reabrir só no Next 15.5.24+.
+- `/_next/image` está **fechado de propósito** (nginx 404 + `images.unoptimized` no `next.config.js`): já teve falha
+  crítica (Next 14) e nada precisa dele. Reabrir só os dois juntos, se um dia precisar.
+- `package.json` → `overrides.next.postcss`: o Next prende um postcss antigo (com alerta alto) só usado no build;
+  o override força o corrigido. Ao atualizar o Next, veja se ainda é preciso.
 - Voltar uma versão: `bash deploy/update.sh <commit>` (sem argumento volta pro `main`).
   Voltar pro deploy antigo (derruba e sobe, ~15 s fora): `DEPLOY_AZUL_VERDE=0 bash deploy/update.sh`.
 
