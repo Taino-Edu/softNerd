@@ -736,6 +736,7 @@ ALTER TABLE championships             ADD COLUMN IF NOT EXISTS melhor_de        
 ALTER TABLE championships             ADD COLUMN IF NOT EXISTS minutos_rodada     INTEGER     NOT NULL DEFAULT 50;
 ALTER TABLE championships             ADD COLUMN IF NOT EXISTS numero_rodadas     INTEGER     NULL;
 ALTER TABLE championships             ADD COLUMN IF NOT EXISTS rodada_atual       INTEGER     NOT NULL DEFAULT 0;
+ALTER TABLE championships             ADD COLUMN IF NOT EXISTS lugares            INTEGER     NOT NULL DEFAULT 24;
 ALTER TABLE championship_participants ADD COLUMN IF NOT EXISTS check_in_em        TIMESTAMPTZ NULL;
 ALTER TABLE championship_participants ADD COLUMN IF NOT EXISTS desistiu_na_rodada INTEGER     NULL;
 ALTER TABLE timers                    ADD COLUMN IF NOT EXISTS championship_id    UUID        NULL
