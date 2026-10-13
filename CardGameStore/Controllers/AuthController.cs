@@ -439,6 +439,7 @@ public class AuthController : ControllerBase
             _logger.LogInformation("Perfil completado para usuário {UserId}", userId);
             return NoContent();
         }
+        catch (CadastroDuplicadoException ex) { return Conflict(new { Message = ex.Message, campo = ex.Campo }); }
         catch (KeyNotFoundException ex)      { return NotFound(new { Message = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { Message = ex.Message }); }
     }

@@ -280,9 +280,16 @@ public class AuthService : IAuthService
                 && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf);
             if (porCpf is not null) return porCpf;
         }
-        return whatsApp is null ? null : await _db.Users.FirstOrDefaultAsync(u => u.WhatsApp != null
-            && u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
-                         .Replace("-", "").Replace("+", "") == whatsApp);
+        if (whatsApp is null) return null;
+        // Cadastro antigo pode ter o 55 do país ("+55 17 99112-2890"): sem comparar com e sem
+        // ele, a mesa não achava a conta e criava outra, sem e-mail — e a pessoa caía no
+        // "Complete seu cadastro" com o e-mail dela preso na conta verdadeira.
+        var whatsAppComDdi = "55" + whatsApp;
+        return await _db.Users.FirstOrDefaultAsync(u => u.WhatsApp != null
+            && (u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
+                          .Replace("-", "").Replace("+", "") == whatsApp
+             || u.WhatsApp.Replace(" ", "").Replace("(", "").Replace(")", "")
+                          .Replace("-", "").Replace("+", "") == whatsAppComDdi));
     }
 
     /// <summary>
@@ -656,7 +663,9 @@ public class AuthService : IAuthService
         var email = request.Email.Trim().ToLowerInvariant();
         var emailInUse = await _db.Users.AnyAsync(u => u.Email == email && u.Id != userId);
         if (emailInUse)
-            throw new InvalidOperationException("Este e-mail já está em uso por outra conta.");
+            // Quase sempre é a própria pessoa, com a conta do site: a tela deixa seguir com a
+            // comanda ("Agora não") em vez de prender no modal
+            throw new CadastroDuplicadoException("email", "Este e-mail já tem outra conta no site.");
 
         user.Email        = email;
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
