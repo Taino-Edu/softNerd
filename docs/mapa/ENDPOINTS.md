@@ -99,7 +99,7 @@
 | POST | `/api/auth/google` | público | `LoginGoogle` (388) | `authApi.google` | `components/GoogleLoginButton.tsx` |
 | GET | `/api/auth/google/config` | público | `GoogleConfig` (383) | `authApi.googleConfig` | `components/GoogleLoginButton.tsx` |
 | POST | `/api/auth/login` | público | `Login` (145) | `authApi.login` | `app/login/page.tsx` |
-| POST | `/api/auth/logout` | logado | `Logout` (505) | `authApi.logout` | `app/cliente/perfil/page.tsx`<br>`components/admin/Sidebar.tsx` |
+| POST | `/api/auth/logout` | logado | `Logout` (505) | `authApi.logout` | `app/cliente/perfil/page.tsx`<br>`app/mesa/[mesa]/page.tsx`<br>`components/admin/Sidebar.tsx` |
 | POST | `/api/auth/quick-login` | público | `QuickLogin` (200) | `authApi.quickLogin` | `app/mesa/[mesa]/page.tsx` |
 | POST | `/api/auth/refresh` | público | `Refresh` (260) | — | `lib/sessionKeepAlive.ts` |
 | POST | `/api/auth/register` | público | `Register` (350) | `authApi.register` | `app/cadastro/page.tsx` |
