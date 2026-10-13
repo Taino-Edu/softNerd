@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.41.4] — 2026-10-13
+
+### Segurança
+- **Gerador de PDF atualizado (jsPDF 2 → 4)**: fecha 2 falhas críticas e 8 altas. Súmula e extrato do crediário e os relatórios financeiro, de clientes, PDV, comandas, crediário e estoque saem iguais — conferido gerando cada um nas duas versões e comparando página por página
+
 ## [v1.41.3] — 2026-10-09
 
 ### Segurança

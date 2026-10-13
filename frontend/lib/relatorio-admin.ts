@@ -8,7 +8,9 @@ import { brl as fmt } from './format'
 
 async function getJsPDF() {
   const { default: jsPDF } = await import('jspdf')
-  await import('jspdf-autotable')
+  // autotable 5: o doc.autoTable() não se pendura mais sozinho no jsPDF — applyPlugin faz isso
+  const { applyPlugin } = await import('jspdf-autotable')
+  applyPlugin(jsPDF)
   return jsPDF
 }
 
