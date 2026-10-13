@@ -20,39 +20,39 @@
   <ItemGroup>
     <!-- Entity Framework Core -->
     <PackageReference Include="Google.Apis.Auth" Version="1.77.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.31" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.31">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.31" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
 
     <!-- Authentication / JWT -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.31" />
 
     <!-- Swagger -->
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
 
     <!-- MongoDB -->
-    <PackageReference Include="MongoDB.Driver" Version="2.28.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.30.0" />
 
     <!-- BCrypt -->
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
 
     <!-- SignalR (built into ASP.NET Core, but included for clarity) -->
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.31" />
 
     <!-- Health Checks -->
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.31" />
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="8.0.1" />
 
     <!-- QR Code generation -->
-    <PackageReference Include="QRCoder" Version="1.4.3" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
 
     <!-- Web Push / VAPID — notificações browser push -->
-    <PackageReference Include="WebPush" Version="1.0.11" />
-    <PackageReference Include="Zeus.Net.NFe.NFCe" Version="2026.6.30.1332" />
+    <PackageReference Include="WebPush" Version="1.0.13" />
+    <PackageReference Include="Zeus.Net.NFe.NFCe" Version="2026.9.24.1416" />
 
     <!-- BouncyCastle: leitura de PKCS#12 com algoritmos legados (RC2/3DES), comuns
          em certificados A1 ICP-Brasil mais antigos. O X509Certificate2 nativo do
@@ -61,7 +61,7 @@
          C# puro, sem depender de config nenhuma do SO.
          Versão fixada em 1.8.1.3 (mesma trazida transitivamente pelo Zeus.Net.NFe.NFCe)
          para não duplicar o assembly Org.BouncyCastle com versões conflitantes. -->
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.3" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
   </ItemGroup>
 
 </Project>
