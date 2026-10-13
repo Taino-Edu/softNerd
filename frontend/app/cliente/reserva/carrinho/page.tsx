@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { brl } from '@/lib/format'
+import { fotoLeve } from '@/lib/fotoLeve'
 
 const NAVY = '#0C3D5A'
 
@@ -240,7 +241,7 @@ export default function ReservationCartPage() {
                   className="rounded-2xl border p-3 flex items-center gap-3"
                   style={{ backgroundColor: C.card, borderColor: C.border }}>
                   {item.productImageUrl ? (
-                    <img src={item.productImageUrl} alt={item.productName} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                    <img src={fotoLeve(item.productImageUrl, 160)} alt={item.productName} className="w-14 h-14 rounded-xl object-cover shrink-0" />
                   ) : (
                     <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: C.bg }}>
                       <Package className="w-6 h-6" style={{ color: C.muted }} />

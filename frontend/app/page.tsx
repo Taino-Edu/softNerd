@@ -15,6 +15,7 @@ import {
   Sun, Moon, Mail, Accessibility,
 } from 'lucide-react'
 import { brl } from '@/lib/format'
+import { fotoLeve } from '@/lib/fotoLeve'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
 // pra não piscar/mudar nada enquanto o admin nunca tiver personalizado o site.
@@ -380,7 +381,7 @@ export default function LandingPage() {
                 style={{ opacity: i === bannerIdx ? 1 : 0 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={banner.imageUrl!} alt="" className="w-full h-full object-cover" />
+                <img src={fotoLeve(banner.imageUrl, 1280)} alt="" className="w-full h-full object-cover" fetchPriority={i === 0 ? 'high' : 'low'} />
               </div>
             ))}
             {/* Overlay escuro — mais forte à esquerda (onde fica o texto do site) e mais
@@ -498,7 +499,7 @@ export default function LandingPage() {
                 {a.imageUrl ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover" />
+                    <img src={fotoLeve(a.imageUrl, 960)} alt={a.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 px-6 pb-6">
                       <span className="inline-block text-xs font-black uppercase tracking-widest mb-2 px-2 py-0.5 rounded"
@@ -974,7 +975,7 @@ function ChampionshipCard({ championship: c, onRegister, C }: { championship: Ch
       {/* Imagem */}
       {c.imageUrl ? (
         <div className="w-full h-36 overflow-hidden">
-          <img src={c.imageUrl} alt={c.name}
+          <img src={fotoLeve(c.imageUrl, 640)} alt={c.name} loading="lazy" decoding="async"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         </div>
       ) : (
@@ -1046,7 +1047,7 @@ function ProductCard({ product: p, onClick, C, pix }: { product: Product; onClic
       <div className="relative w-full aspect-[3/4] overflow-hidden"
         style={{ backgroundColor: C.cardAlt }}>
         {p.imageUrl
-          ? <img src={p.imageUrl} alt={p.name}
+          ? <img src={fotoLeve(p.imageUrl, 480)} alt={p.name} loading="lazy" decoding="async"
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
           : <div className="w-full h-full flex items-center justify-center">
               <Package className="w-10 h-10 opacity-20" style={{ color: C.navy }} />
@@ -1126,7 +1127,7 @@ function AnnouncementModal({ ann, onClose, C }: { ann: AnnouncementDto; onClose:
           <X className="w-4 h-4 text-white" />
         </button>
         {ann.imageUrl && (
-          <img src={ann.imageUrl} alt={ann.title} className="w-full max-h-64 object-cover" />
+          <img src={fotoLeve(ann.imageUrl, 960)} alt={ann.title} className="w-full max-h-64 object-cover" />
         )}
         <div className="p-6 pb-8 sm:pb-6">
           <h3 className="text-xl font-black leading-snug" style={{ color: C.navy }}>{ann.title}</h3>

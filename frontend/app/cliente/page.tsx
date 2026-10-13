@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { brl } from '@/lib/format'
+import { fotoLeve } from '@/lib/fotoLeve'
 
 interface MyParticipation {
   participationId: string
@@ -274,7 +275,7 @@ function ProductCard({ p, adding, onAdd }: {
         <div className="relative w-full aspect-square overflow-hidden flex items-center justify-center p-2"
           style={{ backgroundColor: C.bg }}>
           {p.imageUrl
-            ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" />
+            ? <img src={fotoLeve(p.imageUrl, 320)} alt={p.name} className="w-full h-full object-contain" loading="lazy" decoding="async" />
             : <Package className="w-10 h-10 opacity-20" style={{ color: C.blue2 }} />}
           {p.isPreVenda && !outOfStock && (
             <span className="absolute top-1.5 left-1.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
@@ -723,7 +724,7 @@ export default function ClientePage() {
             {confirmItem.imageUrl && (
               <div className="w-full h-48 flex items-center justify-center p-4"
                 style={{ backgroundColor: C.bg }}>
-                <img src={confirmItem.imageUrl} alt={confirmItem.name} className="h-full w-full object-contain" />
+                <img src={fotoLeve(confirmItem.imageUrl, 480)} alt={confirmItem.name} className="h-full w-full object-contain" />
               </div>
             )}
             <div className="p-5 space-y-4">

@@ -39,6 +39,7 @@ public static class Funcionalidades
     public const string OperadorAcessoPeloMenu = "operador-acesso-pelo-menu";
     public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
     public const string LiguinhaRelogioSeparado = "liguinha-relogio-separado";
+    public const string FotosLeves = "fotos-leves";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -80,6 +81,15 @@ public static class Funcionalidades
             SeDesligar: "Volta ao jeito da primeira versão: gerar a rodada já liga o relógio na hora.",
             Padrao:     true,
             Desde:      "v1.43.0",
+            RevisarEm:  new DateOnly(2027, 1, 15)),
+
+        new(FotosLeves,
+            Nome:       "Site: fotos leves",
+            OQueMuda:   "As fotos de produto, banner e campeonato vão pro site no tamanho em que aparecem e em WebP: " +
+                        "a página inicial cai de ~4 MB pra menos de 1 MB e abre bem mais rápido no celular.",
+            SeDesligar: "Volta a mandar a foto original, do tamanho em que foi enviada (PNG de até 2 MB por foto).",
+            Padrao:     true,
+            Desde:      "v1.44.0",
             RevisarEm:  new DateOnly(2027, 1, 15)),
     ];
 
