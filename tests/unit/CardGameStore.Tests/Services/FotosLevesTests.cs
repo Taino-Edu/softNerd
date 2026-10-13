@@ -144,6 +144,55 @@ public sealed class FotosLevesTests : IDisposable
         Info(refeita!).Height.Should().Be(480);
     }
 
+    /// <summary>
+    /// As 8 orientações do EXIF, pixel a pixel numa foto 3×2 com uma cor por pixel:
+    /// (x, y) da foto gravada → (x, y) de como ela tem que aparecer.
+    /// </summary>
+    [Theory]
+    [InlineData(SKEncodedOrigin.TopLeft)]
+    [InlineData(SKEncodedOrigin.TopRight)]
+    [InlineData(SKEncodedOrigin.BottomRight)]
+    [InlineData(SKEncodedOrigin.BottomLeft)]
+    [InlineData(SKEncodedOrigin.LeftTop)]
+    [InlineData(SKEncodedOrigin.RightTop)]
+    [InlineData(SKEncodedOrigin.RightBottom)]
+    [InlineData(SKEncodedOrigin.LeftBottom)]
+    public void FotoDeCelular_GiradaOuEspelhada_FicaComoONavegadorMostra(SKEncodedOrigin origem)
+    {
+        const int W = 3, H = 2;
+        using var gravada = new SKBitmap(new SKImageInfo(W, H, SKColorType.Rgba8888, SKAlphaType.Premul));
+        SKColor Cor(int x, int y) => new((byte)(40 + x * 60), (byte)(40 + y * 120), 200);
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++)
+                gravada.SetPixel(x, y, Cor(x, y));
+
+        Func<int, int, (int X, int Y)> destino = origem switch
+        {
+            SKEncodedOrigin.TopRight    => (x, y) => (W - 1 - x, y),
+            SKEncodedOrigin.BottomRight => (x, y) => (W - 1 - x, H - 1 - y),
+            SKEncodedOrigin.BottomLeft  => (x, y) => (x, H - 1 - y),
+            SKEncodedOrigin.LeftTop     => (x, y) => (y, x),                 // transposta
+            SKEncodedOrigin.RightTop    => (x, y) => (H - 1 - y, x),         // 90° horário
+            SKEncodedOrigin.RightBottom => (x, y) => (H - 1 - y, W - 1 - x), // transversa
+            SKEncodedOrigin.LeftBottom  => (x, y) => (y, W - 1 - x),         // 270° horário
+            _                           => (x, y) => (x, y),
+        };
+
+        using var certa = FotosLeves.Endireitar(gravada, origem);
+        var resultado = certa ?? gravada;
+
+        var deitada = origem is SKEncodedOrigin.LeftTop or SKEncodedOrigin.RightTop
+                              or SKEncodedOrigin.RightBottom or SKEncodedOrigin.LeftBottom;
+        resultado.Width.Should().Be(deitada ? H : W);
+        resultado.Height.Should().Be(deitada ? W : H);
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++)
+            {
+                var (dx, dy) = destino(x, y);
+                resultado.GetPixel(dx, dy).Should().Be(Cor(x, y), $"pixel ({x},{y}) da foto gravada vai pra ({dx},{dy})");
+            }
+    }
+
     [Fact]
     public async Task VariosPedidosAoMesmoTempo_GeramUmArquivoInteiro()
     {

@@ -29,9 +29,10 @@ public class FotosLevesMiddleware
             if (miniatura is not null)
             {
                 context.Response.ContentType = "image/webp";
-                // O nome da miniatura muda se a foto mudar de largura servida; a foto em si
-                // nunca é regravada no mesmo nome (upload gera nome novo), então pode cachear longo.
-                context.Response.Headers.CacheControl = "public, max-age=2592000";
+                // Cache curto de propósito: é o que faz a chave valer. Desligada, quem já tinha a
+                // miniatura volta pra original em até 1 h (navegador) / 1 dia (Cloudflare) — ou na
+                // hora, limpando o cache da Cloudflare. A Cloudflare segura o tráfego do mesmo jeito.
+                context.Response.Headers.CacheControl = "public, max-age=3600, s-maxage=86400";
                 context.Response.Headers["X-Foto-Leve"] = FotosLeves.LarguraServida(largura).ToString();
                 if (HttpMethods.IsHead(req.Method))
                 {

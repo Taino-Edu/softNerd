@@ -8,7 +8,7 @@
 - Fotos dos cards abaixo da tela só carregam quando a pessoa rola até elas; o primeiro banner carrega antes de tudo
 
 ### Mudança com volta
-- Chave **"Site: fotos leves"** em `/admin/funcionalidades`. Desligada, o site volta a mandar a foto original
+- Chave **"Site: fotos leves"** em `/admin/funcionalidades`. Desligada, o site volta a mandar a foto original — na hora pra foto nova; quem já tinha visto a miniatura volta pra original em até 1 dia (ou na hora, limpando o cache da Cloudflare)
 
 ## [v1.43.0] — 2026-10-13
 

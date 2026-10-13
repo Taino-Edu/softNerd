@@ -148,24 +148,32 @@ public sealed class FotosLeves
     /// Foto de celular vem "deitada" com a orientação no EXIF: o navegador gira a
     /// original sozinho, mas a miniatura sai sem EXIF — então gira aqui. Null = já está em pé.
     /// </summary>
-    private static SKBitmap? Endireitar(SKBitmap foto, SKEncodedOrigin origem)
+    internal static SKBitmap? Endireitar(SKBitmap foto, SKEncodedOrigin origem)
     {
-        var (graus, troca) = origem switch
+        // As 8 orientações do EXIF = girar (sentido horário) e, nas espelhadas, virar na horizontal
+        var (graus, espelha) = origem switch
         {
+            SKEncodedOrigin.TopRight    => (0, true),
             SKEncodedOrigin.BottomRight => (180, false),
-            SKEncodedOrigin.RightTop    => (90, true),
-            SKEncodedOrigin.LeftBottom  => (270, true),
+            SKEncodedOrigin.BottomLeft  => (180, true),
+            SKEncodedOrigin.LeftTop     => (90, true),
+            SKEncodedOrigin.RightTop    => (90, false),
+            SKEncodedOrigin.RightBottom => (270, true),
+            SKEncodedOrigin.LeftBottom  => (270, false),
             _                           => (0, false),
         };
-        if (graus == 0) return null;
+        if (graus == 0 && !espelha) return null;
 
-        var (w, h) = troca ? (foto.Height, foto.Width) : (foto.Width, foto.Height);
-        var girada = new SKBitmap(new SKImageInfo(w, h, foto.ColorType, foto.AlphaType));
-        using var tela = new SKCanvas(girada);
+        var deitada = graus is 90 or 270;
+        var (w, h) = deitada ? (foto.Height, foto.Width) : (foto.Width, foto.Height);
+        var certa = new SKBitmap(new SKImageInfo(w, h, foto.ColorType, foto.AlphaType));
+        using var tela = new SKCanvas(certa);
+        tela.Clear(SKColors.Transparent);
         tela.Translate(w / 2f, h / 2f);
+        if (espelha) tela.Scale(-1, 1);   // aplicado depois do giro (a ordem do canvas é inversa)
         tela.RotateDegrees(graus);
         tela.Translate(-foto.Width / 2f, -foto.Height / 2f);
         tela.DrawBitmap(foto, 0, 0);
-        return girada;
+        return certa;
     }
 }
