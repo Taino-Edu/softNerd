@@ -281,7 +281,9 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
         </div>
       ) : !mesa ? (
         <p className="bg-surface-800 border border-surface-500 rounded-2xl p-5 text-sm text-gray-300">
-          Você não está nesta rodada. Se chegou agora, avise o organizador — você entra na próxima.
+          {dados.checkIn
+            ? 'Check-in feito! Você chegou depois dos pareamentos desta rodada — entra na próxima, sem precisar fazer mais nada.'
+            : 'Você não está nesta rodada. Se chegou agora, avise o organizador — você entra na próxima.'}
         </p>
       ) : !oponente ? (
         <div className="bg-surface-800 border border-surface-500 rounded-2xl p-5 text-center">
@@ -302,7 +304,7 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
               <p className="text-5xl font-bold text-white leading-tight">{mesa.mesa}</p>
             </div>
           )}
-          {!mesa.resultado && !rodadaComecou(t.timer, t.rodadaAtual) && (
+          {!mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual) && (
             <p className="text-sm text-center text-gray-300 bg-surface-700 rounded-xl p-3">
               Vá pra mesa e monte o setup. O relógio começa quando o organizador mandar.
             </p>
