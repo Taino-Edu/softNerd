@@ -119,6 +119,10 @@ public class CrediarioAvisoService
                 CrediarioId          = x.Conta.Id,
                 Marco                = x.Marco,
                 VencimentoReferencia = x.Conta.DataVencimento,
+                // O "agora" da rodada, não o relógio: o "já foi avisado hoje" abaixo compara
+                // com o dia dela. Em produção dá na mesma; no teste o relógio real fazia o
+                // resultado depender da data em que o CI rodava.
+                EnviadoEm            = agoraUtc,
             }).ToList();
             _db.CrediarioAvisos.AddRange(avisos);
             try
