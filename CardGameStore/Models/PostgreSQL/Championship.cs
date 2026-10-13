@@ -101,6 +101,14 @@ public class Championship
     [Column("rodada_atual")]
     public int RodadaAtual { get; set; }
 
+    /// <summary>
+    /// Lugares (cadeiras) da loja pra este torneio: cabem Lugares/2 mesas. Quem passar disso
+    /// numa rodada fica "aguardando mesa" e joga quando uma liberar — a loja vai rodando.
+    /// Não limita inscrição.
+    /// </summary>
+    [Column("lugares")]
+    public int Lugares { get; set; } = 24;
+
     // -------------------------------------------------------------------------
     // Auditoria
     // -------------------------------------------------------------------------

@@ -3,8 +3,9 @@
 // =============================================================================
 // /admin/campeonatos/[id]/torneio — Painel do organizador da liguinha
 //
-// Preparar (código + melhor de + tempo) → check-in → gerar rodada → resolver
-// divergências → próxima rodada → encerrar (colocação vai pra Liga Mensal).
+// Preparar (código + melhor de + tempo + lugares) → check-in → soltar pareamentos →
+// começar rodada (relógio) → resolver divergências → próxima rodada → encerrar
+// (colocação vai pra Liga Mensal).
 // Atualiza sozinho pelo /hubs/torneio. Regras: Services/Liga/TorneioService.cs.
 // =============================================================================
 
@@ -16,7 +17,7 @@ import clsx from 'clsx'
 import {
   ArrowLeft, Loader2, Swords, Play, RefreshCw, Flag, Monitor, Copy, AlertTriangle, CheckCircle2, UserX,
 } from 'lucide-react'
-import { torneioApi, PainelTorneioDto, MesaDto, ResultadoPartida } from '@/lib/api'
+import { torneioApi, PainelTorneioDto, MesaDto, ResultadoPartida, rodadaComecou } from '@/lib/api'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
 import { Switch } from '@/components/ui/Switch'
 import Relogio from '@/components/liga/Relogio'
@@ -39,6 +40,7 @@ export default function PainelTorneioPage() {
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [melhorDe, setMelhorDe] = useState(1)
   const [minutos, setMinutos] = useState(50)
+  const [lugares, setLugares] = useState(24)
   const [rodadas, setRodadas] = useState<number | ''>('')
 
   const recarregar = useCallback(() => {
@@ -55,6 +57,7 @@ export default function PainelTorneioPage() {
     if (!p) return
     setMelhorDe(p.melhorDe)
     setMinutos(p.minutosRodada)
+    setLugares(p.lugares)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p?.id])
 
@@ -85,6 +88,8 @@ export default function PainelTorneioPage() {
   const abertas = p.mesas.filter(m => !m.resultado)
   const divergentes = p.mesas.filter(m => m.divergente)
   const ultimaRodada = p.numeroRodadas !== null && p.rodadaAtual >= p.numeroRodadas
+  // Pareamentos soltos mas o relógio ainda parado: falta o "Começar rodada"
+  const esperandoComecar = p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual) && abertas.length > 0
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -115,14 +120,23 @@ export default function PainelTorneioPage() {
               <input type="number" min={5} max={180} value={minutos}
                 onChange={e => setMinutos(Number(e.target.value))} className="input w-28" />
             </label>
+            <label className="text-sm">
+              <span className="block text-xs font-semibold text-gray-400 mb-1.5">Lugares na loja</span>
+              <input type="number" min={2} max={400} value={lugares}
+                onChange={e => setLugares(Number(e.target.value))} className="input w-28" />
+            </label>
             <button
-              onClick={() => acao('preparar', () => torneioApi.preparar(id, { melhorDe, minutosRodada: minutos }),
+              onClick={() => acao('preparar', () => torneioApi.preparar(id, { melhorDe, minutosRodada: minutos, lugares }),
                 preparado ? 'Configuração salva.' : 'Check-in aberto!')}
               disabled={ocupado !== null} className="btn-primary">
               {ocupado === 'preparar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               {preparado ? 'Salvar' : 'Abrir check-in'}
             </button>
           </div>
+          <p className="text-xs text-gray-400">
+            {Math.floor(lugares / 2)} mesas. Se tiver mais jogadores que lugares, as mesas a mais aparecem como
+            &ldquo;aguardando mesa&rdquo; e jogam quando uma liberar — ninguém fica de fora da inscrição.
+          </p>
         </section>
       )}
 
@@ -166,11 +180,11 @@ export default function PainelTorneioPage() {
               {(!ultimaRodada || p.rodadaAtual === 0) && (
                 <button
                   onClick={() => acao('rodada', () => torneioApi.gerarRodada(id, p.rodadaAtual === 0 && rodadas ? rodadas : undefined),
-                    `Rodada ${p.rodadaAtual + 1} gerada!`)}
+                    `Pareamentos da rodada ${p.rodadaAtual + 1} soltos!`)}
                   disabled={ocupado !== null || (p.rodadaAtual > 0 && abertas.length > 0) || (p.rodadaAtual === 0 && presentes.length < 2)}
                   className="btn-primary">
                   {ocupado === 'rodada' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  {p.rodadaAtual === 0 ? `Gerar rodada 1 (${presentes.length} presentes)` : `Gerar rodada ${p.rodadaAtual + 1}`}
+                  {p.rodadaAtual === 0 ? `Soltar pareamentos da rodada 1 (${presentes.length} presentes)` : `Soltar pareamentos da rodada ${p.rodadaAtual + 1}`}
                 </button>
               )}
               {p.rodadaAtual > 0 && (
@@ -189,6 +203,20 @@ export default function PainelTorneioPage() {
             <p className="text-sm txt-alerta">
               Ninguém fez check-in ainda. Se gerar assim, jogam todos os inscritos com vaga (e pagos, se tiver taxa).
             </p>
+          )}
+
+          {esperandoComecar && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-surface-400 bg-surface-700 px-4 py-3">
+              <p className="text-sm text-gray-300 flex-1 min-w-[14rem]">
+                Pareamentos soltos — os jogadores já veem a mesa deles. Quando todo mundo estiver com o setup pronto,
+                comece a rodada: aí o relógio corre.
+              </p>
+              <button onClick={() => acao('comecar', () => torneioApi.comecarRodada(id), `Rodada ${p.rodadaAtual} começou!`)}
+                disabled={ocupado !== null} className="btn-primary">
+                {ocupado === 'comecar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                Começar rodada {p.rodadaAtual}
+              </button>
+            </div>
           )}
 
           {p.rodadaAtual > 0 && <Relogio timer={p.timer} />}
@@ -258,6 +286,18 @@ export default function PainelTorneioPage() {
   )
 }
 
+/** Aprovado = os dois lançaram igual (ou o organizador decidiu). Senão, de quem falta a confirmação. */
+function StatusMesa({ m }: { m: MesaDto }) {
+  if (m.resultado)
+    return <span className="ml-auto txt-ok text-xs font-semibold flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Aprovado · {LANCOU[m.resultado](m)}</span>
+  if (m.divergente)
+    return <span className="ml-auto txt-alerta text-xs font-semibold flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> Divergente — decida abaixo</span>
+  const falta = !m.reportA && !m.reportB ? null : !m.reportA ? m.a.nome : m.b?.nome
+  return falta
+    ? <span className="ml-auto text-xs txt-alerta">Aguardando confirmação de {falta.split(' ')[0]}</span>
+    : <span className="ml-auto text-xs text-gray-400">Aguardando resultado</span>
+}
+
 function Mesa({ m, resolver, ocupado }: { m: MesaDto; resolver: (r: ResultadoPartida) => void; ocupado: boolean }) {
   if (!m.b) {
     return (
@@ -274,15 +314,13 @@ function Mesa({ m, resolver, ocupado }: { m: MesaDto; resolver: (r: ResultadoPar
   return (
     <div className={clsx('bg-surface-700 rounded-xl px-4 py-3 space-y-2', m.divergente && 'border border-surface-400')}>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="w-8 h-8 rounded-lg bg-surface-600 flex items-center justify-center font-bold text-white shrink-0">{m.mesa}</span>
+        {m.aguardandoMesa
+          ? <span className="px-2 h-8 rounded-lg bg-surface-600 flex items-center justify-center text-xs font-semibold txt-alerta shrink-0" title="Mais jogadores que lugares: joga quando uma mesa liberar">aguardando mesa</span>
+          : <span className="w-8 h-8 rounded-lg bg-surface-600 flex items-center justify-center font-bold text-white shrink-0">{m.mesa}</span>}
         <span className="text-white font-semibold">{m.a.nome}</span>
         <span className="text-gray-500">×</span>
         <span className="text-white font-semibold">{m.b.nome}</span>
-        {m.resultado
-          ? <span className="ml-auto txt-ok text-xs flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {LANCOU[m.resultado](m)}</span>
-          : m.divergente
-            ? <span className="ml-auto txt-alerta text-xs flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> divergente</span>
-            : <span className="ml-auto text-xs text-gray-400">em jogo</span>}
+        <StatusMesa m={m} />
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 pl-10">
         <span>{m.a.nome.split(' ')[0]}: {m.reportA ? LANCOU[m.reportA](m) : 'não lançou'}</span>

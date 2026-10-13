@@ -35,8 +35,8 @@ public class TorneioController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> Preparar(Guid id, [FromBody] PrepararTorneioRequest req) => Rodar(async () =>
     {
-        var ch = await _torneio.PrepararAsync(id, req.MelhorDe, req.MinutosRodada);
-        return Ok(new { ch.CodigoEntrada, ch.MelhorDe, ch.MinutosRodada });
+        var ch = await _torneio.PrepararAsync(id, req.MelhorDe, req.MinutosRodada, req.Lugares);
+        return Ok(new { ch.CodigoEntrada, ch.MelhorDe, ch.MinutosRodada, ch.Lugares });
     });
 
     [HttpPost("{id:guid}/codigo")]
@@ -52,7 +52,16 @@ public class TorneioController : ControllerBase
         return NoContent();
     });
 
-    /// <summary>Gera a próxima rodada (a 1ª inicia o torneio). 409 se ainda houver partida aberta.</summary>
+    /// <summary>Liga o relógio da rodada atual, depois de soltar os pareamentos. 409 se já começou.</summary>
+    [HttpPost("{id:guid}/rodadas/atual/comecar")]
+    [Authorize(Policy = "AdminOnly")]
+    public Task<IActionResult> ComecarRodada(Guid id) => Rodar(async () =>
+    {
+        await _torneio.ComecarRodadaAsync(id);
+        return NoContent();
+    });
+
+    /// <summary>Solta os pareamentos da próxima rodada (a 1ª inicia o torneio). 409 se ainda houver partida aberta.</summary>
     [HttpPost("{id:guid}/rodadas")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> GerarRodada(Guid id, [FromBody] GerarRodadaRequest? req) => Rodar(async () =>
@@ -92,6 +101,15 @@ public class TorneioController : ControllerBase
     {
         var ch = await _torneio.EntrarAsync(UsuarioId(), req.Codigo, req.DeckId, req.DeckNome);
         return Ok(new { championshipId = ch.Id, nome = ch.Name });
+    });
+
+    /// <summary>"Estou aqui": check-in de quem já está inscrito, pela própria conta, sem código.</summary>
+    [HttpPost("{id:guid}/check-in")]
+    [Authorize]
+    public Task<IActionResult> CheckInProprio(Guid id) => Rodar(async () =>
+    {
+        await _torneio.CheckInProprioAsync(UsuarioId(), id);
+        return NoContent();
     });
 
     [HttpGet("ativos")]
@@ -142,7 +160,7 @@ public class TorneioController : ControllerBase
     }
 }
 
-public sealed record PrepararTorneioRequest(int MelhorDe = 1, int MinutosRodada = 50);
+public sealed record PrepararTorneioRequest(int MelhorDe = 1, int MinutosRodada = 50, int? Lugares = null);
 public sealed record CheckInRequest(bool Presente);
 public sealed record GerarRodadaRequest(int? NumeroRodadas);
 public sealed record ResolverPartidaRequest(ResultadoPartida Resultado, int? VitoriasA, int? VitoriasB);

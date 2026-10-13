@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.43.0] — 2026-10-13
+
+### Liguinha (pedidos do Maikon)
+- **Soltar pareamentos sem ligar o relógio**: "Soltar pareamentos" só distribui as mesas; o relógio corre quando o organizador clica em **Começar rodada** — dá tempo de montar o setup. Com volta em "Mudanças com volta"
+- **Lugares da loja** (padrão 24) na configuração do torneio: quem passar disso aparece como **aguardando mesa** e joga quando uma liberar — ninguém fica de fora da inscrição
+- **Status do resultado** na tela do organizador: aguardando resultado → aguardando confirmação de Fulano → **Aprovado** / divergente
+- **Check-in com um toque**: quem já está inscrito toca em **Estou aqui**, sem digitar código (o código continua valendo)
+
 ## [v1.42.1] — 2026-10-13
 
 ### Corrigido
