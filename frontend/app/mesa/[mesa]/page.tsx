@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authApi, comandaApi } from '@/lib/api'
-import { saveAuth, isLoggedIn, getRole } from '@/lib/auth'
+import { saveAuth, isLoggedIn, getRole, getUserName, clearAuth } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
 import GoogleLoginButton from '@/components/GoogleLoginButton'
 import {
@@ -77,6 +77,15 @@ export default function MesaPage() {
   const [temComandaAberta, setTemComandaAberta] = useState(false)
   /** Cliente já logado (com senha): abre a comanda da mesa direto pela conta. */
   const [clienteLogado, setClienteLogado] = useState(false)
+  /**
+   * Logado como cliente, a mesa abre pela conta e o formulário some: antes ele ficava
+   * embaixo do botão e quem preenchia caía em "conta protegida → entrar → volta pra
+   * mesa → formulário de novo", um loop sem saída.
+   */
+  const pelaConta = clienteLogado
+  /** Já leu o cookie de login? Antes disso o formulário não aparece (senão pisca pra quem está logado). */
+  const [conferiuLogin, setConferiuLogin] = useState(false)
+  const mostraFormulario = conferiuLogin && !pelaConta
 
   useEffect(() => {
     try {
@@ -94,12 +103,28 @@ export default function MesaPage() {
   // Quem já está logado e com comanda aberta não precisa passar pelo formulário
   // de novo — abrir outra comanda pela mesa seria repetir o que já existe.
   useEffect(() => {
+    setConferiuLogin(true)
     if (!isLoggedIn()) return
-    setClienteLogado(getRole() === 'Customer')
+    const cliente = getRole() === 'Customer'
+    setClienteLogado(cliente)
     comandaApi.myComanda()
       .then(() => setTemComandaAberta(true))
-      .catch(() => setTemComandaAberta(false))
+      .catch(() => {
+        setTemComandaAberta(false)
+        // Voltou do "Entrar" (conta protegida): abre a comanda sem pedir mais um toque
+        if (cliente && new URLSearchParams(window.location.search).get('abrir') === '1') abrirPelaConta()
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /** "Não é você?": sai da conta deste aparelho e volta pro formulário da mesa. */
+  async function naoSouEu() {
+    try { await authApi.logout() } catch { /* sessão já podia ter caído */ }
+    clearAuth()
+    setClienteLogado(false)
+    setTemComandaAberta(false)
+    setStep(savedUser ? 'quick' : 'form')
+  }
 
   function formatCpf(v: string) {
     const digits = v.replace(/\D/g, '').slice(0, 11)
@@ -229,9 +254,18 @@ export default function MesaPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-gray-900 text-sm">Abrir comanda na mesa {mesa}</p>
-              <p className="text-[11px] text-gray-500">Pela sua conta, sem preencher nada</p>
+              <p className="text-[11px] text-gray-500">
+                Pela sua conta{getUserName() ? ` (${getUserName().split(' ')[0]})` : ''}, sem preencher nada
+              </p>
             </div>
             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+          </button>
+        )}
+
+        {pelaConta && step !== 'loading' && (
+          <button onClick={naoSouEu}
+            className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors py-2">
+            Não é você? Sair e entrar com outros dados
           </button>
         )}
 
@@ -248,7 +282,7 @@ export default function MesaPage() {
                 Depois de entrar, você volta pra esta mesa.
               </p>
             </div>
-            <Link href={`/entrar?returnTo=${encodeURIComponent(`/mesa/${mesa}`)}`}
+            <Link href={`/entrar?returnTo=${encodeURIComponent(`/mesa/${mesa}?abrir=1`)}`}
               className="w-full py-4 font-black text-gray-900 rounded-2xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all text-base shadow-lg"
               style={{ background: 'linear-gradient(135deg, #FFE45E, #F5C518)' }}>
               Entrar com e-mail e senha <ChevronRight className="w-5 h-5" />
@@ -269,7 +303,7 @@ export default function MesaPage() {
         )}
 
         {/* Quick Login */}
-        {step === 'quick' && savedUser && (
+        {mostraFormulario && step === 'quick' && savedUser && (
           <div className="space-y-6 max-w-sm mx-auto">
             <div className="text-center">
               <h2 className="text-xl font-black text-gray-900">Identificação do Cliente</h2>
@@ -306,7 +340,7 @@ export default function MesaPage() {
         )}
 
         {/* Formulário */}
-        {step === 'form' && (
+        {mostraFormulario && step === 'form' && (
           <div className="space-y-5 max-w-sm mx-auto">
             <div className="text-center">
               <h2 className="text-xl font-black text-gray-900">Identificação do Cliente</h2>
@@ -395,7 +429,7 @@ export default function MesaPage() {
         )}
 
         {/* Entrar com Google já abre a comanda desta mesa (escondido até ter Client ID) */}
-        {(step === 'form' || step === 'senha') && (
+        {mostraFormulario && (step === 'form' || step === 'senha') && (
           <div className="max-w-sm mx-auto mt-6">
             <GoogleLoginButton comOu claro mesa={mesa} texto="continue_with"
               onEntrou={() => { toast.success('Entrada autorizada! Boas compras.', { icon: '🏰' }); setTimeout(() => router.push('/cliente'), 800) }}
@@ -403,7 +437,7 @@ export default function MesaPage() {
           </div>
         )}
 
-        {step !== 'loading' && (
+        {mostraFormulario && step !== 'loading' && (
           <p className="text-center text-xs text-gray-400 mt-8">
             Já tem conta com e-mail e senha?{' '}
             <Link href="/entrar" className="text-[#3EC2F2] font-semibold underline underline-offset-2">
