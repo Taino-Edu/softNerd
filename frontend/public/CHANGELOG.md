@@ -1,5 +1,20 @@
 # Changelog — Santuário Nerd
 
+## [v1.41.4] — 2026-10-13
+
+### Segurança
+- **Gerador de PDF atualizado (jsPDF 2 → 4)**: fecha 2 falhas críticas e 8 altas. Súmula e extrato do crediário e os relatórios financeiro, de clientes, PDV, comandas, crediário e estoque saem iguais — conferido gerando cada um nas duas versões e comparando página por página
+
+## [v1.41.3] — 2026-10-09
+
+### Segurança
+- **Falha crítica do Next.js fechada**: o otimizador de imagens do Next 14 permitia, em certas condições, que alguém de fora executasse comandos no servidor. Ele foi desligado e a rota bloqueada — as imagens das cartas passam a vir direto dos sites das cartas, sem diferença pra quem usa. A correção definitiva vem com a atualização pro Next 15
+- **Next.js 14.2.5 → 14.2.35** (a última da versão 14): corrige falhas de travamento e de cache
+- Bibliotecas do site atualizadas dentro da mesma versão (axios, postcss, nanoid, ws, form-data, js-cookie e outras), fechando 30+ alertas de segurança
+
+### Mudado
+- Mudança de configuração do servidor web (nginx) não pausa mais os pedidos: é aplicada com o site rodando, sem reiniciar. Configuração com erro é recusada e a anterior continua no ar
+
 ## [v1.41.2] — 2026-10-09
 
 ### Mudado
