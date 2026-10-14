@@ -1,5 +1,19 @@
 # Changelog — Santuário Nerd
 
+## [v1.45.0] — 2026-10-14
+
+### Novo (pedido do Maikon)
+- **Topo da página inicial no azul royal**, com a etiqueta **"O ponto de encontro da comunidade TCG"** acima do título e anéis de fundo, como no modelo aprovado. A barra do topo acompanha o tom. Banners cadastrados continuam passando por cima, como antes
+- **Login dos clientes novo** (`/entrar`): painel azul com a ilustração e o formulário ao lado — abas Entrar / Criar conta, "Mostrar" senha e "Esqueceu a senha?" à mão. Sempre claro, mesmo com o site no modo escuro. No celular o painel vira o cabeçalho. O login do painel (`/login`) não muda
+- **Personalizar Site** ganhou 3 campos: **Imagem do topo** (a ilustração grande do topo e do login — o mascote), **Cor do topo e do login** e **Etiqueta do topo** (vazia = não aparece). Tudo continua editável sem precisar de atualização
+
+### Pendente
+- A imagem do mascote com o cajado ainda não chegou: até lá fica a nuvem "Santuário Nerd". Quando chegar, é só enviar em Personalizar Site → Imagem do topo
+- Textos do painel do login provisórios — a confirmar com o Maikon
+
+### Mudança com volta
+- Chave **"Site: topo novo e login dos clientes novo"** em `/admin/funcionalidades`. Desligada, volta o topo azul-petróleo e o login antigo
+
 ## [v1.44.2] — 2026-10-14
 
 ### Mudado (bastidores)

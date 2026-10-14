@@ -32,6 +32,10 @@ export interface SiteConfigDto {
   faviconUrl?: string | null
   pwaIconUrl?: string | null
   adminIconUrl?: string | null
+  /** Ilustração do topo e do painel do login dos clientes (mascote). Vazio = logo / arquivo padrão. */
+  heroImageUrl?: string | null
+  /** Etiqueta acima do título do topo. Vazio = sem etiqueta. */
+  heroEyebrow: string
   whatsappNumber: string
   contactEmail: string
   navTorneiosLabel: string
@@ -54,6 +58,8 @@ export interface SiteConfigDto {
   colorNavy: string
   colorBackground: string
   colorCard: string
+  /** Fundo do topo (sem banner) e do painel do login dos clientes. */
+  colorHero: string
   borderRadiusStyle: 'Padrao' | 'Suave' | 'MuitoArredondado'
   /** Desconto padrão do Pix anunciado na vitrine, em %. 0 = não anuncia Pix. */
   pixDiscountPercent: number

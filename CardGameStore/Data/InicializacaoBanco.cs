@@ -42,6 +42,9 @@ public static class InicializacaoBanco
         "ALTER TABLE users ADD COLUMN login_bloqueado_ate TEXT NULL;",
         "ALTER TABLE users ADD COLUMN google_sub TEXT NULL;",
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_google_sub ON users (google_sub) WHERE google_sub IS NOT NULL;",
+        "ALTER TABLE site_config ADD COLUMN hero_image_url TEXT NULL;",
+        "ALTER TABLE site_config ADD COLUMN color_hero TEXT NOT NULL DEFAULT '#1E4FD6';",
+        "ALTER TABLE site_config ADD COLUMN hero_eyebrow TEXT NOT NULL DEFAULT 'O ponto de encontro da comunidade TCG';",
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_championships_codigo_entrada ON championships (codigo_entrada) WHERE codigo_entrada IS NOT NULL;",
     ];
 

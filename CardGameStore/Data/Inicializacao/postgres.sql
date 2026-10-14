@@ -665,6 +665,10 @@ ALTER TABLE site_config ADD COLUMN IF NOT EXISTS contact_person_name VARCHAR(60)
 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS color_background VARCHAR(9) NOT NULL DEFAULT '#EBF7FD';
 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS color_card VARCHAR(9) NOT NULL DEFAULT '#FFFFFF';
 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS nav_liga_label VARCHAR(40) NOT NULL DEFAULT 'Liga Mensal';
+-- Topo da página inicial e painel do login dos clientes (v1.45.0): ilustração, cor e etiqueta
+ALTER TABLE site_config ADD COLUMN IF NOT EXISTS hero_image_url VARCHAR(300) NULL;
+ALTER TABLE site_config ADD COLUMN IF NOT EXISTS color_hero     VARCHAR(9)   NOT NULL DEFAULT '#1E4FD6';
+ALTER TABLE site_config ADD COLUMN IF NOT EXISTS hero_eyebrow   VARCHAR(80)  NOT NULL DEFAULT 'O ponto de encontro da comunidade TCG';
 
 -- Vitrine: parcelamento no cartão + desconto no Pix (padrão da loja).
 -- Categoria com percentual próprio sobrescreve (Pokémon = 3%, por exemplo).
