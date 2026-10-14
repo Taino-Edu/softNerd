@@ -98,6 +98,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5000
+      # Log do ASP.NET: Warning = só o que importa (CardGameStore/Middleware/PedidosNoLogMiddleware.cs).
+      # Pra investigar, LOG_ASPNETCORE=Information no .env e `bash rollout.sh api` (troca sem queda).
+      Logging__LogLevel__Microsoft.AspNetCore: "${LOG_ASPNETCORE:-Warning}"
       # Banco de dados
       ConnectionStrings__PostgreSQL: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cardgamestore};Username=${POSTGRES_USER:-cardgame_user};Password=${POSTGRES_PASSWORD}"
       MongoDbSettings__ConnectionString: "mongodb://${MONGO_USER:-mongo_admin}:${MONGO_PASSWORD}@mongo:27017/?authSource=admin"

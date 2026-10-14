@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.44.2] — 2026-10-14
+
+### Mudado (bastidores)
+- **Log da API enxuto**: o servidor escrevia ~1.300 linhas por hora numa manhã calma — o próprio sistema narrando cada pedido em 6 linhas — e o erro de verdade se perdia no meio. Agora cada mensagem ocupa **uma linha, com a hora**, e pedido só aparece quando merece: erro do servidor, barrado pelo limite de acessos, lento (2 s ou mais) ou recusado (400, 403, 409, 401 do login). Num teste com 20 pedidos: de ~120 linhas pra **3**
+- A Evolution (WhatsApp, desligada desde 13/10) parou de encher o log com a pilha inteira de "conexão recusada" a cada consulta: vira uma linha
+- Falha de envio de WhatsApp grava só o final do telefone (…2890), não o número inteiro
+- Pra investigar um problema e ver todo pedido de novo: `LOG_ASPNETCORE=Information` no `.env` da VPS e `bash rollout.sh api` (troca sem queda)
+
 ## [v1.44.1] — 2026-10-14
 
 ### Segurança
