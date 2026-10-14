@@ -42,6 +42,15 @@ if (args.Contains("gen-vapid"))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Log em uma linha por mensagem, com hora (UTC): antes cada mensagem ocupava duas linhas
+// ("info: Categoria[0]" + o texto) e sem hora nenhuma — `docker logs` sem -t não dizia quando.
+builder.Logging.AddSimpleConsole(o =>
+{
+    o.SingleLine = true;
+    o.TimestampFormat = "yyyy-MM-dd HH:mm:ss'Z' ";
+    o.UseUtcTimestamp = true;
+});
+
 // ---------------------------------------------------------------------------
 // 1. CONFIGURAÇÕES
 // ---------------------------------------------------------------------------
@@ -391,6 +400,9 @@ forwardedOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetw
 forwardedOptions.KnownProxies.Add(IPAddress.Loopback);
 forwardedOptions.KnownProxies.Add(IPAddress.IPv6Loopback);
 app.UseForwardedHeaders(forwardedOptions);
+
+// Uma linha só pro pedido que deu erro, foi barrado ou demorou (Middleware/PedidosNoLogMiddleware.cs)
+app.UsePedidosNoLog();
 
 // Headers de segurança HTTP em todas as respostas
 app.Use(async (context, next) =>

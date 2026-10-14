@@ -39,6 +39,11 @@ public sealed class EvolutionWhatsAppGateway : IWhatsAppGateway
                 ?? "unknown";
             return new(true, state.Equals("open", StringComparison.OrdinalIgnoreCase), state);
         }
+        catch (Exception ex) when (ForaDoAr(ex))
+        {
+            _logger.LogWarning("Evolution API fora do ar ao consultar estado: {Erro}", ex.Message);
+            return new(true, false, "unavailable", "Evolution API indisponível.");
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Evolution API indisponível ao consultar estado");
@@ -65,9 +70,14 @@ public sealed class EvolutionWhatsAppGateway : IWhatsAppGateway
             var id = json.RootElement.TryGetProperty("key", out var key) ? ReadString(key, "id") : null;
             return new(true, id);
         }
+        catch (Exception ex) when (ForaDoAr(ex))
+        {
+            _logger.LogWarning("WhatsApp para {Phone} não saiu, Evolution API fora do ar: {Erro}", Final(phone), ex.Message);
+            return new(false, Error: "Não foi possível falar com a Evolution API.");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Falha ao enviar WhatsApp para {Phone}", phone);
+            _logger.LogError(ex, "Falha ao enviar WhatsApp para {Phone}", Final(phone));
             return new(false, Error: "Não foi possível falar com a Evolution API.");
         }
     }
@@ -98,6 +108,11 @@ public sealed class EvolutionWhatsAppGateway : IWhatsAppGateway
 
             return await ParseQrResponseAsync(response, cancellationToken);
         }
+        catch (Exception ex) when (ForaDoAr(ex))
+        {
+            _logger.LogWarning("Evolution API fora do ar ao obter QR Code: {Erro}", ex.Message);
+            return new(false, Error: "Evolution API indisponível.");
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Evolution API indisponível ao obter QR Code");
@@ -119,6 +134,21 @@ public sealed class EvolutionWhatsAppGateway : IWhatsAppGateway
             var pairing = ReadString(root, "pairingCode") ?? ReadString(root, "code");
             return new(!string.IsNullOrWhiteSpace(base64) || !string.IsNullOrWhiteSpace(pairing), base64, pairing,
                 string.IsNullOrWhiteSpace(base64) && string.IsNullOrWhiteSpace(pairing) ? "QR Code não retornado." : null);
+    }
+
+    /// <summary>
+    /// Evolution fora do ar (desligada de propósito desde 13/10/2026, ou caída): esperado,
+    /// vai pro log numa linha. Antes cada consulta da caixa de atendimento gravava a pilha
+    /// inteira da conexão recusada (~30 linhas). Erro diferente disso continua com a pilha.
+    /// </summary>
+    internal static bool ForaDoAr(Exception ex) => ex is HttpRequestException or TaskCanceledException;
+
+    /// <summary>Telefone no log só com o final (LGPD): "…2890".</summary>
+    internal static string Final(string phone)
+    {
+        // Só os dígitos (o número vem do cadastro): nada de quebra de linha forjando log
+        var digitos = new string(phone.Where(char.IsAsciiDigit).ToArray()).Replace("\r", "").Replace("\n", "");
+        return digitos.Length <= 4 ? "…" : "…" + digitos[^4..];
     }
 
     private HttpClient Client()
