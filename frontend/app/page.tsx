@@ -268,19 +268,32 @@ export default function LandingPage() {
         onMouseEnter={() => setNavHover(true)}
         onMouseLeave={() => setNavHover(false)}>
 
-        {/* Marca centralizada absolutamente */}
-        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none flex items-center gap-2">
-          {site.logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={site.logoUrl} alt={site.siteName} className="h-8 w-auto object-contain" />
-          )}
-          <span className="font-black text-2xl leading-none" style={{ color: '#ffffff' }}>{site.siteName}</span>
-        </div>
+        {/* Marca centralizada absolutamente (visual antigo; no novo ela abre a barra, à esquerda) */}
+        {!visualNovo && (
+          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none flex items-center gap-2">
+            {site.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={site.logoUrl} alt={site.siteName} className="h-8 w-auto object-contain" />
+            )}
+            <span className="font-black text-2xl leading-none" style={{ color: '#ffffff' }}>{site.siteName}</span>
+          </div>
+        )}
 
-        <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between">
+        <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between gap-6">
+
+          {/* Marca no começo, como nas lojas grandes — pedido do Maikon (cabeça do mascote + nome) */}
+          {visualNovo && (
+            <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink">
+              {site.logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={fotoLeve(site.logoUrl, 160) ?? site.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
+              )}
+              <span className="font-black text-xl leading-none truncate" style={{ color: '#ffffff' }}>{site.siteName}</span>
+            </Link>
+          )}
 
           {/* Links desktop — esquerda */}
-          <div className="hidden xl:flex items-center gap-4 text-sm font-medium">
+          <div className={`hidden xl:flex items-center gap-4 text-sm font-medium ${visualNovo ? 'flex-1 justify-center' : ''}`}>
             <a href="#eventos"  style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navTorneiosLabel}</a>
             <Link href="/produtos" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navProdutosLabel}</Link>
             <Link href="/cliente/mercado" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navMercadoLabel}</Link>
@@ -289,10 +302,10 @@ export default function LandingPage() {
           </div>
 
           {/* Espaço mobile esquerda */}
-          <div className="xl:hidden" />
+          {!visualNovo && <div className="xl:hidden" />}
 
           {/* Ações direita */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => (document.querySelector('[vw-access-button]') as HTMLElement | null)?.click()}
               title="Acessibilidade em Libras"
