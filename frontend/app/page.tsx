@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
 // pra não piscar/mudar nada enquanto o admin nunca tiver personalizado o site.
@@ -28,6 +29,8 @@ const DEFAULT_SITE: SiteConfigDto = {
   faviconUrl: null,
   pwaIconUrl: null,
   adminIconUrl: null,
+  heroImageUrl: null,
+  heroEyebrow: 'O ponto de encontro da comunidade TCG',
   whatsappNumber: '5517997633103',
   contactEmail: 'santuarionerd@gmail.com',
   navTorneiosLabel: 'Torneios',
@@ -50,6 +53,7 @@ const DEFAULT_SITE: SiteConfigDto = {
   colorNavy: '#0C3D5A',
   colorBackground: '#EBF7FD',
   colorCard: '#FFFFFF',
+  colorHero: '#1E4FD6',
   borderRadiusStyle: 'Padrao',
   pixDiscountPercent: 5,
   maxInstallments: 12,
@@ -140,6 +144,16 @@ export default function LandingPage() {
   // #112B45) que não respondia a nenhuma personalização. Agora deriva da cor de navbar
   // configurada, então muda junto quando o admin troca a cor em Personalizar Site.
   const bannerGradient = `linear-gradient(135deg, ${site.colorNavy} 0%, ${mixHex(site.colorNavy, '#000000', 0.35)} 100%)`
+
+  // Topo novo (pedido do Maikon, 14/10): azul do topo, etiqueta e ilustração próprias de
+  // Personalizar Site. Chave "visual-topo-e-login": só o "desligada" (false) volta o antigo —
+  // enquanto carrega já mostra o novo, senão o topo piscava de cor a cada visita.
+  const visualNovo = useFuncionalidade('visual-topo-e-login') !== false
+  const heroGradient = visualNovo
+    ? `linear-gradient(135deg, ${mixHex(site.colorHero, '#FFFFFF', 0.10)} 0%, ${site.colorHero} 45%, ${mixHex(site.colorHero, '#000000', 0.38)} 100%)`
+    : bannerGradient
+  const navBg = visualNovo ? mixHex(site.colorHero, '#000000', 0.32) : '#0F3460'
+  const heroImagem = (visualNovo && site.heroImageUrl) || site.logoUrl || '/logo-santuario.webp'
 
   function toggleDark() {
     const next = !isDark
@@ -250,7 +264,7 @@ export default function LandingPage() {
         onMouseEnter={() => setNavHover(true)} />
 
       <nav className="fixed inset-x-0 top-0 z-50 h-16 flex items-center relative transition-transform duration-300"
-        style={{ backgroundColor: '#0F3460', backdropFilter: 'blur(16px)', transform: (navVisible || navHover) ? 'translateY(0)' : 'translateY(-100%)' }}
+        style={{ backgroundColor: navBg, backdropFilter: 'blur(16px)', transform: (navVisible || navHover) ? 'translateY(0)' : 'translateY(-100%)' }}
         onMouseEnter={() => setNavHover(true)}
         onMouseLeave={() => setNavHover(false)}>
 
@@ -315,7 +329,7 @@ export default function LandingPage() {
       {/* Menu mobile */}
       {mobileMenu && (
         <div className="fixed inset-x-0 top-16 z-40 border-b xl:hidden px-5 py-4 space-y-1"
-          style={{ backgroundColor: site.colorNavy, borderColor: 'rgba(255,255,255,0.10)' }}>
+          style={{ backgroundColor: visualNovo ? navBg : site.colorNavy, borderColor: 'rgba(255,255,255,0.10)' }}>
           <a href="#eventos" onClick={() => setMobileMenu(false)}
             className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
             {site.navTorneiosLabel}
@@ -389,7 +403,16 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/10" />
           </>
         ) : (
-          <div className="absolute inset-0" style={{ background: bannerGradient }} />
+          <div className="absolute inset-0" style={{ background: heroGradient }}>
+            {visualNovo && (
+              // Anéis de fundo do mockup: só decoração, não pegam clique
+              <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+                <div className="absolute -right-24 top-1/2 -translate-y-1/2 w-[34rem] h-[34rem] rounded-full border border-white/10" />
+                <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-[24rem] h-[24rem] rounded-full border border-white/10 bg-white/[0.03]" />
+                <div className="absolute -left-32 -bottom-40 w-96 h-96 rounded-full bg-white/[0.04] blur-2xl" />
+              </div>
+            )}
+          </div>
         )}
 
         {/* Conteúdo do hero — por cima do fundo */}
@@ -398,6 +421,13 @@ export default function LandingPage() {
 
             {/* Texto */}
             <div className="flex-1 text-center md:text-left">
+              {visualNovo && site.heroEyebrow && (
+                <span className="inline-flex items-center gap-2 mb-5 px-3 sm:px-3.5 py-1.5 rounded-full border text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.06em] sm:tracking-[0.14em] whitespace-nowrap"
+                  style={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.22)', backgroundColor: 'rgba(255,255,255,0.10)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.yellow }} />
+                  {site.heroEyebrow}
+                </span>
+              )}
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-4 leading-tight">
                 <span style={{ color: C.yellow }}>{heroFirstWord}</span>
                 {heroRest && <>{' '}<span style={{ color: C.blue }}>{heroRest}</span></>}
@@ -425,7 +455,7 @@ export default function LandingPage() {
             <div className="relative shrink-0 w-full max-w-xs sm:max-w-sm md:max-w-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={site.logoUrl || '/logo-santuario.webp'}
+                src={fotoLeve(heroImagem, 960) ?? heroImagem}
                 alt={site.siteName}
                 className="w-full h-auto object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
               />

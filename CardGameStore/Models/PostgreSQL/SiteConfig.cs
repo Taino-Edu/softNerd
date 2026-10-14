@@ -56,10 +56,24 @@ public class SiteConfig
     [Column("pwa_icon_url")]
     public string? PwaIconUrl { get; set; }
 
+    /// <summary>
+    /// Ilustração do topo da página inicial e do painel do login dos clientes (o mascote).
+    /// Vazio = usa a logo; sem logo, o arquivo padrão. Separada da logo de propósito:
+    /// logo é marca pequena na navbar, isto aqui é desenho grande.
+    /// </summary>
+    [MaxLength(300)]
+    [Column("hero_image_url")]
+    public string? HeroImageUrl { get; set; }
+
     /// <summary>URL do ícone exibido no painel admin. Vazio = usa LogoUrl.</summary>
     [MaxLength(300)]
     [Column("admin_icon_url")]
     public string? AdminIconUrl { get; set; }
+
+    /// <summary>Etiqueta acima do título do topo ("O ponto de encontro…"). Vazio = sem etiqueta.</summary>
+    [MaxLength(80)]
+    [Column("hero_eyebrow")]
+    public string HeroEyebrow { get; set; } = "O ponto de encontro da comunidade TCG";
 
     // ── Contato ──────────────────────────────────────────────────────────────
     [MaxLength(20)]
@@ -145,6 +159,14 @@ public class SiteConfig
     [MaxLength(9)]
     [Column("color_navy")]
     public string ColorNavy { get; set; } = "#0C3D5A";
+
+    /// <summary>
+    /// Fundo do topo da página inicial (sem banner) e do painel do login dos clientes.
+    /// Separada da "Cor da navbar" porque aquela também pinta texto e botão em outras partes.
+    /// </summary>
+    [MaxLength(9)]
+    [Column("color_hero")]
+    public string ColorHero { get; set; } = "#1E4FD6";
 
     /// <summary>Fundo da landing page — só afeta o tema claro (o tema escuro mantém a paleta
     /// própria dele, é uma escolha de tema, não de marca).</summary>

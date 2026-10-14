@@ -48,6 +48,9 @@ public class SiteConfigController : ControllerBase
         cfg.FaviconUrl   = req.FaviconUrl;
         cfg.PwaIconUrl   = req.PwaIconUrl;
         cfg.AdminIconUrl = req.AdminIconUrl;
+        cfg.HeroImageUrl = req.HeroImageUrl;
+        // Etiqueta: string vazia é valor de verdade (sem etiqueta); null = não mexe
+        if (req.HeroEyebrow          is not null) cfg.HeroEyebrow          = req.HeroEyebrow.Trim();
         if (req.WhatsappNumber       is not null) cfg.WhatsappNumber       = req.WhatsappNumber;
         if (req.ContactEmail         is not null) cfg.ContactEmail         = req.ContactEmail;
         if (req.NavTorneiosLabel     is not null) cfg.NavTorneiosLabel     = req.NavTorneiosLabel;
@@ -70,6 +73,7 @@ public class SiteConfigController : ControllerBase
         if (req.ColorNavy            is not null) cfg.ColorNavy            = req.ColorNavy;
         if (req.ColorBackground      is not null) cfg.ColorBackground      = req.ColorBackground;
         if (req.ColorCard            is not null) cfg.ColorCard            = req.ColorCard;
+        if (req.ColorHero            is not null) cfg.ColorHero            = req.ColorHero;
 
         // Vitrine (parcelamento/Pix): validados porque vão virar preço na tela do cliente —
         // um percentual negativo ou acima de 100 anunciaria preço maior que o cheio.
@@ -148,6 +152,9 @@ public class SaveSiteConfigRequest
     public string? FaviconUrl          { get; init; }
     public string? PwaIconUrl          { get; init; }
     public string? AdminIconUrl        { get; init; }
+    public string? HeroImageUrl        { get; init; }
+    [System.ComponentModel.DataAnnotations.MaxLength(80)]
+    public string? HeroEyebrow         { get; init; }
     public string? WhatsappNumber      { get; init; }
     public string? ContactEmail        { get; init; }
     public string? NavTorneiosLabel    { get; init; }
@@ -170,6 +177,7 @@ public class SaveSiteConfigRequest
     public string? ColorNavy           { get; init; }
     public string? ColorBackground     { get; init; }
     public string? ColorCard           { get; init; }
+    public string? ColorHero           { get; init; }
     public string? BorderRadiusStyle   { get; init; }
     public decimal? PixDiscountPercent    { get; init; }
     public int?     MaxInstallments       { get; init; }

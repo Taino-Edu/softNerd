@@ -16,6 +16,8 @@ const DEFAULTS: SiteConfigDto = {
   faviconUrl: null,
   pwaIconUrl: null,
   adminIconUrl: null,
+  heroImageUrl: null,
+  heroEyebrow: 'O ponto de encontro da comunidade TCG',
   whatsappNumber: '5517997633103',
   contactEmail: 'santuarionerd@gmail.com',
   navTorneiosLabel: 'Torneios',
@@ -38,6 +40,7 @@ const DEFAULTS: SiteConfigDto = {
   colorNavy: '#0C3D5A',
   colorBackground: '#EBF7FD',
   colorCard: '#FFFFFF',
+  colorHero: '#1E4FD6',
   borderRadiusStyle: 'Padrao',
   pixDiscountPercent: 5,
   maxInstallments: 12,
@@ -207,7 +210,7 @@ export default function SiteConfigPage() {
   const [cfg, setCfg]         = useState<SiteConfigDto>(DEFAULTS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
-  const [uploadingIcon, setUploadingIcon] = useState<'logoUrl' | 'faviconUrl' | 'pwaIconUrl' | 'adminIconUrl' | null>(null)
+  const [uploadingIcon, setUploadingIcon] = useState<'logoUrl' | 'faviconUrl' | 'pwaIconUrl' | 'adminIconUrl' | 'heroImageUrl' | null>(null)
 
   useEffect(() => {
     siteConfigApi.get()
@@ -220,7 +223,7 @@ export default function SiteConfigPage() {
     setCfg(prev => ({ ...prev, [key]: value }))
   }
 
-  async function uploadIcon(field: 'logoUrl' | 'faviconUrl' | 'pwaIconUrl' | 'adminIconUrl', file: File) {
+  async function uploadIcon(field: 'logoUrl' | 'faviconUrl' | 'pwaIconUrl' | 'adminIconUrl' | 'heroImageUrl', file: File) {
     setUploadingIcon(field)
     try {
       const { data } = await uploadApi.image(file)
@@ -288,6 +291,9 @@ export default function SiteConfigPage() {
           <textarea value={cfg.heroSubtitle} onChange={e => set('heroSubtitle', e.target.value)}
             rows={2} className="input w-full resize-none" />
         </Field>
+        <Field label="Etiqueta do topo" desc="Frase curta acima do título principal. Deixe vazio pra não mostrar">
+          <input value={cfg.heroEyebrow} maxLength={80} onChange={e => set('heroEyebrow', e.target.value)} className="input w-full" />
+        </Field>
         <Field label="Endereço / cidade" desc="Aparece no rodapé">
           <input value={cfg.addressLine} onChange={e => set('addressLine', e.target.value)} className="input w-full" />
         </Field>
@@ -305,6 +311,12 @@ export default function SiteConfigPage() {
             value={cfg.logoUrl} uploading={uploadingIcon === 'logoUrl'}
             onUpload={f => uploadIcon('logoUrl', f)}
             onRemove={() => set('logoUrl', null)}
+          />
+          <IconUploadField
+            label="Imagem do topo" desc="Ilustração grande do topo da página e do login dos clientes (ex.: o mascote). PNG com fundo transparente. Vazio = usa a logo"
+            value={cfg.heroImageUrl} uploading={uploadingIcon === 'heroImageUrl'}
+            onUpload={f => uploadIcon('heroImageUrl', f)}
+            onRemove={() => set('heroImageUrl', null)}
           />
           <IconUploadField
             label="Favicon" desc="Aparece na aba do navegador"
@@ -381,6 +393,7 @@ export default function SiteConfigPage() {
           <ColorField label="Cor primária (azul)" value={cfg.colorPrimary} onChange={v => set('colorPrimary', v)} />
           <ColorField label="Cor de destaque (amarelo)" value={cfg.colorAccent} onChange={v => set('colorAccent', v)} />
           <ColorField label="Cor da navbar" value={cfg.colorNavy} onChange={v => set('colorNavy', v)} />
+          <ColorField label="Cor do topo e do login" value={cfg.colorHero} onChange={v => set('colorHero', v)} />
           <ColorField label="Fundo da página" value={cfg.colorBackground} onChange={v => set('colorBackground', v)} />
           <ColorField label="Fundo dos cards" value={cfg.colorCard} onChange={v => set('colorCard', v)} />
         </div>

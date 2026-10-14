@@ -40,6 +40,7 @@ public static class Funcionalidades
     public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
     public const string LiguinhaRelogioSeparado = "liguinha-relogio-separado";
     public const string FotosLeves = "fotos-leves";
+    public const string VisualTopoELogin = "visual-topo-e-login";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -91,6 +92,15 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.44.0",
             RevisarEm:  new DateOnly(2027, 1, 15)),
+
+        new(VisualTopoELogin,
+            Nome:       "Site: topo novo e login dos clientes novo",
+            OQueMuda:   "Topo da página inicial no azul do topo, com a etiqueta e a ilustração (mascote) de " +
+                        "Personalizar Site; login dos clientes em duas partes (painel azul + formulário), sempre claro.",
+            SeDesligar: "Volta o topo antigo (azul-petróleo, imagem = logo) e o login dos clientes antigo (cartão simples).",
+            Padrao:     true,
+            Desde:      "v1.45.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>
