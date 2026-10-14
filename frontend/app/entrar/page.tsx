@@ -13,7 +13,7 @@ import { mixHex } from '@/lib/colors'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import toast, { Toaster } from 'react-hot-toast'
-import { Mail, KeyRound, Loader2, Gamepad2, ArrowLeft, Trophy, Eye, EyeOff } from 'lucide-react'
+import { Mail, KeyRound, Loader2, Gamepad2, ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react'
 import Link from 'next/link'
 import GoogleLoginButton from '@/components/GoogleLoginButton'
 
@@ -199,6 +199,8 @@ function TelaNova({
   const nome   = site?.siteName ?? 'Santuário Nerd'
   const cor    = site?.colorHero ?? '#1E4FD6'
   const arte   = site?.heroImageUrl || site?.logoUrl || '/logo-santuario.webp'
+  // Logo só no quadradinho quando é diferente da arte grande (senão o mascote aparece duas vezes)
+  const logo   = site?.logoUrl && site.logoUrl !== arte ? site.logoUrl : null
   const painel = `linear-gradient(150deg, ${mixHex(cor, '#FFFFFF', 0.12)} 0%, ${cor} 45%, ${mixHex(cor, '#000000', 0.35)} 100%)`
   const campo: React.CSSProperties = { backgroundColor: L.campo, border: `1px solid ${L.borda}`, color: L.texto }
 
@@ -210,23 +212,25 @@ function TelaNova({
         style={{ backgroundColor: L.cartao }}>
 
         {/* ── Painel da marca (no celular vira o cabeçalho) ── */}
-        {/* TEXTOS PROVISÓRIOS — o mockup falava da liguinha; confirmar os definitivos com o Maikon */}
-        {/* Cor do texto no style, não em "text-white": o tema claro do site força .text-white pra escuro */}
-        <section className="relative overflow-hidden px-6 pt-6 pb-8 lg:p-10 rounded-b-[2rem] lg:rounded-none flex flex-col"
+        {/* Textos do Maikon (14/10/2026). Cor do texto no style, não em "text-white": o tema claro força .text-white pra escuro */}
+        <section className="relative overflow-hidden px-6 pt-6 pb-6 lg:p-8 rounded-b-[2rem] lg:rounded-none flex flex-col"
           style={{ background: painel, color: '#FFFFFF' }}>
           <div className="absolute inset-0 pointer-events-none" aria-hidden>
-            <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full border border-white/10" />
-            <div className="absolute -left-24 -bottom-24 w-80 h-80 rounded-full bg-white/[0.05] blur-2xl" />
+            <div className="absolute left-1/2 top-[58%] -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] rounded-full border border-white/10" />
+            <div className="absolute left-1/2 top-[58%] -translate-x-1/2 -translate-y-1/2 w-[20rem] h-[20rem] rounded-full bg-white/[0.06] blur-2xl" />
           </div>
 
           <div className="relative flex items-center justify-between gap-3">
-            <Link href="/" className="flex items-center gap-2.5 min-w-0">
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: L.amarelo }}>
-                <Gamepad2 className="w-5 h-5" style={{ color: mixHex(cor, '#000000', 0.4) }} />
+            <Link href="/" className="flex items-center gap-3 min-w-0">
+              <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden" style={{ backgroundColor: L.amarelo }}>
+                {logo
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={fotoLeve(logo, 160) ?? logo} alt="" className="w-10 h-10 object-contain" />
+                  : <Gamepad2 className="w-5 h-5" style={{ color: mixHex(cor, '#000000', 0.4) }} />}
               </span>
               <span className="min-w-0 leading-tight">
-                <span className="block text-sm font-black uppercase tracking-wide truncate">{nome}</span>
-                <span className="block text-[11px] text-white/70">Comunidade TCG</span>
+                <span className="block text-lg font-black truncate">{nome}</span>
+                <span className="block text-xs text-white/75">· Comunidade TCG</span>
               </span>
             </Link>
             <Link href="/" className="lg:hidden flex items-center gap-1 text-xs text-white/80 shrink-0">
@@ -234,31 +238,22 @@ function TelaNova({
             </Link>
           </div>
 
-          <div className="relative flex items-end gap-3 mt-6 lg:mt-12 lg:flex-col lg:items-start lg:gap-0 lg:flex-1">
-            <div className="flex-1 min-w-0">
+          <div className="relative flex items-center gap-3 mt-5 lg:mt-6 lg:flex-col lg:text-center lg:flex-1">
+            <div className="flex-1 min-w-0 lg:flex-none">
               <span className="inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.14em] bg-white/15 border border-white/20">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: L.amarelo }} /> Área do cliente
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: L.amarelo }} /> Sua próxima rodada
               </span>
-              <h1 className="text-[1.75rem] leading-[1.1] lg:text-5xl font-black">
-                Entre para a <span style={{ color: L.amarelo }}>aventura!</span>
+              <h1 className="text-[1.65rem] leading-[1.1] lg:text-[2.6rem] font-black">
+                Jogue, <span style={{ color: L.amarelo }}>evolua</span> e divirta-se
               </h1>
-              <p className="mt-3 text-sm lg:text-base text-white/85 max-w-xs">
-                Sua comanda, seus pontos e os campeonatos da loja num lugar só.
-              </p>
-              <div className="hidden sm:inline-flex mt-5 items-center gap-3 rounded-2xl px-4 py-3 bg-white text-left shadow-lg">
-                <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: L.amarelo }}>
-                  <Trophy className="w-5 h-5" style={{ color: L.texto }} />
-                </span>
-                <span className="leading-tight">
-                  <span className="block text-sm font-black" style={{ color: L.texto }}>Campeonatos toda semana</span>
-                  <span className="block text-xs" style={{ color: L.suave }}>Inscrições abertas pra quem quiser jogar</span>
-                </span>
-              </div>
+              <p className="mt-2 text-sm font-bold text-white/90">Campeonatos todas as semanas</p>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={fotoLeve(arte, 640) ?? arte} alt=""
-              className="w-28 sm:w-36 lg:w-64 lg:self-end lg:-mb-4 h-auto object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.35)] shrink-0" />
+              className="w-24 sm:w-32 lg:w-auto lg:max-h-[22rem] lg:mt-4 lg:flex-1 lg:min-h-0 h-auto object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.35)] shrink-0" />
           </div>
+
+          <p className="relative hidden lg:block mt-4 text-xs text-white/80">Uma comunidade. Muitas partidas. ✦</p>
         </section>
 
         {/* ── Formulário ── */}
@@ -267,12 +262,12 @@ function TelaNova({
             <div className="flex justify-end mb-4">
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
                 style={{ backgroundColor: '#E9F8EF', color: '#16794A' }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#22A55B' }} /> Área do cliente
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#22A55B' }} /> Área do jogador
               </span>
             </div>
 
             <h2 className="text-3xl font-black" style={{ color: L.texto }}>Boas-vindas!</h2>
-            <p className="text-sm mt-1" style={{ color: L.suave }}>Entre na sua conta para continuar</p>
+            <p className="text-sm mt-1" style={{ color: L.suave }}>Entre na sua conta para continuar.</p>
 
             <div className="grid grid-cols-2 gap-1 p-1 mt-6 rounded-xl" style={{ backgroundColor: L.campo, border: `1px solid ${L.borda}` }}>
               <span className="text-center text-sm font-bold py-2 rounded-lg bg-white shadow-sm" style={{ color: L.texto }}>Entrar</span>
@@ -320,7 +315,7 @@ function TelaNova({
                 className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black transition active:scale-[0.99] disabled:opacity-70"
                 style={{ color: '#FFFFFF', background: `linear-gradient(135deg, ${cor}, ${mixHex(cor, '#000000', 0.2)})`, boxShadow: `0 12px 28px -12px ${cor}` }}>
                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                {loading ? 'Entrando...' : 'Entrar na minha conta'}
+                {loading ? 'Entrando...' : 'Entrar na minha conta →'}
               </button>
 
               <GoogleLoginButton comOu claro texto="continue_with"
@@ -328,11 +323,18 @@ function TelaNova({
                 onErro={msg => toast.error(msg, { duration: 6000 })} />
             </form>
 
-            <p className="text-center text-xs mt-6" style={{ color: L.suave }}>
+            <p className="text-center text-sm mt-6" style={{ color: L.suave }}>
+              Ainda não tem uma conta?{' '}
+              <Link href={cadastroHref} className="font-bold hover:underline" style={{ color: cor }}>Cadastre-se</Link>
+            </p>
+            <p className="text-center text-xs mt-2" style={{ color: L.suave }}>
               Já comprou na loja física?{' '}
               <Link href="/primeiro-acesso" className="font-semibold hover:underline" style={{ color: cor }}>Ative sua conta pelo CPF</Link>
             </p>
-            <Link href="/" className="hidden lg:flex items-center justify-center gap-1.5 text-xs mt-3 hover:underline" style={{ color: L.suave }}>
+            <p className="flex items-center justify-center gap-1.5 text-[11px] mt-5" style={{ color: L.suave }}>
+              <Lock className="w-3 h-3" /> Seus dados estão protegidos
+            </p>
+            <Link href="/" className="hidden lg:flex items-center justify-center gap-1.5 text-xs mt-2 hover:underline" style={{ color: L.suave }}>
               <ArrowLeft className="w-3.5 h-3.5" /> Voltar para a loja
             </Link>
           </div>

@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.46.1] — 2026-10-14
+
+### Mudado (pedido do Maikon)
+- **Barra do topo**: a cabeça do mascote e o nome **Santuário Nerd** agora abrem a barra, à esquerda (como nas lojas grandes); os links ficam no meio e "Minha Conta" / "Ver Eventos" na direita. O logo cadastrado em Personalizar Site é o que aparece ali — o certo é a **cabeça**; o mascote inteiro vai em **Imagem do topo**
+- **Login dos clientes** com os textos definitivos: "Sua próxima rodada", "Jogue, evolua e divirta-se", "Campeonatos todas as semanas", "Área do jogador", "Ainda não tem uma conta? Cadastre-se" e "Seus dados estão protegidos". O logo aparece no quadradinho amarelo
+- **Ícone do app e da aba do navegador**: a cabeça do mascote 3D no azul (antes, o mascote desenhado)
+
+### Mudança com volta
+- Tudo segue a chave **"Site: topo novo e login dos clientes novo"**. Desligada, volta a barra com a marca no meio e o login antigo
+
 ## [v1.46.0] — 2026-10-14
 
 ### Novo
