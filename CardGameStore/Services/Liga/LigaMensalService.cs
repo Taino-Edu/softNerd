@@ -317,11 +317,17 @@ public class LigaMensalService
     private static IEnumerable<string?> DecksDoLancamento(LigaMensalManualEntry m) =>
         (m.Decks ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    private static List<string> DecksOrdenados(IEnumerable<string?> decks) => decks
+    /// <summary>
+    /// Decks do jogador no mês, do mais jogado pro menos (empate: nome). O primeiro é o
+    /// "deck principal" que a página da liga mostra no pódio — por isso não é alfabético.
+    /// </summary>
+    internal static List<string> DecksOrdenados(IEnumerable<string?> decks) => decks
         .Where(d => !string.IsNullOrWhiteSpace(d))
         .Select(d => d!.Trim())
-        .Distinct()
-        .OrderBy(d => d)
+        .GroupBy(d => d, StringComparer.OrdinalIgnoreCase)
+        .OrderByDescending(g => g.Count())
+        .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+        .Select(g => g.First())
         .ToList();
 
     private static LigaMensalManualEntryDto ParaDto(LigaMensalManualEntry e) => new()

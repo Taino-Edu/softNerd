@@ -1,5 +1,17 @@
 # Changelog — Santuário Nerd
 
+## [v1.46.0] — 2026-10-14
+
+### Novo
+- **Página da Liga Mensal nova** (`/liga`): faixa no azul da loja com o título em fonte pixel, **pódio do top 3** (ouro, prata e bronze) com o **sprite em pixel do deck** de cada um, classificação com o deck de todo mundo e o selo de **brinde** no top 4, e o quadro **Decks do mês** (quantos jogadores usaram cada deck). Os meses viram botões
+- Sprite do deck sai do nome digitado: "Charizard ex / Pidgeot ex" mostra os dois, "Lost Box" mostra o Comfey; deck com nome livre mostra um ícone de cartas
+
+### Mudado
+- Os decks de cada jogador na liga vêm do **mais jogado pro menos** (antes, ordem alfabética) — o primeiro é o que aparece no pódio
+
+### Mudança com volta
+- Chave **"Liga Mensal: página nova"** em `/admin/funcionalidades`. Desligada, volta a lista simples
+
 ## [v1.45.0] — 2026-10-14
 
 ### Novo (pedido do Maikon)
