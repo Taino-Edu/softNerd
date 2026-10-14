@@ -45,6 +45,7 @@ public static class InicializacaoBanco
         "ALTER TABLE site_config ADD COLUMN hero_image_url TEXT NULL;",
         "ALTER TABLE site_config ADD COLUMN color_hero TEXT NOT NULL DEFAULT '#1E4FD6';",
         "ALTER TABLE site_config ADD COLUMN hero_eyebrow TEXT NOT NULL DEFAULT 'O ponto de encontro da comunidade TCG';",
+        "ALTER TABLE site_config ADD COLUMN aviso_topo TEXT NOT NULL DEFAULT 'Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!';",
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_championships_codigo_entrada ON championships (codigo_entrada) WHERE codigo_entrada IS NOT NULL;",
     ];
 

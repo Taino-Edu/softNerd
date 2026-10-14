@@ -18,6 +18,7 @@ const DEFAULTS: SiteConfigDto = {
   adminIconUrl: null,
   heroImageUrl: null,
   heroEyebrow: 'O ponto de encontro da comunidade TCG',
+  avisoTopo: 'Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!',
   whatsappNumber: '5517997633103',
   contactEmail: 'santuarionerd@gmail.com',
   navTorneiosLabel: 'Torneios',
@@ -293,6 +294,9 @@ export default function SiteConfigPage() {
         </Field>
         <Field label="Etiqueta do topo" desc="Frase curta acima do título principal. Deixe vazio pra não mostrar">
           <input value={cfg.heroEyebrow} maxLength={80} onChange={e => set('heroEyebrow', e.target.value)} className="input w-full" />
+        </Field>
+        <Field label="Faixa acima do menu" desc="Frase fininha no alto da página inicial. Deixe vazio pra não mostrar">
+          <input value={cfg.avisoTopo ?? ''} maxLength={120} onChange={e => set('avisoTopo', e.target.value)} className="input w-full" />
         </Field>
         <Field label="Endereço / cidade" desc="Aparece no rodapé">
           <input value={cfg.addressLine} onChange={e => set('addressLine', e.target.value)} className="input w-full" />

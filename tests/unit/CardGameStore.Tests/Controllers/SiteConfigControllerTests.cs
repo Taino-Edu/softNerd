@@ -65,6 +65,21 @@ public class SiteConfigControllerTests
     }
 
     [Fact]
+    public async Task FaixaDoTopo_NasceComAFraseDoMaikon_SalvaAparada_EVaziaSome()
+    {
+        var (_, c) = Criar();
+        var padrao = (SiteConfig)((OkObjectResult)await c.Get()).Value!;
+        padrao.AvisoTopo.Should().StartWith("Jogue, evolua e divirta-se — ");
+
+        var salva = await Salvar(c, new SaveSiteConfigRequest { AvisoTopo = "  Promoção de sábado  " });
+        salva.AvisoTopo.Should().Be("Promoção de sábado");
+
+        await Salvar(c, new SaveSiteConfigRequest { AvisoTopo = "" });
+        var cfg = await Salvar(c, new SaveSiteConfigRequest { AvisoTopo = null, SiteName = "Loja" });
+        cfg.AvisoTopo.Should().BeEmpty("vazio é escolha do admin: sem faixa; null não mexe");
+    }
+
+    [Fact]
     public async Task RemoverImagemDoTopo_VoltaPraLogo()
     {
         var (_, c) = Criar();
