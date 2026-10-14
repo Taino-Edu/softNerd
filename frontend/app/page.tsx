@@ -31,7 +31,8 @@ const DEFAULT_SITE: SiteConfigDto = {
   adminIconUrl: null,
   heroImageUrl: null,
   heroEyebrow: 'O ponto de encontro da comunidade TCG',
-  avisoTopo: '',
+  // Igual ao padrão do servidor: a faixa já nasce no lugar e não empurra o menu quando a config chega
+  avisoTopo: 'Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!',
   whatsappNumber: '5517997633103',
   contactEmail: 'santuarionerd@gmail.com',
   navTorneiosLabel: 'Torneios',
