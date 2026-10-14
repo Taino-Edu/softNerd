@@ -144,7 +144,12 @@ public sealed class EvolutionWhatsAppGateway : IWhatsAppGateway
     internal static bool ForaDoAr(Exception ex) => ex is HttpRequestException or TaskCanceledException;
 
     /// <summary>Telefone no log só com o final (LGPD): "…2890".</summary>
-    internal static string Final(string phone) => phone.Length <= 4 ? "…" : "…" + phone[^4..];
+    internal static string Final(string phone)
+    {
+        // Só os dígitos (o número vem do cadastro): nada de quebra de linha forjando log
+        var digitos = new string(phone.Where(char.IsAsciiDigit).ToArray()).Replace("\r", "").Replace("\n", "");
+        return digitos.Length <= 4 ? "…" : "…" + digitos[^4..];
+    }
 
     private HttpClient Client()
     {

@@ -74,6 +74,23 @@ public class PedidosNoLogMiddlewareTests
     }
 
     [Fact]
+    public async Task CaminhoComQuebraDeLinha_NaoForjaLinhaNoLog()
+    {
+        var log = await Rodar("/api/x\ninfo: Admin logou com sucesso", null,
+            ctx => { ctx.Response.StatusCode = 500; return Task.CompletedTask; });
+
+        log.Linhas.Should().ContainSingle();
+        log.Linhas[0].Texto.Should().NotContain("\n").And.NotContain("\r");
+    }
+
+    [Theory]
+    [InlineData("17991122890", "…2890")]
+    [InlineData("(17) 99112-2890\ninfo: falso", "…2890")]
+    [InlineData("12", "…")]
+    public void TelefoneNoLog_SoOsUltimosDigitos(string telefone, string esperado) =>
+        EvolutionWhatsAppGateway.Final(telefone).Should().Be(esperado);
+
+    [Fact]
     public async Task ExcecaoNaoTratada_RegistraComo500_EDeixaAExcecaoSeguir()
     {
         var log = new LogGuardado<PedidosNoLogMiddleware>();

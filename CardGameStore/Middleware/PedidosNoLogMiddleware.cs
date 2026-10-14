@@ -46,6 +46,12 @@ public class PedidosNoLogMiddleware
         return null;
     }
 
+    /// <summary>
+    /// O caminho vem de quem fez o pedido: "/x%0Ainfo: ..." viraria uma linha falsa no log
+    /// (que agora é uma linha por mensagem). Quebra de linha sai antes de gravar.
+    /// </summary>
+    internal static string SemQuebra(string valor) => valor.Replace("\r", "").Replace("\n", "");
+
     public async Task InvokeAsync(HttpContext context)
     {
         var relogio = Stopwatch.StartNew();
@@ -67,7 +73,7 @@ public class PedidosNoLogMiddleware
             var caminho = context.Request.Path.Value ?? "/";
             if (Nivel(caminho, status, ms) is { } nivel)
                 _logger.Log(nivel, "{Metodo} {Caminho} → {Status} em {Ms} ms",
-                    context.Request.Method, caminho, status, ms);
+                    SemQuebra(context.Request.Method), SemQuebra(caminho), status, ms);
         }
     }
 }
