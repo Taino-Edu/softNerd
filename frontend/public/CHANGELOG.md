@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.44.1] — 2026-10-14
+
+### Segurança
+- **postcss-selector-parser 6.1.2 → 7.1.6** (usado só na montagem do visual do site, pelo Tailwind): fecha 2 alertas do Dependabot (1 médio, 1 baixo) de travamento ao ler seletores CSS malformados. Conferido gerando o CSS do site antes e depois: saiu **idêntico, byte a byte**
+
 ## [v1.44.0] — 2026-10-13
 
 ### Mais rápido
