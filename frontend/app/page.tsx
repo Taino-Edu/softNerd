@@ -283,7 +283,7 @@ export default function LandingPage() {
 
           {/* Marca no começo, como nas lojas grandes — pedido do Maikon (cabeça do mascote + nome) */}
           {visualNovo && (
-            <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink-0">
+            <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink">
               {site.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={fotoLeve(site.logoUrl, 160) ?? site.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
@@ -302,10 +302,10 @@ export default function LandingPage() {
           </div>
 
           {/* Espaço mobile esquerda */}
-          <div className="xl:hidden" />
+          {!visualNovo && <div className="xl:hidden" />}
 
           {/* Ações direita */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => (document.querySelector('[vw-access-button]') as HTMLElement | null)?.click()}
               title="Acessibilidade em Libras"
