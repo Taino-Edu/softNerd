@@ -175,6 +175,20 @@ public class LigaMensalServiceTests
     }
 
     [Fact]
+    public async Task Decks_DoMaisJogadoProMenos_PraPaginaMostrarODeckPrincipal()
+    {
+        var amb = Criar();
+        var ana = amb.Jogador("Ana");
+        amb.Campeonato(Br(2026, 10, 3),  resultado: [(ana, 2, "Lugia")]);
+        amb.Campeonato(Br(2026, 10, 10), resultado: [(ana, 1, "Dragapult ex")]);
+        amb.Campeonato(Br(2026, 10, 17), resultado: [(ana, 1, "dragapult EX")]);
+
+        var linha = (await amb.Liga.RankingAsync(2026, 10)).Ranking.Single();
+
+        linha.Decks.Should().Equal("Dragapult ex", "Lugia"); // 2 vezes antes de 1, sem duplicar por maiúscula
+    }
+
+    [Fact]
     public async Task Manual_EntraNaLinhaDoJogadorComOMesmoNome_IgnorandoMaiusculasEEspacos()
     {
         var amb = Criar();

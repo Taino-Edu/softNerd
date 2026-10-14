@@ -41,6 +41,7 @@ public static class Funcionalidades
     public const string LiguinhaRelogioSeparado = "liguinha-relogio-separado";
     public const string FotosLeves = "fotos-leves";
     public const string VisualTopoELogin = "visual-topo-e-login";
+    public const string LigaVisualNovo = "liga-visual-novo";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -100,6 +101,15 @@ public static class Funcionalidades
             SeDesligar: "Volta o topo antigo (azul-petróleo, imagem = logo) e o login dos clientes antigo (cartão simples).",
             Padrao:     true,
             Desde:      "v1.45.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(LigaVisualNovo,
+            Nome:       "Liga Mensal: página nova",
+            OQueMuda:   "Página pública da liga com pódio do top 3, ranking com o sprite do deck de cada jogador, " +
+                        "decks do mês e meses em botões, no visual da loja.",
+            SeDesligar: "Volta a lista simples de antes (nome, decks em texto e pontos).",
+            Padrao:     true,
+            Desde:      "v1.46.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 
