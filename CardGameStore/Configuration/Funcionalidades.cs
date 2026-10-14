@@ -42,6 +42,7 @@ public static class Funcionalidades
     public const string FotosLeves = "fotos-leves";
     public const string VisualTopoELogin = "visual-topo-e-login";
     public const string LigaVisualNovo = "liga-visual-novo";
+    public const string HomeDetalhesMaikon = "home-detalhes-maikon";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -110,6 +111,16 @@ public static class Funcionalidades
             SeDesligar: "Volta a lista simples de antes (nome, decks em texto e pontos).",
             Padrao:     true,
             Desde:      "v1.46.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(HomeDetalhesMaikon,
+            Nome:       "Página inicial: detalhes do modelo do Maikon",
+            OQueMuda:   "Faixa fina acima do menu (texto em Personalizar Site), topo com cantos arredondados, " +
+                        "três cartões curtos abaixo do topo, chamada \"Quero jogar\" antes do rodapé, rodapé no azul " +
+                        "e o parcelamento no cartão nos cartões de produto.",
+            SeDesligar: "A página inicial volta a ser como na v1.46.1 (sem faixa, sem cartões e chamada, rodapé claro).",
+            Padrao:     true,
+            Desde:      "v1.47.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

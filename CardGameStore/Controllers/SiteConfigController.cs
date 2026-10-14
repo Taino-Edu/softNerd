@@ -51,6 +51,7 @@ public class SiteConfigController : ControllerBase
         cfg.HeroImageUrl = req.HeroImageUrl;
         // Etiqueta: string vazia é valor de verdade (sem etiqueta); null = não mexe
         if (req.HeroEyebrow          is not null) cfg.HeroEyebrow          = req.HeroEyebrow.Trim();
+        if (req.AvisoTopo            is not null) cfg.AvisoTopo            = req.AvisoTopo.Trim();
         if (req.WhatsappNumber       is not null) cfg.WhatsappNumber       = req.WhatsappNumber;
         if (req.ContactEmail         is not null) cfg.ContactEmail         = req.ContactEmail;
         if (req.NavTorneiosLabel     is not null) cfg.NavTorneiosLabel     = req.NavTorneiosLabel;
@@ -155,6 +156,8 @@ public class SaveSiteConfigRequest
     public string? HeroImageUrl        { get; init; }
     [System.ComponentModel.DataAnnotations.MaxLength(80)]
     public string? HeroEyebrow         { get; init; }
+    [System.ComponentModel.DataAnnotations.MaxLength(120)]
+    public string? AvisoTopo           { get; init; }
     public string? WhatsappNumber      { get; init; }
     public string? ContactEmail        { get; init; }
     public string? NavTorneiosLabel    { get; init; }

@@ -75,6 +75,11 @@ public class SiteConfig
     [Column("hero_eyebrow")]
     public string HeroEyebrow { get; set; } = "O ponto de encontro da comunidade TCG";
 
+    /// <summary>Faixa fina acima da barra do topo da página inicial. Vazio = sem faixa.</summary>
+    [MaxLength(120)]
+    [Column("aviso_topo")]
+    public string AvisoTopo { get; set; } = "Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!";
+
     // ── Contato ──────────────────────────────────────────────────────────────
     [MaxLength(20)]
     [Column("whatsapp_number")]

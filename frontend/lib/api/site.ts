@@ -36,6 +36,8 @@ export interface SiteConfigDto {
   heroImageUrl?: string | null
   /** Etiqueta acima do título do topo. Vazio = sem etiqueta. */
   heroEyebrow: string
+  /** Faixa fina acima da barra do topo da página inicial. Vazio = sem faixa. */
+  avisoTopo?: string
   whatsappNumber: string
   contactEmail: string
   navTorneiosLabel: string

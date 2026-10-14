@@ -1,5 +1,23 @@
 # Changelog — Santuário Nerd
 
+## [v1.47.0] — 2026-10-14
+
+### Novo (do modelo do Maikon — só acréscimos, nada do que já existia saiu)
+- **Faixa fina acima do menu** com a frase "Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!" (o trecho antes do travessão sai em amarelo). O texto fica em **Personalizar Site → Faixa acima do menu**; vazio, a faixa some
+- **Três cartões curtos** abaixo do topo: Produtos para jogar, Feito para a comunidade e Uma loja de quem joga (levam pra produtos, campeonatos e liga)
+- **Chamada "Partidas, amizades e muita diversão"** com o botão **Quero jogar** antes do rodapé
+- Cartão do produto mostra o **parcelamento no cartão** ("3x de R$ 8,30 no cartão"), com a mesma regra da página do produto
+
+### Mudado
+- Topo com os **cantos de baixo arredondados** e seta no botão principal
+- **Rodapé no azul do topo**, com os mesmos contatos e links
+
+### Ficou de fora (não existe no sistema hoje)
+- Sacola/carrinho, estrelas de avaliação e selo "Novo" do modelo
+
+### Mudança com volta
+- Chave **"Página inicial: detalhes do modelo do Maikon"** em `/admin/funcionalidades`. Desligada, a página inicial volta a ser a da v1.46.1
+
 ## [v1.46.1] — 2026-10-14
 
 ### Mudado (pedido do Maikon)
