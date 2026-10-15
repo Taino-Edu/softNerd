@@ -2,7 +2,7 @@
 // Cartão de produto da vitrine nova (chave "vitrine-nova", v1.48.0) — usado na home e em /produtos.
 // Desenho do modelo do Maikon: área da foto com fundo suave, selo, categoria, nome, preço grande,
 // parcelamento no cartão, preço no Pix e um botão "Ver produto". Só mostra dado que existe de
-// verdade (nada de estrela de avaliação inventada); "Últimas N" sai do estoque real.
+// verdade (nada de estrela de avaliação inventada); "Últimas N" sai do estoque mínimo do produto.
 import Link from 'next/link'
 import { Package, ChevronRight } from 'lucide-react'
 import type { Product } from '@/lib/api'
@@ -46,7 +46,8 @@ export default function CartaoProduto({ p, C, pix, cartao, href, onClick }: {
 }) {
   const promo   = p.isOnPromo && p.discountPriceInReais != null
   const preco   = promo ? p.discountPriceInReais! : p.priceInReais
-  const ultimas = p.stockQuantity > 0 && p.stockQuantity <= 3
+  // "Últimas N" segue o estoque mínimo de cada produto (isLowStock do servidor), não um número fixo
+  const ultimas = p.stockQuantity > 0 && p.isLowStock
 
   const conteudo = (
     <>
