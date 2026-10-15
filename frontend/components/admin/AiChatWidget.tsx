@@ -244,7 +244,7 @@ export default function AiChatWidget() {
 
           {/* Cabeçalho */}
           <div className="flex items-center justify-between px-4 py-3"
-               style={{ background: 'linear-gradient(135deg, #1a1028 0%, #111117 100%)', borderBottom: '1px solid #303040' }}>
+               style={{ background: 'linear-gradient(135deg, #0F1A3A 0%, #111117 100%)', borderBottom: '1px solid #303040' }}>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center"
                    style={{ background: 'linear-gradient(135deg, #1E4FD6, #163CA8)' }}>
@@ -261,7 +261,7 @@ export default function AiChatWidget() {
                 onClick={() => { setVoiceOn(v => !v); window.speechSynthesis?.cancel() }}
                 title={voiceOn ? 'Desligar voz' : 'Ligar voz'}
                 className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-                style={{ color: voiceOn ? '#a78bfa' : '#6b7280', background: voiceOn ? '#3b1f6a33' : 'transparent' }}>
+                style={{ color: voiceOn ? '#7FA0F0' : '#6b7280', background: voiceOn ? '#1E4FD633' : 'transparent' }}>
                 {voiceOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
               </button>
               <button onClick={() => setOpen(false)}
@@ -294,7 +294,7 @@ export default function AiChatWidget() {
                   {SUGGESTIONS.map(s => (
                     <button key={s} onClick={() => send(s)}
                             className="w-full text-left text-xs px-3 py-2.5 rounded-xl text-[#D5E1FB] hover:text-white hover:border-[#5B7FE3]/50 transition-all"
-                            style={{ background: '#1a1a2e', border: '1px solid #4c2d8a' }}>
+                            style={{ background: '#1a1a2e', border: '1px solid #2A4A9A' }}>
                       {s}
                     </button>
                   ))}
@@ -386,7 +386,7 @@ export default function AiChatWidget() {
             ...CORNER_STYLES[prefs.aiButton.corner] ?? CORNER_STYLES['bottom-right'],
             width: BTN_SIZE, height: BTN_SIZE,
             background: open ? '#10286B' : 'linear-gradient(135deg, #1E4FD6, #163CA8)',
-            boxShadow: `0 4px 24px rgba(109, 40, 217, ${listening ? 0.9 : 0.6})`,
+            boxShadow: `0 4px 24px rgba(30, 79, 214, ${listening ? 0.9 : 0.6})`,
           }}
           aria-label={open ? 'Fechar assistente IA' : 'Abrir assistente IA'}>
           {listening
@@ -405,7 +405,7 @@ export default function AiChatWidget() {
             left: pos.x, top: pos.y,
             width: BTN_SIZE, height: BTN_SIZE,
             background: open ? '#10286B' : 'linear-gradient(135deg, #1E4FD6, #163CA8)',
-            boxShadow: `0 4px 24px rgba(109, 40, 217, ${listening ? 0.9 : 0.6})`,
+            boxShadow: `0 4px 24px rgba(30, 79, 214, ${listening ? 0.9 : 0.6})`,
             cursor: 'grab',
           }}
           aria-label={open ? 'Fechar assistente IA' : 'Abrir assistente IA'}

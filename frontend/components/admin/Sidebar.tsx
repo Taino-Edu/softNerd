@@ -211,7 +211,9 @@ export default function Sidebar() {
   const site = useSiteConfig()
   const cor  = site?.colorHero ?? '#1E4FD6'
   const fundoMenu = `linear-gradient(180deg, ${mixHex(cor, '#000000', 0.28)} 0%, ${mixHex(cor, '#000000', 0.5)} 100%)`
-  const logo = novo && site?.logoUrl ? (fotoLeve(site.logoUrl, 160) ?? site.logoUrl) : '/logo-maikon-128.png'
+  // "Ícone do admin" de Personalizar Site tem preferência; sem ele, o logo da loja
+  const iconePainel = site?.adminIconUrl || site?.logoUrl
+  const logo = novo && iconePainel ? (fotoLeve(iconePainel, 160) ?? iconePainel) : '/logo-maikon-128.png'
   const nomeLoja = novo ? (site?.siteName ?? 'Santuário Nerd') : 'Santuário Nerd'
 
   useEffect(() => {
