@@ -1,4 +1,7 @@
 'use client'
+// Loja (/produtos). Com a chave "vitrine-nova" (v1.48.0): barra com a marca e a Sacola (carrinho de
+// reserva), título "Todos os produtos" e o cartão novo (components/loja/CartaoProduto). Desligada,
+// volta a barra "Loja" e o cartão pequeno de antes. ?categoria=X abre já filtrado (atalhos da home).
 import { useEffect, useState, useMemo } from 'react'
 import { productApi, siteConfigApi, categoryApi, Product, ProductCategory, SiteConfigDto } from '@/lib/api'
 import { resolvePixPercent, calcPrecoVitrine } from '@/lib/precoVitrine'
@@ -10,6 +13,10 @@ import {
 } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
+import { mixHex } from '@/lib/colors'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { useReservationCart } from '@/hooks/useReservationCart'
+import CartaoProduto from '@/components/loja/CartaoProduto'
 
 const NAVY = '#0C3D5A'
 
@@ -85,6 +92,8 @@ export default function ProdutosPage() {
   const [isDark,   setIsDark]   = useState(false)
   const [siteCfg,    setSiteCfg]    = useState<SiteConfigDto | null>(null)
   const [categorias, setCategorias] = useState<ProductCategory[]>([])
+  const vitrineNova = useFuncionalidade('vitrine-nova') !== false
+  const { totalItems: itensSacola } = useReservationCart()
 
   // pix: tom fechado no claro e aberto no escuro, pra manter contraste nos dois temas
   const C: Theme = isDark ? {
@@ -100,6 +109,9 @@ export default function ProdutosPage() {
   useEffect(() => {
     const saved = localStorage.getItem('landing-theme')
     if (saved === 'dark') setIsDark(true)
+    // Atalho de categoria vindo da home (/produtos?categoria=Pokémon)
+    const cat = new URLSearchParams(window.location.search).get('categoria')
+    if (cat) setCatFilter(cat)
     productApi.list()
       .then(r => setProducts(r.data.filter(p => p.isActive && p.stockQuantity > 0 && p.showOnMarketplace !== false)))
       .finally(() => setLoading(false))
@@ -118,6 +130,23 @@ export default function ProdutosPage() {
     return { precoPix, pixPercent }
   }
 
+  /** Pix e cartão no formato do cartão novo (null = a linha some). */
+  function precosNovos(p: Product) {
+    if (!siteCfg) return { pix: null, cartao: null }
+    const preco = p.isOnPromo && p.discountPriceInReais != null ? p.discountPriceInReais : p.priceInReais
+    const v = calcPrecoVitrine(preco, p.maxInstallments, siteCfg, resolvePixPercent(p, categorias, siteCfg.pixDiscountPercent))
+    return {
+      pix: v.pixPercent > 0 ? { precoPix: v.precoPix, pixPercent: v.pixPercent } : null,
+      cartao: v.parcelas >= 2 ? { parcelas: v.parcelas, valorParcela: v.valorParcela } : null,
+    }
+  }
+
+  const corTopo = siteCfg?.colorHero ?? '#1E4FD6'
+  const CN = {
+    card: C.card, cardAlt: isDark ? '#1E1E24' : mixHex(C.card, C.blue, 0.06), border: C.border,
+    navy: C.navy, text: isDark ? C.text : '#5B6B84', blue: isDark ? C.blue : corTopo, pix: C.pix, yellow: C.yellow,
+  }
+
   const categories = useMemo(() => [...new Set(products.map(p => p.category))].sort(), [products])
 
   const filtered = useMemo(() => {
@@ -129,19 +158,52 @@ export default function ProdutosPage() {
     })
   }, [products, search, catFilter])
 
-  const grouped = useMemo(() => {
-    if (catFilter) return { [catFilter]: filtered }
-    return categories.reduce<Record<string, Product[]>>((acc, cat) => {
-      const items = filtered.filter(p => p.category === cat)
-      if (items.length) acc[cat] = items
-      return acc
-    }, {})
+  // Lista de [categoria, itens] — não objeto: a categoria pode vir do endereço (?categoria=)
+  // e nunca deve virar nome de propriedade (CodeQL: remote property injection)
+  const grouped = useMemo<[string, Product[]][]>(() => {
+    if (catFilter) return filtered.length ? [[catFilter, filtered]] : []
+    return categories
+      .map((cat): [string, Product[]] => [cat, filtered.filter(p => p.category === cat)])
+      .filter(([, items]) => items.length > 0)
   }, [filtered, categories, catFilter])
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 
       {/* Navbar */}
+      {vitrineNova ? (
+      <nav className="fixed inset-x-0 top-0 z-50 h-16 flex items-center"
+        style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), backdropFilter: 'blur(16px)' }}>
+        <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink hover:opacity-90">
+            {siteCfg?.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fotoLeve(siteCfg.logoUrl, 160) ?? siteCfg.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
+            )}
+            <span className="font-black text-xl leading-none truncate" style={{ color: '#FFFFFF' }}>{siteCfg?.siteName ?? 'Santuário Nerd'}</span>
+          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href="/" className="hidden sm:inline text-sm font-semibold px-3 py-2 rounded-xl hover:bg-white/10" style={{ color: '#FFFFFF' }}>Início</Link>
+            <button onClick={() => {
+              const next = !isDark
+              setIsDark(next)
+              setOptionalItem('landing-theme', next ? 'dark' : 'light')
+            }} className="p-2 rounded-xl hover:bg-white/10 transition-colors" style={{ color: '#ffffff' }}
+              title={isDark ? 'Modo claro' : 'Modo escuro'}>
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
+              className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-white/10"
+              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">Sacola</span>
+              <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
+                style={{ backgroundColor: '#FFE45E', color: '#3D2E00' }}>{itensSacola}</span>
+            </Link>
+          </div>
+        </div>
+      </nav>
+      ) : (
       <nav className="fixed inset-x-0 top-0 z-50 h-14 flex items-center px-5 gap-4"
         style={{ backgroundColor: '#0F3460', backdropFilter: 'blur(16px)' }}>
         <Link href="/" className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity"
@@ -160,8 +222,19 @@ export default function ProdutosPage() {
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
       </nav>
+      )}
 
-      <div className="max-w-6xl mx-auto px-5 pt-20 pb-16">
+      <div className={`max-w-6xl mx-auto px-5 pb-16 ${vitrineNova ? 'pt-24' : 'pt-20'}`}>
+
+        {vitrineNova && (
+          <div className="mb-6">
+            <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: CN.blue }}>Catálogo completo</p>
+            <h1 className="text-3xl md:text-4xl font-black" style={{ color: C.navy }}>Todos os produtos</h1>
+            <p className="text-sm mt-1" style={{ color: CN.text }}>
+              Busque e filtre pra achar o que precisa pra próxima partida{products.length ? ` — ${products.length} itens em estoque` : ''}.
+            </p>
+          </div>
+        )}
 
         {/* Busca */}
         <div className="relative mb-6">
@@ -182,7 +255,7 @@ export default function ProdutosPage() {
               onClick={() => setCatFilter(null)}
               className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all"
               style={!catFilter
-                ? { backgroundColor: C.blue, borderColor: C.blue, color: '#fff' }
+                ? { backgroundColor: CN.blue, borderColor: CN.blue, color: '#fff' }
                 : { backgroundColor: C.card, borderColor: C.border, color: C.text }}>
               <Tag className="w-3 h-3" /> Todos
             </button>
@@ -191,7 +264,7 @@ export default function ProdutosPage() {
                 onClick={() => setCatFilter(catFilter === cat ? null : cat)}
                 className="shrink-0 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all"
                 style={catFilter === cat
-                  ? { backgroundColor: C.blue, borderColor: C.blue, color: '#fff' }
+                  ? { backgroundColor: CN.blue, borderColor: CN.blue, color: '#fff' }
                   : { backgroundColor: C.card, borderColor: C.border, color: C.text }}>
                 {cat}
               </button>
@@ -204,14 +277,14 @@ export default function ProdutosPage() {
           <div className="flex justify-center py-24">
             <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: C.blue, borderTopColor: 'transparent' }} />
           </div>
-        ) : Object.keys(grouped).length === 0 ? (
+        ) : grouped.length === 0 ? (
           <div className="text-center py-24">
             <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-20" style={{ color: C.navy }} />
             <p className="font-bold opacity-40" style={{ color: C.navy }}>Nenhum produto encontrado.</p>
           </div>
         ) : (
           <div className="space-y-12">
-            {Object.entries(grouped).map(([cat, items]) => (
+            {grouped.map(([cat, items]) => (
               <section key={cat}>
                 <div className="flex items-center gap-3 mb-5">
                   <h2 className="text-lg font-black" style={{ color: C.navy }}>{cat}</h2>
@@ -220,11 +293,20 @@ export default function ProdutosPage() {
                   </span>
                   <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                  {items.map(p => (
-                    <ProductCard key={p.id} p={p} C={C} pix={pixDoProduto(p)} />
-                  ))}
-                </div>
+                {vitrineNova ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {items.map(p => {
+                      const { pix, cartao } = precosNovos(p)
+                      return <CartaoProduto key={p.id} p={p} C={CN} pix={pix} cartao={cartao} href={`/produtos/${p.id}`} />
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    {items.map(p => (
+                      <ProductCard key={p.id} p={p} C={C} pix={pixDoProduto(p)} />
+                    ))}
+                  </div>
+                )}
               </section>
             ))}
           </div>

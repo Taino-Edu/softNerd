@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.48.0] — 2026-10-15
+
+### Mudado — vitrine mais vendedora
+- **Página inicial**: o carrossel de destaques (que quase não andava) virou uma **grade de 8 produtos** — destaques primeiro — com **atalhos das categorias** mais cheias (levam pra loja já filtrada) e o botão "Ver todos os N produtos"
+- **Cartão de produto novo** na página inicial e em `/produtos`: foto grande, selo (Pré-venda, Promoção ou Destaque), categoria, preço grande, **parcelamento no cartão**, **preço no Pix**, aviso de **"Últimas N!"** quando o estoque está acabando e o botão "Ver produto"
+- **`/produtos`**: barra com a marca (cabeça do mascote + nome), título **"Todos os produtos"** com a quantidade em estoque e filtros no azul do topo
+- **Botão Sacola** na barra da página inicial e da loja, com a quantidade de itens do **carrinho de reserva** que já existia
+
+### Mudança com volta
+- Chave **"Loja: vitrine nova"** em `/admin/funcionalidades`. Desligada, volta o carrossel na página inicial e a loja de antes
+
 ## [v1.47.0] — 2026-10-14
 
 ### Novo (do modelo do Maikon — só acréscimos, nada do que já existia saiu)

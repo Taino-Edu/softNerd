@@ -58,12 +58,12 @@
 | `/login` | `app/login/page.tsx` | — |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
-| `/` | `app/page.tsx` | — |
+| `/` | `app/page.tsx` | `loja/CartaoProduto` |
 | `/perfil/[id]` | `app/perfil/[id]/page.tsx` | — |
 | `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | — |
 | `/privacidade` | `app/privacidade/page.tsx` | `LegalActions`, `ThemeToggle` |
 | `/produtos/[id]` | `app/produtos/[id]/page.tsx` | — |
-| `/produtos` | `app/produtos/page.tsx` | — |
+| `/produtos` | `app/produtos/page.tsx` | `loja/CartaoProduto` |
 | `/reset-password` | `app/reset-password/page.tsx` | — |
 | `/termos` | `app/termos/page.tsx` | `LegalActions`, `ThemeToggle` |
 
@@ -106,6 +106,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/Relogio` | `Relogio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
 | `liga/SpriteDeck` | `SpriteDeck` | `app/liga/page.tsx` |
 | `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
+| `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/page.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
 | `ui/Switch` | `Switch` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx` |

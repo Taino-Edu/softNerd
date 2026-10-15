@@ -17,6 +17,8 @@ import {
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { useReservationCart } from '@/hooks/useReservationCart'
+import CartaoProduto from '@/components/loja/CartaoProduto'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
 // pra não piscar/mudar nada enquanto o admin nunca tiver personalizado o site.
@@ -97,6 +99,8 @@ export default function LandingPage() {
   const router = useRouter()
   const [championships, setChampionships] = useState<Championship[]>([])
   const [products,      setProducts]      = useState<Product[]>([])
+  // Vitrine nova: todos os visíveis (destaques primeiro) — a grade mostra 8 e as categorias saem daqui
+  const [vitrine,       setVitrine]       = useState<Product[]>([])
   const [announcements, setAnnouncements] = useState<AnnouncementDto[]>([])
   const [loading,       setLoading]       = useState(true)
   const [registerModal, setRegisterModal] = useState<Championship | null>(null)
@@ -171,6 +175,13 @@ export default function LandingPage() {
   // faixa acima do menu, topo arredondado, 3 cartões, chamada "Quero jogar", rodapé no azul e
   // parcelamento no cartão de produto. Chave "home-detalhes-maikon" desligada = home da v1.46.1.
   const detalhes  = useFuncionalidade('home-detalhes-maikon') !== false
+  // Vitrine nova (v1.48.0): grade no lugar do carrossel, cartão novo e botão Sacola (carrinho de
+  // reserva que já existia). Chave "vitrine-nova" desligada = carrossel e cartão de antes.
+  const vitrineNova = useFuncionalidade('vitrine-nova') !== false
+  const { totalItems: itensSacola } = useReservationCart()
+  const categoriasVitrine = Object.entries(
+    vitrine.reduce<Record<string, number>>((acc, p) => { acc[p.category] = (acc[p.category] ?? 0) + 1; return acc }, {}),
+  ).sort((a, b) => b[1] - a[1]).slice(0, 6)
   const avisoTopo = detalhes ? (site.avisoTopo ?? '').trim() : ''
   const faixa     = avisoTopo ? 32 : 0          // altura da faixa (px): empurra menu e topo pra baixo
   // "Jogue, evolua e divirta-se — encontre tudo…": o trecho antes do travessão sai em amarelo
@@ -246,6 +257,7 @@ export default function LandingPage() {
         const visible  = r.data.filter(p => p.isActive && p.stockQuantity > 0 && p.showOnMarketplace !== false)
         const featured = visible.filter(p => p.isFeatured)
         setProducts(featured.length > 0 ? featured : visible)
+        setVitrine([...featured, ...visible.filter(p => !p.isFeatured)])
       }),
       announcementApi.visible().then(r => setAnnouncements(r.data)),
       siteConfigApi.get().then(r => setSite(r.data)),
@@ -361,6 +373,17 @@ export default function LandingPage() {
               style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
               Minha Conta
             </Link>
+            {vitrineNova && (
+              // Sacola = carrinho de reserva (/cliente/reserva/carrinho); no celular vira só o ícone
+              <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
+                className="flex items-center gap-2 text-sm px-2.5 xl:px-4 py-2 rounded-xl xl:border transition-colors hover:bg-white/10"
+                style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
+                <ShoppingBag className="w-4 h-4" />
+                <span className="hidden xl:inline">Sacola</span>
+                <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
+                  style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{itensSacola}</span>
+              </Link>
+            )}
             <a href="#eventos"
               className="hidden xl:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95"
               style={{ backgroundColor: C.yellow, color: site.colorNavy }}>
@@ -712,7 +735,68 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── PRODUTOS ────────────────────────────────────────────────────── */}
+      {/* ── PRODUTOS: VITRINE NOVA (grade, sem carrossel parado) ─────────── */}
+      {vitrineNova ? (
+      <section id="produtos" className={`py-16 px-5 ${detalhes ? '' : 'border-t'}`} style={{ borderColor: C.border }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: C.blue }}>{site.produtosEyebrow}</p>
+              <h2 className="text-2xl md:text-3xl font-black" style={{ color: C.navy }}>{site.produtosTitle}</h2>
+              <p className="text-sm mt-1" style={{ color: C.text }}>Cartas, acessórios e colecionáveis pra sua próxima partida.</p>
+            </div>
+            {vitrine.length > 0 && (
+              <Link href="/produtos" className="inline-flex items-center gap-1 text-sm font-black shrink-0 hover:underline" style={{ color: C.blue }}>
+                Ver todos os {vitrine.length} produtos <ChevronRight className="w-4 h-4" />
+              </Link>
+            )}
+          </div>
+
+          {/* Atalhos das categorias com mais itens — levam pra loja já filtrada */}
+          {categoriasVitrine.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-5" style={{ scrollbarWidth: 'none' }}>
+              {categoriasVitrine.map(([cat, n]) => (
+                <Link key={cat} href={`/produtos?categoria=${encodeURIComponent(cat)}`}
+                  className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full border transition-colors hover:opacity-80"
+                  style={{ backgroundColor: C.card, borderColor: C.border, color: C.navy }}>
+                  {cat} <span style={{ color: C.text }}>{n}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center py-14">
+              <div className="w-7 h-7 border-2 rounded-full animate-spin" style={{ borderColor: C.blue, borderTopColor: 'transparent' }} />
+            </div>
+          ) : vitrine.length === 0 ? (
+            <div className="text-center py-14 rounded-2xl border" style={{ borderColor: C.border, backgroundColor: C.card }}>
+              <Package className="w-8 h-8 mx-auto mb-3 opacity-20" style={{ color: C.navy }} />
+              <p className="font-medium opacity-50" style={{ color: C.navy }}>Produtos em breve.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                {vitrine.slice(0, 8).map(p => (
+                  <CartaoProduto key={p.id} p={p} C={C} onClick={() => setProductModal(p)}
+                    pix={pixDoProduto(p)} cartao={cartaoDoProduto(p)} />
+                ))}
+              </div>
+              {vitrine.length > 8 && (
+                <div className="flex justify-center mt-8">
+                  <Link href="/produtos"
+                    className="inline-flex items-center gap-2 text-sm font-black px-7 py-3 rounded-xl transition-all active:scale-95"
+                    style={{ backgroundColor: site.colorHero, color: '#FFFFFF', boxShadow: `0 10px 24px -10px ${site.colorHero}` }}>
+                    Ver todos os {vitrine.length} produtos <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+      ) : (
+      /* ── PRODUTOS (carrossel antigo, guardado pra volta) ─────────────── */
       <section id="produtos" className="py-16 px-5 border-t" style={{ borderColor: C.border }}>
         <div className="max-w-6xl mx-auto">
           <div className="flex items-baseline justify-between mb-8">
@@ -817,6 +901,7 @@ export default function LandingPage() {
           )}
         </div>
       </section>
+      )}
 
       {/* ── PONTOS / FIDELIDADE ─────────────────────────────────────────── */}
       <section id="pontos" className="py-16 px-5 border-t" style={{ borderColor: C.border }}>

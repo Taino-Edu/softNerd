@@ -43,6 +43,7 @@ public static class Funcionalidades
     public const string VisualTopoELogin = "visual-topo-e-login";
     public const string LigaVisualNovo = "liga-visual-novo";
     public const string HomeDetalhesMaikon = "home-detalhes-maikon";
+    public const string VitrineNova = "vitrine-nova";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -121,6 +122,16 @@ public static class Funcionalidades
             SeDesligar: "A página inicial volta a ser como na v1.46.1 (sem faixa, sem cartões e chamada, rodapé claro).",
             Padrao:     true,
             Desde:      "v1.47.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(VitrineNova,
+            Nome:       "Loja: vitrine nova",
+            OQueMuda:   "Na página inicial os produtos viram uma grade de 8 (sem o carrossel), com atalhos das " +
+                        "categorias; cartão de produto novo (selo, parcelamento, Pix, últimas unidades) na home e em " +
+                        "/produtos; botão Sacola com o carrinho de reserva na barra.",
+            SeDesligar: "Volta o carrossel de destaques na home, a barra \"Loja\" e o cartão pequeno em /produtos.",
+            Padrao:     true,
+            Desde:      "v1.48.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 
