@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.51.0] — 2026-10-15
+
+### Mudado — painel (primeira parte: o "esqueleto")
+- **Menu lateral do painel no azul da loja**, nos temas claro e escuro: logo de Personalizar Site (a cabeça do mascote), "Santuário Nerd · Painel", item da tela atual em **destaque branco**, selo "LIVE" em amarelo e o rodapé do menu (usuário, Ver Loja, tema, Sair) no mesmo estilo. Recolhido (só ícones) e no celular (barra e gaveta) também
+- **Assistente de IA sem roxo**: botão flutuante, cabeçalho e balões no azul da loja
+- O conteúdo das telas não muda nesta etapa — vem por partes, começando pelas mais usadas
+
+### Mudança com volta
+- Chave **"Painel: menu lateral novo"** em `/admin/funcionalidades`. Desligada, volta o menu branco/preto de antes
+
 ## [v1.50.0] — 2026-10-15
 
 ### Mudado — Sacola, área do cliente e cores
