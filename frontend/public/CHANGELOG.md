@@ -1,5 +1,20 @@
 # Changelog — Santuário Nerd
 
+## [v1.52.0] — 2026-10-15
+
+### Mudado — conta do cliente padronizada
+- **Um topo só em todas as telas da conta** (Meus Decks, Configurações, Mercado de Cartas): barra no azul da loja, botão de voltar redondo e título branco. O "voltar" sempre leva pra um lugar fixo — antes cada tela voltava pra um canto (página inicial, área do cliente ou Minha conta)
+- **Minha conta mais clara**: abas com nomes de cliente em pílulas que rolam — **Pontos, Compras, Reservas, Campeonatos, Crediário e Notas** (antes: Histórico, Torneios, Pré-vendas e "Dívida", espremidas); os pontos aparecem uma vez só, com quanto valem em reais, e a aba Pontos explica **como ganhar e usar**; "voltar" leva pra área do cliente; **Meus decks, Configurações e Sair da conta** juntos em "Mais"
+- **Mercado de Cartas no visual da loja** (antes usava o visual escuro do painel admin). Quem chega pelo menu da página inicial sem login volta pra página inicial
+- **Azul da loja em toda a conta**: o azul-claro antigo das telas de cliente (topo da Minha conta, botões, interruptores, sino de notificações) virou o azul do topo
+
+### Corrigido
+- **Títulos "Meus Decks" e "Configurações" sumiam**: texto escuro em cima do topo escuro (o tema claro forçava a cor). Agora ficam brancos
+- **Nome do deck sumia no editor de deck**, pelo mesmo motivo
+
+### Mudança com volta
+- Chave **"Cliente: Minha conta organizada"** em `/admin/funcionalidades`. Desligada, volta a grade de abas antiga e o saldo repetido
+
 ## [v1.51.0] — 2026-10-15
 
 ### Mudado — painel (primeira parte: o "esqueleto")

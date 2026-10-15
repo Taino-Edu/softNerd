@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { usePreferences } from '@/hooks/usePreferences'
 
 const NAVY   = '#0C3D5A'
-const BLUE   = '#3EC2F2'
+const BLUE   = '#1E4FD6'
 const MUTED  = '#4D8FAC'
 const BORDER = 'rgba(12,61,90,0.12)'
 

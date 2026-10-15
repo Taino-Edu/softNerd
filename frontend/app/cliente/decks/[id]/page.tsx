@@ -10,7 +10,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast'
 import { brl } from '@/lib/format'
 
-const C = { navy: '#0C3D5A', blue: '#3EC2F2', blue2: '#1A9DD4', yellow: '#FFE45E', bg: '#EBF7FD', white: '#FFFFFF', muted: '#4D8FAC', border: 'rgba(62,194,242,0.18)' }
+const C = { navy: '#0C3D5A', blue: '#1E4FD6', blue2: '#163CA8', yellow: '#FFE45E', bg: '#EBF7FD', white: '#FFFFFF', muted: '#4D8FAC', border: 'rgba(62,194,242,0.18)' }
 
 const GAMES   = ['Pokemon', 'MTG', 'Yu-Gi-Oh!', 'One Piece TCG', 'LoL Riftbound']
 const FORMATS: Record<string, string[]> = {
@@ -934,15 +934,18 @@ export default function DeckBuilderPage() {
       <Toaster position="top-center" />
 
       {/* Header */}
-      <header style={{ backgroundColor: C.navy }}>
+      <header style={{ background: 'linear-gradient(135deg, #1A40B4 0%, #133190 100%)' }}>
         <div className="max-w-lg mx-auto px-5 pt-10 pb-5 space-y-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/cliente/decks')} className="text-white/60 hover:text-white">
-              <ArrowLeft className="w-5 h-5" />
+            <button onClick={() => router.push('/cliente/decks')} aria-label="Voltar pra Meus Decks"
+              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 hover:bg-white/25"
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFFFFF' }}>
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <input value={deckName} onChange={e => setDeckName(e.target.value)} disabled={readOnly}
               placeholder="Nome do deck..." maxLength={100}
-              className="flex-1 bg-transparent text-white font-black text-lg placeholder-white/40 outline-none disabled:opacity-80" />
+              className="flex-1 bg-transparent font-black text-lg placeholder-white/40 outline-none disabled:opacity-80"
+              style={{ color: '#FFFFFF' }} />
             {!readOnly && (
               <button onClick={() => setIsPublic(v => !v)}
                 className="p-2 rounded-lg" title={isPublic ? 'Público' : 'Privado'}

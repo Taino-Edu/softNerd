@@ -2,11 +2,12 @@
 import { useEffect, useState } from 'react'
 import { deckApi, DeckListDto } from '@/lib/api'
 import { Plus, Loader2, Swords, BookOpen, Lock, Globe, Trash2 } from 'lucide-react'
+import CabecalhoCliente from '@/components/cliente/CabecalhoCliente'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 
-const C = { navy: '#0C3D5A', blue: '#3EC2F2', blue2: '#1A9DD4', yellow: '#FFE45E', bg: '#EBF7FD', white: '#FFFFFF', muted: '#4D8FAC', border: 'rgba(62,194,242,0.18)' }
+const C = { navy: '#0C3D5A', blue: '#1E4FD6', blue2: '#163CA8', yellow: '#FFE45E', bg: '#EBF7FD', white: '#FFFFFF', muted: '#4D8FAC', border: 'rgba(62,194,242,0.18)' }
 
 const GAME_EMOJI: Record<string, string> = {
   Pokemon: '🔴', 'Yu-Gi-Oh!': '🟡', MTG: '♠️', 'LoL Riftbound': '⚔️',
@@ -41,21 +42,16 @@ export default function MeusDecksPage() {
       <Toaster position="top-center" />
 
       {/* Header */}
-      <header style={{ backgroundColor: C.navy }}>
-        <div className="max-w-lg mx-auto px-5 pt-10 pb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/cliente" className="text-white/60 hover:text-white transition-colors">← Voltar</Link>
-            <h1 className="font-black text-white text-lg">Meus Decks</h1>
-          </div>
+      <CabecalhoCliente titulo="Meus Decks" subtitulo="Sua coleção e listas pra campeonato"
+        acao={
           <button
             onClick={() => router.push('/cliente/decks/novo')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95"
-            style={{ backgroundColor: C.yellow, color: C.navy }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 shrink-0"
+            style={{ backgroundColor: C.yellow, color: '#3D2E00' }}
           >
-            <Plus className="w-4 h-4" /> Novo Deck
+            <Plus className="w-4 h-4" /> Novo
           </button>
-        </div>
-      </header>
+        } />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-3">
         {loading ? (
