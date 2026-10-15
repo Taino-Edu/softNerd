@@ -161,7 +161,7 @@ export default function ProdutosPage() {
   // Lista de [categoria, itens] — não objeto: a categoria pode vir do endereço (?categoria=)
   // e nunca deve virar nome de propriedade (CodeQL: remote property injection)
   const grouped = useMemo<[string, Product[]][]>(() => {
-    if (catFilter) return [[catFilter, filtered]]
+    if (catFilter) return filtered.length ? [[catFilter, filtered]] : []
     return categories
       .map((cat): [string, Product[]] => [cat, filtered.filter(p => p.category === cat)])
       .filter(([, items]) => items.length > 0)
