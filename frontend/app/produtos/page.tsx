@@ -158,13 +158,13 @@ export default function ProdutosPage() {
     })
   }, [products, search, catFilter])
 
-  const grouped = useMemo(() => {
-    if (catFilter) return { [catFilter]: filtered }
-    return categories.reduce<Record<string, Product[]>>((acc, cat) => {
-      const items = filtered.filter(p => p.category === cat)
-      if (items.length) acc[cat] = items
-      return acc
-    }, {})
+  // Lista de [categoria, itens] — não objeto: a categoria pode vir do endereço (?categoria=)
+  // e nunca deve virar nome de propriedade (CodeQL: remote property injection)
+  const grouped = useMemo<[string, Product[]][]>(() => {
+    if (catFilter) return [[catFilter, filtered]]
+    return categories
+      .map((cat): [string, Product[]] => [cat, filtered.filter(p => p.category === cat)])
+      .filter(([, items]) => items.length > 0)
   }, [filtered, categories, catFilter])
 
   return (
@@ -277,14 +277,14 @@ export default function ProdutosPage() {
           <div className="flex justify-center py-24">
             <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: C.blue, borderTopColor: 'transparent' }} />
           </div>
-        ) : Object.keys(grouped).length === 0 ? (
+        ) : grouped.length === 0 ? (
           <div className="text-center py-24">
             <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-20" style={{ color: C.navy }} />
             <p className="font-bold opacity-40" style={{ color: C.navy }}>Nenhum produto encontrado.</p>
           </div>
         ) : (
           <div className="space-y-12">
-            {Object.entries(grouped).map(([cat, items]) => (
+            {grouped.map(([cat, items]) => (
               <section key={cat}>
                 <div className="flex items-center gap-3 mb-5">
                   <h2 className="text-lg font-black" style={{ color: C.navy }}>{cat}</h2>
