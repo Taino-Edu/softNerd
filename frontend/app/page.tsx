@@ -253,7 +253,8 @@ export default function LandingPage() {
     }
     Promise.allSettled([
       championshipApi.list().then(r =>
-        setChampionships(r.data.filter(c => c.status === 'Planejado' || c.status === 'Inscricoes').slice(0, 8))
+        // Lista inteira (o ?campeonato=id da área do cliente pode ser o 9º); a tela mostra só 8
+        setChampionships(r.data.filter(c => c.status === 'Planejado' || c.status === 'Inscricoes'))
       ),
       productApi.list().then(r => {
         const visible  = r.data.filter(p => p.isActive && p.stockQuantity > 0 && p.showOnMarketplace !== false)
@@ -724,11 +725,11 @@ export default function LandingPage() {
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Calendário */}
               <div className="shrink-0 lg:w-64">
-                <EventCalendar championships={championships} onSelect={c => setRegisterModal(c)} C={C} />
+                <EventCalendar championships={championships.slice(0, 8)} onSelect={c => setRegisterModal(c)} C={C} />
               </div>
               {/* Cards */}
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
-                {championships.map(c => (
+                {championships.slice(0, 8).map(c => (
                   <ChampionshipCard key={c.id} championship={c} onRegister={() => setRegisterModal(c)} C={C} />
                 ))}
               </div>
