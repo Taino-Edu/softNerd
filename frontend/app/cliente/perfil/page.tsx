@@ -916,7 +916,7 @@ export default function PerfilPage() {
                             <div className="flex flex-col gap-1 shrink-0">
                               {r.expiresAt && (
                                 <button onClick={() => setPixGroupId(r.reservationGroupId)}
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-purple-500 hover:bg-purple-50 transition-colors"
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#1E4FD6] hover:bg-[#EAF0FD] transition-colors"
                                   title="Pagar via Pix">
                                   <QrCode className="w-4 h-4" />
                                 </button>
@@ -937,16 +937,16 @@ export default function PerfilPage() {
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Na fila</p>
                         {fila.map(f => (
                           <div key={f.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0 overflow-hidden">
+                            <div className="w-11 h-11 rounded-xl bg-[#EAF0FD] border border-[#D5E1FB] flex items-center justify-center shrink-0 overflow-hidden">
                               {f.productImageUrl
                                 ? <img src={fotoLeve(f.productImageUrl, 160)} alt={f.productName} className="w-full h-full object-cover" loading="lazy" />
-                                : <Package className="w-5 h-5 text-purple-400" />}
+                                : <Package className="w-5 h-5 text-[#5B7FE3]" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-gray-900 truncate">
-                                <span className="text-purple-500">{f.quantity}×</span> {f.productName}
+                                <span className="text-[#1E4FD6]">{f.quantity}×</span> {f.productName}
                               </p>
-                              <p className="text-[11px] text-purple-500 font-bold mt-0.5">
+                              <p className="text-[11px] text-[#1E4FD6] font-bold mt-0.5">
                                 {f.posicaoFila ? `#${f.posicaoFila} na fila` : 'Na fila'}
                               </p>
                               <p className="text-[11px] text-gray-400 mt-0.5">Avisamos quando chegar — aí vira pré-venda</p>
@@ -993,7 +993,7 @@ export default function PerfilPage() {
                       {dividasAbertas.length > 1 && dividasAbertas[0].pagamentoToken && (
                         <Link
                           href={`/pagar/${dividasAbertas[0].pagamentoToken}?tudo=1`}
-                          className="inline-flex items-center justify-center gap-2 mt-3 px-5 py-2.5 rounded-xl text-sm font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors"
+                          className="inline-flex items-center justify-center gap-2 mt-3 px-5 py-2.5 rounded-xl text-sm font-black text-white bg-[#1E4FD6] hover:bg-[#1A43B8] transition-colors"
                         >
                           Pagar tudo com Pix
                         </Link>
@@ -1072,8 +1072,8 @@ export default function PerfilPage() {
               className="flex items-center justify-between bg-white border border-gray-100 rounded-2xl p-4 shadow-sm mt-4 hover:bg-gray-50 transition-colors active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-50 border border-purple-100 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-purple-500" />
+                <div className="w-10 h-10 rounded-full bg-[#EAF0FD] border border-[#D5E1FB] flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-[#1E4FD6]" />
                 </div>
                 <div>
                   <p className="text-sm font-black text-gray-900">Meus Decks</p>

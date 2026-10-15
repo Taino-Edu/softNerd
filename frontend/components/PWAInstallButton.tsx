@@ -63,7 +63,7 @@ export default function PWAInstallButton() {
 
   return (
     <div
-      className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-[#6C3FC5] text-white text-sm font-semibold pl-4 pr-2 py-2.5 rounded-2xl shadow-xl shadow-purple-900/40 transition-all duration-300 ${
+      className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-[#1E4FD6] text-white text-sm font-semibold pl-4 pr-2 py-2.5 rounded-2xl shadow-xl shadow-blue-900/40 transition-all duration-300 ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
       }`}
     >

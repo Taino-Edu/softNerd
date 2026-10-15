@@ -122,7 +122,7 @@ export default function PagarCrediarioPage() {
           </div>
         ) : !resumo ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#1E4FD6]" />
           </div>
         ) : (
           <>
@@ -179,7 +179,7 @@ export default function PagarCrediarioPage() {
                         titulo="Pagar outro valor" detalhe="Pague uma parte agora e o resto depois" />
                       {modo === 'valor' && (
                         <div className="px-3 pb-2">
-                          <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-violet-500">
+                          <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-[#1E4FD6]">
                             <span className="text-sm font-bold text-gray-500">R$</span>
                             <input
                               autoFocus
@@ -204,7 +204,7 @@ export default function PagarCrediarioPage() {
                     <button
                       onClick={gerarPix}
                       disabled={gerando || valorInvalido || valorAPagar <= 0}
-                      className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors disabled:opacity-50 shadow-sm"
+                      className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-black text-white bg-[#1E4FD6] hover:bg-[#1A43B8] transition-colors disabled:opacity-50 shadow-sm"
                     >
                       {gerando ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
                       {valorAPagar > 0 && !valorInvalido ? `Gerar Pix de ${brl(valorAPagar)}` : 'Gerar Pix'}
@@ -219,7 +219,7 @@ export default function PagarCrediarioPage() {
                     </p>
                     <button
                       onClick={() => { setPix(null); setModo('conta'); setValorTexto('') }}
-                      className="text-sm font-bold text-violet-600"
+                      className="text-sm font-bold text-[#1E4FD6]"
                     >
                       Pagar o restante
                     </button>
@@ -233,7 +233,7 @@ export default function PagarCrediarioPage() {
                     <p className="text-center text-lg font-black text-gray-900">{brl(pix.valorEmReais)}</p>
                     {pix.pixCopiaCola && (
                       <button onClick={copiar}
-                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition-colors">
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white bg-[#1E4FD6] hover:bg-[#1A43B8] transition-colors">
                         <Copy className="w-4 h-4" /> Copiar código Pix
                       </button>
                     )}
@@ -241,7 +241,7 @@ export default function PagarCrediarioPage() {
                       No app do banco, escolha Pix → Copia e Cola. A confirmação aparece aqui sozinha.
                     </p>
                     <button onClick={() => verificar()} disabled={verificando}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border border-violet-600 text-violet-600 disabled:opacity-60">
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border border-[#1E4FD6] text-[#1E4FD6] disabled:opacity-60">
                       {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                       Já paguei, conferir
                     </button>
@@ -259,7 +259,7 @@ export default function PagarCrediarioPage() {
                         </div>
                       ))}
                     </div>
-                    <Link href="/cliente/perfil?tab=crediario" className="block text-center text-xs font-bold text-violet-600 mt-3">
+                    <Link href="/cliente/perfil?tab=crediario" className="block text-center text-xs font-bold text-[#1E4FD6] mt-3">
                       Ver os itens no meu perfil
                     </Link>
                   </div>
@@ -290,12 +290,12 @@ function Opcao({ ativo, onClick, titulo, detalhe, valor }: {
       onClick={onClick}
       className={clsx(
         'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors',
-        ativo ? 'bg-violet-50' : 'hover:bg-gray-50',
+        ativo ? 'bg-[#EAF0FD]' : 'hover:bg-gray-50',
       )}
     >
       <span className={clsx(
         'w-4 h-4 rounded-full border-2 shrink-0',
-        ativo ? 'border-violet-600 bg-violet-600 shadow-[inset_0_0_0_3px_white]' : 'border-gray-300',
+        ativo ? 'border-[#1E4FD6] bg-[#1E4FD6] shadow-[inset_0_0_0_3px_white]' : 'border-gray-300',
       )} />
       <span className="flex-1 min-w-0">
         <span className="block text-sm font-bold text-gray-900">{titulo}</span>

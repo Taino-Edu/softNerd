@@ -23,7 +23,7 @@ export default function Footer() {
     || pathname?.startsWith('/janela')) return null
 
   // Cores no style (não em classe text-*): o tema claro do site força algumas classes de cor
-  const fundo   = novo ? mixHex(site?.colorHero ?? '#1E4FD6', '#000000', 0.62) : '#1a0a2e'
+  const fundo   = novo ? mixHex(site?.colorHero ?? '#1E4FD6', '#000000', 0.62) : '#10286B'
   const texto   = novo ? 'rgba(255,255,255,0.62)' : undefined
   const fraco   = novo ? 'rgba(255,255,255,0.28)' : undefined
   const nome    = novo ? (site?.siteName ?? 'Santuário Nerd') : 'Santuário Nerd'

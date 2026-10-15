@@ -113,7 +113,7 @@ export default function LgpdPage() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Cabeçalho */}
-      <header className="bg-[#1a0a2e] text-white py-6 px-4">
+      <header className="bg-[#10286B] text-white py-6 px-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold">
             <span className="text-[#42B6EE]">Santuário</span>

@@ -1,5 +1,29 @@
 # Changelog — Santuário Nerd
 
+## [v1.50.0] — 2026-10-15
+
+### Mudado — Sacola, área do cliente e cores
+- **Sacola no visual da loja**: barra com a marca e "Continuar comprando", passos **Sacola → Reserva confirmada → Retirada na loja**, itens com foto maior (clicável), preço de cada um, e o **"+" trava no estoque** ("Só 2 em estoque")
+- **Resumo ao lado** (no celular, embaixo): total, **quanto sai no Pix** e a economia, botão **Confirmar reserva** no azul do topo e "nada é cobrado agora"
+- Tela de **reserva confirmada** no mesmo estilo, com o Pix opcional, "Minhas reservas" e "Continuar comprando"
+- **Área do cliente** (`/cliente`, onde todo cliente logado cai): barra no azul da loja com o logo de Personalizar Site, **cartão de pontos dizendo quanto valem** ("1.250 pts — valem R$ 12,50 de desconto na comanda") e **6 atalhos**: Loja, Sacola (com a quantidade), Liga, Mercado, Meus decks e Minha conta. Comanda, Pix e campeonatos continuam iguais
+- **Sem roxo nas telas de cliente**: roxo não é cor da loja. Selos de pré-venda, botões da sacola, do produto, do pagamento (`/pagar`), do crediário, do "Complete seu cadastro", da janela do Pix e do "Instalar App", e o topo das páginas de privacidade, termos e LGPD agora usam o **azul da loja**. (O painel admin segue igual por enquanto — lá o roxo marca status de reserva e fila.)
+
+- **Próximos campeonatos na área do cliente**: os abertos e planejados em que a pessoa ainda não está, com dia/hora (Brasília), valor e vagas, e o botão **Inscrever-se** (abre a mesma inscrição da página inicial)
+- **Liga: sprites dos decks do formato atual** — "Mega Lucario ex", "Mega Absol ex", "Mega Charizard X", "Mewtwo ex da Equipe Rocket", "Ho-Oh de Ethan", "Snorlax stall", "Chien-Pao ex" agora mostram o Pokémon (antes caíam no ícone de cartas). Se um nome não existe, a tela tenta o próximo candidato antes do ícone
+
+### Corrigido
+- **Quem não estava logado e tocava na Sacola
+- **Cliente logado não achava os campeonatos**: a página inicial manda o cliente pra área dele, e a lista só existia na página inicial. Agora está na área do cliente
+- **"Criar conta grátis" na página do produto levava pra ativação por CPF** (que é de quem já comprou na loja). Agora vai pro cadastro e volta pro produto; a ativação por CPF continua logo abaixo
+- **Depois de entrar pela página do produto, o item não ia pra Sacola** — tinha que tocar em "Comprar" de novo. Agora vai sozinho era jogado pra página inicial sem aviso.** Agora aparece "Entre pra ver sua sacola" e, depois de entrar (ou se cadastrar), a pessoa volta pra sacola
+- **Nome "Santuário Nerd" sumia no topo da área do cliente**: texto escuro em cima do fundo escuro (o tema claro forçava a cor). Agora fica branco
+- O cadastro só volta pra páginas do próprio site depois de criar a conta (igual ao "Entrar" desde a v1.42.1) — um link malicioso não leva mais pra fora
+
+### Mudança com volta
+- Chave **"Loja: sacola nova"** em `/admin/funcionalidades`. Desligada, volta o carrinho de antes
+- Chave **"Cliente: área do cliente nova"**. Desligada, volta a barra azul-petróleo, o cartão de pontos simples e os 2 atalhos
+
 ## [v1.49.0] — 2026-10-15
 
 ### Mudado — página do produto e rodapé

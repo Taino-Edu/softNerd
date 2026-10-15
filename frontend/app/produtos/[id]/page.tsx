@@ -140,6 +140,9 @@ export default function ProductPage() {
       setLoginEmail('')
       setLoginPass('')
       userApi.me().then(r => setProfile(r.data)).catch(() => {})
+      // O login abriu porque a pessoa tocou em "Comprar": o item já vai pra Sacola (antes tinha
+      // que tocar de novo). O botão flutuante "Ver reserva" aparece como confirmação.
+      handleAddToCart()
     } catch {
       setLoginError('E-mail ou senha inválidos.')
     } finally {
@@ -318,13 +321,13 @@ export default function ProductPage() {
             <div className="flex flex-wrap gap-2">
               {dataRua && (
                 <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
-                  style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
+                  style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>
                   Pré-venda · lançamento {fmtData(dataRua)}
                 </span>
               )}
               {!dataRua && emEstoque && ehPreVenda && (
                 <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
-                  style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+                  style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>Pré-venda</span>
               )}
               {emEstoque && product.isOnPromo && (
                 <span className="text-xs font-black uppercase tracking-wide px-3 py-1 rounded-full"
@@ -404,7 +407,7 @@ export default function ProductPage() {
                         className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
                         style={nova && !ehPreVenda
                           ? { backgroundColor: corTopo, color: '#fff', boxShadow: `0 10px 26px -10px ${corTopo}` }
-                          : { backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
+                          : { backgroundColor: '#1E4FD6', color: '#fff', boxShadow: '0 8px 24px rgba(30,79,214,0.30)' }}>
                         <BookmarkPlus className="w-5 h-5" />
                         {inCart
                           ? `Adicionar +${qty} · ${fmt(precoUnit * qty)}`
@@ -475,7 +478,7 @@ export default function ProductPage() {
               <Link href="/cliente/reserva/carrinho"
                 key={cartCount}
                 className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full font-bold text-sm shadow-xl transition-transform active:scale-95 animate-bounce-in"
-                style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}>
+                style={{ backgroundColor: '#1E4FD6', color: '#fff', boxShadow: '0 8px 24px rgba(30,79,214,0.35)' }}>
                 <BookmarkPlus className="w-4 h-4" />
                 Ver reserva ({cartCount}) — finalizar
               </Link>
@@ -590,14 +593,20 @@ export default function ProductPage() {
               </button>
             </form>
 
+            {/* Criar conta = cadastro de verdade, voltando pro produto (antes ia pra ativação por CPF,
+                que é de quem já comprou na loja física — essa continua aqui embaixo) */}
             <div className="flex items-center justify-between text-xs" style={{ color: '#9CA3AF' }}>
-              <Link href="/primeiro-acesso" className="hover:underline" style={{ color: '#3EC2F2' }}>
+              <Link href={`/cadastro?returnTo=${encodeURIComponent(`/produtos/${product.id}`)}`} className="font-bold hover:underline" style={{ color: '#1E4FD6' }}>
                 Criar conta grátis
               </Link>
               <Link href="/reset-password" className="hover:underline">
                 Esqueci a senha
               </Link>
             </div>
+            <p className="text-[11px] text-center -mt-2" style={{ color: '#9CA3AF' }}>
+              Já comprou na loja física?{' '}
+              <Link href="/primeiro-acesso" className="font-semibold hover:underline" style={{ color: '#1E4FD6' }}>Ative sua conta pelo CPF</Link>
+            </p>
           </div>
         </div>
       )}

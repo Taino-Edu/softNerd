@@ -107,7 +107,7 @@ export default function ContaCrediarioCliente({ c }: { c: CrediariosDto }) {
       {!quitada && c.pagamentoToken && (
         <Link
           href={`/pagar/${c.pagamentoToken}`}
-          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-black text-white bg-violet-600 hover:bg-violet-700 transition-colors"
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-black text-white bg-[#1E4FD6] hover:bg-[#1A43B8] transition-colors"
         >
           Pagar {brl(c.saldoRestanteEmReais)} com Pix
         </Link>
@@ -134,7 +134,7 @@ export default function ContaCrediarioCliente({ c }: { c: CrediariosDto }) {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setHistorico(v => !v)}
-          className="flex items-center gap-1 text-xs font-bold text-violet-600"
+          className="flex items-center gap-1 text-xs font-bold text-[#1E4FD6]"
         >
           {historico ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           {historico ? 'Esconder histórico' : 'Ver histórico (quando cada coisa entrou)'}

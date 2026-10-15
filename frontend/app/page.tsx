@@ -1273,7 +1273,7 @@ function ProductCard({ product: p, onClick, C, pix, cartao = null }: { product: 
         }
         {p.isPreVenda && (
           <span className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
-            style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
+            style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>
             Pré-venda
           </span>
         )}
@@ -1426,7 +1426,7 @@ function ProductModal({ product: p, onClose, C, pix }: { product: Product; onClo
               <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                 {p.isPreVenda && (
                   <span className="text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-lg"
-                    style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+                    style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>Pré-venda</span>
                 )}
                 {p.isOnPromo && !p.isPreVenda && (
                   <span className="text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-lg"

@@ -1,6 +1,10 @@
 'use client'
+// Área do cliente (/cliente) — onde todo cliente logado cai (a página inicial redireciona pra cá).
+// Com a chave "cliente-inicio-novo" (v1.50.0): barra no azul da loja com o logo de Personalizar Site,
+// cartão de pontos com quanto valem em reais e atalhos pra Loja, Sacola, Liga, Mercado, Decks e Conta.
+// Comanda, Pix, campeonatos e produtos da comanda não mudam.
 import { useEffect, useState, useCallback } from 'react'
-import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation } from '@/lib/api'
+import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, championshipApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation, Championship } from '@/lib/api'
 import { getUserName } from '@/lib/auth'
 import { fmtRestante } from '@/lib/prazo'
 import NotificationBell from '@/components/cliente/NotificationBell'
@@ -15,6 +19,10 @@ import {
 import Link from 'next/link'
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
+import { mixHex } from '@/lib/colors'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { useSiteConfig } from '@/lib/useSiteConfig'
+import { useReservationCart } from '@/hooks/useReservationCart'
 
 interface MyParticipation {
   participationId: string
@@ -64,6 +72,76 @@ function ContagemDaVaga({ expiraEm }: { expiraEm?: string | null }) {
     <p className="text-[11px] font-bold text-center" style={{ color: '#DC2626' }}>
       O prazo venceu — a vaga voltou pro público. Pagar ainda vale se não tiver lotado.
     </p>
+  )
+}
+
+// ── Próximos campeonatos ──────────────────────────────────────────────────────
+// A página inicial manda todo cliente logado pra cá, e a lista de campeonatos só existia lá:
+// quem tinha conta não achava onde se inscrever. Mostra os abertos/planejados em que a pessoa
+// ainda não está; "Inscrever-se" usa o mesmo caminho da página pública (/?campeonato=id abre
+// a inscrição na página inicial, sem redirecionar).
+function ProximosCampeonatos({ cor }: { cor: string }) {
+  const [lista, setLista] = useState<Championship[]>([])
+
+  useEffect(() => {
+    let vivo = true
+    Promise.all([
+      championshipApi.list().then(r => r.data).catch(() => [] as Championship[]),
+      fetch(`${BASE}/api/championship/my-participations`, { credentials: 'include' })
+        .then(r => r.ok ? r.json() : []).catch(() => []) as Promise<{ championshipId: string }[]>,
+    ]).then(([todos, minhas]) => {
+      if (!vivo) return
+      const jaEstou = new Set(minhas.map(m => m.championshipId))
+      setLista(todos
+        .filter(c => (c.status === 'Inscricoes' || c.status === 'Planejado') && !jaEstou.has(c.id))
+        .sort((a, b) => a.startDate.localeCompare(b.startDate))
+        .slice(0, 4))
+    })
+    return () => { vivo = false }
+  }, [])
+
+  if (lista.length === 0) return null
+
+  const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
+
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-black flex items-center gap-1.5" style={{ color: C.navy }}>
+          <Trophy className="w-4 h-4" style={{ color: cor }} /> Próximos campeonatos
+        </h2>
+        <Link href="/liga" className="text-[11px] font-bold hover:underline" style={{ color: cor }}>Ver a liga</Link>
+      </div>
+      {lista.map(c => {
+        const vagas = c.maxParticipants != null ? Math.max(0, c.maxParticipants - (c.participantCount ?? 0)) : null
+        const aberto = c.status === 'Inscricoes'
+        return (
+          <div key={c.id} className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${cor}14` }}>
+              <Swords className="w-5 h-5" style={{ color: cor }} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black leading-tight truncate" style={{ color: C.navy }}>{c.name}</p>
+              <p className="text-[11px] mt-0.5 capitalize" style={{ color: C.muted }}>
+                {c.game} · {quando(c.startDate)}
+              </p>
+              <p className="text-[11px] font-bold mt-0.5" style={{ color: C.navy }}>
+                {c.entryFeeInCents > 0 ? brl(c.entryFeeInCents / 100) : 'Grátis'}
+                {vagas != null && <span className="font-semibold" style={{ color: vagas <= 3 ? '#E11D48' : C.muted }}> · {vagas === 0 ? 'lotado (lista de espera)' : `${vagas} ${vagas === 1 ? 'vaga' : 'vagas'}`}</span>}
+              </p>
+            </div>
+            <Link href={aberto ? `/?campeonato=${c.id}` : `/campeonato/${c.id}`}
+              className="shrink-0 text-xs font-black px-3.5 py-2 rounded-xl transition-all active:scale-95"
+              style={aberto ? { backgroundColor: cor, color: '#FFFFFF' } : { border: `1px solid ${C.border}`, color: C.navy }}>
+              {aberto ? 'Inscrever-se' : 'Detalhes'}
+            </Link>
+          </div>
+        )
+      })}
+    </section>
   )
 }
 
@@ -279,11 +357,11 @@ function ProductCard({ p, adding, onAdd }: {
             : <Package className="w-10 h-10 opacity-20" style={{ color: C.blue2 }} />}
           {p.isPreVenda && !outOfStock && (
             <span className="absolute top-1.5 left-1.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
-              style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+              style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>Pré-venda</span>
           )}
           {canWaitList && (
             <span className="absolute top-1.5 left-1.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
-              style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Em breve</span>
+              style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>Em breve</span>
           )}
           {!p.isPreVenda && p.isOnPromo && !outOfStock && (
             <span className="absolute top-1.5 left-1.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
@@ -336,7 +414,7 @@ function ProductCard({ p, adding, onAdd }: {
             className="w-full py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 transition-all"
             style={{
               backgroundColor: filaEntry ? '#F0FDF4' : '#EDE9FE',
-              color:           filaEntry ? '#16A34A' : '#7C3AED',
+              color:           filaEntry ? '#16A34A' : '#1E4FD6',
               border:          `1px solid ${filaEntry ? '#86EFAC' : '#C4B5FD'}`,
             }}
           >
@@ -445,6 +523,10 @@ export default function ClientePage() {
   const [loadingVariants, setLoadingVariants] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [pix,             setPix]             = useState<PixCobrancaDto | null>(null)
+  const inicioNovo = useFuncionalidade('cliente-inicio-novo') !== false
+  const site = useSiteConfig()
+  const corTopo = site?.colorHero ?? '#1E4FD6'
+  const { totalItems: itensSacola } = useReservationCart()
 
   const fetchComanda = useCallback(async () => {
     try {
@@ -769,12 +851,15 @@ export default function ClientePage() {
       )}
 
       {/* ── HEADER ──────────────────────────────────────────────────── */}
-      <header style={{ backgroundColor: C.navy }}>
+      <header style={{ backgroundColor: inicioNovo ? mixHex(corTopo, '#000000', 0.32) : C.navy }}>
         <div className="max-w-lg mx-auto px-5 pt-10 pb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo-maikon-128.png" alt="Santuário Nerd" className="w-10 h-10 object-contain drop-shadow-md" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={inicioNovo && site?.logoUrl ? (fotoLeve(site.logoUrl, 160) ?? site.logoUrl) : '/logo-maikon-128.png'}
+              alt={site?.siteName ?? 'Santuário Nerd'} className="w-10 h-10 object-contain drop-shadow-md" />
             <div>
-              <p className="text-white font-black text-base leading-tight">Santuário Nerd</p>
+              {/* Cor no style: o tema claro do site força .text-white pra escuro e o nome sumia no fundo */}
+              <p className="font-black text-base leading-tight" style={{ color: '#FFFFFF' }}>{inicioNovo ? (site?.siteName ?? 'Santuário Nerd') : 'Santuário Nerd'}</p>
               {profile && (
                 <p className="text-xs font-bold mt-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   Olá, {profile.name.split(' ')[0]}!
@@ -801,8 +886,64 @@ export default function ClientePage() {
       {/* ── CONTENT ─────────────────────────────────────────────────── */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4 pb-24">
 
-        {/* Pontos */}
-        {profile && (
+        {/* Pontos (novo): quanto valem em reais — 1 ponto = 1 centavo de desconto na comanda */}
+        {inicioNovo && profile && (
+          <div className="relative overflow-hidden rounded-3xl p-5"
+            style={{ background: `linear-gradient(135deg, ${mixHex(corTopo, '#FFFFFF', 0.12)} 0%, ${corTopo} 55%, ${mixHex(corTopo, '#000000', 0.3)} 100%)`, color: '#FFFFFF' }}>
+            <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full border border-white/15 pointer-events-none" aria-hidden />
+            <div className="relative flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>Seus pontos</p>
+                <p className="text-3xl font-black leading-tight mt-0.5">
+                  {profile.pointsBalance.toLocaleString('pt-BR')} <span className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.8)' }}>pts</span>
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                  {profile.pointsBalance > 0
+                    ? <>Valem <strong style={{ color: C.yellow }}>{brl(profile.pointsBalance / 100)}</strong> de desconto na comanda</>
+                    : 'Ganhe pontos a cada compra na loja'}
+                </p>
+              </div>
+              <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                <Star className="w-5 h-5" style={{ color: C.yellow }} />
+              </span>
+            </div>
+            {profile.balanceInCents > 0 && (
+              <p className="relative mt-3 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                Cashback: {brl(profile.balanceInCents / 100)}
+              </p>
+            )}
+          </div>
+        )}
+
+        {inicioNovo && (
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { href: '/produtos', icon: ShoppingBag, titulo: 'Loja', sub: 'Ver produtos' },
+              { href: '/cliente/reserva/carrinho', icon: ShoppingCart, titulo: 'Sacola', sub: itensSacola > 0 ? `${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}` : 'Vazia', badge: itensSacola },
+              { href: '/liga', icon: Trophy, titulo: 'Liga', sub: 'Ranking do mês' },
+              { href: '/cliente/mercado', icon: Swords, titulo: 'Mercado', sub: 'Cartas avulsas' },
+              { href: '/cliente/decks', icon: BookOpen, titulo: 'Meus decks', sub: 'Sua coleção' },
+              { href: '/cliente/perfil', icon: UserIcon, titulo: 'Minha conta', sub: 'Pontos e notas' },
+            ].map(({ href, icon: Icon, titulo, sub, badge }) => (
+              <Link key={href} href={href}
+                className="relative flex flex-col items-center text-center gap-1.5 rounded-2xl p-3 transition-all active:scale-95 hover:-translate-y-0.5"
+                style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${corTopo}14` }}>
+                  <Icon className="w-5 h-5" style={{ color: corTopo }} />
+                </span>
+                <span className="text-xs font-black leading-tight" style={{ color: C.navy }}>{titulo}</span>
+                <span className="text-[10px] leading-tight" style={{ color: C.muted }}>{sub}</span>
+                {!!badge && (
+                  <span className="absolute top-2 right-2 min-w-[1.25rem] h-5 px-1 rounded-full text-[10px] font-black flex items-center justify-center"
+                    style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{badge}</span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Pontos (visual antigo) */}
+        {!inicioNovo && profile && (
           <div className="rounded-2xl p-4 flex items-center justify-between"
             style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(12,61,90,0.06)' }}>
             <div className="flex items-center gap-3">
@@ -828,7 +969,8 @@ export default function ClientePage() {
           </div>
         )}
 
-        {/* Atalhos rápidos */}
+        {/* Atalhos rápidos (visual antigo) */}
+        {!inicioNovo && (
         <div className="grid grid-cols-2 gap-3">
           <Link href="/cliente/mercado" className="flex items-center gap-3 rounded-2xl p-4 transition-all active:scale-95"
             style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
@@ -851,9 +993,13 @@ export default function ClientePage() {
             </div>
           </Link>
         </div>
+        )}
 
         {/* Meus Campeonatos */}
         <MeusCampeonatos />
+
+        {/* Próximos campeonatos (área do cliente nova) */}
+        {inicioNovo && <ProximosCampeonatos cor={corTopo} />}
 
 
         {loading ? (

@@ -28,7 +28,7 @@ function fmtPct(v: number) { return `${(Math.round(v * 10) / 10).toString().repl
 function ProductBadge({ p }: { p: Product }) {
   if (p.isPreVenda) return (
     <span className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded z-10"
-      style={{ backgroundColor: '#7C3AED', color: '#fff' }}>Pré-venda</span>
+      style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>Pré-venda</span>
   )
   if (p.isOnPromo) return (
     <span className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded z-10"
