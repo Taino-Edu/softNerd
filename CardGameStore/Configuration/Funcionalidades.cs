@@ -47,6 +47,7 @@ public static class Funcionalidades
     public const string VisualProdutoERodape = "visual-produto-e-rodape";
     public const string SacolaNova = "sacola-nova";
     public const string ClienteInicioNovo = "cliente-inicio-novo";
+    public const string ContaClienteNova = "conta-cliente-nova";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -164,6 +165,16 @@ public static class Funcionalidades
             SeDesligar: "Volta a barra azul-petróleo com o logo antigo, o cartão de pontos simples e os 2 atalhos.",
             Padrao:     true,
             Desde:      "v1.50.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(ContaClienteNova,
+            Nome:       "Cliente: Minha conta organizada",
+            OQueMuda:   "Em Minha conta: abas com nomes de cliente (Pontos, Compras, Reservas, Campeonatos, Crediário, Notas) " +
+                        "em pílulas, pontos uma vez só com o valor em reais e como usar, \"voltar\" sempre pra área do cliente " +
+                        "e Meus decks / Configurações / Sair juntos em \"Mais\".",
+            SeDesligar: "Volta a grade de 6 abas (Histórico, Torneios, Pré-vendas, Dívida...), o saldo repetido e o voltar do navegador.",
+            Padrao:     true,
+            Desde:      "v1.52.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

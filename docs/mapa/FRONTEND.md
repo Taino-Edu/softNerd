@@ -41,10 +41,10 @@
 | `/admin/whatsapp` | `app/admin/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox`, `ui/PageHeader` |
 | `/cadastro` | `app/cadastro/page.tsx` | — |
 | `/campeonato/[id]` | `app/campeonato/[id]/page.tsx` | — |
-| `/cliente/configuracoes` | `app/cliente/configuracoes/page.tsx` | — |
+| `/cliente/configuracoes` | `app/cliente/configuracoes/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/decks/[id]` | `app/cliente/decks/[id]/page.tsx` | — |
-| `/cliente/decks` | `app/cliente/decks/page.tsx` | — |
-| `/cliente/mercado` | `app/cliente/mercado/page.tsx` | — |
+| `/cliente/decks` | `app/cliente/decks/page.tsx` | `cliente/CabecalhoCliente` |
+| `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/notas/[id]` | `app/cliente/notas/[id]/page.tsx` | — |
 | `/cliente` | `app/cliente/page.tsx` | `cliente/NotificationBell` |
 | `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente` |
@@ -101,6 +101,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/VariantPicker` | `VariantPicker` | `app/admin/venda-avulsa/page.tsx` |
 | `admin/whatsapp/WhatsAppFloatingPanel` | `WhatsAppFloatingPanel` | `app/admin/layout.tsx` |
 | `admin/whatsapp/WhatsAppInbox` | `WhatsAppInbox` | `app/admin/whatsapp/page.tsx`<br>`app/janela/whatsapp/page.tsx` |
+| `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
 | `liga/Relogio` | `Relogio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |

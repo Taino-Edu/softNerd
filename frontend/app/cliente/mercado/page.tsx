@@ -1,22 +1,32 @@
 'use client'
+// Mercado de Cartas (cartas avulsas da loja). v1.52.0: saiu do visual escuro do painel admin pro
+// visual claro da loja, com o topo único da conta (CabecalhoCliente). O menu da página inicial
+// também traz visitante sem login pra cá — aí o "voltar" leva pra página inicial.
 
 import { useEffect, useState, useCallback } from 'react'
 import { marketplaceApi, CardListingDto } from '@/lib/api'
-import { getUserId } from '@/lib/auth'
+import { getUserId, isLoggedIn } from '@/lib/auth'
+import CabecalhoCliente from '@/components/cliente/CabecalhoCliente'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   Search, Heart, HeartOff, Package, Loader2,
-  ArrowLeft, X, ChevronLeft, ChevronRight, User as UserIcon,
+  X, ChevronLeft, ChevronRight, User as UserIcon,
 } from 'lucide-react'
 
+/** Paleta clara da loja (cores no style: o tema claro do site remapeia classes text-white/surface). */
+const L = {
+  fundo: '#F5F8FA', card: '#FFFFFF', borda: 'rgba(12,61,90,0.10)', texto: '#0F1B33', suave: '#5B6B84',
+  azul: '#1E4FD6', foto: '#F1F5FD',
+}
+
 const CONDITIONS: { value: string; label: string; color: string }[] = [
-  { value: 'NM',  label: 'Near Mint',     color: 'text-green-400' },
-  { value: 'LP',  label: 'Light Played',  color: 'text-yellow-400' },
-  { value: 'MP',  label: 'Moderate Played', color: 'text-orange-400' },
-  { value: 'HP',  label: 'Heavy Played',  color: 'text-red-400' },
-  { value: 'DMG', label: 'Damaged',       color: 'text-red-600' },
+  { value: 'NM',  label: 'Near Mint',       color: '#15803D' },
+  { value: 'LP',  label: 'Light Played',    color: '#A16207' },
+  { value: 'MP',  label: 'Moderate Played', color: '#C2410C' },
+  { value: 'HP',  label: 'Heavy Played',    color: '#DC2626' },
+  { value: 'DMG', label: 'Damaged',         color: '#991B1B' },
 ]
 const conditionLabel = Object.fromEntries(CONDITIONS.map(c => [c.value, c.label]))
 const conditionColor = Object.fromEntries(CONDITIONS.map(c => [c.value, c.color]))
@@ -34,17 +44,17 @@ function ListingCard({ listing, onInterest }: {
 }) {
   return (
     <div className={clsx(
-      'card flex flex-col gap-3 relative overflow-hidden',
+      'rounded-2xl border p-3 flex flex-col gap-3 relative overflow-hidden',
       listing.status === 'Sold'     && 'opacity-60',
       listing.status === 'Reserved' && 'ring-1 ring-amber-500/40',
-    )}>
+    )} style={{ backgroundColor: L.card, borderColor: L.borda }}>
       {/* status badge */}
       {listing.status !== 'Available' && (
         <div className="absolute top-2 right-2 z-10">
           <span className={clsx(
             'text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider',
-            listing.status === 'Sold'     && 'bg-red-500/20 text-red-400 border border-red-500/30',
-            listing.status === 'Reserved' && 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+            listing.status === 'Sold'     && 'bg-red-50 text-red-600 border border-red-200',
+            listing.status === 'Reserved' && 'bg-amber-50 text-amber-700 border border-amber-200',
           )}>
             {listing.status === 'Sold' ? 'Vendido' : 'Reservado'}
           </span>
@@ -52,42 +62,45 @@ function ListingCard({ listing, onInterest }: {
       )}
 
       {/* imagem ou placeholder */}
-      <div className="rounded-xl overflow-hidden h-36 bg-surface-700 flex items-center justify-center">
+      <div className="rounded-xl overflow-hidden h-36 flex items-center justify-center" style={{ backgroundColor: L.foto }}>
         {listing.cardImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={listing.cardImageUrl} alt={listing.cardName} className="h-full w-full object-contain" />
         ) : (
-          <Package className="w-10 h-10 text-surface-500" />
+          <Package className="w-10 h-10" style={{ color: L.suave, opacity: 0.4 }} />
         )}
       </div>
 
       {/* info */}
       <div className="flex-1 flex flex-col gap-1 min-w-0">
-        <p className="font-bold text-white text-sm leading-tight truncate">{listing.cardName}</p>
-        {listing.cardGame && <p className="text-xs text-brand-400">{listing.cardGame}</p>}
+        <p className="font-black text-sm leading-tight truncate" style={{ color: L.texto }}>{listing.cardName}</p>
+        {listing.cardGame && <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: L.azul }}>{listing.cardGame}</p>}
         <div className="flex items-center gap-2 mt-0.5">
-          <span className={clsx('text-xs font-medium', conditionColor[listing.condition] ?? 'text-gray-400')}>
+          <span className="text-xs font-semibold" style={{ color: conditionColor[listing.condition] ?? L.suave }}>
             {conditionLabel[listing.condition] ?? listing.condition}
           </span>
         </div>
-        <p className="text-lg font-black text-brand-300 mt-1">{fmtPrice(listing.priceInCents)}</p>
+        <p className="text-lg font-black mt-1" style={{ color: L.texto }}>{fmtPrice(listing.priceInCents)}</p>
         {listing.description && (
-          <p className="text-xs text-gray-400 line-clamp-2">{listing.description}</p>
+          <p className="text-xs line-clamp-2" style={{ color: L.suave }}>{listing.description}</p>
         )}
       </div>
 
       {/* vendedor */}
       <Link
         href={`/perfil/${listing.sellerId}`}
-        className="flex items-center gap-2 mt-auto pt-2 border-t border-surface-700 hover:opacity-80 transition-opacity"
+        className="flex items-center gap-2 mt-auto pt-2 border-t hover:opacity-80 transition-opacity"
+        style={{ borderColor: L.borda }}
       >
         {listing.sellerImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={listing.sellerImageUrl} alt={listing.sellerName} className="w-6 h-6 rounded-full object-cover" />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-surface-600 flex items-center justify-center">
-            <UserIcon className="w-3 h-3 text-gray-400" />
+          <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: L.foto }}>
+            <UserIcon className="w-3 h-3" style={{ color: L.suave }} />
           </div>
         )}
-        <span className="text-xs text-gray-400 truncate">{listing.sellerName}</span>
+        <span className="text-xs truncate" style={{ color: L.suave }}>{listing.sellerName}</span>
       </Link>
 
       {/* ação */}
@@ -95,12 +108,12 @@ function ListingCard({ listing, onInterest }: {
         onClick={() => onInterest(listing)}
         disabled={listing.status === 'Sold'}
         className={clsx(
-          'flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-          listing.myInterest
-            ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-            : 'bg-brand-500/20 text-brand-400 border border-brand-500/30 hover:bg-brand-500/30',
+          'flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-black transition-colors border',
           listing.status === 'Sold' && 'opacity-40 cursor-not-allowed',
         )}
+        style={listing.myInterest
+          ? { backgroundColor: '#FEF2F2', color: '#DC2626', borderColor: '#FECACA' }
+          : { backgroundColor: '#EAF0FD', color: L.azul, borderColor: '#D5E1FB' }}
       >
         {listing.myInterest ? <HeartOff className="w-3.5 h-3.5" /> : <Heart className="w-3.5 h-3.5" />}
         {listing.myInterest ? 'Remover interesse' : `Tenho interesse${listing.interestCount > 0 ? ` (${listing.interestCount})` : ''}`}
@@ -144,7 +157,7 @@ function InterestConsentModal({ listing, onClose, onConfirm }: {
           )}
           <div>
             <p className="font-semibold text-sm" style={{ color: '#0C3D5A' }}>{listing.cardName}</p>
-            <p className="text-sm font-bold" style={{ color: '#3EC2F2' }}>{fmtPrice(listing.priceInCents)}</p>
+            <p className="text-sm font-bold" style={{ color: L.azul }}>{fmtPrice(listing.priceInCents)}</p>
           </div>
         </div>
 
@@ -193,7 +206,7 @@ function InterestConsentModal({ listing, onClose, onConfirm }: {
           </button>
           <button onClick={submit} disabled={saving || !isAdult}
             className="px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 transition-all disabled:opacity-40"
-            style={{ backgroundColor: '#3EC2F2', color: '#0C3D5A' }}>
+            style={{ backgroundColor: L.azul, color: '#FFFFFF' }}>
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Confirmar interesse
           </button>
@@ -214,6 +227,9 @@ export default function MercadoPage() {
   const [gameFilter,     setGameFilter]     = useState('')
   const [loading,        setLoading]        = useState(true)
   const [consentListing, setConsentListing] = useState<CardListingDto | null>(null)
+  // Visitante (veio pelo menu da página inicial) volta pra página inicial; cliente volta pra área dele
+  const [voltar, setVoltar] = useState('/')
+  useEffect(() => { if (isLoggedIn()) setVoltar('/cliente') }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -248,33 +264,27 @@ export default function MercadoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-900 p-4 max-w-5xl mx-auto pb-20">
+    <div className="min-h-screen pb-20" style={{ backgroundColor: L.fundo, colorScheme: 'light' }}>
       <Toaster position="top-right" />
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/" className="p-2 rounded-xl bg-surface-800 hover:bg-surface-700 transition-colors text-gray-400">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-black text-white">Mercado de Cartas</h1>
-          <p className="text-sm text-gray-400">Cartas avulsas da loja, direto do Maikon</p>
-        </div>
-      </div>
+      <CabecalhoCliente titulo="Mercado de Cartas" subtitulo="Cartas avulsas da loja" voltar={voltar} />
 
+      <div className="max-w-5xl mx-auto px-4 pt-5">
       {/* Filtros */}
       <div className="flex gap-2 mb-5">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: L.suave }} />
           <input
-            className="input pl-9"
+            className="w-full rounded-xl border pl-9 pr-3 py-2.5 text-sm outline-none"
+            style={{ backgroundColor: L.card, borderColor: L.borda, color: L.texto }}
             placeholder="Buscar carta..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
           />
         </div>
         <select
-          className="input max-w-[160px]"
+          className="rounded-xl border px-3 py-2.5 text-sm max-w-[160px] outline-none"
+          style={{ backgroundColor: L.card, borderColor: L.borda, color: L.texto }}
           value={gameFilter}
           onChange={e => { setGameFilter(e.target.value); setPage(1) }}
         >
@@ -286,12 +296,13 @@ export default function MercadoPage() {
       {/* Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: L.azul }} />
         </div>
       ) : items.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p className="text-lg font-semibold">Nenhuma carta encontrada</p>
+        <div className="text-center py-16 rounded-2xl border" style={{ backgroundColor: L.card, borderColor: L.borda }}>
+          <Package className="w-12 h-12 mx-auto mb-3" style={{ color: L.suave, opacity: 0.4 }} />
+          <p className="text-lg font-black" style={{ color: L.texto }}>Nenhuma carta encontrada</p>
+          <p className="text-sm mt-1" style={{ color: L.suave }}>Tente outro nome ou jogo — a loja põe cartas novas toda semana.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -304,15 +315,18 @@ export default function MercadoPage() {
       {/* Paginação */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-4 mt-8">
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-xl bg-surface-800 disabled:opacity-40 hover:bg-surface-700 transition-colors">
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} aria-label="Página anterior"
+            className="p-2 rounded-xl border disabled:opacity-40 transition-colors" style={{ backgroundColor: L.card, borderColor: L.borda, color: L.texto }}>
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-sm text-gray-400">{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-xl bg-surface-800 disabled:opacity-40 hover:bg-surface-700 transition-colors">
+          <span className="text-sm font-semibold" style={{ color: L.suave }}>{page} / {totalPages}</span>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} aria-label="Próxima página"
+            className="p-2 rounded-xl border disabled:opacity-40 transition-colors" style={{ backgroundColor: L.card, borderColor: L.borda, color: L.texto }}>
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       )}
+      </div>
 
       {consentListing && (
         <InterestConsentModal

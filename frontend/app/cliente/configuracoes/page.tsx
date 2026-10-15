@@ -4,11 +4,12 @@ import { usePreferences } from '@/hooks/usePreferences'
 import { Bell, Check, Loader2, ArrowLeft, Accessibility } from 'lucide-react'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
+import CabecalhoCliente from '@/components/cliente/CabecalhoCliente'
 import Link from 'next/link'
 import { UserPreferences } from '@/lib/api'
 
 const C = {
-  navy: '#0C3D5A', blue: '#3EC2F2', blue2: '#1A9DD4',
+  navy: '#0C3D5A', blue: '#1E4FD6', blue2: '#163CA8',
   yellow: '#FFE45E', bg: '#EBF7FD', white: '#FFFFFF',
   muted: '#4D8FAC', border: 'rgba(62,194,242,0.18)',
 }
@@ -73,18 +74,8 @@ export default function ClienteConfiguracoesPage() {
       }} />
 
       {/* Header */}
-      <header style={{ backgroundColor: C.navy }}>
-        <div className="max-w-lg mx-auto px-5 pt-10 pb-6 flex items-center gap-4">
-          <Link href="/cliente/perfil" className="text-white/70 hover:text-white transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <p className="text-white font-black text-base leading-tight">Configurações</p>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Suas preferências pessoais</p>
-          </div>
-          {saving && <Loader2 className="w-4 h-4 animate-spin ml-auto" style={{ color: 'rgba(255,255,255,0.5)' }} />}
-        </div>
-      </header>
+      <CabecalhoCliente titulo="Configurações" subtitulo="Acessibilidade e notificações" voltar="/cliente/perfil" voltarRotulo="Voltar pra Minha conta"
+        acao={saving ? <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'rgba(255,255,255,0.7)' }} /> : undefined} />
 
       {loading ? (
         <div className="flex items-center justify-center py-24">

@@ -289,8 +289,8 @@ function MeusCampeonatos() {
 
 const C = {
   navy:   '#0C3D5A',
-  blue:   '#3EC2F2',
-  blue2:  '#1A9DD4',
+  blue:   '#1E4FD6',
+  blue2:  '#163CA8',
   yellow: '#FFE45E',
   bg:     '#EBF7FD',
   white:  '#FFFFFF',
