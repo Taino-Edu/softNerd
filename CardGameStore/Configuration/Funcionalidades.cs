@@ -44,6 +44,7 @@ public static class Funcionalidades
     public const string LigaVisualNovo = "liga-visual-novo";
     public const string HomeDetalhesMaikon = "home-detalhes-maikon";
     public const string VitrineNova = "vitrine-nova";
+    public const string VisualProdutoERodape = "visual-produto-e-rodape";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -132,6 +133,16 @@ public static class Funcionalidades
             SeDesligar: "Volta o carrossel de destaques na home, a barra \"Loja\" e o cartão pequeno em /produtos.",
             Padrao:     true,
             Desde:      "v1.48.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(VisualProdutoERodape,
+            Nome:       "Loja: página do produto nova e rodapé no azul",
+            OQueMuda:   "Página do produto com a barra da marca e a Sacola, caminho Início › Produtos › Categoria, " +
+                        "preço com contraste, \"Últimas N\", garantias da loja e \"Você também pode gostar\"; " +
+                        "o rodapé geral do site segue o azul do topo.",
+            SeDesligar: "Volta a página do produto de antes (barra escura com o nome) e o rodapé geral roxo-escuro.",
+            Padrao:     true,
+            Desde:      "v1.49.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

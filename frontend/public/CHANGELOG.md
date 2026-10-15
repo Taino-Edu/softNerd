@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.49.0] — 2026-10-15
+
+### Mudado — página do produto e rodapé
+- **Página do produto** no visual da loja: barra com a marca e a **Sacola** (carrinho de reserva), caminho **Início › Produtos › Categoria**, foto com fundo suave, **preço com mais contraste** (antes em azul-claro), **"Últimas N unidades!"** quando o estoque chega no mínimo do produto e o botão principal no azul do topo (pré-venda continua roxa)
+- Abaixo do botão, as **garantias da loja**: separado na hora, Pix ou na retirada, retire na loja
+- **"Você também pode gostar"**: até 4 produtos da mesma categoria no fim da página
+- **Rodapé geral do site** (links de privacidade, termos e LGPD) segue o **azul do topo** em vez do roxo-escuro — na página inicial vira a faixa final do rodapé azul, sem repetir o copyright
+
+### Mudança com volta
+- Chave **"Loja: página do produto nova e rodapé no azul"** em `/admin/funcionalidades`. Desligada, volta a página do produto e o rodapé de antes
+
 ## [v1.48.0] — 2026-10-15
 
 ### Mudado — vitrine mais vendedora
