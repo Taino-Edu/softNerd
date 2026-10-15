@@ -45,6 +45,8 @@ public static class Funcionalidades
     public const string HomeDetalhesMaikon = "home-detalhes-maikon";
     public const string VitrineNova = "vitrine-nova";
     public const string VisualProdutoERodape = "visual-produto-e-rodape";
+    public const string SacolaNova = "sacola-nova";
+    public const string ClienteInicioNovo = "cliente-inicio-novo";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -143,6 +145,25 @@ public static class Funcionalidades
             SeDesligar: "Volta a página do produto de antes (barra escura com o nome) e o rodapé geral roxo-escuro.",
             Padrao:     true,
             Desde:      "v1.49.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(SacolaNova,
+            Nome:       "Loja: sacola nova",
+            OQueMuda:   "Carrinho de reserva no visual da loja: passos, itens com foto maior e \"+\" travado no estoque, " +
+                        "resumo com o total no Pix e garantias; quem não está logado vê \"Entre pra ver sua sacola\" " +
+                        "e volta pra sacola depois de entrar.",
+            SeDesligar: "Volta o carrinho de antes — e quem não está logado volta a ser mandado pra página inicial.",
+            Padrao:     true,
+            Desde:      "v1.50.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(ClienteInicioNovo,
+            Nome:       "Cliente: área do cliente nova",
+            OQueMuda:   "Na área do cliente (/cliente): barra no azul da loja com o logo de Personalizar Site, cartão de " +
+                        "pontos com quanto valem em reais e atalhos pra Loja, Sacola, Liga, Mercado, Decks e Conta.",
+            SeDesligar: "Volta a barra azul-petróleo com o logo antigo, o cartão de pontos simples e os 2 atalhos.",
+            Padrao:     true,
+            Desde:      "v1.50.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

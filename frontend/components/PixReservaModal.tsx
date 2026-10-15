@@ -97,7 +97,7 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
 
         <div className="flex items-center justify-between">
           <h2 className={clsx('text-lg font-black flex items-center gap-2', dark ? 'text-white' : 'text-gray-900')}>
-            <QrCode className="w-5 h-5" style={{ color: '#7C3AED' }} /> Pagamento via Pix
+            <QrCode className="w-5 h-5" style={{ color: '#1E4FD6' }} /> Pagamento via Pix
           </h2>
           <button onClick={onClose} className={clsx('p-1.5 rounded-lg transition-colors',
             dark ? 'hover:bg-surface-500 text-gray-400' : 'text-gray-400 hover:text-gray-600')}>
@@ -107,7 +107,7 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
 
         {loading ? (
           <div className="flex justify-center py-10">
-            <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#7C3AED' }} />
+            <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#1E4FD6' }} />
           </div>
         ) : pago ? (
           <div className="text-center py-6 space-y-2">
@@ -147,7 +147,7 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
             </p>
             <button onClick={() => verificar()} disabled={verifying}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all disabled:opacity-60"
-              style={{ borderColor: '#7C3AED', color: '#7C3AED' }}>
+              style={{ borderColor: '#1E4FD6', color: '#1E4FD6' }}>
               {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               Já paguei, verificar
             </button>

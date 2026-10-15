@@ -18,7 +18,9 @@ export default function CadastroPage() {
 function CadastroForm() {
   const router      = useRouter()
   const searchParams = useSearchParams()
-  const returnTo     = searchParams.get('returnTo') || '/cliente/perfil'
+  // Só páginas do próprio site (igual ao /entrar): um link malicioso não leva pra fora depois do cadastro
+  const pedido       = searchParams.get('returnTo')
+  const returnTo     = pedido && pedido.startsWith('/') && !pedido.startsWith('//') && !pedido.startsWith('/\\') ? pedido : '/cliente/perfil'
 
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')

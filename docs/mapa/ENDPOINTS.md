@@ -124,7 +124,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/championship` | público | `GetAll` (56) | `championshipApi.list` | `app/admin/dashboard/page.tsx`<br>`app/page.tsx` |
+| GET | `/api/championship` | público | `GetAll` (56) | `championshipApi.list` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx`<br>`app/page.tsx` |
 | POST | `/api/championship` | AdminOnly | `Create` (162) | `championshipApi.create` | `app/admin/campeonatos/page.tsx` |
 | GET | `/api/championship/admin/all` | AdminOnly | `GetAllAdmin` (66) | `championshipApi.listAll` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx` |
 | GET | `/api/championship/my-participations` | logado | `GetMyParticipations` (107) | `championshipApi.myParticipations` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |

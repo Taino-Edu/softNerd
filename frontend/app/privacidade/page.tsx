@@ -34,7 +34,7 @@ export default function PrivacidadePage() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
 
       {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
-      <header className="bg-[#1a0a2e] text-white print:hidden">
+      <header className="bg-[#10286B] text-white print:hidden">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-1 text-xl font-bold">
             <span className="text-[#42B6EE]">Santuário</span><span> Nerd</span>
@@ -47,7 +47,7 @@ export default function PrivacidadePage() {
       </header>
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-b from-[#1a0a2e] to-transparent print:hidden">
+      <div className="bg-gradient-to-b from-[#10286B] to-transparent print:hidden">
         <div className="max-w-5xl mx-auto px-4 py-10 pb-8">
           <span className="inline-block text-[10px] font-bold tracking-widest text-[#42B6EE] uppercase mb-3">
             LGPD · Lei nº 13.709/2018

@@ -22,7 +22,7 @@ function pct(v: number) { return `${(Math.round(v * 10) / 10).toString().replace
 /** Selo do canto da foto: pré-venda > promoção > destaque. */
 function Selo({ p }: { p: Product }) {
   const [texto, fundo, cor] =
-    p.isPreVenda ? ['Pré-venda', '#7C3AED', '#FFFFFF']
+    p.isPreVenda ? ['Pré-venda', '#1E4FD6', '#FFFFFF']
     : p.isOnPromo ? ['Promoção', '#EF4444', '#FFFFFF']
     : p.isFeatured ? ['Destaque', '#FFE45E', '#3D2E00']
     : [null, '', '']

@@ -109,7 +109,7 @@ export default function CompleteProfileGuard() {
         className="w-full max-w-sm rounded-2xl border p-6 space-y-4"
         style={{ backgroundColor: '#FFFFFF', borderColor: 'rgba(12,61,90,0.10)' }}>
         <div className="text-center space-y-2">
-          <MailCheck className="w-10 h-10 mx-auto" style={{ color: '#7C3AED' }} />
+          <MailCheck className="w-10 h-10 mx-auto" style={{ color: '#1E4FD6' }} />
           <h2 className="text-lg font-black" style={{ color: '#0C3D5A' }}>Complete seu cadastro</h2>
           <p className="text-sm" style={{ color: '#4D8FAC' }}>
             {google
@@ -123,13 +123,13 @@ export default function CompleteProfileGuard() {
             <input
               type="tel" required placeholder="WhatsApp com DDD"
               value={whatsApp} onChange={e => setWhatsApp(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
+              className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
               style={inputStyle}
             />
             <input
               type="tel" placeholder="CPF (opcional)"
               value={cpf} onChange={e => setCpf(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
+              className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
               style={inputStyle}
             />
           </>
@@ -137,19 +137,19 @@ export default function CompleteProfileGuard() {
         <input
           type="email" required placeholder="Seu e-mail"
           value={email} onChange={e => setEmail(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
+          className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
           style={inputStyle}
         />
         <input
           type="password" required minLength={8} placeholder="Senha (mín. 8 caracteres)"
           value={password} onChange={e => setPassword(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
+          className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
           style={inputStyle}
         />
         <input
           type="password" required placeholder="Confirmar senha"
           value={confirm} onChange={e => setConfirm(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]/40"
+          className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
           style={inputStyle}
         />
         {emailDeOutraConta && (
@@ -162,7 +162,7 @@ export default function CompleteProfileGuard() {
 
         <button type="submit" disabled={loading}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-sm transition-all disabled:opacity-60"
-          style={{ backgroundColor: '#7C3AED', color: '#fff' }}>
+          style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           Salvar e continuar
         </button>
