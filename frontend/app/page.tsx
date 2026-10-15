@@ -178,6 +178,8 @@ export default function LandingPage() {
   // Vitrine nova (v1.48.0): grade no lugar do carrossel, cartão novo e botão Sacola (carrinho de
   // reserva que já existia). Chave "vitrine-nova" desligada = carrossel e cartão de antes.
   const vitrineNova = useFuncionalidade('vitrine-nova') !== false
+  // Rodapé geral no azul (v1.49.0): ele já traz o copyright, então o da home não se repete
+  const rodapeNovo  = useFuncionalidade('visual-produto-e-rodape') !== false
   const { totalItems: itensSacola } = useReservationCart()
   const categoriasVitrine = Object.entries(
     vitrine.reduce<Record<string, number>>((acc, p) => { acc[p.category] = (acc[p.category] ?? 0) + 1; return acc }, {}),
@@ -1036,10 +1038,12 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Rodapé copyright */}
-          <div className="border-t pt-4 text-center text-[11px]" style={{ borderColor: F.border, color: F.text }}>
-            © {new Date().getFullYear()} {site.siteName} · {site.addressLine} · Todos os direitos reservados
-          </div>
+          {/* Rodapé copyright (com o rodapé geral novo, quem mostra é ele) */}
+          {!(detalhes && rodapeNovo) && (
+            <div className="border-t pt-4 text-center text-[11px]" style={{ borderColor: F.border, color: F.text }}>
+              © {new Date().getFullYear()} {site.siteName} · {site.addressLine} · Todos os direitos reservados
+            </div>
+          )}
         </div>
       </footer>
 

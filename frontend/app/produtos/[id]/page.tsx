@@ -1,4 +1,7 @@
 'use client'
+// Página do produto. Com a chave "visual-produto-e-rodape" (v1.49.0): barra com a marca e a Sacola,
+// caminho Início › Produtos › Categoria, preço com contraste, "Últimas N", garantias da loja e
+// "Você também pode gostar". Lógica de reserva, login e WhatsApp é a mesma nos dois visuais.
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { productApi, authApi, userApi, siteConfigApi, categoryApi, Product, UserProfile, SiteConfigDto, ProductCategory } from '@/lib/api'
@@ -7,9 +10,12 @@ import { useReservationCart } from '@/hooks/useReservationCart'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
-import { ChevronLeft, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
+import { mixHex } from '@/lib/colors'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import CartaoProduto from '@/components/loja/CartaoProduto'
 
 const NAVY = '#0C3D5A'
 const BLUE = '#3EC2F2'
@@ -49,6 +55,9 @@ export default function ProductPage() {
   const [categorias, setCategorias] = useState<ProductCategory[]>([])
 
   const { items: cartItems, addItem, totalItems: cartCount } = useReservationCart()
+  const chaveNova = useFuncionalidade('visual-produto-e-rodape')
+  const nova = chaveNova !== false
+  const [relacionados, setRelacionados] = useState<Product[]>([])
   const inCart = product ? cartItems.some(i => i.productId === product.id) : false
   const [qty, setQty] = useState(1)
 
@@ -102,6 +111,22 @@ export default function ProductPage() {
     siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
     categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [id, router])
+
+  // "Você também pode gostar": até 4 da mesma categoria. Só busca com a chave confirmada ligada
+  // (=== true, não "enquanto carrega") — desligar a chave numa emergência corta também esta requisição.
+  const produtoId = product?.id
+  const categoria = product?.category
+  useEffect(() => {
+    if (chaveNova !== true || !produtoId || !categoria) return
+    let vivo = true
+    productApi.list(categoria)
+      .then(rs => { if (vivo) setRelacionados(rs.data
+        .filter(x => x.id !== produtoId && x.category === categoria && x.isActive
+          && x.stockQuantity > 0 && x.showOnMarketplace !== false)
+        .slice(0, 4)) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [chaveNova, produtoId, categoria])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -159,10 +184,76 @@ export default function ProductPage() {
                        resolvePixPercent(product, categorias, siteCfg.pixDiscountPercent))
     : null
 
+  const corTopo = siteCfg?.colorHero ?? '#1E4FD6'
+  const destaque = isDark ? BLUE : corTopo
+  const ultimas = emEstoque && product.isLowStock
+  const CN = {
+    card: C.card, cardAlt: isDark ? '#1E1E24' : mixHex('#FFFFFF', corTopo, 0.05), border: C.border,
+    navy: C.navy, text: isDark ? C.text : '#5B6B84', blue: destaque, pix: C.pix, yellow: '#FFE45E',
+  }
+  function precosDe(p: Product) {
+    if (!siteCfg) return { pix: null, cartao: null }
+    const preco = p.isOnPromo && p.discountPriceInReais != null ? p.discountPriceInReais : p.priceInReais
+    const v = calcPrecoVitrine(preco, p.maxInstallments, siteCfg, resolvePixPercent(p, categorias, siteCfg.pixDiscountPercent))
+    return {
+      pix: v.pixPercent > 0 ? { precoPix: v.precoPix, pixPercent: v.pixPercent } : null,
+      cartao: v.parcelas >= 2 ? { parcelas: v.parcelas, valorParcela: v.valorParcela } : null,
+    }
+  }
+
+  const avatar = authed && (
+    <Link href="/cliente" title="Minha conta">
+      {profile?.profileImageUrl ? (
+        <img src={profile.profileImageUrl} alt={userName}
+          className="w-8 h-8 rounded-full object-cover border-2 border-white/30 hover:border-white/70 transition-all" />
+      ) : (
+        <div className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white/30 hover:border-white/70 transition-all text-xs font-black"
+          style={{ backgroundColor: '#3EC2F2', color: '#0C3D5A' }}>
+          {userName.charAt(0).toUpperCase() || <UserIcon className="w-4 h-4" />}
+        </div>
+      )}
+    </Link>
+  )
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 
       {/* Nav */}
+      {nova ? (
+      <nav className="sticky top-0 z-40 h-16 flex items-center border-b"
+        style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="w-full max-w-5xl mx-auto px-4 flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink hover:opacity-90">
+            {siteCfg?.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fotoLeve(siteCfg.logoUrl, 160) ?? siteCfg.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
+            )}
+            <span className="font-black text-lg leading-none truncate" style={{ color: '#FFFFFF' }}>{siteCfg?.siteName ?? 'Santuário Nerd'}</span>
+          </Link>
+          <div className="ml-auto flex items-center gap-1 shrink-0">
+            <button onClick={() => { const n = !isDark; setIsDark(n); setOptionalItem('landing-theme', n ? 'dark' : 'light') }}
+              title={isDark ? 'Modo claro' : 'Modo escuro'}
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors" style={{ color: '#fff' }}>
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button title="Compartilhar"
+              onClick={() => navigator.share?.({ title: product.name, url: window.location.href }).catch(() => navigator.clipboard?.writeText(window.location.href))}
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors" style={{ color: '#fff' }}>
+              <Share2 className="w-4 h-4" />
+            </button>
+            <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${cartCount} ${cartCount === 1 ? 'item' : 'itens'}`}
+              className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-white/10 mr-1"
+              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">Sacola</span>
+              <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
+                style={{ backgroundColor: '#FFE45E', color: '#3D2E00' }}>{cartCount}</span>
+            </Link>
+            {avatar}
+          </div>
+        </div>
+      </nav>
+      ) : (
       <nav className="sticky top-0 z-40 h-14 flex items-center px-4 gap-3 border-b"
         style={{ backgroundColor: '#0F3460', borderColor: 'rgba(255,255,255,0.08)' }}>
         <button onClick={() => router.back()} className="flex items-center gap-1 text-sm hover:opacity-70 transition-opacity" style={{ color: '#fff' }}>
@@ -182,28 +273,27 @@ export default function ProductPage() {
         </button>
 
         {/* Avatar do usuário logado */}
-        {authed && (
-          <Link href="/cliente" title="Minha conta">
-            {profile?.profileImageUrl ? (
-              <img src={profile.profileImageUrl} alt={userName}
-                className="w-8 h-8 rounded-full object-cover border-2 border-white/30 hover:border-white/70 transition-all" />
-            ) : (
-              <div className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white/30 hover:border-white/70 transition-all text-xs font-black"
-                style={{ backgroundColor: '#3EC2F2', color: '#0C3D5A' }}>
-                {userName.charAt(0).toUpperCase() || <UserIcon className="w-4 h-4" />}
-              </div>
-            )}
-          </Link>
-        )}
+        {avatar}
       </nav>
+      )}
 
       <div className="max-w-5xl mx-auto px-4 py-6">
+        {nova && (
+          <nav aria-label="Caminho" className="flex items-center flex-wrap gap-1 text-xs mb-4" style={{ color: C.muted }}>
+            <Link href="/" className="hover:underline">Início</Link>
+            <ChevronRight className="w-3 h-3" />
+            <Link href="/produtos" className="hover:underline">Produtos</Link>
+            <ChevronRight className="w-3 h-3" />
+            <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`} className="hover:underline font-semibold"
+              style={{ color: destaque }}>{product.category}</Link>
+          </nav>
+        )}
         <div className="flex flex-col lg:flex-row gap-6">
 
           {/* ── Galeria ── */}
           <div className="lg:w-[420px] shrink-0 space-y-3">
-            <div className="rounded-2xl overflow-hidden border flex items-center justify-center"
-              style={{ backgroundColor: C.card, borderColor: C.border, aspectRatio: '1' }}>
+            <div className={`overflow-hidden border flex items-center justify-center ${nova ? 'rounded-3xl' : 'rounded-2xl'}`}
+              style={{ backgroundColor: nova ? CN.cardAlt : C.card, borderColor: C.border, aspectRatio: '1' }}>
               {mainImg
                 ? <img src={fotoLeve(mainImg, 960)} alt={product.name} className="w-full h-full object-contain p-6" />
                 : <Package className="w-20 h-20 opacity-10" style={{ color: C.navy }} />
@@ -214,7 +304,7 @@ export default function ProductPage() {
                 {allImgs.map((url, i) => (
                   <button key={i} onClick={() => setMainImg(url)}
                     className="shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all"
-                    style={{ borderColor: mainImg === url ? BLUE : C.border, backgroundColor: C.card }}>
+                    style={{ borderColor: mainImg === url ? (nova ? destaque : BLUE) : C.border, backgroundColor: C.card }}>
                     <img src={fotoLeve(url, 160)} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
                   </button>
                 ))}
@@ -260,7 +350,7 @@ export default function ProductPage() {
                   </p>
                 </div>
               ) : (
-                <p className="text-4xl font-black" style={{ color: BLUE }}>{fmt(product.priceInReais)}</p>
+                <p className="text-4xl font-black" style={{ color: nova ? C.navy : BLUE }}>{fmt(product.priceInReais)}</p>
               )}
 
               {/* Cartão × Pix — o que o cliente pergunta antes de comprar */}
@@ -276,9 +366,12 @@ export default function ProductPage() {
                 </p>
               )}
 
-              <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: emEstoque ? '#22C55E' : '#EF4444' }}>
+              <p className={`text-xs mt-3 flex items-center gap-1.5 ${nova && ultimas ? 'font-bold' : ''}`}
+                style={{ color: !emEstoque ? '#EF4444' : nova && ultimas ? '#E11D48' : '#22C55E' }}>
                 <CheckCircle className="w-3.5 h-3.5" />
-                {emEstoque ? `${product.stockQuantity} unidades em estoque` : 'Produto esgotado'}
+                {!emEstoque ? 'Produto esgotado'
+                  : nova && ultimas ? `Últimas ${product.stockQuantity} ${product.stockQuantity === 1 ? 'unidade' : 'unidades'}!`
+                  : `${product.stockQuantity} unidades em estoque`}
               </p>
             </div>
 
@@ -309,7 +402,9 @@ export default function ProductPage() {
                       </div>
                       <button onClick={handleAddToCart}
                         className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
-                        style={{ backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
+                        style={nova && !ehPreVenda
+                          ? { backgroundColor: corTopo, color: '#fff', boxShadow: `0 10px 26px -10px ${corTopo}` }
+                          : { backgroundColor: '#7C3AED', color: '#fff', boxShadow: '0 8px 24px rgba(124,58,237,0.30)' }}>
                         <BookmarkPlus className="w-5 h-5" />
                         {inCart
                           ? `Adicionar +${qty} · ${fmt(precoUnit * qty)}`
@@ -324,6 +419,22 @@ export default function ProductPage() {
                           : 'O produto já é separado pra você na hora. Pague agora no Pix ou na retirada.'}
                     </p>
                   </div>
+
+                  {nova && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { icon: PackageCheck, titulo: 'Separado na hora', texto: 'Fica guardado pra você' },
+                        { icon: Wallet,       titulo: 'Pix ou na retirada', texto: 'Você escolhe como pagar' },
+                        { icon: Store,        titulo: 'Retire na loja', texto: 'José Bonifácio, SP' },
+                      ].map(({ icon: Icon, titulo, texto }) => (
+                        <div key={titulo} className="rounded-xl border p-2.5 text-center" style={{ backgroundColor: C.card, borderColor: C.border }}>
+                          <Icon className="w-4 h-4 mx-auto mb-1" style={{ color: destaque }} />
+                          <p className="text-[11px] font-black leading-tight" style={{ color: C.navy }}>{titulo}</p>
+                          <p className="text-[10px] leading-tight mt-0.5" style={{ color: C.muted }}>{texto}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div>
                     <a href={`https://wa.me/${WA_NUM}?text=${waMsg}`}
@@ -396,6 +507,24 @@ export default function ProductPage() {
             </div>
           </div>
         </div>
+
+        {nova && relacionados.length > 0 && (
+          <section className="mt-12">
+            <div className="flex items-end justify-between gap-3 mb-4">
+              <h2 className="text-xl md:text-2xl font-black" style={{ color: C.navy }}>Você também pode gostar</h2>
+              <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+                className="text-sm font-black inline-flex items-center gap-0.5 hover:underline shrink-0" style={{ color: destaque }}>
+                Ver mais <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {relacionados.map(r => {
+                const { pix, cartao } = precosDe(r)
+                return <CartaoProduto key={r.id} p={r} C={CN} pix={pix} cartao={cartao} href={`/produtos/${r.id}`} />
+              })}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* ── Modal de login inline ── */}
