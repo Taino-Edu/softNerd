@@ -55,7 +55,8 @@ export default function ProductPage() {
   const [categorias, setCategorias] = useState<ProductCategory[]>([])
 
   const { items: cartItems, addItem, totalItems: cartCount } = useReservationCart()
-  const nova = useFuncionalidade('visual-produto-e-rodape') !== false
+  const chaveNova = useFuncionalidade('visual-produto-e-rodape')
+  const nova = chaveNova !== false
   const [relacionados, setRelacionados] = useState<Product[]>([])
   const inCart = product ? cartItems.some(i => i.productId === product.id) : false
   const [qty, setQty] = useState(1)
@@ -102,13 +103,6 @@ export default function ProductPage() {
       .then(r => {
         setProduct(r.data)
         setMainImg(r.data.imageUrl)
-        // "Você também pode gostar": até 4 da mesma categoria. Falhou, a seção some.
-        productApi.list(r.data.category)
-          .then(rs => setRelacionados(rs.data
-            .filter(x => x.id !== r.data.id && x.category === r.data.category && x.isActive
-              && x.stockQuantity > 0 && x.showOnMarketplace !== false)
-            .slice(0, 4)))
-          .catch(() => {})
       })
       .catch(() => router.replace('/produtos'))
       .finally(() => setLoading(false))
@@ -117,6 +111,22 @@ export default function ProductPage() {
     siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
     categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [id, router])
+
+  // "Você também pode gostar": até 4 da mesma categoria. Só busca com a chave confirmada ligada
+  // (=== true, não "enquanto carrega") — desligar a chave numa emergência corta também esta requisição.
+  const produtoId = product?.id
+  const categoria = product?.category
+  useEffect(() => {
+    if (chaveNova !== true || !produtoId || !categoria) return
+    let vivo = true
+    productApi.list(categoria)
+      .then(rs => { if (vivo) setRelacionados(rs.data
+        .filter(x => x.id !== produtoId && x.category === categoria && x.isActive
+          && x.stockQuantity > 0 && x.showOnMarketplace !== false)
+        .slice(0, 4)) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [chaveNova, produtoId, categoria])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
