@@ -5,6 +5,7 @@ import KeyboardShortcutsOverlay from '@/components/admin/KeyboardShortcutsOverla
 import WhatsAppFloatingPanel from '@/components/admin/whatsapp/WhatsAppFloatingPanel'
 import TimerWidget from '@/components/TimerWidget'
 import { TimerProvider } from '@/contexts/TimerContext'
+import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
@@ -19,6 +20,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Telas do painel no azul da loja (v1.53.0): a classe troca a paleta brand/roxo por variável CSS
   // (globals.css → .painel-novo), sem mexer em classe de tela nenhuma. Chave desligada = como antes.
   const telasNovas = useFuncionalidade('admin-telas-novas') !== false
+  // Também no <body>: janelas abertas por portal (Nova venda, detalhe da venda...) ficam fora deste
+  // wrapper no DOM e não herdariam as variáveis. Sai ao deixar o painel, pra não vazar pro site.
+  useEffect(() => {
+    document.body.classList.toggle('painel-novo', telasNovas)
+    return () => { document.body.classList.remove('painel-novo') }
+  }, [telasNovas])
   return (
     <TimerProvider>
       <div className={`flex min-h-screen bg-surface-900 ${telasNovas ? 'painel-novo' : ''}`}>

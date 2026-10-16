@@ -1,5 +1,6 @@
 'use client'
 import { useEffect } from 'react'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 const LOJA = 'Santuário Nerd'
 const VERSION = 'v1.25.5'
@@ -491,7 +492,7 @@ const SECOES: Secao[] = [
   {
     grupo: 'Divulgação',
     titulo: 'Mensageria (Avisos aos Clientes)',
-    cor: '#0EA5E9',
+    cor: '#7C3AED',
     itens: [
       { t: 'Como funciona', d: 'Envie um aviso (título, texto, imagem opcional e link) pra um grupo de clientes de uma vez — por notificação in-app, e-mail ou os dois.' },
       { t: 'Passo a passo', d: 'Fluxo em 3 passos: escreva a mensagem, escolha o canal (in-app / e-mail / ambos), escolha os destinatários (segmento de clientes ou seleção manual).' },
@@ -529,6 +530,9 @@ const SECOES: Secao[] = [
 ]
 
 export default function ManualPdfPage() {
+  // Painel novo: a seção que era roxa (Mensageria) sai em azul-céu; chave desligada = cor de antes
+  const telasNovas = useFuncionalidade('admin-telas-novas') !== false
+  const corSecao = (cor: string) => (telasNovas && cor === '#7C3AED' ? '#0EA5E9' : cor)
   useEffect(() => {
     document.title = `Manual do Sistema — ${LOJA} ${VERSION}`
   }, [])
@@ -763,7 +767,7 @@ export default function ManualPdfPage() {
                 <div className="secao-header">
                   <span className="secao-num">{s.num}</span>
                   <span className="secao-title">{s.titulo}</span>
-                  <span className="secao-dot" style={{ background: s.cor }} />
+                  <span className="secao-dot" style={{ background: corSecao(s.cor) }} />
                 </div>
 
                 {s.itens.map((item, i) => (

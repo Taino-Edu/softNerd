@@ -18,6 +18,7 @@ import ConferenciaButton from '@/components/admin/ConferenciaButton'
 import EscolherContaCrediarioModal from '@/components/admin/EscolherContaCrediarioModal'
 import PercentPicker from '@/components/admin/PercentPicker'
 import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 interface CartItem {
   product: Product
@@ -37,7 +38,7 @@ const PAY_COLORS: Record<string, string> = {
   CartaoCredito: '#00F0A8', // accent.green
   CartaoDebito:  '#f97316', // accent.orange
   Crediario:     '#f59e0b',
-  Pontos:        '#1E4FD6', // azul da loja (pontos são da loja; roxo não é cor da loja)
+  Pontos:        '#a78bfa',
   Cashback:      '#34d399',
 }
 
@@ -1449,6 +1450,9 @@ function VendaWizard({
 
 export default function VendaAvulsaPage() {
   const { prefs } = usePreferences()
+  // Painel novo: "Pontos" no azul da loja (era roxo); chave desligada = cor de antes
+  const telasNovas = useFuncionalidade('admin-telas-novas') !== false
+  const corPagamento = (m: string) => (telasNovas && m === 'Pontos' ? '#1E4FD6' : PAY_COLORS[m]) ?? '#4B5563'
   const [tab, setTab]               = useState<'venda' | 'historico'>('venda')
   const [products, setProducts]     = useState<Product[]>([])
   const [loading, setLoading]       = useState(true)
@@ -1760,12 +1764,12 @@ export default function VendaAvulsaPage() {
                   <div className="space-y-1.5">
                     {payBreakdown.map(p => (
                       <div key={p.method} className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: PAY_COLORS[p.method] ?? '#4B5563' }} />
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: corPagamento(p.method) }} />
                         <span className="text-[11px] text-gray-400 w-16 shrink-0 truncate">{p.label}</span>
                         <div className="flex-1 h-1.5 bg-surface-700 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${p.pct}%`, background: PAY_COLORS[p.method] ?? '#4B5563' }} />
+                          <div className="h-full rounded-full" style={{ width: `${p.pct}%`, background: corPagamento(p.method) }} />
                         </div>
-                        <span className="text-[10px] font-semibold w-6 text-right shrink-0" style={{ color: PAY_COLORS[p.method] ?? '#4B5563' }}>{p.pct}%</span>
+                        <span className="text-[10px] font-semibold w-6 text-right shrink-0" style={{ color: corPagamento(p.method) }}>{p.pct}%</span>
                       </div>
                     ))}
                   </div>
