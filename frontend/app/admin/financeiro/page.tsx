@@ -13,6 +13,7 @@ import {
 import clsx from 'clsx'
 import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
 import { brl as fmt } from '@/lib/format'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function toDateInput(d: Date) {
@@ -1172,6 +1173,9 @@ function DayPieChart({ formas, receita, custo, date }: {
   date: string
 }) {
   const [hovered, setHovered] = useState<string | null>(null)
+  // Painel novo: cartão sai do roxo pro azul-céu; chave desligada = cor de antes (rollback completo)
+  const telasNovas = useFuncionalidade('admin-telas-novas') !== false
+  const corDe = (forma: string) => (telasNovas && forma === 'CartaoCredito' ? '#0EA5E9' : FORMA_CORES[forma]) ?? '#6b7280'
   const total = formas.reduce((s, f) => s + f.total, 0)
   if (total === 0) return null
 
@@ -1212,7 +1216,7 @@ function DayPieChart({ formas, receita, custo, date }: {
             {slices.map(s => {
               const isHov  = hovered === s.forma
               const outerR = isHov ? r + 7 : r
-              const color  = FORMA_CORES[s.forma] ?? '#6b7280'
+              const color  = corDe(s.forma)
               // Quando o slice é 100% o arco SVG degenera (ponto inicial = final).
               // Nesse caso renderiza dois semicírculos para formar o anel completo.
               const isFull = s.ea - s.sa >= 359.99
@@ -1257,7 +1261,7 @@ function DayPieChart({ formas, receita, custo, date }: {
         </div>
         <div className="flex-1 space-y-1 min-w-0 w-full">
           {slices.map(s => {
-            const color = FORMA_CORES[s.forma] ?? '#6b7280'
+            const color = corDe(s.forma)
             return (
               <div
                 key={s.forma}

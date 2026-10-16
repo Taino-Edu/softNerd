@@ -9,17 +9,34 @@ const config: Config = {
     extend: {
       colors: {
         // Paleta alinhada com o design Maikon
+        // Cores via variável CSS (canal RGB) pra o painel poder trocar de paleta sem mexer em
+        // classe nenhuma (globals.css → .painel-novo). Padrão = o azul-claro de sempre.
         brand: {
-          50:  '#EEF7FD',
-          100: '#D9EFF9',
-          200: '#B3DEF4',
-          300: '#7EC8EC',
-          400: '#5BBDE8',
-          500: '#3EC2F2', // primary — azul Santuário Nerd
-          600: '#1AAFD9', // primary darker
-          700: '#167AAB',
-          800: '#186288',
-          900: '#1A5170',
+          50:  'rgb(var(--brand-50) / <alpha-value>)',
+          100: 'rgb(var(--brand-100) / <alpha-value>)',
+          200: 'rgb(var(--brand-200) / <alpha-value>)',
+          300: 'rgb(var(--brand-300) / <alpha-value>)',
+          400: 'rgb(var(--brand-400) / <alpha-value>)',
+          500: 'rgb(var(--brand-500) / <alpha-value>)', // primary — azul Santuário Nerd
+          600: 'rgb(var(--brand-600) / <alpha-value>)',
+          700: 'rgb(var(--brand-700) / <alpha-value>)',
+          800: 'rgb(var(--brand-800) / <alpha-value>)',
+          900: 'rgb(var(--brand-900) / <alpha-value>)',
+        },
+        // Roxo/violeta usados como cor de STATUS no painel (fila, pré-venda, cartão, variação).
+        // No painel novo viram azul-céu (roxo não é cor da loja); fora dele, o roxo original.
+        purple: {
+          300: 'rgb(var(--status-300, 216 180 254) / <alpha-value>)',
+          400: 'rgb(var(--status-400, 192 132 252) / <alpha-value>)',
+          500: 'rgb(var(--status-500, 168 85 247) / <alpha-value>)',
+          600: 'rgb(var(--status-600, 147 51 234) / <alpha-value>)',
+        },
+        violet: {
+          300: 'rgb(var(--status-300, 196 181 253) / <alpha-value>)',
+          400: 'rgb(var(--status-400, 167 139 250) / <alpha-value>)',
+          500: 'rgb(var(--status-500, 139 92 246) / <alpha-value>)',
+          600: 'rgb(var(--status-600, 124 58 237) / <alpha-value>)',
+          700: 'rgb(var(--status-700, 109 40 217) / <alpha-value>)',
         },
         surface: {
           900: '#121215', // Fundo da página (app bg)
