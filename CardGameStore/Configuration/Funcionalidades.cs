@@ -49,6 +49,7 @@ public static class Funcionalidades
     public const string ClienteInicioNovo = "cliente-inicio-novo";
     public const string AdminEsqueletoNovo = "admin-esqueleto-novo";
     public const string ContaClienteNova = "conta-cliente-nova";
+    public const string AdminTelasNovas = "admin-telas-novas";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -185,6 +186,16 @@ public static class Funcionalidades
             SeDesligar: "Volta a grade de 6 abas (Histórico, Torneios, Pré-vendas, Dívida...), o saldo repetido e o voltar do navegador.",
             Padrao:     true,
             Desde:      "v1.52.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(AdminTelasNovas,
+            Nome:       "Painel: telas no azul da loja",
+            OQueMuda:   "Dentro do painel, botões e destaques no azul da loja (eram azul-claro) e as marcas de status " +
+                        "que eram roxas (fila de espera, pré-venda, cartão, variação) em azul-céu; no tema claro os tons " +
+                        "claros escurecem pra dar leitura.",
+            SeDesligar: "O painel volta ao azul-claro e ao roxo de status de antes. O site público não muda em nenhum dos dois casos.",
+            Padrao:     true,
+            Desde:      "v1.53.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

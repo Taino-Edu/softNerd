@@ -491,7 +491,7 @@ const SECOES: Secao[] = [
   {
     grupo: 'Divulgação',
     titulo: 'Mensageria (Avisos aos Clientes)',
-    cor: '#7C3AED',
+    cor: '#0EA5E9',
     itens: [
       { t: 'Como funciona', d: 'Envie um aviso (título, texto, imagem opcional e link) pra um grupo de clientes de uma vez — por notificação in-app, e-mail ou os dois.' },
       { t: 'Passo a passo', d: 'Fluxo em 3 passos: escreva a mensagem, escolha o canal (in-app / e-mail / ambos), escolha os destinatários (segmento de clientes ou seleção manual).' },

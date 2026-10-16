@@ -37,7 +37,7 @@ const PAY_COLORS: Record<string, string> = {
   CartaoCredito: '#00F0A8', // accent.green
   CartaoDebito:  '#f97316', // accent.orange
   Crediario:     '#f59e0b',
-  Pontos:        '#a78bfa',
+  Pontos:        '#1E4FD6', // azul da loja (pontos são da loja; roxo não é cor da loja)
   Cashback:      '#34d399',
 }
 

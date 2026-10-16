@@ -293,3 +293,48 @@ html.light .text-accent-gold { color: #1e293b !important; }
   main, [class*="p-6"] { padding: 0 !important; }
 }
 
+
+/* ── Paleta da marca em variáveis (tailwind.config.ts → brand/purple/violet) ───────────────
+   Padrão: o azul-claro de sempre (nada muda fora do painel). */
+:root {
+  --brand-50: 238 247 253;  --brand-100: 217 239 249; --brand-200: 179 222 244;
+  --brand-300: 126 200 236; --brand-400: 91 189 232;  --brand-500: 62 194 242;
+  --brand-600: 26 175 217;  --brand-700: 22 122 171;  --brand-800: 24 98 136;  --brand-900: 26 81 112;
+}
+
+/* ── Painel novo (chave "admin-telas-novas", classe no app/admin/layout.tsx) ────────────────
+   Botões e destaques no azul da loja; o roxo de STATUS (fila, pré-venda, cartão, variação) vira
+   azul-céu — roxo não é cor da loja. */
+.painel-novo {
+  --brand-50: 238 243 253;  --brand-100: 217 227 251; --brand-200: 179 198 246;
+  --brand-300: 127 160 240; --brand-400: 92 135 235;  --brand-500: 30 79 214;
+  --brand-600: 26 67 184;   --brand-700: 22 60 168;   --brand-800: 16 40 107;  --brand-900: 11 30 79;
+  --status-300: 125 211 252; --status-400: 56 189 248; --status-500: 14 165 233;
+  --status-600: 2 132 199;   --status-700: 3 105 161;
+}
+/* Tema claro: os tons claros (usados como TEXTO no tema escuro) escurecem pra ter contraste no branco */
+html.light .painel-novo {
+  --brand-200: 22 60 168; --brand-300: 26 67 184; --brand-400: 30 79 214;
+  --status-300: 3 105 161; --status-400: 2 132 199;
+}
+/* O tema claro força .text-white pra quase preto; em fundo azul forte do painel novo isso some.
+   Botão/selo de fundo sólido da marca ou de status mantém o texto branco. */
+html.light .painel-novo :is(.bg-brand-500, .bg-brand-600, .bg-brand-700, .bg-purple-500, .bg-purple-600, .bg-violet-600).text-white,
+html.light .painel-novo :is(.bg-brand-500, .bg-brand-600, .bg-brand-700, .bg-purple-500, .bg-purple-600, .bg-violet-600) .text-white {
+  color: #FFFFFF !important;
+}
+/* Botão principal do painel (btn-primary): no tema claro o texto saía #111118 — ilegível no azul da loja */
+html.light .painel-novo .btn-primary,
+html.light .painel-novo .btn-primary :is(span, svg) {
+  color: #FFFFFF !important;
+}
+/* Destaque ao passar o mouse: tom da marca do painel (era o azul-claro fixo) */
+.painel-novo .hover\:bg-surface-500:hover,
+.painel-novo .hover\:bg-surface-500\/20:hover,
+.painel-novo .hover\:bg-surface-500\/30:hover,
+.painel-novo .hover\:bg-surface-700:hover,
+.painel-novo .hover\:bg-surface-700\/30:hover,
+.painel-novo .hover\:bg-surface-700\/40:hover,
+.painel-novo .hover\:bg-surface-700\/50:hover {
+  background-color: rgba(30, 79, 214, 0.08) !important;
+}

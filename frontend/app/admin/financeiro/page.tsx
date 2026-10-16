@@ -1158,7 +1158,7 @@ function BarChart({ dias, onDayClick }: {
 const FORMA_CORES: Record<string, string> = {
   Dinheiro:      '#10b981',
   Pix:           '#42B6EE',
-  CartaoCredito: '#a855f7',
+  CartaoCredito: '#0EA5E9',
   CartaoDebito:  '#3b82f6',
   Crediario:     '#f59e0b',
   Pontos:        '#eab308',

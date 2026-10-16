@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.53.0] — 2026-10-16
+
+### Mudado — painel (segunda parte: as telas)
+- **Todas as telas do painel no azul da loja**: botões principais ("Abrir Comanda", "Começar venda", "Novo Produto"...), abas ativas, destaques, ícones e bordas de foco usavam o azul-claro antigo. A troca vale pro painel inteiro de uma vez, sem mexer tela por tela
+- **Sem roxo no painel**: as marcas de status que eram roxas — **fila de espera, pré-venda, cartão de crédito, variações (tamanho/cor)** — agora são **azul-céu**, uma cor de status bem diferente do azul dos botões. "Pontos" na Frente de Caixa ficou no azul da loja
+- **Tema claro com leitura melhor**: os tons claros usados como texto escurecem no fundo branco, e botão de fundo azul forte sempre com texto branco (no tema claro o texto do botão principal saía quase preto)
+- O site dos clientes não muda nada (as cores dele já foram trocadas nas versões anteriores)
+
+### Mudança com volta
+- Chave **"Painel: telas no azul da loja"** em `/admin/funcionalidades`. Desligada, o painel volta ao azul-claro e ao roxo de status de antes
+
 ## [v1.52.0] — 2026-10-15
 
 ### Mudado — conta do cliente padronizada

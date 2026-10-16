@@ -6,6 +6,7 @@ import WhatsAppFloatingPanel from '@/components/admin/whatsapp/WhatsAppFloatingP
 import TimerWidget from '@/components/TimerWidget'
 import { TimerProvider } from '@/contexts/TimerContext'
 import { Toaster } from 'react-hot-toast'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 // A renovação de sessão saiu daqui pro layout raiz (lib/sessionKeepAlive): antes só
 // o painel renovava, então a área do cliente caía sozinha.
@@ -15,9 +16,12 @@ import { Toaster } from 'react-hot-toast'
 // navegador. O provider vem junto de propósito — deixá-lo no raiz mantinha o
 // polling e o alarme rodando fora do painel, mesmo sem o botão à vista.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  // Telas do painel no azul da loja (v1.53.0): a classe troca a paleta brand/roxo por variável CSS
+  // (globals.css → .painel-novo), sem mexer em classe de tela nenhuma. Chave desligada = como antes.
+  const telasNovas = useFuncionalidade('admin-telas-novas') !== false
   return (
     <TimerProvider>
-      <div className="flex min-h-screen bg-surface-900">
+      <div className={`flex min-h-screen bg-surface-900 ${telasNovas ? 'painel-novo' : ''}`}>
         <Sidebar />
         <main className="flex-1 overflow-auto pt-14 md:pt-0 admin-main">
           <Toaster
