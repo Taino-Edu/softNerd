@@ -1,11 +1,11 @@
-FROM node:20-alpine AS deps
+FROM node:25-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 # scripts/ deve ser copiado antes do npm ci pois o postinstall chama scripts/patch-next.js
 COPY scripts/ ./scripts/
 RUN npm ci --legacy-peer-deps
 
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 # CACHEBUST invalida o cache do COPY a cada deploy sem re-baixar npm
@@ -22,7 +22,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:25-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
