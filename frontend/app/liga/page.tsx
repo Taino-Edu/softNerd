@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Press_Start_2P } from 'next/font/google'
+import { pixel } from '@/lib/fontePixel'
 import { ArrowLeft, Trophy, Medal, Award, Loader2, Layers, ChevronDown, Swords, Gift } from 'lucide-react'
 import { ligaMensalApi, siteConfigApi, LigaMensalDto, LigaMensalMesDto } from '@/lib/api'
 import { mixHex } from '@/lib/colors'
@@ -143,8 +143,6 @@ function PaginaAntiga() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Página nova (v1.46.0) — pedido do Maikon: "o tapa no visual" da liga
 // ─────────────────────────────────────────────────────────────────────────────
-
-const pixel = Press_Start_2P({ weight: '400', subsets: ['latin'], display: 'swap' })
 
 /** Ouro, prata, bronze e o 4º (que também ganha brinde). */
 /** "cor" pinta medalha e borda; "texto" é o tom que dá leitura nos dois temas (prata clara some no branco). */

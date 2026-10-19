@@ -51,6 +51,7 @@ public static class Funcionalidades
     public const string ContaClienteNova = "conta-cliente-nova";
     public const string AdminTelasNovas = "admin-telas-novas";
     public const string TelaoNovo = "telao-novo";
+    public const string LigaAnimacaoResultado = "liga-animacao-resultado";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -207,6 +208,16 @@ public static class Funcionalidades
             SeDesligar: "Volta o telão de antes (tema escuro simples, sem deck nem sprite).",
             Padrao:     true,
             Desde:      "v1.54.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(LigaAnimacaoResultado,
+            Nome:       "Liguinha: animação de vitória e derrota",
+            OQueMuda:   "Na tela do jogador (/liga/jogar), quando o resultado da mesa é confirmado aparece uma animação em tela cheia " +
+                        "com o Pokémon do deck: vitória (o seu pula e o do oponente desmaia, confete, +3 pts), derrota (o seu desmaia) " +
+                        "ou empate (os dois balançam). No fim do torneio, a colocação com coroa pro campeão. A mesa mostra você vs oponente com os sprites.",
+            SeDesligar: "A tela do jogador volta a mostrar só o texto do resultado e o nome do oponente, sem animação nem sprite.",
+            Padrao:     true,
+            Desde:      "v1.55.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 
