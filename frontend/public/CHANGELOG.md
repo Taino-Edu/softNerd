@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.53.1] — 2026-10-19
+
+### Ferramenta interna (não muda nada no site)
+- **Ensaio geral do campeonato** (`scripts/ensaio-campeonato.py`): roda no computador de desenvolvimento um dia de liguinha inteiro e confere cada regra — inscrição pelo site, check-in com um toque e pelo código, quem falta, loja com menos mesas que jogadores, pareamentos sem ligar o relógio, bye, sem revanche, resultado divergente resolvido pela loja, desistência, classificação (3/1/0 e OWP), telão e os pontos 10/7/5/3/1 na Liga Mensal. Rodar antes de cada evento: `python scripts/ensaio-campeonato.py --limpar`
+
 ## [v1.53.0] — 2026-10-16
 
 ### Mudado — painel (segunda parte: as telas)
