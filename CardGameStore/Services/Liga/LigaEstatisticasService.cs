@@ -144,8 +144,11 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
             .Where(e => e.Ano == inicio.Year && (p == "ano" || e.Mes == inicio.Month))
             .ToListAsync();
 
-        // Ranking: o mesmo da Liga Mensal (pontos 10/7/5/3/1, mesmo jogador = mesma linha, manual pelo nome)
-        var ranking = LigaMensalService.Ordenar(LigaMensalService.RankingPorJogador(participantes, manuais));
+        // Ranking: o mesmo da Liga Mensal (pontos 10/7/5/3/1, mesmo jogador = mesma linha, manual pelo nome),
+        // inclusive a volta da chave "liga-mensal-por-jogador" pro cálculo antigo por nome
+        var ranking = LigaMensalService.Ordenar(await funcionalidades.LigadaAsync(Funcionalidades.LigaMensalPorJogador)
+            ? LigaMensalService.RankingPorJogador(participantes, manuais)
+            : LigaMensalService.RankingLegadoPorNome(participantes, manuais));
 
         // Partidas do suíço dessas etapas (bye não é partida)
         var etapaIds = participantes.Select(x => x.ChampionshipId).Distinct().ToList();
@@ -154,9 +157,28 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
             .Select(x => new
             {
                 A = x.ParticipanteA.UserId, B = x.ParticipanteB!.UserId,
+                PA = x.ParticipanteAId, PB = x.ParticipanteBId!.Value,
                 x.DeckANome, x.DeckBNome, x.Resultado,
             })
             .ToListAsync();
+
+        // Deck de cada inscrição: o da inscrição + os que ele usou nas partidas (o jogador pode trocar de
+        // deck no meio do torneio; a partida guarda o deck daquela rodada)
+        var decksDaInscricao = participantes.ToDictionary(x => x.Id, x =>
+        {
+            var s = new HashSet<string>();
+            if (ChaveDeck(x.DeckName) is { } k) s.Add(k);
+            return s;
+        });
+        var nomesDoDeck = new Dictionary<string, List<string>>();
+        void Nome(string? deck) { if (ChaveDeck(deck) is { } k) (nomesDoDeck.TryGetValue(k, out var l) ? l : nomesDoDeck[k] = []).Add(deck!.Trim()); }
+        foreach (var x in participantes) Nome(x.DeckName);
+        foreach (var x in partidas)
+        {
+            if (ChaveDeck(x.DeckANome) is { } ka && decksDaInscricao.TryGetValue(x.PA, out var sa)) sa.Add(ka);
+            if (ChaveDeck(x.DeckBNome) is { } kb && decksDaInscricao.TryGetValue(x.PB, out var sb)) sb.Add(kb);
+            Nome(x.DeckANome); Nome(x.DeckBNome);
+        }
 
         var vedJogador = new Dictionary<Guid, (int V, int E, int D)>();
         var vedDeck = new Dictionary<string, (int V, int E, int D)>();
@@ -216,16 +238,18 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
             })
             .OrderBy(e => e.Data).ToList();
 
-        var decks = participantes.Where(x => !string.IsNullOrWhiteSpace(x.DeckName))
-            .GroupBy(x => ChaveDeck(x.DeckName)!)
-            .Select(g =>
+        // Uso = inscrições que jogaram com o deck (na inscrição ou em alguma partida); título e top 4 pela
+        // colocação dessas inscrições; V/E/D pelas partidas jogadas com ele
+        var decks = nomesDoDeck.Keys
+            .Select(chave =>
             {
-                var ved = vedDeck.GetValueOrDefault(g.Key);
+                var g = participantes.Where(x => decksDaInscricao[x.Id].Contains(chave)).ToList();
+                var ved = vedDeck.GetValueOrDefault(chave);
                 // Nome como mais gente escreveu
-                var nome = g.GroupBy(x => x.DeckName!.Trim()).OrderByDescending(n => n.Count()).First().Key;
+                var nome = nomesDoDeck[chave].GroupBy(n => n).OrderByDescending(n => n.Count()).First().Key;
                 return new LigaDeckStatsDto
                 {
-                    Deck = nome, Usos = g.Count(), Jogadores = g.Select(x => x.UserId).Distinct().Count(),
+                    Deck = nome, Usos = g.Count, Jogadores = g.Select(x => x.UserId).Distinct().Count(),
                     Titulos = g.Count(x => x.Placement == 1), Top4 = g.Count(x => x.Placement <= 4),
                     Partidas = ved.V + ved.E + ved.D, Vitorias = ved.V, Empates = ved.E, Derrotas = ved.D,
                     PctVitoria = Pct(ved.V, ved.E, ved.D),

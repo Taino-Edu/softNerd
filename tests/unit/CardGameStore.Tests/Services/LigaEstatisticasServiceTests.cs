@@ -113,6 +113,42 @@ public class LigaEstatisticasServiceTests
     }
 
     [Fact]
+    public async Task Deck_TrocadoNoMeioDoTorneio_ContaOsDoisComOVEDDeCada()
+    {
+        var a = Criar();
+        var ana = a.Jogador("Ana"); var beto = a.Jogador("Beto");
+        var (ch, p) = a.Etapa(Br(2026, 10, 3), (ana, "Gardevoir ex"), (beto, "Lugia"));
+        // rodada 1 a Ana jogou de Dragapult; depois trocou pra Gardevoir (a inscrição ficou com o último)
+        p[0].DeckName = "Dragapult ex";
+        a.Rodada(ch, (p[0], p[1], ResultadoPartida.VitoriaA));
+        p[0].DeckName = "Gardevoir ex";
+        a.Db.SaveChanges();
+
+        var r = await a.Stats.EstatisticasAsync("mes", 2026, 10, null);
+
+        var dragapult = r.Decks.Single(d => d.Deck == "Dragapult ex");
+        (dragapult.Usos, dragapult.Vitorias, dragapult.PctVitoria).Should().Be((1, 1, 100.0));
+        r.Decks.Single(d => d.Deck == "Gardevoir ex").Partidas.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ChaveDoRankingPorJogadorDesligada_UsaOCalculoAntigo_IgualALigaMensal()
+    {
+        var a = Criar();
+        var funcionalidades = new FuncionalidadesService(a.Db, new MemoryCache(new MemoryCacheOptions()));
+        await funcionalidades.DefinirAsync(CardGameStore.Configuration.Funcionalidades.LigaMensalPorJogador, false, AdminId);
+        var stats = new LigaEstatisticasService(a.Db, funcionalidades);
+        var liga = new LigaMensalService(a.Db, funcionalidades);
+        var ana = a.Jogador("Ana"); var outraAna = a.Jogador("ana");
+        a.Etapa(Br(2026, 10, 3), (ana, null), (outraAna, null));
+
+        var r = await stats.EstatisticasAsync("mes", 2026, 10, null);
+        var mensal = await liga.RankingAsync(2026, 10);
+
+        r.Ranking.Select(l => (l.Nome, l.Pontos)).Should().Equal(mensal.Ranking.Select(l => (l.PlayerName, l.TotalPoints)));
+    }
+
+    [Fact]
     public async Task Semana_SoSegundaADomingo_SemLancamentoManual()
     {
         var a = Criar();
