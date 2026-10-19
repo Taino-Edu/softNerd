@@ -51,6 +51,10 @@ export interface ChampionshipParticipant {
   entryFeePaidAt?: string | null; entryFeePaymentMethod?: string | null
   /** Até quando a vaga fica segurada esperando pagamento. Null = vaga firme. */
   inscricaoExpiraEm?: string | null
+  /** Valor da cobrança Pix da inscrição (null = sem cobrança: grátis ou pago no balcão). */
+  valorInscricaoEmCentavos?: number | null
+  /** Tem cobrança Pix ativa e ainda não pagou. */
+  cobrancaEmAberto?: boolean
 }
 
 export interface MyParticipation {

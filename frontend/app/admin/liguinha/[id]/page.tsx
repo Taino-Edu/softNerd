@@ -184,20 +184,27 @@ function Colocacao({ colocados, somaNaLiga }: { colocados: ChampionshipParticipa
   )
 }
 
-/** Campeonato avulso: quantos se inscreveram, quantos pagaram e quanto entrou (a taxa × pagos). */
+/** Campeonato avulso: quantos se inscreveram, quantos pagaram e quanto entrou / falta entrar.
+ *  Soma o valor da cobrança de cada um — o preço da entrada pode ter mudado depois das primeiras inscrições. */
 function ResumoVendas({ id, taxaEmCentavos, vagas, versao }: { id: string; taxaEmCentavos: number; vagas: number | null; versao: number }) {
   const [inscritos, setInscritos] = useState<ChampionshipParticipant[] | null>(null)
   useEffect(() => {
     championshipApi.participants(id).then(r => setInscritos(r.data)).catch(() => setInscritos([]))
   }, [id, versao])
   if (!inscritos) return null
-  const pagos = taxaEmCentavos > 0 ? inscritos.filter(x => x.entryFeePaidAt).length : inscritos.length
-  const pendentes = inscritos.length - pagos
+  // Sem cobrança: pago no balcão (vale o preço atual) ou inscrição grátis / vaga firme (zero)
+  const valor = (x: ChampionshipParticipant) => x.valorInscricaoEmCentavos ?? (x.entryFeePaidAt ? taxaEmCentavos : 0)
+  const pagos = inscritos.filter(x => x.entryFeePaidAt)
+  // Devendo: vaga segurada esperando o Pix, ou cobrança em aberto (inclusive de quem tinha vaga firme e foi cobrado depois)
+  const devendo = inscritos.filter(x => !x.entryFeePaidAt && (x.inscricaoExpiraEm || x.cobrancaEmAberto))
+  const arrecadado = pagos.reduce((t, x) => t + valor(x), 0)
+  const aReceber = devendo.reduce((t, x) => t + valor(x), 0)
+  const pendentes = devendo.length
   const tiles = [
     { icone: <Users className="w-3.5 h-3.5" />, rotulo: 'Inscritos', valor: `${inscritos.length}${vagas ? ` / ${vagas}` : ''}`, detalhe: vagas ? `${Math.max(0, vagas - inscritos.length)} vagas sobrando` : 'sem limite de vagas' },
-    { icone: <CheckCircle2 className="w-3.5 h-3.5" />, rotulo: 'Pagos', valor: String(pagos), detalhe: taxaEmCentavos > 0 ? `${pendentes} a pagar` : 'inscrição grátis' },
-    { icone: <CircleDollarSign className="w-3.5 h-3.5" />, rotulo: 'Arrecadado', valor: brlDeCentavos(pagos * taxaEmCentavos), detalhe: taxaEmCentavos > 0 ? `${brlDeCentavos(taxaEmCentavos)} por inscrição` : '—' },
-    { icone: <Wallet className="w-3.5 h-3.5" />, rotulo: 'A receber', valor: brlDeCentavos(pendentes * taxaEmCentavos), detalhe: pendentes > 0 && taxaEmCentavos > 0 ? 'inscrições não pagas' : 'nada pendente' },
+    { icone: <CheckCircle2 className="w-3.5 h-3.5" />, rotulo: 'Pagos', valor: String(pagos.length), detalhe: pendentes > 0 ? `${pendentes} a pagar` : taxaEmCentavos > 0 ? 'ninguém devendo' : 'inscrição grátis' },
+    { icone: <CircleDollarSign className="w-3.5 h-3.5" />, rotulo: 'Arrecadado', valor: brlDeCentavos(arrecadado), detalhe: taxaEmCentavos > 0 ? `entrada atual ${brlDeCentavos(taxaEmCentavos)}` : '—' },
+    { icone: <Wallet className="w-3.5 h-3.5" />, rotulo: 'A receber', valor: brlDeCentavos(aReceber), detalhe: pendentes > 0 ? 'inscrições não pagas' : 'nada pendente' },
   ]
   return (
     <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">

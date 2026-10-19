@@ -73,7 +73,7 @@ public class EtapaExternaService(AppDbContext db)
         if (jogadores.Any(j => j.Deck?.Length > 200)) throw new TorneioException("Nome de deck muito longo (máx. 200).");
 
         var dataBrasilia = req.Data.Date;
-        if (dataBrasilia > Brasilia.Hoje().AddDays(1)) throw new TorneioException("A etapa não pode ser no futuro.");
+        if (dataBrasilia > Brasilia.Hoje()) throw new TorneioException("A etapa não pode ser no futuro.");
 
         // Lançar duas vezes somaria os pontos em dobro na Liga: mesmo nome no mesmo dia = já lançada
         var (diaInicio, diaFim) = Brasilia.DiaUtc(dataBrasilia);
