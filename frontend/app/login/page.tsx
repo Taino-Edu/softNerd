@@ -1,4 +1,6 @@
 'use client'
+// Login do painel (Maikon e operadores). Com a chave "login-telas-unificadas" (v1.57.0) usa a
+// moldura do /entrar com o selo "Painel da loja"; desligada, o cartão de antes.
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { authApi } from '@/lib/api'
@@ -6,6 +8,8 @@ import { saveAuth } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
 import { KeyRound, Mail, Loader2, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { MolduraEntrada, TituloEntrada, CampoEntrada, BotaoEntrada, LinhaEntrada, LinkEntrada, useMarca } from '@/components/auth/Moldura'
 
 export default function LoginPage() {
   const router  = useRouter()
@@ -13,6 +17,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [showPass, setShowPass] = useState(false)
+  const unificadas = useFuncionalidade('login-telas-unificadas') !== false
+  const { cor } = useMarca()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -33,6 +39,22 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (unificadas) {
+    return (
+      <MolduraEntrada selo="Painel da loja">
+        <TituloEntrada titulo="Painel de gestão" sub="Entre com a conta da equipe." />
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <CampoEntrada rotulo="E-mail" icone={Mail} type="email" required autoComplete="username"
+            value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com.br" />
+          <CampoEntrada rotulo="Senha" icone={KeyRound} senha cor={cor} required autoComplete="current-password"
+            value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha" />
+          <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Entrando...' : 'Entrar no painel →'}</BotaoEntrada>
+        </form>
+        <LinhaEntrada>É cliente? <LinkEntrada href="/entrar" cor={cor}>Acesse a sua conta</LinkEntrada></LinhaEntrada>
+      </MolduraEntrada>
+    )
   }
 
   return (

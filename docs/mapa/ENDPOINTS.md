@@ -450,7 +450,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/site-config` | público | `Get` (27) | `siteConfigApi.get` | `app/admin/estoque/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/entrar/page.tsx`<br>`app/liga/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`lib/useSiteConfig.ts` |
+| GET | `/api/site-config` | público | `Get` (27) | `siteConfigApi.get` | `app/admin/estoque/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/liga/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`components/auth/Moldura.tsx`<br>`lib/useSiteConfig.ts` |
 | PUT | `/api/site-config` | AdminOnly | `Save` (35) | `siteConfigApi.save` | `app/admin/site/page.tsx` |
 
 ## Tcg

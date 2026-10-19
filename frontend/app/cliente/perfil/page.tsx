@@ -459,7 +459,7 @@ export default function PerfilPage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h1 className="text-sm font-black text-white uppercase tracking-[0.2em]">Minha Conta</h1>
+          <h1 className="text-sm font-black uppercase tracking-[0.2em]" style={{ color: '#FFFFFF' }}>Minha Conta</h1>
           <button
             onClick={handleLogout}
             className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-red-400/60 transition-colors"
@@ -510,7 +510,8 @@ export default function PerfilPage() {
 
           {!loading && (
             <div className="mt-3 text-center">
-              <h2 className="text-lg font-black text-white leading-tight">
+              {/* Cor no style: o tema claro troca .text-white por escuro e o nome sumia no azul */}
+              <h2 className="text-lg font-black leading-tight" style={{ color: '#FFFFFF' }}>
                 {profile?.name ?? getUserName() ?? 'Visitante'}
               </h2>
               <div className="flex flex-col items-center gap-1 mt-1">
@@ -527,7 +528,8 @@ export default function PerfilPage() {
               </div>
               <button
                 onClick={() => setEditingProfile(true)}
-                className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-white/15 hover:bg-white/25 transition-colors px-3 py-1.5 rounded-full"
+                className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 hover:bg-white/25 transition-colors px-3 py-1.5 rounded-full"
+                style={{ color: '#FFFFFF' }}
               >
                 <Pencil className="w-3 h-3" /> Editar dados
               </button>
@@ -552,8 +554,11 @@ export default function PerfilPage() {
         />
       )}
 
-      {/* ── CARD PRINCIPAL (sobrepõe o header) ── */}
-      <div className="flex-1 -mt-12 bg-gray-50 rounded-t-[2rem] relative z-10 px-4 pt-6 pb-20 max-w-lg mx-auto w-full">
+      {/* ── CARD PRINCIPAL (sobrepõe o header) ──
+          O fundo cinza ocupa a largura toda (antes ficava com max-w-lg e sobravam duas faixas
+          azuis nas laterais, com um "degrau" à direita); só o conteúdo fica centralizado. */}
+      <div className="flex-1 -mt-12 bg-gray-50 rounded-t-[2rem] relative z-10 w-full">
+      <div className="px-4 pt-6 pb-20 max-w-lg mx-auto w-full">
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -615,10 +620,11 @@ export default function PerfilPage() {
 
             {/* ── TABS ── */}
             {contaNova ? (
-            <nav className="flex gap-2 mb-5 sticky top-4 z-20 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }} aria-label="Seções da conta">
+            // Celular: grade de 3 colunas (todas as abas à vista, nenhuma cortada na direita); maior: uma linha
+            <nav className="grid grid-cols-3 gap-2 mb-5 sm:flex sm:flex-wrap" aria-label="Seções da conta">
               {tabs.map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={clsx('relative shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-black border transition-all',
+                  className={clsx('relative inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 rounded-full text-xs font-black border transition-all whitespace-nowrap',
                     tab === t.id ? 'shadow-md' : 'hover:bg-gray-50')}
                   style={tab === t.id
                     ? { backgroundColor: '#1E4FD6', borderColor: '#1E4FD6', color: '#FFFFFF' }
@@ -1169,6 +1175,7 @@ export default function PerfilPage() {
             )}
           </>
         )}
+      </div>
       </div>
     </div>
   )
