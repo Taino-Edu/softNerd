@@ -41,7 +41,7 @@
 | `/admin/usuarios` | `app/admin/usuarios/page.tsx` | `admin/DeckViewerModal`, `ui/Badge` |
 | `/admin/venda-avulsa` | `app/admin/venda-avulsa/page.tsx` | `admin/ConferenciaButton`, `admin/EscolherContaCrediarioModal`, `admin/PercentPicker`, `admin/VariantPicker`, `ui/PageHeader` |
 | `/admin/whatsapp` | `app/admin/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox`, `ui/PageHeader` |
-| `/cadastro` | `app/cadastro/page.tsx` | — |
+| `/cadastro` | `app/cadastro/page.tsx` | `auth/Moldura` |
 | `/campeonato/[id]` | `app/campeonato/[id]/page.tsx` | — |
 | `/cliente/configuracoes` | `app/cliente/configuracoes/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/decks/[id]` | `app/cliente/decks/[id]/page.tsx` | — |
@@ -51,22 +51,22 @@
 | `/cliente` | `app/cliente/page.tsx` | `cliente/NotificationBell` |
 | `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | — |
-| `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton` |
+| `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
 | `/janela/whatsapp` | `app/janela/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox` |
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
 | `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/AnimacaoResultado`, `liga/Relogio`, `liga/SpriteDeck`, `liga/TabelaTorneio` |
 | `/liga` | `app/liga/page.tsx` | `liga/SpriteDeck` |
 | `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio`, `liga/TelaoNovo` |
-| `/login` | `app/login/page.tsx` | — |
+| `/login` | `app/login/page.tsx` | `auth/Moldura` |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
 | `/` | `app/page.tsx` | `loja/CartaoProduto` |
 | `/perfil/[id]` | `app/perfil/[id]/page.tsx` | — |
-| `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | — |
+| `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | `auth/Moldura` |
 | `/privacidade` | `app/privacidade/page.tsx` | `LegalActions`, `ThemeToggle` |
 | `/produtos/[id]` | `app/produtos/[id]/page.tsx` | `loja/CartaoProduto` |
 | `/produtos` | `app/produtos/page.tsx` | `loja/CartaoProduto` |
-| `/reset-password` | `app/reset-password/page.tsx` | — |
+| `/reset-password` | `app/reset-password/page.tsx` | `auth/Moldura` |
 | `/termos` | `app/termos/page.tsx` | `LegalActions`, `ThemeToggle` |
 
 ## Componentes (onde cada um é usado)
@@ -103,6 +103,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/VariantPicker` | `VariantPicker` | `app/admin/venda-avulsa/page.tsx` |
 | `admin/whatsapp/WhatsAppFloatingPanel` | `WhatsAppFloatingPanel` | `app/admin/layout.tsx` |
 | `admin/whatsapp/WhatsAppInbox` | `WhatsAppInbox` | `app/admin/whatsapp/page.tsx`<br>`app/janela/whatsapp/page.tsx` |
+| `auth/Moldura` | `useMarca`, `MolduraEntrada`, `TituloEntrada`, `AbasEntrada`, `CampoEntrada`, `BotaoEntrada`, `LinhaEntrada`, `LinkEntrada` | `app/cadastro/page.tsx`<br>`app/entrar/page.tsx`<br>`app/login/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/reset-password/page.tsx` |
 | `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |

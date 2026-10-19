@@ -332,7 +332,8 @@ export default function LandingPage() {
           </div>
         )}
 
-        <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between gap-6">
+        {/* Menu numa linha só: nada quebra em duas (era "Mercado de / Cartas" entre 1280 e 1440px) */}
+        <div className="w-full max-w-7xl mx-auto px-5 flex items-center justify-between gap-4 2xl:gap-6">
 
           {/* Marca no começo, como nas lojas grandes — pedido do Maikon (cabeça do mascote + nome) */}
           {visualNovo && (
@@ -346,7 +347,7 @@ export default function LandingPage() {
           )}
 
           {/* Links desktop — esquerda */}
-          <div className={`hidden xl:flex items-center gap-4 text-sm font-medium ${visualNovo ? 'flex-1 justify-center' : ''}`}>
+          <div className={`hidden xl:flex items-center gap-3 2xl:gap-5 text-sm font-medium whitespace-nowrap ${visualNovo ? 'flex-1 justify-center' : ''}`}>
             <a href="#eventos"  style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navTorneiosLabel}</a>
             <Link href="/produtos" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navProdutosLabel}</Link>
             <Link href="/cliente/mercado" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navMercadoLabel}</Link>
@@ -372,14 +373,14 @@ export default function LandingPage() {
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <Link href="/entrar"
-              className="hidden xl:block text-sm px-4 py-2 rounded-xl border transition-colors hover:bg-white/10"
+              className="hidden xl:block text-sm px-4 py-2 rounded-xl border transition-colors hover:bg-white/10 whitespace-nowrap"
               style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
               Minha Conta
             </Link>
             {vitrineNova && (
               // Sacola = carrinho de reserva (/cliente/reserva/carrinho); no celular vira só o ícone
               <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
-                className="flex items-center gap-2 text-sm px-2.5 xl:px-4 py-2 rounded-xl xl:border transition-colors hover:bg-white/10"
+                className="flex items-center gap-2 text-sm px-2.5 xl:px-4 py-2 rounded-xl xl:border transition-colors hover:bg-white/10 whitespace-nowrap"
                 style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
                 <ShoppingBag className="w-4 h-4" />
                 <span className="hidden xl:inline">Sacola</span>
@@ -387,8 +388,9 @@ export default function LandingPage() {
                   style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{itensSacola}</span>
               </Link>
             )}
+            {/* "Ver Eventos" repete o link Torneios: só aparece quando sobra espaço (2xl) */}
             <a href="#eventos"
-              className="hidden xl:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95"
+              className="hidden 2xl:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95 whitespace-nowrap"
               style={{ backgroundColor: C.yellow, color: site.colorNavy }}>
               {site.ctaVerEventosLabel}
             </a>

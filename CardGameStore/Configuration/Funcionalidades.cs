@@ -54,6 +54,7 @@ public static class Funcionalidades
     public const string LigaAnimacaoResultado = "liga-animacao-resultado";
     public const string AdminLiguinhaCentral = "admin-liguinha-central";
     public const string LigaModalidades = "liga-modalidades";
+    public const string LoginTelasUnificadas = "login-telas-unificadas";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -239,6 +240,15 @@ public static class Funcionalidades
             SeDesligar: "A Liga Mensal volta a somar todo evento com colocação, seja Liga ou Campeonato (como antes).",
             Padrao:     true,
             Desde:      "v1.56.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(LoginTelasUnificadas,
+            Nome:       "Entrada: todas as telas no mesmo visual",
+            OQueMuda:   "Cadastro, primeiro acesso pelo CPF, recuperar senha e o login do painel passam a usar a mesma moldura do " +
+                        "/entrar (painel da marca + formulário), com o seletor Entrar | Criar conta e passos no primeiro acesso.",
+            SeDesligar: "Essas telas voltam ao cartão escuro de antes (o /entrar segue a chave \"visual-topo-e-login\").",
+            Padrao:     true,
+            Desde:      "v1.57.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

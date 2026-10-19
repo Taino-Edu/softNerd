@@ -1,5 +1,21 @@
 # Changelog — Santuário Nerd
 
+## [v1.57.0] — 2026-10-19
+
+### Corrigido — telas quebradas
+- **Menu do topo da loja numa linha só**: entre 1280 e 1440px "Mercado de Cartas", "Liga Mensal", "Minha Conta" e "Ver Eventos" quebravam em duas linhas e o menu ficava desproporcional. Agora nada quebra; o "Ver Eventos" (que repetia o link Torneios) só aparece em tela bem larga
+- **Minha conta sem o "corte" do lado**: o cartão branco ficava mais estreito que a tela e sobrava uma faixa azul com um degrau na direita. Agora ocupa a largura toda
+- **Abas da Minha conta todas à vista no celular**: em duas linhas de três (antes a última sumia pra direita)
+- **Nome e título no topo da Minha conta** voltaram a ser brancos no tema claro (saíam escuros em cima do azul)
+
+### Mudado — entrada com um fluxo só
+- **Cadastro, primeiro acesso pelo CPF, recuperar senha e o login do painel** agora usam a mesma tela do "Entrar" (painel da marca + formulário). Antes cada uma tinha um visual e parecia que o site mudava no meio do caminho
+- **Entrar | Criar conta** no topo das duas telas; o primeiro acesso mostra os passos (1 CPF → 2 Senha); "Mostrar senha" em todos os campos de senha; aviso na hora quando a confirmação não bate
+- Os links entre elas ficaram coerentes (entrar ↔ criar conta ↔ ativar pelo CPF ↔ esqueci a senha), mantendo pra onde a pessoa ia depois
+
+### Mudança com volta
+- Chave **"Entrada: todas as telas no mesmo visual"** em `/admin/funcionalidades`. Desligada, cadastro, primeiro acesso, recuperar senha e login do painel voltam ao cartão de antes
+
 ## [v1.56.1] — 2026-10-19
 
 ### Corrigido — Central da Liguinha

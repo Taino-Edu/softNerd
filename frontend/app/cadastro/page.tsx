@@ -1,4 +1,6 @@
 'use client'
+// Cadastro do cliente. Com a chave "login-telas-unificadas" (v1.57.0) usa a mesma moldura do /entrar
+// (components/auth/Moldura.tsx) com o seletor Entrar | Criar conta; desligada, o cartão de antes.
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { authApi } from '@/lib/api'
@@ -6,6 +8,8 @@ import { saveAuth } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
 import { Mail, KeyRound, Loader2, Gamepad2, ArrowLeft, User, Phone } from 'lucide-react'
 import Link from 'next/link'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { MolduraEntrada, TituloEntrada, AbasEntrada, CampoEntrada, BotaoEntrada, LinhaEntrada, LinkEntrada, useMarca } from '@/components/auth/Moldura'
 
 export default function CadastroPage() {
   return (
@@ -32,6 +36,9 @@ function CadastroForm() {
   // embaixo do campo certo em vez de um toast solto dizendo "erro ao criar conta".
   const [erroCampo,    setErroCampo]    = useState<string | null>(null)
   const [erroMensagem, setErroMensagem] = useState<string | null>(null)
+  const unificadas = useFuncionalidade('login-telas-unificadas') !== false
+  const { cor } = useMarca()
+  const entrarHref = pedido && returnTo !== '/cliente/perfil' ? `/entrar?returnTo=${encodeURIComponent(returnTo)}` : '/entrar'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,6 +60,35 @@ function CadastroForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (unificadas) {
+    const limpaErro = (campo: string) => { if (erroCampo === campo) { setErroCampo(null); setErroMensagem(null) } }
+    const irProLogin = <> <Link href={entrarHref} className="underline">Ir para o login</Link></>
+    return (
+      <MolduraEntrada>
+        <TituloEntrada titulo="Crie sua conta" sub="Acompanhe campeonatos, reservas e seus pontos." />
+        <AbasEntrada ativa="criar" entrarHref={entrarHref} criarHref="#" />
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <CampoEntrada rotulo="Nome" icone={User} required autoComplete="name" value={name}
+            onChange={e => setName(e.target.value)} placeholder="Seu nome completo" />
+          <CampoEntrada rotulo="E-mail" icone={Mail} type="email" required autoComplete="email" value={email}
+            onChange={e => { setEmail(e.target.value); limpaErro('email') }} placeholder="voce@email.com"
+            erro={erroCampo === 'email' ? <>{erroMensagem}{irProLogin}</> : undefined} />
+          <CampoEntrada rotulo="WhatsApp" opcional icone={Phone} type="tel" autoComplete="tel" value={whatsApp}
+            onChange={e => { setWhatsApp(e.target.value); limpaErro('whatsapp') }} placeholder="(17) 99999-9999"
+            erro={erroCampo === 'whatsapp' ? <>{erroMensagem}{irProLogin}</> : undefined} />
+          <CampoEntrada rotulo="Senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
+            value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
+          <CampoEntrada rotulo="Confirmar senha" icone={KeyRound} senha cor={cor} required autoComplete="new-password"
+            value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha"
+            erro={confirm && password !== confirm ? 'As senhas não coincidem.' : undefined} />
+          <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Criando...' : 'Criar minha conta →'}</BotaoEntrada>
+        </form>
+        <LinhaEntrada>Já tem conta? <LinkEntrada href={entrarHref} cor={cor}>Entrar</LinkEntrada></LinhaEntrada>
+        <LinhaEntrada pequena>Já comprou na loja física? <LinkEntrada href="/primeiro-acesso" cor={cor}>Ative sua conta pelo CPF</LinkEntrada></LinhaEntrada>
+      </MolduraEntrada>
+    )
   }
 
   return (
