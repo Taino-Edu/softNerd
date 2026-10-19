@@ -139,8 +139,11 @@ public class LigaEstatisticasServiceTests
         await funcionalidades.DefinirAsync(CardGameStore.Configuration.Funcionalidades.LigaMensalPorJogador, false, AdminId);
         var stats = new LigaEstatisticasService(a.Db, funcionalidades);
         var liga = new LigaMensalService(a.Db, funcionalidades);
-        var ana = a.Jogador("Ana"); var outraAna = a.Jogador("ana");
+        var ana = a.Jogador("Ana"); var outraAna = a.Jogador("ana"); var beto = a.Jogador("Beto");
         a.Etapa(Br(2026, 10, 3), (ana, null), (outraAna, null));
+        var (cancelado, _) = a.Etapa(Br(2026, 10, 10), (beto, null), (ana, null));   // o cálculo antigo soma cancelado
+        cancelado.Status = ChampionshipStatus.Cancelado;
+        a.Db.SaveChanges();
 
         var r = await stats.EstatisticasAsync("mes", 2026, 10, null);
         var mensal = await liga.RankingAsync(2026, 10);

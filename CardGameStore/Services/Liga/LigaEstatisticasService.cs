@@ -131,10 +131,13 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
         var fimUtc = Brasilia.DiaUtc(fim).InicioUtc;
 
         var soLiga = await funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
+        // Chave "liga-mensal-por-jogador" desligada = cálculo antigo da Liga Mensal, que também somava
+        // campeonato cancelado; as métricas seguem o mesmo pra mostrar os mesmos pontos
+        var porJogador = await funcionalidades.LigadaAsync(Funcionalidades.LigaMensalPorJogador);
         var participantes = await db.ChampionshipParticipants.AsNoTracking()
             .Include(x => x.User).Include(x => x.Championship)
             .Where(x => x.Placement != null
-                        && x.Championship.Status != ChampionshipStatus.Cancelado
+                        && (!porJogador || x.Championship.Status != ChampionshipStatus.Cancelado)
                         && x.Championship.StartDate >= inicioUtc && x.Championship.StartDate < fimUtc
                         && (!soLiga || x.Championship.Modalidade == ModalidadeTorneio.Liga))
             .ToListAsync();
@@ -146,7 +149,7 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
 
         // Ranking: o mesmo da Liga Mensal (pontos 10/7/5/3/1, mesmo jogador = mesma linha, manual pelo nome),
         // inclusive a volta da chave "liga-mensal-por-jogador" pro cálculo antigo por nome
-        var ranking = LigaMensalService.Ordenar(await funcionalidades.LigadaAsync(Funcionalidades.LigaMensalPorJogador)
+        var ranking = LigaMensalService.Ordenar(porJogador
             ? LigaMensalService.RankingPorJogador(participantes, manuais)
             : LigaMensalService.RankingLegadoPorNome(participantes, manuais));
 
