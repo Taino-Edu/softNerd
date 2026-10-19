@@ -1,5 +1,21 @@
 # Changelog — Santuário Nerd
 
+## [v1.54.0] — 2026-10-19
+
+### Novo — telão da liguinha com os sprites
+- **Telão no estilo da Liga Mensal, feito pra TV**: topo no azul da loja com o nome do torneio e a situação (check-in aberto / rodada X de Y / encerrado) em letra de videogame
+- **Relógio gigante** com barra de tempo: fica amarelo nos últimos 5 minutos e pisca "TEMPO!" quando acaba
+- **Mesas com o Pokémon do deck de cada jogador**, quem já venceu marcado, empate, bye ("vitória automática") e "aguarda mesa" quando a loja tem menos mesas que jogadores
+- **Classificação com sprite e deck**, V-E-D, aproveitamento dos adversários (desempate) e pontos; os 3 primeiros com ouro, prata e bronze
+- **Pódio com sprites grandes** quando o torneio encerra, com coroa no campeão
+- Numa TV 1920×1080 a rodada inteira cabe sem rolar, mesmo com 16 jogadores (relógio e mesas à esquerda, classificação à direita; com muita gente as mesas vão pra 3 colunas e a classificação pra 2); no celular fica tudo empilhado
+
+### Mudança com volta
+- Chave **"Liguinha: telão novo com os sprites"** em `/admin/funcionalidades`. Desligada, volta o telão de antes
+
+### Corrigido
+- **Rodapé (Política de Privacidade, Termos de Uso, Seus Direitos, cookies, contato) quase invisível**: o texto era cinza-claro fraco no azul-marinho e, no tema claro, virava cinza-escuro — sumia. Agora é branco bem legível nos dois temas e, no celular, os links ficam em duas colunas fáceis de tocar em vez de uma linha quebrada com "|" soltos
+
 ## [v1.53.1] — 2026-10-19
 
 ### Ferramenta interna (não muda nada no site)

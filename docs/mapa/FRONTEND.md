@@ -54,7 +54,7 @@
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
 | `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio` |
 | `/liga` | `app/liga/page.tsx` | `liga/SpriteDeck` |
-| `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio` |
+| `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio`, `liga/TelaoNovo` |
 | `/login` | `app/login/page.tsx` | — |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
@@ -105,8 +105,9 @@ Mudou um componente? Confira as telas da última coluna.
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
 | `liga/Relogio` | `Relogio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
-| `liga/SpriteDeck` | `SpriteDeck` | `app/liga/page.tsx` |
+| `liga/SpriteDeck` | `SpriteDeck` | `app/liga/page.tsx`<br>`components/liga/TelaoNovo.tsx` |
 | `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
+| `liga/TelaoNovo` | `TelaoNovo` | `app/liga/torneio/[id]/page.tsx` |
 | `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |

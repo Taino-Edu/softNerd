@@ -3,6 +3,8 @@
 // =============================================================================
 // /liga/torneio/[id] — Telão do torneio (público, sem login)
 // Timer da rodada, mesas e classificação ao vivo (/hubs/torneio). docs/liguinha.md
+// Chave "telao-novo" (v1.54.0): telão no estilo da Liga Mensal com os sprites dos decks
+// (components/liga/TelaoNovo.tsx). Desligada, volta o telão de antes (abaixo).
 // =============================================================================
 
 import { useCallback, useEffect, useState } from 'react'
@@ -13,11 +15,14 @@ import { torneioApi, TorneioPublicoDto, rodadaComecou } from '@/lib/api'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
 import Relogio from '@/components/liga/Relogio'
 import TabelaTorneio from '@/components/liga/TabelaTorneio'
+import TelaoNovo from '@/components/liga/TelaoNovo'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 export default function TelaoTorneioPage() {
   const { id } = useParams<{ id: string }>()
   const [t, setT] = useState<TorneioPublicoDto | null>(null)
   const [erro, setErro] = useState(false)
+  const telaoNovo = useFuncionalidade('telao-novo') !== false
 
   const recarregar = useCallback(() => {
     torneioApi.publico(id).then(r => { setT(r.data); setErro(false) }).catch(() => setErro(true))
@@ -33,6 +38,8 @@ export default function TelaoTorneioPage() {
       </div>
     )
   }
+
+  if (telaoNovo) return <TelaoNovo t={t} />
 
   const encerrado = t.status === 'Finalizado'
 
