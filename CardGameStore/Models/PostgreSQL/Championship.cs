@@ -81,6 +81,10 @@ public class Championship
     [Column("formato")]
     public FormatoTorneio Formato { get; set; } = FormatoTorneio.Livre;
 
+    /// <summary>Liga (soma na Liga Mensal) ou Campeonato (avulso, não soma). Independe do formato.</summary>
+    [Column("modalidade")]
+    public ModalidadeTorneio Modalidade { get; set; } = ModalidadeTorneio.Liga;
+
     /// <summary>Código que o jogador digita no celular pra entrar (ex.: KX7P2).</summary>
     [MaxLength(8)]
     [Column("codigo_entrada")]

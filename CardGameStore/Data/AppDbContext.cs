@@ -289,6 +289,7 @@ public class AppDbContext : DbContext
                   .HasDatabaseName("ix_championships_start_date");
 
             entity.Property(c => c.Formato).HasConversion<string>();
+            entity.Property(c => c.Modalidade).HasConversion<string>().HasMaxLength(20);
         });
 
         // =====================================================================

@@ -113,6 +113,48 @@ public class LigaMensalServiceTests
     }
 
     [Fact]
+    public async Task Ranking_CampeonatoAvulso_NaoSomaNaLiga()
+    {
+        var amb = Criar();
+        var ana = amb.Jogador("Ana");
+        var beto = amb.Jogador("Beto");
+        amb.Campeonato(Br(2026, 10, 3), resultado: [(ana, 1, null), (beto, 2, null)]);
+        var avulso = amb.Campeonato(Br(2026, 10, 10), resultado: [(beto, 1, null), (ana, 2, null)]);
+        avulso.Modalidade = ModalidadeTorneio.Campeonato;
+        amb.Db.SaveChanges();
+
+        var r = await amb.Liga.RankingAsync(2026, 10);
+
+        r.Ranking.Select(l => (l.PlayerName, l.TotalPoints, l.EventsPlayed)).Should().Equal(("Ana", 10, 1), ("Beto", 7, 1));
+    }
+
+    [Fact]
+    public async Task Ranking_ChaveDeModalidadesDesligada_SomaOCampeonatoComoAntes()
+    {
+        var amb = Criar();
+        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LigaModalidades, false, AdminId);
+        var ana = amb.Jogador("Ana");
+        var avulso = amb.Campeonato(Br(2026, 10, 10), resultado: [(ana, 1, null)]);
+        avulso.Modalidade = ModalidadeTorneio.Campeonato;
+        amb.Db.SaveChanges();
+
+        (await amb.Liga.RankingAsync(2026, 10)).Ranking.Single().TotalPoints.Should().Be(10);
+        (await amb.Liga.MesesComDadosAsync()).Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Meses_SoCampeonatoAvulso_NaoViraMesDaLiga()
+    {
+        var amb = Criar();
+        var ana = amb.Jogador("Ana");
+        var avulso = amb.Campeonato(Br(2026, 9, 10), resultado: [(ana, 1, null)]);
+        avulso.Modalidade = ModalidadeTorneio.Campeonato;
+        amb.Db.SaveChanges();
+
+        (await amb.Liga.MesesComDadosAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Ranking_UsaOMesDeBrasilia_NaoODoServidor()
     {
         var amb = Criar();

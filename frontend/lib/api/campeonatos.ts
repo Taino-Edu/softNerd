@@ -3,6 +3,9 @@
 import { api } from './client'
 import type { PixCobrancaDto } from './crediario'
 
+/** Liga = soma na Liga Mensal; Campeonato = evento avulso, não soma (chave "liga-modalidades"). */
+export type Modalidade = 'Liga' | 'Campeonato'
+
 export interface Championship {
   id: string; name: string; game: string; status: string
   startDate: string; entryFeeInCents: number; entryFeeInReais: number; maxParticipants: number | null
@@ -13,6 +16,12 @@ export interface Championship {
   registrationDeadline?: string | null; endDate?: string | null
   imageUrl?: string | null; podioJson?: string | null
   participants?: ChampionshipParticipant[]
+  /** "Livre" (campeonato comum ou etapa lançada de fora) ou "Suico" (liguinha rodada no sistema). */
+  formato?: 'Livre' | 'Suico'
+  modalidade?: Modalidade
+  rodadaAtual?: number; numeroRodadas?: number | null
+  /** Participantes com check-in feito. */
+  presentesCount?: number
 }
 
 export interface ChampionshipPreInscricao {

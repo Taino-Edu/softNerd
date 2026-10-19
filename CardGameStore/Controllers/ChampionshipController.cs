@@ -178,6 +178,7 @@ public class ChampionshipController : ControllerBase
             EntryFeeInCents      = request.EntryFeeInCents,
             MinutosParaPagar     = Math.Clamp(request.MinutosParaPagar ?? 30, 1, 1440),
             ImageUrl             = request.ImageUrl,
+            Modalidade           = request.Modalidade ?? ModalidadeTorneio.Liga,
             Status               = ChampionshipStatus.Planejado,
             CreatedByAdminId     = adminId
         };
@@ -218,6 +219,8 @@ public class ChampionshipController : ControllerBase
         // Só sobrescreve se veio no corpo — assim uma tela antiga não zera o prazo.
         if (request.MinutosParaPagar is int minutos)
             ch.MinutosParaPagar = Math.Clamp(minutos, 1, 1440);
+        if (request.Modalidade is { } modalidade)
+            ch.Modalidade = modalidade;
 
         var updated = await _service.UpdateAsync(ch);
         _logger.LogInformation("Campeonato {Id} editado pelo admin", id);
@@ -800,6 +803,11 @@ public class ChampionshipController : ControllerBase
         CreatedAt            = ch.CreatedAt,
         ImageUrl             = ch.ImageUrl,
         PodioJson            = ch.PodioJson,
+        Formato              = ch.Formato.ToString(),
+        Modalidade           = ch.Modalidade.ToString(),
+        RodadaAtual          = ch.RodadaAtual,
+        NumeroRodadas        = ch.NumeroRodadas,
+        PresentesCount       = ch.Participants?.Count(p => p.CheckInEm != null) ?? 0,
     };
 }
 
@@ -833,6 +841,8 @@ public class UpdateChampionshipRequest
     /// que já está gravado (cliente antigo que não manda o campo não zera nada).
     /// </summary>
     public int?      MinutosParaPagar     { get; init; }
+    /// <summary>Liga ou Campeonato. Ausente: Liga na criação, mantém na edição.</summary>
+    public ModalidadeTorneio? Modalidade { get; init; }
 }
 
 /// <summary>DTO de resposta de campeonato (sem circular reference).</summary>
@@ -857,6 +867,14 @@ public class ChampionshipDto
     public DateTime  CreatedAt            { get; init; }
     public string?   ImageUrl             { get; init; }
     public string?   PodioJson            { get; init; }
+    /// <summary>"Livre" (campeonato comum ou etapa lançada de fora) ou "Suico" (liguinha rodada no sistema).</summary>
+    public string    Formato              { get; init; } = "Livre";
+    /// <summary>"Liga" (soma na Liga Mensal) ou "Campeonato" (avulso, não soma).</summary>
+    public string    Modalidade           { get; init; } = "Liga";
+    public int       RodadaAtual          { get; init; }
+    public int?      NumeroRodadas        { get; init; }
+    /// <summary>Participantes com check-in feito.</summary>
+    public int       PresentesCount       { get; init; }
 }
 
 /// <summary>DTO de participação do próprio usuário (GET /api/championship/my-participations).</summary>
@@ -928,6 +946,8 @@ public class CreateChampionshipRequest
     /// que já está gravado (cliente antigo que não manda o campo não zera nada).
     /// </summary>
     public int?      MinutosParaPagar     { get; init; }
+    /// <summary>Liga ou Campeonato. Ausente: Liga na criação, mantém na edição.</summary>
+    public ModalidadeTorneio? Modalidade { get; init; }
 }
 
 /// <summary>Request para alterar status do campeonato.</summary>

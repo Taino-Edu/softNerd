@@ -76,13 +76,17 @@ public class LigaMensalService
         var inicioUtc   = Brasilia.DiaUtc(primeiroDia).InicioUtc;
         var fimUtc      = Brasilia.DiaUtc(primeiroDia.AddMonths(1)).InicioUtc;
 
+        // Chave "liga-modalidades": campeonato avulso (modalidade Campeonato) não soma na Liga.
+        // Desligada: soma tudo, como antes da v1.56.0.
+        var soLiga = await _funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
         var participantes = await _db.ChampionshipParticipants
             .AsNoTracking()
             .Include(p => p.User)
             .Include(p => p.Championship)
             .Where(p => p.Placement != null
                         && p.Championship.StartDate >= inicioUtc
-                        && p.Championship.StartDate < fimUtc)
+                        && p.Championship.StartDate < fimUtc
+                        && (!soLiga || p.Championship.Modalidade == ModalidadeTorneio.Liga))
             .ToListAsync();
 
         var manuais = await _db.LigaMensalManualEntries
@@ -221,8 +225,9 @@ public class LigaMensalService
     /// <summary>Meses que têm campeonato com colocação ou lançamento manual, do mais novo pro mais antigo.</summary>
     public async Task<List<LigaMensalMesDto>> MesesComDadosAsync()
     {
+        var soLiga = await _funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
         var datasCampeonatos = await _db.ChampionshipParticipants
-            .Where(p => p.Placement != null)
+            .Where(p => p.Placement != null && (!soLiga || p.Championship.Modalidade == ModalidadeTorneio.Liga))
             .Select(p => p.Championship.StartDate)
             .ToListAsync();
 

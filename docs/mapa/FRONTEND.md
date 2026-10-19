@@ -7,8 +7,8 @@
 | URL | Arquivo | Componentes usados |
 |---|---|---|
 | `/admin/anuncios` | `app/admin/anuncios/page.tsx` | `admin/ImageUpload`, `ui/PageHeader` |
-| `/admin/campeonatos/[id]/torneio` | `app/admin/campeonatos/[id]/torneio/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio`, `ui/Switch` |
-| `/admin/campeonatos` | `app/admin/campeonatos/page.tsx` | `admin/ConferenciaDecksModal`, `admin/DeckViewerModal`, `ui/Badge` |
+| `/admin/campeonatos/[id]/torneio` | `app/admin/campeonatos/[id]/torneio/page.tsx` | `liga/PainelTorneio` |
+| `/admin/campeonatos` | `app/admin/campeonatos/page.tsx` | `admin/ConferenciaDecksModal`, `admin/DeckViewerModal`, `liga/admin/EscolherModalidade`, `ui/Badge` |
 | `/admin/cartas` | `app/admin/cartas/page.tsx` | — |
 | `/admin/categorias` | `app/admin/categorias/page.tsx` | `ui/Badge`, `ui/Table` |
 | `/admin/changelog` | `app/admin/changelog/page.tsx` | `ui/PageHeader` |
@@ -26,6 +26,8 @@
 | `/admin/lgpd/documento/[id]` | `app/admin/lgpd/documento/[id]/page.tsx` | — |
 | `/admin/lgpd` | `app/admin/lgpd/page.tsx` | `ui/Badge`, `ui/PageHeader`, `ui/Table` |
 | `/admin/liga-mensal` | `app/admin/liga-mensal/page.tsx` | `ui/PageHeader` |
+| `/admin/liguinha/[id]` | `app/admin/liguinha/[id]/page.tsx` | `liga/PainelTorneio`, `liga/SpriteDeck`, `liga/TabelaTorneio`, `liga/admin/EscolherEntrada`, `liga/admin/HistoricoRodadas`, `liga/admin/Janela`, `liga/admin/JogadoresTorneio`, `liga/admin/nomes`, `ui/Badge` |
+| `/admin/liguinha` | `app/admin/liguinha/page.tsx` | `liga/admin/CriarTorneio`, `liga/admin/EscolherEntrada`, `liga/admin/LancarEtapa`, `liga/admin/nomes`, `ui/Badge`, `ui/PageHeader` |
 | `/admin/manual` | `app/admin/manual/page.tsx` | — |
 | `/admin/marketplace` | `app/admin/marketplace/page.tsx` | `ui/PageHeader`, `ui/Table` |
 | `/admin/mensageria` | `app/admin/mensageria/page.tsx` | `ui/PageHeader` |
@@ -105,14 +107,23 @@ Mudou um componente? Confira as telas da última coluna.
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
 | `liga/AnimacaoResultado` | `AnimacaoResultado` | `app/liga/jogar/page.tsx` |
-| `liga/Relogio` | `Relogio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
-| `liga/SpriteDeck` | `SpriteDeck` | `app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/liga/AnimacaoResultado.tsx`<br>`components/liga/TelaoNovo.tsx` |
-| `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx` |
+| `liga/PainelTorneio` | `PainelTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx` |
+| `liga/Relogio` | `Relogio` | `app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
+| `liga/SpriteDeck` | `SpriteDeck` | `app/admin/liguinha/[id]/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/liga/AnimacaoResultado.tsx`<br>`components/liga/TelaoNovo.tsx`<br>`components/liga/admin/HistoricoRodadas.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/liguinha/[id]/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
 | `liga/TelaoNovo` | `TelaoNovo` | `app/liga/torneio/[id]/page.tsx` |
+| `liga/admin/CriarTorneio` | `CriarTorneio` | `app/admin/liguinha/page.tsx` |
+| `liga/admin/EscolherCliente` | `finalWhats`, `EscolherCliente` | **nenhum lugar** |
+| `liga/admin/EscolherEntrada` | `EscolherEntrada`, `precosRecentes` | `app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx` |
+| `liga/admin/EscolherModalidade` | `EscolherModalidade` | `app/admin/campeonatos/page.tsx` |
+| `liga/admin/HistoricoRodadas` | `HistoricoRodadas` | `app/admin/liguinha/[id]/page.tsx` |
+| `liga/admin/Janela` | `Janela` | `app/admin/liguinha/[id]/page.tsx` |
+| `liga/admin/JogadoresTorneio` | `JogadoresTorneio` | `app/admin/liguinha/[id]/page.tsx` |
+| `liga/admin/LancarEtapa` | `LancarEtapa` | `app/admin/liguinha/page.tsx` |
 | `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
-| `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/usuarios/page.tsx` |
-| `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
-| `ui/Switch` | `Switch` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx` |
+| `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
+| `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
+| `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
 
 ## Bibliotecas (`frontend/lib`)
