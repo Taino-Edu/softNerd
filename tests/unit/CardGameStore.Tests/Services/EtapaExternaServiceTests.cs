@@ -4,6 +4,7 @@
 // Etapa jogada fora do sistema vira campeonato encerrado com colocação → Liga Mensal.
 // =============================================================================
 
+using CardGameStore.Common;
 using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
@@ -131,13 +132,25 @@ public class EtapaExternaServiceTests
             .Should().ThrowAsync<TorneioException>();
     }
 
-    [Fact]
-    public async Task Lancar_EtapaNoFuturo_Recusa()
+    [Theory]
+    [InlineData(1)]   // amanhã: ainda não foi jogada, não pode dar pontos adiantado
+    [InlineData(10)]
+    public async Task Lancar_EtapaNoFuturo_Recusa(int dias)
     {
         var (_, etapa, _) = Criar();
 
-        await FluentActions.Invoking(() => etapa.LancarAsync(Etapa(DateTime.Today.AddDays(10), "Ana", "Bia"), AdminId))
+        await FluentActions.Invoking(() => etapa.LancarAsync(Etapa(Brasilia.Hoje().AddDays(dias), "Ana", "Bia"), AdminId))
             .Should().ThrowAsync<TorneioException>().WithMessage("*futuro*");
+    }
+
+    [Fact]
+    public async Task Lancar_EtapaDeHoje_Aceita()
+    {
+        var (db, etapa, _) = Criar();
+
+        await etapa.LancarAsync(Etapa(Brasilia.Hoje(), "Ana", "Bia"), AdminId);
+
+        (await db.Championships.CountAsync()).Should().Be(1);
     }
 
     [Fact]

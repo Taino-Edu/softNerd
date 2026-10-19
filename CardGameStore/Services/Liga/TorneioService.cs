@@ -530,6 +530,12 @@ public class TorneioService
         ?? throw new TorneioException("Partida não encontrada.", 404);
 
     /// <summary>Quem joga: check-in feito; se ninguém fez check-in, todos com vaga valendo (e pagos, se houver taxa).</summary>
+    /// <summary>
+    /// Inscrição paga ainda não paga: tem prazo de pagamento (vaga segurada esperando o Pix) e não caiu.
+    /// Vaga firme (grátis, ou inscrito antes de a entrada virar paga) não deve nada.
+    /// </summary>
+    internal static bool DeveInscricao(ChampionshipParticipant p) => p.EntryFeePaidAt is null && p.InscricaoExpiraEm is not null;
+
     private async Task<List<ChampionshipParticipant>> ParticipantesQueJogamAsync(Championship ch)
     {
         var todos = await _db.ChampionshipParticipants.Where(p => p.ChampionshipId == ch.Id).ToListAsync();
@@ -539,9 +545,13 @@ public class TorneioService
             // Quem já jogou alguma rodada continua na lista (pros pontos), mesmo sem check-in
             var jaJogaram = (await HistoricoAsync(ch.Id))
                 .SelectMany(h => h.B is null ? new[] { h.A } : new[] { h.A, h.B.Value }).ToHashSet();
-            return todos.Where(p => p.CheckInEm != null || jaJogaram.Contains(p.Id)).ToList();
+            // Presente mas com a inscrição paga ainda pendente não é pareado: o painel (ou o check-in
+            // pelo celular) marcava presente quem só tinha a cobrança Pix gerada, e ele jogava sem pagar.
+            return todos.Where(p => jaJogaram.Contains(p.Id) || (p.CheckInEm != null && !DeveInscricao(p))).ToList();
         }
-        return todos.Where(p => p.VagaVale && (ch.EntryFeeInCents == 0 || p.EntryFeePaidAt != null)).ToList();
+        // Ninguém fez check-in: jogam todos com a inscrição em dia — pagou, ou vaga firme (inclusive quem se
+        // inscreveu quando era grátis e a entrada virou paga depois)
+        return todos.Where(p => !DeveInscricao(p)).ToList();
     }
 
     private async Task<List<PartidaSuico>> HistoricoAsync(Guid championshipId) =>
