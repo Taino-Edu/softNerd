@@ -125,27 +125,27 @@
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
 | GET | `/api/championship` | público | `GetAll` (56) | `championshipApi.list` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx`<br>`app/page.tsx` |
-| POST | `/api/championship` | AdminOnly | `Create` (162) | `championshipApi.create` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
+| POST | `/api/championship` | AdminOnly | `Create` (172) | `championshipApi.create` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
 | GET | `/api/championship/admin/all` | AdminOnly | `GetAllAdmin` (66) | `championshipApi.listAll` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx` |
 | GET | `/api/championship/my-participations` | logado | `GetMyParticipations` (107) | `championshipApi.myParticipations` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| POST | `/api/championship/participants/{participantId:guid}/cobrar` | OwnerOnly | `CobrarInscricao` (421) | `championshipApi.cobrarInscricao` | `app/admin/campeonatos/page.tsx` |
-| PUT | `/api/championship/participants/{participantId:guid}/pagamento` | AdminOnly | `MarcarPagamentoInscricao` (491) | — | — |
+| POST | `/api/championship/participants/{participantId:guid}/cobrar` | OwnerOnly | `CobrarInscricao` (431) | `championshipApi.cobrarInscricao` | `app/admin/campeonatos/page.tsx` |
+| PUT | `/api/championship/participants/{participantId:guid}/pagamento` | AdminOnly | `MarcarPagamentoInscricao` (501) | — | — |
 | DELETE | `/api/championship/{id:guid}` | AdminOnly | `Delete` (78) | `championshipApi.delete` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
 | GET | `/api/championship/{id:guid}` | público | `GetById` (97) | — | `app/campeonato/[id]/page.tsx` |
-| PUT | `/api/championship/{id:guid}` | AdminOnly | `Update` (201) | `championshipApi.update` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
-| POST | `/api/championship/{id:guid}/admin-register` | OwnerOnly | `AdminRegister` (524) | `championshipApi.adminRegister` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
-| PUT | `/api/championship/{id:guid}/image` | AdminOnly | `SetImage` (681) | — | — |
-| POST | `/api/championship/{id:guid}/my-inscription/pix` | logado | `GerarPixInscricao` (344) | — | `app/cliente/page.tsx` |
-| POST | `/api/championship/{id:guid}/my-inscription/pix/verificar` | logado | `VerificarPixInscricao` (461) | `championshipApi.verificarPixInscricao` | `app/cliente/page.tsx`<br>`app/page.tsx` |
+| PUT | `/api/championship/{id:guid}` | AdminOnly | `Update` (211) | `championshipApi.update` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
+| POST | `/api/championship/{id:guid}/admin-register` | OwnerOnly | `AdminRegister` (534) | `championshipApi.adminRegister` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| PUT | `/api/championship/{id:guid}/image` | AdminOnly | `SetImage` (691) | — | — |
+| POST | `/api/championship/{id:guid}/my-inscription/pix` | logado | `GerarPixInscricao` (354) | — | `app/cliente/page.tsx` |
+| POST | `/api/championship/{id:guid}/my-inscription/pix/verificar` | logado | `VerificarPixInscricao` (471) | `championshipApi.verificarPixInscricao` | `app/cliente/page.tsx`<br>`app/page.tsx` |
 | GET | `/api/championship/{id:guid}/participants` | logado | `GetParticipants` (134) | `championshipApi.participants` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx` |
-| DELETE | `/api/championship/{id:guid}/participants/{participantId:guid}` | AdminOnly | `RemoveParticipant` (613) | `championshipApi.removeParticipant` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
-| PUT | `/api/championship/{id:guid}/participants/{participantId:guid}/placement` | AdminOnly | `SetPlacement` (663) | `championshipApi.setPlacement` | `app/admin/liga-mensal/page.tsx` |
-| PATCH | `/api/championship/{id:guid}/podio` | AdminOnly | `SetPodio` (760) | `championshipApi.setPodio` | `app/admin/campeonatos/page.tsx` |
-| GET | `/api/championship/{id:guid}/preinscricoes` | AdminOnly | `GetPreInscricoes` (720) | `championshipApi.getPreInscricoes` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
-| POST | `/api/championship/{id:guid}/preinscricoes` | público | `AddPreInscricao` (701) | — | `app/campeonato/[id]/page.tsx` |
-| DELETE | `/api/championship/{id:guid}/preinscricoes/{preInscricaoId:guid}` | AdminOnly | `DeletePreInscricao` (745) | `championshipApi.deletePreInscricao` | `app/admin/campeonatos/page.tsx` |
-| POST | `/api/championship/{id:guid}/register` | logado | `Register` (240) | `championshipApi.selfRegister` | `app/page.tsx` |
-| PUT | `/api/championship/{id:guid}/status` | AdminOnly | `UpdateStatus` (637) | `championshipApi.setStatus` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
+| DELETE | `/api/championship/{id:guid}/participants/{participantId:guid}` | AdminOnly | `RemoveParticipant` (623) | `championshipApi.removeParticipant` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| PUT | `/api/championship/{id:guid}/participants/{participantId:guid}/placement` | AdminOnly | `SetPlacement` (673) | `championshipApi.setPlacement` | `app/admin/liga-mensal/page.tsx` |
+| PATCH | `/api/championship/{id:guid}/podio` | AdminOnly | `SetPodio` (770) | `championshipApi.setPodio` | `app/admin/campeonatos/page.tsx` |
+| GET | `/api/championship/{id:guid}/preinscricoes` | AdminOnly | `GetPreInscricoes` (730) | `championshipApi.getPreInscricoes` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
+| POST | `/api/championship/{id:guid}/preinscricoes` | público | `AddPreInscricao` (711) | — | `app/campeonato/[id]/page.tsx` |
+| DELETE | `/api/championship/{id:guid}/preinscricoes/{preInscricaoId:guid}` | AdminOnly | `DeletePreInscricao` (755) | `championshipApi.deletePreInscricao` | `app/admin/campeonatos/page.tsx` |
+| POST | `/api/championship/{id:guid}/register` | logado | `Register` (250) | `championshipApi.selfRegister` | `app/page.tsx` |
+| PUT | `/api/championship/{id:guid}/status` | AdminOnly | `UpdateStatus` (647) | `championshipApi.setStatus` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
 
 ## Comanda
 

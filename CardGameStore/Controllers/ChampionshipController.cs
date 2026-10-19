@@ -134,8 +134,18 @@ public class ChampionshipController : ControllerBase
     public async Task<IActionResult> GetParticipants(Guid id)
     {
         var participants = await _service.GetParticipantsAsync(id);
+        // Valor da cobrança de cada um (a mais recente): o preço da entrada pode mudar depois das
+        // primeiras inscrições, e quem já tinha cobrança fica com o valor dela.
+        var ids = participants.Select(p => p.Id).ToList();
+        var cobrancas = await _db.PixCobrancas.AsNoTracking()
+            .Where(c => c.ChampionshipParticipantId != null && ids.Contains(c.ChampionshipParticipantId.Value))
+            .Select(c => new { Id = c.ChampionshipParticipantId!.Value, c.ValorEmCentavos, c.CriadoEm })
+            .ToListAsync();
+        var valorPor = cobrancas.GroupBy(c => c.Id)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CriadoEm).First().ValorEmCentavos);
         return Ok(participants.Select(p => new ParticipantDto
         {
+            ValorInscricaoEmCentavos = valorPor.TryGetValue(p.Id, out var valor) ? valor : null,
             Id             = p.Id,
             UserId         = p.UserId,
             UserName       = p.User?.Name ?? string.Empty,
@@ -912,6 +922,8 @@ public class ParticipantDto
     public string?   EntryFeePaymentMethod { get; init; }
     /// <summary>Até quando a vaga fica segurada esperando pagamento. Null = vaga firme.</summary>
     public DateTime? InscricaoExpiraEm     { get; init; }
+    /// <summary>Valor da cobrança Pix da inscrição (null = sem cobrança: grátis ou pago no balcão).</summary>
+    public int?      ValorInscricaoEmCentavos { get; init; }
 }
 
 /// <summary>Request do admin para marcar/desmarcar pagamento da inscrição no balcão.</summary>

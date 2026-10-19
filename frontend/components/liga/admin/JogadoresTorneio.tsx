@@ -21,7 +21,8 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false }
   const encerrado = p.status === 'Finalizado' || p.status === 'Cancelado'
   const [modo, setModo] = useState<'um' | 'varios'>('um')
   const [deck, setDeck] = useState('')
-  const [presente, setPresente] = useState(!inscricao)
+  // Liguinha paga: quem entra pelo painel recebe a cobrança e só joga depois de pagar — não entra presente sozinho
+  const [presente, setPresente] = useState(!inscricao && !pago)
   const [novoNome, setNovoNome] = useState('')
   const [novoZap, setNovoZap] = useState('')
   const [lista, setLista] = useState('')
@@ -146,7 +147,7 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false }
             Já entra presente (check-in)
             <Switch ligado={presente} onChange={setPresente} label="Já entra presente" />
           </label>
-          {pago && <p className="text-xs txt-alerta">Torneio com inscrição paga: cada jogador adicionado recebe a cobrança Pix.</p>}
+          {pago && <p className="text-xs txt-alerta">Inscrição paga: cada jogador adicionado recebe a cobrança Pix e só entra no pareamento depois de pagar (ou quando você marcar o pagamento no balcão).</p>}
         </section>
       )}
 
