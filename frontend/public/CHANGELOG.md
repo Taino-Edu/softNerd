@@ -3,8 +3,8 @@
 ## [v1.56.1] — 2026-10-19
 
 ### Corrigido — Central da Liguinha
-- **Liguinha paga: só joga quem pagou.** Jogador adicionado pelo painel entrava como presente com a cobrança Pix ainda pendente e era pareado sem pagar. Agora quem está devendo a inscrição não entra no pareamento (vale também pro check-in pelo celular), e quem entra pelo painel numa liguinha paga não vem marcado presente. Quem tem vaga firme (inscrito quando era grátis) segue jogando
-- **Vendas do campeonato pelo valor de cada inscrição**: "Arrecadado" e "A receber" somavam todo mundo pelo preço atual; se a entrada mudava depois das primeiras inscrições, o total saía errado. Agora soma o valor da cobrança de cada um
+- **Liguinha paga: só joga quem pagou.** Jogador adicionado pelo painel entrava como presente com a cobrança Pix ainda pendente e era pareado sem pagar. Agora quem está devendo a inscrição não entra no pareamento (vale também pro check-in pelo celular), e quem entra pelo painel numa liguinha paga não vem marcado presente. Quem tem vaga firme (inscrito quando era grátis) segue jogando, com ou sem check-in
+- **Vendas do campeonato pelo valor de cada inscrição**: "Arrecadado" e "A receber" somavam todo mundo pelo preço atual; se a entrada mudava depois das primeiras inscrições, o total saía errado. Agora soma o valor da cobrança de cada um, e cobrança em aberto conta como "a receber" mesmo pra quem tinha vaga firme
 - **Etapa de fora não pode ser de amanhã**: dava pra lançar a etapa de amanhã e adiantar os pontos da Liga
 
 ## [v1.56.0] — 2026-10-19

@@ -549,7 +549,9 @@ public class TorneioService
             // pelo celular) marcava presente quem só tinha a cobrança Pix gerada, e ele jogava sem pagar.
             return todos.Where(p => jaJogaram.Contains(p.Id) || (p.CheckInEm != null && !DeveInscricao(p))).ToList();
         }
-        return todos.Where(p => p.VagaVale && (ch.EntryFeeInCents == 0 || p.EntryFeePaidAt != null)).ToList();
+        // Ninguém fez check-in: jogam todos com a inscrição em dia — pagou, ou vaga firme (inclusive quem se
+        // inscreveu quando era grátis e a entrada virou paga depois)
+        return todos.Where(p => !DeveInscricao(p)).ToList();
     }
 
     private async Task<List<PartidaSuico>> HistoricoAsync(Guid championshipId) =>

@@ -53,6 +53,8 @@ export interface ChampionshipParticipant {
   inscricaoExpiraEm?: string | null
   /** Valor da cobrança Pix da inscrição (null = sem cobrança: grátis ou pago no balcão). */
   valorInscricaoEmCentavos?: number | null
+  /** Tem cobrança Pix ativa e ainda não pagou. */
+  cobrancaEmAberto?: boolean
 }
 
 export interface MyParticipation {

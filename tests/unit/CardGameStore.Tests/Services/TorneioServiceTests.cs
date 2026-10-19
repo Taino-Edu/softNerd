@@ -122,6 +122,28 @@ public class TorneioServiceTests
     }
 
     [Fact]
+    public async Task GerarRodada_SemCheckIn_EntradaVirouPaga_VagaFirmeJoga()
+    {
+        var amb = Criar(3, taxaEmCentavos: 1500);
+        await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 50);
+        var agora = DateTime.UtcNow;
+        var parts = amb.Jogadores.Select((u, i) => new ChampionshipParticipant
+        {
+            // ninguém fez check-in; 1 e 2 se inscreveram quando era grátis (vaga firme); 3 está devendo o Pix
+            ChampionshipId = amb.Ch.Id, UserId = u.Id, PlayerNumber = i + 1,
+            InscricaoExpiraEm = i == 2 ? agora.AddMinutes(30) : null,
+        }).ToList();
+        amb.Db.ChampionshipParticipants.AddRange(parts);
+        await amb.Db.SaveChangesAsync();
+
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id, 2);
+
+        var jogam = (await amb.Db.TorneioPartidas.AsNoTracking().ToListAsync())
+            .SelectMany(p => new[] { (Guid?)p.ParticipanteAId, p.ParticipanteBId }).Where(id => id != null).ToList();
+        jogam.Should().BeEquivalentTo(parts.Take(2).Select(p => (Guid?)p.Id));
+    }
+
+    [Fact]
     public async Task Entrar_TorneioPago_SemInscricaoPaga_Recusa()
     {
         var amb = Criar(1, taxaEmCentavos: 1500);

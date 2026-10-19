@@ -139,13 +139,15 @@ public class ChampionshipController : ControllerBase
         var ids = participants.Select(p => p.Id).ToList();
         var cobrancas = await _db.PixCobrancas.AsNoTracking()
             .Where(c => c.ChampionshipParticipantId != null && ids.Contains(c.ChampionshipParticipantId.Value))
-            .Select(c => new { Id = c.ChampionshipParticipantId!.Value, c.ValorEmCentavos, c.CriadoEm })
+            .Select(c => new { Id = c.ChampionshipParticipantId!.Value, c.ValorEmCentavos, c.CriadoEm, c.Status })
             .ToListAsync();
-        var valorPor = cobrancas.GroupBy(c => c.Id)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CriadoEm).First().ValorEmCentavos);
+        var ultimaPor = cobrancas.GroupBy(c => c.Id)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CriadoEm).First());
         return Ok(participants.Select(p => new ParticipantDto
         {
-            ValorInscricaoEmCentavos = valorPor.TryGetValue(p.Id, out var valor) ? valor : null,
+            ValorInscricaoEmCentavos = ultimaPor.TryGetValue(p.Id, out var ultima) ? ultima.ValorEmCentavos : null,
+            // Cobrança em aberto conta como "a receber" mesmo com vaga firme (cobrada depois de a entrada virar paga)
+            CobrancaEmAberto = ultimaPor.TryGetValue(p.Id, out var aberta) && aberta.Status == "ATIVA" && p.EntryFeePaidAt == null,
             Id             = p.Id,
             UserId         = p.UserId,
             UserName       = p.User?.Name ?? string.Empty,
@@ -924,6 +926,8 @@ public class ParticipantDto
     public DateTime? InscricaoExpiraEm     { get; init; }
     /// <summary>Valor da cobrança Pix da inscrição (null = sem cobrança: grátis ou pago no balcão).</summary>
     public int?      ValorInscricaoEmCentavos { get; init; }
+    /// <summary>Tem cobrança Pix ativa e ainda não pagou.</summary>
+    public bool      CobrancaEmAberto         { get; init; }
 }
 
 /// <summary>Request do admin para marcar/desmarcar pagamento da inscrição no balcão.</summary>

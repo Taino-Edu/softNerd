@@ -195,7 +195,8 @@ function ResumoVendas({ id, taxaEmCentavos, vagas, versao }: { id: string; taxaE
   // Sem cobrança: pago no balcão (vale o preço atual) ou inscrição grátis / vaga firme (zero)
   const valor = (x: ChampionshipParticipant) => x.valorInscricaoEmCentavos ?? (x.entryFeePaidAt ? taxaEmCentavos : 0)
   const pagos = inscritos.filter(x => x.entryFeePaidAt)
-  const devendo = inscritos.filter(x => !x.entryFeePaidAt && x.inscricaoExpiraEm)
+  // Devendo: vaga segurada esperando o Pix, ou cobrança em aberto (inclusive de quem tinha vaga firme e foi cobrado depois)
+  const devendo = inscritos.filter(x => !x.entryFeePaidAt && (x.inscricaoExpiraEm || x.cobrancaEmAberto))
   const arrecadado = pagos.reduce((t, x) => t + valor(x), 0)
   const aReceber = devendo.reduce((t, x) => t + valor(x), 0)
   const pendentes = devendo.length
