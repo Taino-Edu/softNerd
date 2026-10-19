@@ -8,7 +8,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers, Hand } from 'lucide-react'
+import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers, Hand, PartyPopper } from 'lucide-react'
 import {
   torneioApi, deckApi, DeckListDto, MinhaMesaDto, ResultadoJogador, TorneioResumoDto, rodadaComecou,
 } from '@/lib/api'
@@ -16,6 +16,9 @@ import { isLoggedIn } from '@/lib/auth'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
 import Relogio from '@/components/liga/Relogio'
 import TabelaTorneio from '@/components/liga/TabelaTorneio'
+import SpriteDeck from '@/components/liga/SpriteDeck'
+import AnimacaoResultado, { CenaResultado } from '@/components/liga/AnimacaoResultado'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 function mensagemDe(e: unknown, padrao: string) {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? padrao
@@ -186,6 +189,43 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
 
 const ROTULO: Record<ResultadoJogador, string> = { Venci: 'Venci', Perdi: 'Perdi', Empatei: 'Empatei' }
 
+// Animação de resultado (chave "liga-animacao-resultado"): toca uma vez por partida e uma vez no fim do
+// torneio. Guarda as últimas vistas no aparelho; sem armazenamento, lembra só enquanto a página está aberta.
+const CHAVE_VISTAS = 'liga-animacoes-vistas'
+const vistasNaMemoria = new Set<string>()
+function jaViu(chave: string) {
+  if (vistasNaMemoria.has(chave)) return true
+  try { return (JSON.parse(localStorage.getItem(CHAVE_VISTAS) ?? '[]') as string[]).includes(chave) } catch { return false }
+}
+function marcaVista(chave: string) {
+  vistasNaMemoria.add(chave)
+  try {
+    const lista = (JSON.parse(localStorage.getItem(CHAVE_VISTAS) ?? '[]') as string[]).filter(c => c !== chave)
+    localStorage.setItem(CHAVE_VISTAS, JSON.stringify([...lista, chave].slice(-40)))
+  } catch { /* sem armazenamento: fica só na memória */ }
+}
+
+/** Cena da partida já decidida (null em bye ou sem resultado). */
+function cenaDaMesa(dados: MinhaMesaDto): CenaResultado | null {
+  const m = dados.mesa
+  if (!m?.resultado || !m.b || !dados.participanteId) return null
+  const souA = m.a.participanteId === dados.participanteId
+  const eu = souA ? m.a : m.b
+  const op = souA ? m.b : m.a
+  const tipo = m.resultado === 'Empate' ? 'empate' : (m.resultado === 'VitoriaA') === souA ? 'vitoria' : 'derrota'
+  return { tipo, rodada: dados.torneio.rodadaAtual, meuDeck: eu.deck ?? dados.deck, oponente: { nome: op.nome, deck: op.deck } }
+}
+
+/** Cena da colocação final (null se o torneio não acabou ou a pessoa não jogou). */
+function cenaFinal(dados: MinhaMesaDto): CenaResultado | null {
+  const t = dados.torneio
+  const eu = t.classificacao.find(l => l.participanteId === dados.participanteId)
+  if (t.status !== 'Finalizado' || !eu) return null
+  const n = (q: number, palavra: string) => `${q} ${palavra}${q === 1 ? '' : 's'}`
+  return { tipo: 'final', meuDeck: eu.deck ?? dados.deck, posicao: eu.posicao, total: t.classificacao.length,
+    pontos: eu.pontos, campanha: `${n(eu.vitorias, 'vitória')} · ${n(eu.empates, 'empate')} · ${n(eu.derrotas, 'derrota')}` }
+}
+
 function MinhaMesa({ torneioId }: { torneioId: string }) {
   const [dados, setDados] = useState<MinhaMesaDto | null>(null)
   const [erro, setErro] = useState('')
@@ -199,6 +239,20 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
 
   useEffect(() => { recarregar() }, [recarregar])
   useTorneioAoVivo(torneioId, recarregar)
+
+  const animar = useFuncionalidade('liga-animacao-resultado') !== false
+  const [cena, setCena] = useState<CenaResultado | null>(null)
+  const fecharCena = useCallback(() => setCena(null), [])
+  // Resultado confirmado (pelo oponente, ao vivo, ou pelo organizador) → anima uma vez
+  useEffect(() => {
+    if (!animar || !dados || cena) return
+    const fim = cenaFinal(dados)
+    const nova = fim ?? cenaDaMesa(dados)
+    const chave = fim ? `fim-${dados.torneio.id}` : `partida-${dados.mesa?.partidaId}`
+    if (!nova || jaViu(chave)) return
+    marcaVista(chave)
+    setCena(nova)
+  }, [animar, dados, cena])
 
   async function lancar(r: ResultadoJogador) {
     if (!dados?.mesa) return
@@ -236,8 +290,12 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
   const souA = mesa?.a.participanteId === dados.participanteId
   const oponente = mesa ? (souA ? mesa.b : mesa.a) : null
 
+  const meuDeck = mesa ? ((souA ? mesa.a.deck : mesa.b?.deck) ?? dados.deck) : dados.deck
+  const rever = animar ? (encerrado ? cenaFinal(dados) : cenaDaMesa(dados)) : null
+
   return (
     <div className="space-y-4">
+      {cena && <AnimacaoResultado cena={cena} onFechar={fecharCena} />}
       <header>
         <h1 className="text-xl font-bold text-white">{t.nome}</h1>
         <p className="text-sm text-gray-400">
@@ -259,6 +317,11 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
             <p className="text-3xl font-bold text-white">{eu.posicao}º</p>
             <p className="text-sm text-gray-400">{eu.pontos} pts · {eu.vitorias}V {eu.empates}E {eu.derrotas}D</p>
           </> : <p className="text-gray-400 text-sm">Você não jogou este torneio.</p>}
+          {rever && (
+            <button onClick={() => setCena(rever)} className="mt-3 text-sm text-brand-400 inline-flex items-center gap-1.5">
+              <PartyPopper className="w-4 h-4" /> Ver a comemoração de novo
+            </button>
+          )}
         </div>
       ) : dados.desistiuNaRodada ? (
         <p className="bg-surface-800 border border-surface-500 rounded-2xl p-5 text-sm text-gray-300">
@@ -309,12 +372,33 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
               Vá pra mesa e monte o setup. O relógio começa quando o organizador mandar.
             </p>
           )}
-          <div className="bg-surface-700 rounded-xl p-3 text-center">
-            <p className="text-xs text-gray-400">Seu oponente</p>
-            <p className="text-lg font-semibold text-white">{oponente.nome}</p>
-            {oponente.deck && <p className="text-xs text-gray-400">{oponente.deck}</p>}
-          </div>
+          {animar ? (
+            <div className="bg-surface-700 rounded-xl p-3 flex items-end gap-2">
+              <div className="flex-1 min-w-0 flex flex-col items-center text-center">
+                <SpriteDeck deck={meuDeck} tamanho={64} />
+                <p className="text-sm font-semibold text-white">Você</p>
+                {meuDeck && <p className="text-xs text-gray-400 truncate max-w-full">{meuDeck}</p>}
+              </div>
+              <span className="text-xs font-black text-gray-500 pb-6">VS</span>
+              <div className="flex-1 min-w-0 flex flex-col items-center text-center">
+                <SpriteDeck deck={oponente.deck} tamanho={64} />
+                <p className="text-sm font-semibold text-white truncate max-w-full">{oponente.nome}</p>
+                {oponente.deck && <p className="text-xs text-gray-400 truncate max-w-full">{oponente.deck}</p>}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-surface-700 rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-400">Seu oponente</p>
+              <p className="text-lg font-semibold text-white">{oponente.nome}</p>
+              {oponente.deck && <p className="text-xs text-gray-400">{oponente.deck}</p>}
+            </div>
+          )}
 
+          {mesa.resultado && rever && (
+            <button onClick={() => setCena(rever)} className="w-full text-sm text-brand-400 flex items-center justify-center gap-1.5">
+              <PartyPopper className="w-4 h-4" /> Ver a animação de novo
+            </button>
+          )}
           {mesa.resultado ? (
             <p className="flex items-center justify-center gap-2 txt-ok font-semibold">
               <CheckCircle2 className="w-5 h-5" /> Resultado confirmado: {dados.meuReport ? ROTULO[dados.meuReport] : 'definido pelo organizador'}

@@ -1,5 +1,20 @@
 # Changelog — Santuário Nerd
 
+## [v1.55.0] — 2026-10-19
+
+### Novo — animação de vitória e derrota na liguinha
+- **Na tela do jogador (/liga/jogar)**, quando o resultado da mesa é confirmado (pelo oponente ou pelo organizador) aparece uma animação em tela cheia com o Pokémon do deck de cada um:
+  - **Vitória**: o seu Pokémon pula, o do oponente desmaia (cai de lado e fica cinza), chuva de confete e "+3 PTS"
+  - **Derrota**: o seu desmaia e o do oponente comemora, com uma frase pra animar pra próxima
+  - **Empate**: os dois balançam, "+1 PT"
+- **Fim do torneio**: a sua colocação — coroa pro campeão, ouro/prata/bronze e confete pro pódio, e um "valeu por jogar" pra quem ficou de fora
+- Toca **uma vez por partida** (recarregar a página não repete); dá pra rever pelo botão "Ver a animação de novo"
+- **A mesa mostra você vs oponente com os sprites** dos dois decks
+- Quem liga "reduzir movimento" no celular vê o resultado parado, sem pulos nem confete
+
+### Mudança com volta
+- Chave **"Liguinha: animação de vitória e derrota"** em `/admin/funcionalidades`. Desligada, a tela do jogador volta a mostrar só o texto do resultado
+
 ## [v1.54.0] — 2026-10-19
 
 ### Novo — telão da liguinha com os sprites

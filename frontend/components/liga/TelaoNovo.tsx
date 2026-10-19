@@ -5,14 +5,12 @@
 // Cores no style (não em text-white): o tema claro do site força .text-white pra escuro.
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Press_Start_2P } from 'next/font/google'
+import { pixel } from '@/lib/fontePixel'
 import { ArrowLeft, Swords, CheckCircle2, Clock, Crown } from 'lucide-react'
 import { TorneioPublicoDto, MesaDto, LinhaTabela, rodadaComecou, segundosRestantes } from '@/lib/api'
 import { mixHex } from '@/lib/colors'
 import { useSiteConfig } from '@/lib/useSiteConfig'
 import SpriteDeck from '@/components/liga/SpriteDeck'
-
-const pixel = Press_Start_2P({ weight: '400', subsets: ['latin'], display: 'swap' })
 
 const B = '#FFFFFF'
 const SUAVE = 'rgba(255,255,255,0.72)'
