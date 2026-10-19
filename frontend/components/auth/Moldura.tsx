@@ -6,11 +6,11 @@
 // pular de site em site.
 // Sempre clara, de propósito (login de empresa grande é claro, mesmo com o site no escuro).
 // Cores no style, nunca em text-white/text-gray: o tema claro do site troca essas classes.
-import { InputHTMLAttributes, ReactNode, useEffect, useState } from 'react'
+import { InputHTMLAttributes, ReactNode, useState } from 'react'
 import Link from 'next/link'
 import { Toaster } from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff, Gamepad2, Loader2, Lock } from 'lucide-react'
-import { siteConfigApi, SiteConfigDto } from '@/lib/api'
+import { useSiteConfig } from '@/lib/useSiteConfig'
 import { mixHex } from '@/lib/colors'
 import { fotoLeve } from '@/lib/fotoLeve'
 
@@ -20,12 +20,10 @@ export const L = {
   campo: '#F5F8FC', borda: '#DCE4F0', amarelo: '#FFE45E', erro: '#C62828',
 }
 
-type Marca = Pick<SiteConfigDto, 'siteName' | 'colorHero' | 'heroImageUrl' | 'logoUrl'>
-
-/** Nome, cor e arte da loja (Personalizar Site), com o padrão enquanto carrega. */
+/** Nome, cor e arte da loja (Personalizar Site), com o padrão enquanto carrega.
+ *  useSiteConfig divide uma requisição só entre a moldura e o formulário da página. */
 export function useMarca() {
-  const [site, setSite] = useState<Marca | null>(null)
-  useEffect(() => { siteConfigApi.get().then(r => setSite(r.data)).catch(() => { /* fica no padrão */ }) }, [])
+  const site = useSiteConfig()
   const arte = site?.heroImageUrl || site?.logoUrl || '/logo-santuario.webp'
   return {
     nome: site?.siteName ?? 'Santuário Nerd',

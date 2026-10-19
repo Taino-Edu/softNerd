@@ -620,20 +620,21 @@ export default function PerfilPage() {
 
             {/* ── TABS ── */}
             {contaNova ? (
-            // Celular: grade de 3 colunas (todas as abas à vista, nenhuma cortada na direita); maior: uma linha
-            <nav className="grid grid-cols-3 gap-2 mb-5 sm:flex sm:flex-wrap" aria-label="Seções da conta">
+            // Celular: grade de 3 colunas (todas as abas à vista, nenhuma cortada na direita); maior: uma linha.
+            // Em tela bem estreita (320px) o ícone some e o texto encolhe em vez de vazar da pílula.
+            <nav className="grid grid-cols-3 gap-1.5 min-[400px]:gap-2 mb-5 sm:flex sm:flex-wrap" aria-label="Seções da conta">
               {tabs.map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={clsx('relative inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 rounded-full text-xs font-black border transition-all whitespace-nowrap',
+                  className={clsx('relative min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-4 py-2.5 rounded-full text-[11px] min-[400px]:text-xs font-black border transition-all',
                     tab === t.id ? 'shadow-md' : 'hover:bg-gray-50')}
                   style={tab === t.id
                     ? { backgroundColor: '#1E4FD6', borderColor: '#1E4FD6', color: '#FFFFFF' }
                     : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', color: '#4B5563' }}
                   aria-current={tab === t.id ? 'page' : undefined}>
-                  <t.icon className="w-3.5 h-3.5" />
-                  {t.label}
+                  <t.icon className="w-3.5 h-3.5 shrink-0 max-[359px]:hidden" />
+                  <span className="truncate">{t.label}</span>
                   {'badge' in t && t.badge > 0 && (
-                    <span className="min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-black flex items-center justify-center"
+                    <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-black flex items-center justify-center"
                       style={tab === t.id ? { backgroundColor: '#FFE45E', color: '#3D2E00' } : { backgroundColor: '#EF4444', color: '#FFFFFF' }}>
                       {t.badge}
                     </span>
