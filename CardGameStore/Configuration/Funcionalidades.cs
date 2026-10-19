@@ -50,6 +50,7 @@ public static class Funcionalidades
     public const string AdminEsqueletoNovo = "admin-esqueleto-novo";
     public const string ContaClienteNova = "conta-cliente-nova";
     public const string AdminTelasNovas = "admin-telas-novas";
+    public const string TelaoNovo = "telao-novo";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -196,6 +197,16 @@ public static class Funcionalidades
             SeDesligar: "O painel volta ao azul-claro e ao roxo de status de antes. O site público não muda em nenhum dos dois casos.",
             Padrao:     true,
             Desde:      "v1.53.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(TelaoNovo,
+            Nome:       "Liguinha: telão novo com os sprites",
+            OQueMuda:   "Telão do torneio no estilo da Liga Mensal, pra TV: relógio gigante em fonte pixel com barra de tempo, " +
+                        "mesas com o sprite do deck de cada lado, classificação com sprite, deck, V-E-D, OWP e pontos, " +
+                        "e pódio com sprites grandes quando o torneio encerra.",
+            SeDesligar: "Volta o telão de antes (tema escuro simples, sem deck nem sprite).",
+            Padrao:     true,
+            Desde:      "v1.54.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

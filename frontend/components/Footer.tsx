@@ -22,32 +22,36 @@ export default function Footer() {
   if (pathname?.startsWith('/admin') || pathname?.startsWith('/login')
     || pathname?.startsWith('/janela')) return null
 
-  // Cores no style (não em classe text-*): o tema claro do site força algumas classes de cor
+  // Cores sempre no style (nunca text-gray-*): o tema claro do site troca essas classes por cinza-escuro,
+  // que some em cima do azul-marinho do rodapé
   const fundo   = novo ? mixHex(site?.colorHero ?? '#1E4FD6', '#000000', 0.62) : '#10286B'
-  const texto   = novo ? 'rgba(255,255,255,0.62)' : undefined
-  const fraco   = novo ? 'rgba(255,255,255,0.28)' : undefined
   const nome    = novo ? (site?.siteName ?? 'Santuário Nerd') : 'Santuário Nerd'
+  const link    = 'rgba(255,255,255,0.88)'
+  const sep     = 'rgba(255,255,255,0.35)'
+  // Celular: links em grade de 2 colunas, sem os "|" (que quebravam linha); do sm pra cima, em linha com "|"
+  const item    = 'py-1.5 sm:py-0 text-center hover:underline underline-offset-2'
+  const barra   = <span aria-hidden className="hidden sm:inline" style={{ color: sep }}>|</span>
 
   return (
-    <footer className={`py-5 px-4 text-xs ${novo ? '' : 'text-gray-400'}`} style={{ backgroundColor: fundo, color: texto }}>
-      <div className="max-w-5xl mx-auto space-y-3">
+    <footer className="py-6 px-4 text-[13px] sm:text-xs" style={{ backgroundColor: fundo, color: link }}>
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-3">
         {/* Links legais */}
-        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-          <Link href="/privacidade" className="hover:text-white transition-colors">Política de Privacidade</Link>
-          <span className={novo ? '' : 'text-gray-700'} style={{ color: fraco }}>|</span>
-          <Link href="/termos" className="hover:text-white transition-colors">Termos de Uso</Link>
-          <span className={novo ? '' : 'text-gray-700'} style={{ color: fraco }}>|</span>
-          <Link href="/lgpd" className="hover:text-white transition-colors">Seus Direitos (LGPD)</Link>
-          <span className={novo ? '' : 'text-gray-700'} style={{ color: fraco }}>|</span>
-          <CookieSettingsButton />
-          <span className={novo ? '' : 'text-gray-700'} style={{ color: fraco }}>|</span>
-          <a href="mailto:contato@santuarionerd.com.br" className="hover:text-white transition-colors">
+        <nav aria-label="Links legais" className="grid grid-cols-2 gap-x-4 gap-y-1 sm:flex sm:flex-wrap sm:items-center sm:justify-center">
+          <Link href="/privacidade" className={item}>Política de Privacidade</Link>
+          {barra}
+          <Link href="/termos" className={item}>Termos de Uso</Link>
+          {barra}
+          <Link href="/lgpd" className={item}>Seus Direitos (LGPD)</Link>
+          {barra}
+          <CookieSettingsButton className={`${item} inline-flex items-center justify-center gap-1.5`} />
+          {barra}
+          <a href="mailto:contato@santuarionerd.com.br" className={`${item} col-span-2 break-all`}>
             contato@santuarionerd.com.br
           </a>
         </nav>
         {/* Copyright */}
-        <p className={`text-center ${novo ? '' : 'text-gray-600'}`} style={novo ? { color: 'rgba(255,255,255,0.45)' } : undefined}>
-          © {new Date().getFullYear()} <span className={novo ? '' : 'text-gray-400'} style={novo ? { color: 'rgba(255,255,255,0.75)' } : undefined}>{nome}</span> — José Bonifácio, SP. Todos os direitos reservados.
+        <p className="text-center leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          © {new Date().getFullYear()} <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{nome}</span> — José Bonifácio, SP. Todos os direitos reservados.
         </p>
       </div>
     </footer>
