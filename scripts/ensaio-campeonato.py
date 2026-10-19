@@ -276,7 +276,9 @@ ok(chf.get('status') == 'Finalizado', f"campeonato ficou {chf.get('status')}")
 st, tel = Cliente('telão').req('GET', f'/api/torneios/{cid}')
 ok(st == 200 and len(tel.get('classificacao', [])) == len(tabela or []), 'telão abre sem login e mostra a classificação final')
 
-# Liga Mensal: pontos pela colocação (10/7/5/3/1), no mês do campeonato (calendário de Brasília)
+# Liga Mensal: pontos pela colocação (10/7/5/3/1), no mês do campeonato (calendário de Brasília).
+# As contas são novas a cada ensaio (uma linha por jogador na liga), então o total tem que ser EXATO:
+# a mais também é erro (ex.: dar 10 pra todo mundo).
 mes_br = (agora - timedelta(hours=3))
 st, liga = Cliente('liga').req('GET', f'/api/liga-mensal?ano={mes_br.year}&mes={mes_br.month}')
 pontos_liga = {l['userId']: l for l in (liga or {}).get('ranking', [])}
@@ -285,9 +287,10 @@ erros_liga = []
 for l in tabela or []:
     lin = pontos_liga.get(l['userId'])
     quer = esperado.get(l['posicao'], 1)
-    if lin is None or lin['totalPoints'] < quer:
-        erros_liga.append(f"{l['nome']}: esperado ≥ {quer}, veio {lin and lin['totalPoints']}")
-ok(not erros_liga, 'Liga Mensal somou 10/7/5/3/1 pela colocação' + ('' if not erros_liga else ': ' + '; '.join(erros_liga[:3])))
+    if lin is None or lin['totalPoints'] != quer or lin.get('eventsPlayed') != 1:
+        erros_liga.append(f"{l['nome']}: esperado {quer} pts em 1 evento, veio {lin and lin['totalPoints']} em {lin and lin.get('eventsPlayed')}")
+ok(not erros_liga, 'Liga Mensal deu exatamente 10/7/5/3/1 pela colocação' + ('' if not erros_liga else ': ' + '; '.join(erros_liga[:3])))
+ok(faltou['userId'] not in pontos_liga, f"{faltou['nome']} (faltou) não ganhou ponto na liga")
 com_deck = [l for l in (tabela or []) if pontos_liga.get(l['userId'], {}).get('decks')]
 ok(len(com_deck) == len(tabela or []), 'o deck de cada jogador chegou na Liga Mensal (vira o sprite na página)')
 
