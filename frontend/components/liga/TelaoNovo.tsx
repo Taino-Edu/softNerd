@@ -27,7 +27,7 @@ const PODIO = [
   { cor: '#E7A36B', texto: '#3B1D06', rotulo: '3º' },
 ]
 
-function RelogioTelao({ t, cor }: { t: TorneioPublicoDto; cor: string }) {
+function RelogioTelao({ t, cor, compacto }: { t: TorneioPublicoDto; cor: string; compacto?: boolean }) {
   const [, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick(x => x + 1), 1000)
@@ -43,16 +43,16 @@ function RelogioTelao({ t, cor }: { t: TorneioPublicoDto; cor: string }) {
   const mm = String(Math.floor(resta / 60)).padStart(2, '0')
   const ss = String(resta % 60).padStart(2, '0')
   return (
-    <section className="rounded-3xl px-6 py-5 md:py-6 text-center" style={CARD} aria-live="polite">
+    <section className={`rounded-3xl px-6 ${compacto ? 'py-4' : 'py-5 md:py-6'} text-center`} style={CARD} aria-live="polite">
       <p className={`${pixel.className} text-[10px] md:text-xs`} style={{ color: SUAVE }}>
         <Clock className="inline w-4 h-4 -mt-1 mr-2" />
         {t.timer?.state === 'paused' ? 'RELÓGIO PAUSADO' : `TEMPO DA RODADA ${t.rodadaAtual}`}
       </p>
-      <p className={`${pixel.className} mt-4 text-6xl md:text-8xl 2xl:text-9xl leading-none ${acabou ? 'animate-pulse' : ''}`}
+      <p className={`${pixel.className} ${compacto ? 'mt-3 text-6xl md:text-7xl' : 'mt-4 text-6xl md:text-8xl 2xl:text-9xl'} leading-none ${acabou ? 'animate-pulse' : ''}`}
         style={{ color: corTempo, textShadow: `0 6px 0 ${mixHex(cor, '#000000', 0.5)}` }}>
         {acabou ? 'TEMPO!' : `${mm}:${ss}`}
       </p>
-      <div className="mt-5 h-3 rounded-full overflow-hidden max-w-3xl mx-auto" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+      <div className={`${compacto ? 'mt-4' : 'mt-5'} h-3 rounded-full overflow-hidden max-w-3xl mx-auto`} style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
         <div className="h-full rounded-full transition-[width] duration-1000"
           style={{ width: `${pct}%`, backgroundColor: acabou ? '#F87171' : pouco ? AMARELO : '#7FA0F0' }} />
       </div>
@@ -60,25 +60,26 @@ function RelogioTelao({ t, cor }: { t: TorneioPublicoDto; cor: string }) {
   )
 }
 
-function Jogador({ nome, deck, venceu, perdeu }: { nome: string; deck?: string | null; venceu?: boolean; perdeu?: boolean }) {
+function Jogador({ nome, deck, venceu, perdeu, compacto }: { nome: string; deck?: string | null; venceu?: boolean; perdeu?: boolean; compacto?: boolean }) {
   return (
-    <div className={`flex items-center gap-3 min-w-0 ${perdeu ? 'opacity-50' : ''}`}>
-      <span className="w-12 h-12 shrink-0 flex items-end justify-center"><SpriteDeck deck={deck} tamanho={48} /></span>
+    <div className={`flex items-center ${compacto ? 'gap-2' : 'gap-3'} min-w-0 ${perdeu ? 'opacity-50' : ''}`}>
+      <span className={`${compacto ? 'w-9 h-9' : 'w-12 h-12'} shrink-0 flex items-end justify-center`}><SpriteDeck deck={deck} tamanho={compacto ? 36 : 48} /></span>
       <div className="min-w-0 flex-1">
-        <p className="text-base md:text-lg font-black leading-tight truncate" style={{ color: B }}>
+        <p className={`${compacto ? 'text-sm md:text-base' : 'text-base md:text-lg'} font-black leading-tight truncate`} style={{ color: B }}>
           {nome}{venceu && <CheckCircle2 className="inline w-4 h-4 ml-1.5 -mt-0.5" style={{ color: '#4ADE80' }} />}
         </p>
-        {deck && <p className="text-xs truncate" style={{ color: FRACO }}>{deck}</p>}
+        {deck && <p className={`${compacto ? 'text-[11px]' : 'text-xs'} truncate`} style={{ color: FRACO }}>{deck}</p>}
       </div>
     </div>
   )
 }
 
-function CartaoMesa({ m }: { m: MesaDto }) {
+function CartaoMesa({ m, compacto }: { m: MesaDto; compacto?: boolean }) {
+  const recuo = compacto ? 'pl-[44px]' : 'pl-[60px]'
   const venceuA = m.resultado === 'VitoriaA', venceuB = m.resultado === 'VitoriaB'
   return (
-    <div className="rounded-2xl px-4 py-3 flex gap-4 items-center" style={CARD}>
-      <div className="shrink-0 w-16 text-center">
+    <div className={`rounded-2xl ${compacto ? 'px-3 py-2.5 gap-3' : 'px-4 py-3 gap-4'} flex items-center`} style={CARD}>
+      <div className={`shrink-0 ${compacto ? 'w-12' : 'w-16'} text-center`}>
         {m.aguardandoMesa ? (
           <span className={`${pixel.className} block text-[8px] leading-relaxed px-1 py-2 rounded-lg`} style={{ backgroundColor: 'rgba(255,228,94,0.15)', color: AMARELO }}>
             AGUARDA<br />MESA
@@ -90,15 +91,15 @@ function CartaoMesa({ m }: { m: MesaDto }) {
           </>
         )}
       </div>
-      <div className="flex-1 min-w-0 space-y-2">
-        <Jogador nome={m.a.nome} deck={m.a.deck} venceu={venceuA || !m.b} perdeu={venceuB} />
+      <div className={`flex-1 min-w-0 ${compacto ? 'space-y-1' : 'space-y-2'}`}>
+        <Jogador nome={m.a.nome} deck={m.a.deck} venceu={venceuA || !m.b} perdeu={venceuB} compacto={compacto} />
         {m.b ? (
           <>
-            <p className={`${pixel.className} text-[8px] pl-[60px]`} style={{ color: FRACO }}>{m.resultado === 'Empate' ? 'EMPATE' : 'VS'}</p>
-            <Jogador nome={m.b.nome} deck={m.b.deck} venceu={venceuB} perdeu={venceuA} />
+            <p className={`${pixel.className} text-[8px] ${recuo}`} style={{ color: FRACO }}>{m.resultado === 'Empate' ? 'EMPATE' : 'VS'}</p>
+            <Jogador nome={m.b.nome} deck={m.b.deck} venceu={venceuB} perdeu={venceuA} compacto={compacto} />
           </>
         ) : (
-          <p className="text-xs pl-[60px]" style={{ color: SUAVE }}>Vitória automática nesta rodada</p>
+          <p className={`text-xs ${recuo}`} style={{ color: SUAVE }}>Vitória automática nesta rodada</p>
         )}
       </div>
     </div>
@@ -106,33 +107,36 @@ function CartaoMesa({ m }: { m: MesaDto }) {
 }
 
 function Classificacao({ linhas, cheia }: { linhas: LinhaTabela[]; cheia: boolean }) {
+  // Em jogo a classificação divide a tela com relógio e mesas: com mais de 10 jogadores as linhas
+  // ficam mais baixas e, em TV (2xl), vão pra duas colunas — 16 jogadores cabem em 1080px sem rolar
+  const compacta = !cheia && linhas.length > 10
   return (
     <section className="rounded-3xl p-4 md:p-5" style={CARD}>
       <h2 className={`${pixel.className} text-[11px] mb-3`} style={{ color: AMARELO }}>CLASSIFICAÇÃO</h2>
-      <div className={`grid gap-1.5 ${cheia ? 'xl:grid-cols-2 xl:gap-x-6' : ''}`}>
+      <div className={`grid ${compacta ? 'gap-1 2xl:grid-cols-2 2xl:gap-x-4' : 'gap-1.5'} ${cheia ? 'xl:grid-cols-2 xl:gap-x-6' : ''}`}>
         {linhas.map(l => {
           const p = PODIO[l.posicao - 1]
           return (
-            <div key={l.participanteId} className={`flex items-center gap-3 rounded-xl px-2 py-1.5 ${l.desistiuNaRodada ? 'opacity-50' : ''}`}
+            <div key={l.participanteId} className={`flex items-center ${compacta ? 'gap-2 py-1' : 'gap-3 py-1.5'} rounded-xl px-2 ${l.desistiuNaRodada ? 'opacity-50' : ''}`}
               style={p ? { backgroundColor: 'rgba(255,255,255,0.05)' } : undefined}>
-              <span className={`${pixel.className} w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[10px]`}
+              <span className={`${pixel.className} ${compacta ? 'w-7 h-7 text-[9px]' : 'w-9 h-9 text-[10px]'} shrink-0 rounded-lg flex items-center justify-center`}
                 style={p ? { backgroundColor: p.cor, color: p.texto } : { color: SUAVE }}>
                 {l.posicao}
               </span>
-              <span className="w-11 shrink-0 flex justify-center"><SpriteDeck deck={l.deck} tamanho={40} /></span>
+              <span className={`${compacta ? 'w-9' : 'w-11'} shrink-0 flex justify-center`}><SpriteDeck deck={l.deck} tamanho={compacta ? 32 : 40} /></span>
               <div className="flex-1 min-w-0">
-                <p className="text-base md:text-lg font-black leading-tight truncate" style={{ color: B }}>
+                <p className={`${compacta ? 'text-sm md:text-base' : 'text-base md:text-lg'} font-black leading-tight truncate`} style={{ color: B }}>
                   {l.nome}{l.desistiuNaRodada ? <span className="text-xs font-semibold" style={{ color: FRACO }}> (saiu)</span> : null}
                 </p>
-                {l.deck && <p className="text-xs truncate" style={{ color: FRACO }}>{l.deck}</p>}
+                {l.deck && <p className={`${compacta ? 'text-[11px]' : 'text-xs'} truncate`} style={{ color: FRACO }}>{l.deck}</p>}
               </div>
               <span className="hidden sm:block text-sm tabular-nums shrink-0" style={{ color: SUAVE }} title="Vitórias / Empates / Derrotas">
                 {l.vitorias}-{l.empates}-{l.derrotas}
               </span>
-              <span className="hidden md:block text-xs tabular-nums w-14 text-right shrink-0" style={{ color: FRACO }} title="Aproveitamento dos adversários (desempate)">
+              <span className={`hidden md:block ${compacta ? '2xl:hidden' : ''} text-xs tabular-nums w-14 text-right shrink-0`} style={{ color: FRACO }} title="Aproveitamento dos adversários (desempate)">
                 {l.owp.toFixed(0)}%
               </span>
-              <span className={`${pixel.className} text-sm md:text-base w-12 text-right shrink-0`} style={{ color: AMARELO }}>{l.pontos}</span>
+              <span className={`${pixel.className} text-sm md:text-base ${compacta ? 'w-9' : 'w-12'} text-right shrink-0`} style={{ color: AMARELO }}>{l.pontos}</span>
             </div>
           )
         })}
@@ -172,6 +176,8 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
   const cor = site?.colorHero ?? '#1E4FD6'
   const encerrado = t.status === 'Finalizado'
   const emJogo = !encerrado && t.rodadaAtual > 0
+  // Muitas mesas (16+ jogadores): relógio menor e mesas em 3 colunas na TV, pra rodada caber em 1080px
+  const muitasMesas = t.mesas.length > 6
   const setup = emJogo && !rodadaComecou(t.timer, t.rodadaAtual) && t.mesas.some(m => !m.resultado)
   const situacao = encerrado ? 'TORNEIO ENCERRADO'
     : t.rodadaAtual > 0 ? `RODADA ${t.rodadaAtual}${t.numeroRodadas ? ` DE ${t.numeroRodadas}` : ''}`
@@ -219,7 +225,7 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
         <div className={`grid gap-6 items-start ${emJogo && t.classificacao.length > 0 ? 'xl:grid-cols-[1.15fr_1fr]' : ''}`}>
           {emJogo && (
             <div className="space-y-5 min-w-0">
-              <RelogioTelao t={t} cor={cor} />
+              <RelogioTelao t={t} cor={cor} compacto={muitasMesas} />
               {setup && (
                 <p className={`${pixel.className} text-center text-[10px] md:text-sm leading-relaxed rounded-2xl py-4 px-3`}
                   style={{ backgroundColor: 'rgba(255,228,94,0.12)', color: AMARELO, border: '1px solid rgba(255,228,94,0.35)' }}>
@@ -229,8 +235,8 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
               {t.mesas.length > 0 && (
                 <section className="space-y-3">
                   <h2 className={`${pixel.className} text-[11px]`} style={{ color: AMARELO }}>MESAS DA RODADA {t.rodadaAtual}</h2>
-                  <div className="grid md:grid-cols-2 gap-3">
-                    {t.mesas.map(m => <CartaoMesa key={m.partidaId} m={m} />)}
+                  <div className={`grid md:grid-cols-2 gap-3 ${muitasMesas ? '2xl:grid-cols-3' : ''}`}>
+                    {t.mesas.map(m => <CartaoMesa key={m.partidaId} m={m} compacto={muitasMesas} />)}
                   </div>
                 </section>
               )}
