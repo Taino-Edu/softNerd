@@ -21,8 +21,13 @@ namespace CardGameStore.Controllers;
 public class TorneioController : ControllerBase
 {
     private readonly TorneioService _torneio;
+    private readonly EtapaExternaService _etapaExterna;
 
-    public TorneioController(TorneioService torneio) => _torneio = torneio;
+    public TorneioController(TorneioService torneio, EtapaExternaService etapaExterna)
+    {
+        _torneio = torneio;
+        _etapaExterna = etapaExterna;
+    }
 
     // ── Organizador ──────────────────────────────────────────────────────────
 
@@ -90,6 +95,20 @@ public class TorneioController : ControllerBase
     [HttpPost("{id:guid}/encerrar")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> Encerrar(Guid id) => Rodar(async () => Ok(await _torneio.EncerrarAsync(id)));
+
+    // ── Etapa jogada fora do sistema (Central da Liguinha) ───────────────────
+
+    /// <summary>Mostra quem vai ser ligado a cliente existente e quem vai ser criado, sem gravar.</summary>
+    [HttpPost("etapa-externa/simular")]
+    [Authorize(Policy = "AdminOnly")]
+    public Task<IActionResult> SimularEtapaExterna([FromBody] EtapaExternaRequest req) =>
+        Rodar(async () => Ok(await _etapaExterna.SimularAsync(req)));
+
+    /// <summary>Grava a etapa como campeonato encerrado, com a colocação de cada um → Liga Mensal.</summary>
+    [HttpPost("etapa-externa")]
+    [Authorize(Policy = "AdminOnly")]
+    public Task<IActionResult> LancarEtapaExterna([FromBody] EtapaExternaRequest req) =>
+        Rodar(async () => StatusCode(201, await _etapaExterna.LancarAsync(req, UsuarioId())));
 
     // ── Jogador ──────────────────────────────────────────────────────────────
 

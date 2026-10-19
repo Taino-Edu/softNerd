@@ -10,8 +10,10 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import ConferenciaDecksModal from '@/components/admin/ConferenciaDecksModal'
+import EscolherModalidade from '@/components/liga/admin/EscolherModalidade'
 import DeckViewerModal from '@/components/admin/DeckViewerModal'
 import { getRole } from '@/lib/auth'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 /**
  * Vaga que passou do prazo de pagamento. A inscrição não some — ela só deixa de
@@ -49,7 +51,8 @@ function NewChampionshipModal({ onClose, onSave }: {
   onClose: () => void
   onSave: (c: Partial<Championship>) => Promise<void>
 }) {
-  const [form, setForm]       = useState<Partial<Championship>>({ game: 'Pokemon', entryFeeInCents: 0 })
+  const [form, setForm]       = useState<Partial<Championship>>({ game: 'Pokemon', entryFeeInCents: 0, modalidade: 'Liga' })
+  const modalidades = useFuncionalidade('liga-modalidades') !== false
   const [saving, setSaving]   = useState(false)
   const [imgPreview, setImgPreview] = useState<string | null>(null)
   const [uploading, setUploading]   = useState(false)
@@ -126,6 +129,12 @@ function NewChampionshipModal({ onClose, onSave }: {
             )}
           </div>
 
+          {modalidades && (
+            <div>
+              <label className="label">Modalidade</label>
+              <EscolherModalidade valor={form.modalidade ?? 'Liga'} onChange={m => set('modalidade', m)} />
+            </div>
+          )}
           <div>
             <label className="label">Nome do Campeonato *</label>
             <input className="input" value={form.name ?? ''}
@@ -201,6 +210,7 @@ function EditChampionshipModal({ championship, onClose, onSave }: {
   onSave: (id: string, c: Partial<Championship>) => Promise<void>
 }) {
   const [form, setForm]       = useState<Partial<Championship>>({ ...championship })
+  const modalidades = useFuncionalidade('liga-modalidades') !== false
   const [saving, setSaving]   = useState(false)
   const [imgPreview, setImgPreview] = useState<string | null>(championship.imageUrl ?? null)
   const [uploading, setUploading]   = useState(false)
@@ -278,6 +288,12 @@ function EditChampionshipModal({ championship, onClose, onSave }: {
             )}
           </div>
 
+          {modalidades && (
+            <div>
+              <label className="label">Modalidade</label>
+              <EscolherModalidade valor={form.modalidade ?? 'Liga'} onChange={m => set('modalidade', m)} />
+            </div>
+          )}
           <div>
             <label className="label">Nome do Campeonato *</label>
             <input className="input" required value={form.name ?? ''}

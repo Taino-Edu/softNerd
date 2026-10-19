@@ -52,6 +52,8 @@ public static class Funcionalidades
     public const string AdminTelasNovas = "admin-telas-novas";
     public const string TelaoNovo = "telao-novo";
     public const string LigaAnimacaoResultado = "liga-animacao-resultado";
+    public const string AdminLiguinhaCentral = "admin-liguinha-central";
+    public const string LigaModalidades = "liga-modalidades";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -218,6 +220,25 @@ public static class Funcionalidades
             SeDesligar: "A tela do jogador volta a mostrar só o texto do resultado e o nome do oponente, sem animação nem sprite.",
             Padrao:     true,
             Desde:      "v1.55.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(AdminLiguinhaCentral,
+            Nome:       "Painel: Central da Liguinha",
+            OQueMuda:   "Item novo no menu do painel (Eventos → Central da Liguinha), no estilo do Challonge: lista de torneios com busca e filtro, " +
+                        "criar torneio em um passo, adicionar jogadores por nome ou vários de uma vez, histórico de rodadas, classificação, " +
+                        "Liga do mês ao lado e \"Lançar etapa de fora\" pra etapa jogada no papel ou em outro app entrar no histórico e na Liga.",
+            SeDesligar: "O item some do menu e fica só o de antes (Campeonatos, Liga Mensal, Timers). Etapas já lançadas continuam no histórico.",
+            Padrao:     true,
+            Desde:      "v1.56.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(LigaModalidades,
+            Nome:       "Liga × Campeonato",
+            OQueMuda:   "Ao criar, escolhe a modalidade: Liga (liguinha semanal, suíço, soma na Liga Mensal) ou Campeonato " +
+                        "(evento avulso — por enquanto só inscrição e venda, NÃO soma na Liga). Os que já existiam continuam Liga.",
+            SeDesligar: "A Liga Mensal volta a somar todo evento com colocação, seja Liga ou Campeonato (como antes).",
+            Padrao:     true,
+            Desde:      "v1.56.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

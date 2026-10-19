@@ -114,5 +114,6 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que jÃ
 | Singleton | `IValidadorGoogle â†’ ValidadorGoogle` | `CardGameStore/Services/Implementations/LoginGoogle.cs` |
 | Scoped | `CardGameStore.Services.Liga.TorneioService` | `CardGameStore/Services/Liga/TorneioService.cs` |
 | Scoped | `CardGameStore.Services.Liga.LigaMensalService` | `CardGameStore/Services/Liga/LigaMensalService.cs` |
+| Scoped | `CardGameStore.Services.Liga.EtapaExternaService` | `CardGameStore/Services/Liga/EtapaExternaService.cs` |
 | Scoped | `FuncionalidadesService` | `CardGameStore/Services/Implementations/FuncionalidadesService.cs` |
 | Singleton | `FotosLeves` | `CardGameStore/Services/Implementations/FotosLeves.cs` |

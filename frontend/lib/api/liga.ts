@@ -55,6 +55,23 @@ export interface MinhaMesaDto {
   mesa: MesaDto | null; meuReport: ResultadoJogador | null; reportOponente: ResultadoJogador | null
 }
 
+/** Etapa jogada fora do sistema (papel, outro app) → campeonato encerrado com colocação. */
+export interface EtapaExternaJogador {
+  nome: string; deck?: string | null; userId?: string | null
+  /** Cadastro novo mesmo se o nome bater com um cliente ("não é esse"). */
+  novoCadastro?: boolean
+}
+export interface EtapaExternaRequest {
+  nome: string; data: string; jogo?: string | null; jogadores: EtapaExternaJogador[]
+}
+export interface EtapaExternaLinha {
+  posicao: number; nome: string; deck?: string | null; pontos: number
+  userId?: string | null; clienteNome?: string | null
+  /** existente = liga ao cliente; novo = cria cliente de balcão; homonimos = vários com o nome (cria novo, a menos que escolha) */
+  situacao: 'existente' | 'novo' | 'homonimos'
+}
+export interface EtapaExternaDto { championshipId?: string | null; linhas: EtapaExternaLinha[] }
+
 export interface TorneioResumoDto {
   id: string; nome: string; status: string; rodadaAtual: number; numeroRodadas: number | null; checkIn: boolean
 }
@@ -76,6 +93,10 @@ export const torneioApi = {
   desistencia: (id: string, participantId: string) =>
     api.post(`/api/torneios/${id}/participantes/${participantId}/desistencia`),
   encerrar:    (id: string) => api.post<LinhaTabela[]>(`/api/torneios/${id}/encerrar`),
+  /** Mesas de uma rodada já jogada (histórico). */
+  rodada:      (id: string, numero: number) => api.get<MesaDto[]>(`/api/torneios/${id}/rodadas/${numero}`),
+  simularEtapaExterna: (body: EtapaExternaRequest) => api.post<EtapaExternaDto>('/api/torneios/etapa-externa/simular', body),
+  lancarEtapaExterna:  (body: EtapaExternaRequest) => api.post<EtapaExternaDto>('/api/torneios/etapa-externa', body),
 
   // Jogador
   entrar:      (body: { codigo: string; deckId?: string | null; deckNome?: string | null }) =>

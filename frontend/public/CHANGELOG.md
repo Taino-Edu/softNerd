@@ -1,5 +1,27 @@
 # Changelog — Santuário Nerd
 
+## [v1.56.0] — 2026-10-19
+
+### Novo — Central da Liguinha (painel, estilo Challonge)
+- **Item novo no menu: Eventos → Central da Liguinha.** Todos os torneios num lugar só, com busca ("Procure seus torneios") e filtros (em andamento, inscrições, encerrados, cancelados); quem está rodando aparece primeiro, com "Rodada 2 de 4"
+- **Números do mês no topo**: torneios acontecendo agora, etapas no mês, líder da Liga e quantos jogadores pontuaram; **a Liga do mês ao lado**, com os 10 primeiros
+- **Criar torneio em um passo**: nome, dia, hora, jogo, melhor de 1/3, minutos por rodada, lugares e inscrição — já abre o check-in e cai na lista de jogadores
+- **Cada torneio em abas**: Painel (o de sempre), **Jogadores**, **Rodadas** (todas as mesas de cada rodada, com sprite do deck e quem venceu) e **Classificação**
+- **Adicionar jogador como no Challonge**: buscar cliente, **só pelo nome** (quem não tem cadastro vira cliente de balcão, igual ao caixa — ativa a conta depois) ou **vários de uma vez** colando a lista; quem chega na hora já entra presente
+- **Lançar etapa de fora**: pra etapa jogada no papel ou em outro app. Cola a classificação (um por linha, do 1º ao último), confere quem já é cliente e quem vai ser cadastrado (dá pra ligar a outro cliente), e lança: vira torneio encerrado com a colocação de cada um e **soma na Liga Mensal** (10/7/5/3/1). A mesma etapa não entra duas vezes
+
+### Novo — Liguinha × Campeonato, duas modalidades
+- Ao criar (na Central ou na tela de Campeonatos) escolhe a **modalidade**:
+  - **Liguinha**: semanal, no suíço — a colocação **soma na Liga Mensal**, que define prêmios e métricas
+  - **Campeonato**: evento avulso — por enquanto **só inscrição e venda** (vagas, taxa, inscritos, pagos, quanto entrou e quanto falta receber); **não soma na Liga**
+- A Central filtra por **Tudo / Liga / Campeonatos** e mostra a modalidade de cada evento. "Lançar etapa de fora" é sempre da Liguinha
+- Tudo que já existia continua **Liguinha** (nada muda pra trás)
+- **Preço da entrada por evento**: em cada liguinha (mesmo com mais de uma na semana) e em cada campeonato o Maikon escolhe **Grátis** ou **Paga** e o valor — o de sempre ou um a mais numa edição especial. Atalhos com os últimos valores usados; o preço aparece na lista e dá pra mudar depois ("Entrada R$ …" no topo do evento; quem já se inscreveu fica como estava)
+
+### Mudança com volta
+- Chave **"Liga × Campeonato"**: desligada, a Liga Mensal volta a somar todo evento com colocação, como antes
+- Chave **"Painel: Central da Liguinha"** em `/admin/funcionalidades`. Desligada, o item some do menu e ficam as telas de antes (Campeonatos, Liga Mensal, Timers)
+
 ## [v1.55.0] — 2026-10-19
 
 ### Novo — animação de vitória e derrota na liguinha

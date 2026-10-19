@@ -34,6 +34,7 @@ public static class InicializacaoBanco
         "ALTER TABLE championships ADD COLUMN numero_rodadas INTEGER NULL;",
         "ALTER TABLE championships ADD COLUMN rodada_atual INTEGER NOT NULL DEFAULT 0;",
         "ALTER TABLE championships ADD COLUMN lugares INTEGER NOT NULL DEFAULT 24;",
+        "ALTER TABLE championships ADD COLUMN modalidade TEXT NOT NULL DEFAULT 'Liga';",
         "ALTER TABLE championship_participants ADD COLUMN check_in_em TEXT NULL;",
         "ALTER TABLE championship_participants ADD COLUMN desistiu_na_rodada INTEGER NULL;",
         "ALTER TABLE timers ADD COLUMN championship_id TEXT NULL;",

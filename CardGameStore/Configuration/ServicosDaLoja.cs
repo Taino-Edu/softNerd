@@ -188,6 +188,7 @@ public static class ServicosDaLoja
         // Liguinha — torneio suíço em cima do campeonato (docs/liguinha.md)
         services.AddScoped<CardGameStore.Services.Liga.TorneioService>();
         services.AddScoped<CardGameStore.Services.Liga.LigaMensalService>();
+        services.AddScoped<CardGameStore.Services.Liga.EtapaExternaService>();
 
         // Chaves de funcionalidade: mudança grande com volta (Configuration/Funcionalidades.cs)
         services.AddScoped<FuncionalidadesService>();
