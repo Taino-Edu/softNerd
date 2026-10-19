@@ -115,5 +115,6 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j√
 | Scoped | `CardGameStore.Services.Liga.TorneioService` | `CardGameStore/Services/Liga/TorneioService.cs` |
 | Scoped | `CardGameStore.Services.Liga.LigaMensalService` | `CardGameStore/Services/Liga/LigaMensalService.cs` |
 | Scoped | `CardGameStore.Services.Liga.EtapaExternaService` | `CardGameStore/Services/Liga/EtapaExternaService.cs` |
+| Scoped | `CardGameStore.Services.Liga.LigaEstatisticasService` | `CardGameStore/Services/Liga/LigaEstatisticasService.cs` |
 | Scoped | `FuncionalidadesService` | `CardGameStore/Services/Implementations/FuncionalidadesService.cs` |
 | Singleton | `FotosLeves` | `CardGameStore/Services/Implementations/FotosLeves.cs` |

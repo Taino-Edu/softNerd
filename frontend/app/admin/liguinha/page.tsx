@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import clsx from 'clsx'
-import { Award, CalendarDays, ChevronRight, ClipboardList, Crown, Loader2, Monitor, Plus, Search, Swords, Trophy, Users } from 'lucide-react'
+import { Award, BarChart3, CalendarDays, ChevronRight, ClipboardList, Crown, Loader2, Monitor, Plus, Search, Swords, Trophy, Users } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Badge, BadgeTone } from '@/components/ui/Badge'
 import { championshipApi, ligaMensalApi, Championship, LigaMensalDto, Modalidade } from '@/lib/api'
@@ -105,6 +105,7 @@ export default function CentralLiguinhaPage() {
         title="Central da Liguinha"
         subtitle="Torneios, etapas e a Liga do mês num lugar só"
         actions={<>
+          <Link href="/admin/liguinha/liga" className="btn-secondary"><BarChart3 className="w-4 h-4" /> Liga e métricas</Link>
           <button onClick={() => setLancando(true)} className="btn-secondary"><ClipboardList className="w-4 h-4" /> Lançar etapa de fora</button>
           <button onClick={() => setCriando(true)} className="btn-primary"><Plus className="w-4 h-4" /> Criar torneio</button>
         </>}
@@ -219,8 +220,11 @@ export default function CentralLiguinhaPage() {
               ))}
             </ol>
           )}
-          <Link href="/admin/liga-mensal" className="text-sm text-brand-400 inline-flex items-center gap-1">
-            <Award className="w-4 h-4" /> Liga completa e lançamentos manuais
+          <Link href="/admin/liguinha/liga" className="text-sm text-brand-400 inline-flex items-center gap-1">
+            <BarChart3 className="w-4 h-4" /> Ranking completo, campeões e decks
+          </Link>
+          <Link href="/admin/liga-mensal" className="text-xs text-gray-500 inline-flex items-center gap-1 hover:text-gray-300">
+            <Award className="w-3.5 h-3.5" /> Lançamentos manuais
           </Link>
         </aside>
       </div>

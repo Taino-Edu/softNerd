@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.58.0] — 2026-10-19
+
+### Novo — Liga e métricas (Central da Liguinha)
+- **Tela "Liga e métricas"** (botão no topo da Central): escolhe **Semana**, **Mês** ou **Temporada** e anda pros períodos anteriores
+- **Resumo do período**: etapas, jogadores diferentes, média por etapa, novatos (primeira etapa na Liga) e o líder
+- **Ranking completo** com pontos, etapas jogadas, títulos, vezes no top 4, V-E-D e % de vitória nas partidas, com o Pokémon do deck principal de cada um — os mesmos pontos da Liga Mensal
+- **Campeões de cada etapa** do período, com o deck que venceu
+- **Decks**: mais usados, quantos jogadores, títulos, V-E-D e % de vitória de cada um
+- **Copiar pro WhatsApp**: o top 10 e os campeões das etapas num texto pronto pra colar no grupo
+- Etapa lançada de fora entra nos pontos, nos campeões e nos decks; V-E-D e % só das jogadas no sistema (a de fora tem só a colocação)
+
 ## [v1.57.0] — 2026-10-19
 
 ### Corrigido — telas quebradas

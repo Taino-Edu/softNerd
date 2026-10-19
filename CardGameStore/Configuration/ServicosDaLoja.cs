@@ -189,6 +189,7 @@ public static class ServicosDaLoja
         services.AddScoped<CardGameStore.Services.Liga.TorneioService>();
         services.AddScoped<CardGameStore.Services.Liga.LigaMensalService>();
         services.AddScoped<CardGameStore.Services.Liga.EtapaExternaService>();
+        services.AddScoped<CardGameStore.Services.Liga.LigaEstatisticasService>();
 
         // Chaves de funcionalidade: mudança grande com volta (Configuration/Funcionalidades.cs)
         services.AddScoped<FuncionalidadesService>();
