@@ -4,7 +4,7 @@
 // uma vez colando a lista. Quem chega na hora já entra presente (check-in).
 // Cliente com conta: dá pra escolher um dos decks salvos em "Meus decks" (v1.59.0) — o mesmo
 // deck que ele escolheria entrando pelo código; o servidor confere que o deck é dele.
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { Layers, ListPlus, Loader2, Trash2, UserPlus, X } from 'lucide-react'
@@ -35,6 +35,8 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false, 
   const [decksDele, setDecksDele] = useState<DeckDto[] | null>(null)
   const [deckId, setDeckId] = useState('')   // '' = digitar o nome
   const [deckTexto, setDeckTexto] = useState('')
+  // Cliente da busca em andamento: resposta de um cliente que já foi trocado é ignorada
+  const buscaDecksDe = useRef<string | null>(null)
 
   async function inscrever(userId: string, deckNome: string | null, idDoDeck?: string) {
     const { data: part } = await championshipApi.adminRegister(p.id, userId, deckNome || undefined, idDoDeck || undefined)
@@ -44,15 +46,17 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false, 
   function escolher(c: { id: string; name: string }) {
     setEscolhido({ id: c.id, nome: c.name })
     setDecksDele(null); setDeckId(''); setDeckTexto('')
+    buscaDecksDe.current = c.id
     deckApi.getByUser(c.id)
       .then(r => {
+        if (buscaDecksDe.current !== c.id) return
         // os do jogo do torneio primeiro, depois os mais recentes
         const doJogo = (d: DeckDto) => (jogo && d.game?.toLowerCase() === jogo.toLowerCase() ? 0 : 1)
         const ordem = [...r.data].sort((a, b) => doJogo(a) - doJogo(b) || b.updatedAt.localeCompare(a.updatedAt))
         setDecksDele(ordem)
         if (ordem.length > 0 && doJogo(ordem[0]) === 0) setDeckId(ordem[0].id)
       })
-      .catch(() => setDecksDele([]))
+      .catch(() => { if (buscaDecksDe.current === c.id) setDecksDele([]) })
   }
 
   async function adicionarEscolhido() {
@@ -138,7 +142,7 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false, 
                   <div className="rounded-xl border border-surface-400 p-3 space-y-3">
                     <div className="flex items-center gap-2">
                       <span className="flex-1 min-w-0 text-sm font-semibold text-white truncate">{escolhido.nome}</span>
-                      <button type="button" onClick={() => setEscolhido(null)} title="Escolher outro cliente"
+                      <button type="button" onClick={() => { buscaDecksDe.current = null; setEscolhido(null) }} title="Escolher outro cliente"
                         className="text-gray-500 hover:text-white p-1"><X className="w-4 h-4" /></button>
                     </div>
                     <div className="text-sm">
