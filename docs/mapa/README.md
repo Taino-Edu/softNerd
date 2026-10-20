@@ -132,6 +132,9 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
 - Dá baixa quando pagou: `PixReconciliationService.cs` — um `case` por origem (comanda, crediário,
   campeonato, reserva). Origem nova de cobrança = `case` novo aqui.
 - Robô que confere a cada 5 min: `PixReconciliationBackgroundService.cs`.
+- Pedido do site (reserva): cancelar pedido não pago **derruba o Pix antes** (`ReservationController.DerrubarPixAntesDeCancelarAsync`);
+  Pix que cai em pedido cancelado reativa o pedido se tiver estoque ou avisa os admins (`BaixarReservaAsync`).
+  Chave `pedido-pix-consistente`. Fluxo novo que cancela pedido? Passe pelo mesmo método.
 - Crediário tem regra própria (reaproveitar cobrança, pagar parte, pagar tudo): `CrediarioPixService.cs`.
 
 ### Crediário
