@@ -1,3 +1,4 @@
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Hubs;
@@ -43,12 +44,14 @@ public class ReservationController : ControllerBase
     private readonly IHubContext<ComandaHub> _hub;
     private readonly InterSyncService    _inter;
     private readonly ILogger<ReservationController> _logger;
+    private readonly FuncionalidadesService? _funcionalidades;
 
     public ReservationController(
         AppDbContext db, IVendaAvulsaService vendaService,
         IReservationPixService reservationPix, IPixReconciliationService pixReconciliation, IPushService push,
         IAuditService audit, IHubContext<ComandaHub> hub,
-        InterSyncService inter, ILogger<ReservationController> logger)
+        InterSyncService inter, ILogger<ReservationController> logger,
+        FuncionalidadesService? funcionalidades = null)
     {
         _db                = db;
         _vendaService      = vendaService;
@@ -59,6 +62,74 @@ public class ReservationController : ControllerBase
         _hub               = hub;
         _inter             = inter;
         _logger            = logger;
+        _funcionalidades   = funcionalidades;
+    }
+
+    private async Task<bool> PedidoPixConsistenteAsync() =>
+        _funcionalidades is null
+            ? Funcionalidades.Buscar(Funcionalidades.PedidoPixConsistente)!.Padrao
+            : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoPixConsistente);
+
+    /// <summary>
+    /// Chave "pedido-pix-consistente": pedido não pago sendo cancelado com Pix aberto tem a
+    /// cobrança derrubada no Inter ANTES — senão o QR continua pagável e o dinheiro cai num
+    /// pedido cancelado (o estoque já voltou pra prateleira e nada vira venda). Devolve o
+    /// erro pra responder ao chamador, ou null pra seguir com o cancelamento.
+    /// </summary>
+    private async Task<IActionResult?> DerrubarPixAntesDeCancelarAsync(ProductReservation res)
+    {
+        if (res.Kind != "pre_venda" || res.Status != "active" || res.ExpiresAt is null) return null;
+        if (!await PedidoPixConsistenteAsync()) return null;
+
+        var pix = await _db.PixCobrancas
+            .Where(p => p.ReservationGroupId == res.ReservationGroupId && p.Origem == PixCobrancaOrigem.Reserva && p.Status == "ATIVA")
+            .OrderByDescending(p => p.CriadoEm)
+            .FirstOrDefaultAsync();
+        if (pix is null) return null;
+
+        return await DerrubarCobrancaAsync(pix,
+            pagaAgora: "O Pix deste pedido acabou de ser pago — ele está pago agora e não foi cancelado. Recarregue a tela.",
+            interRecusou: "Não deu pra cancelar o Pix no banco agora, então o pedido não foi cancelado (o cliente ainda conseguiria pagar). Tente de novo em instantes.",
+            motivo: "pedido cancelado");
+    }
+
+    /// <summary>
+    /// Encerra uma cobrança Pix de pedido no Inter. Antes confere se ela não acabou de ser
+    /// paga (cancelar apagaria a única pista do pagamento). Cobrança vencida pode ser encerrada
+    /// só aqui se o Inter não responder; no prazo, não — o QR ficaria de pé sem ninguém conciliar.
+    /// </summary>
+    private async Task<IActionResult?> DerrubarCobrancaAsync(PixCobranca pix, string pagaAgora, string interRecusou, string motivo)
+    {
+        // Confere SEMPRE, mesmo vencida: Pix pago pouco antes de vencer e ainda não conciliado
+        // (o robô roda a cada 5 min) seria marcado como removido e o robô nunca mais olharia pra
+        // ele (só busca ATIVA) — o pagamento sumiria. Sem conseguir conferir, não cancela.
+        var conferida = await _pixReconciliation.ReconciliarAsync(pix);
+        if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
+            return Conflict(new { Message = pagaAgora });
+        if (conferida.Error is not null)
+            return StatusCode(502, new { Message = $"{interRecusou} ({conferida.Error})" });
+
+        var jaVenceu = pix.ExpiraEm is not null && pix.ExpiraEm <= DateTime.UtcNow;
+
+        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
+        var removida = cfg is null
+            ? new PixCobrancaResult { Error = "Integração com o Inter não configurada." }
+            : await _inter.RemoverCobrancaAsync(cfg, pix.TxId);
+
+        if (removida.Error is not null && !jaVenceu)
+            return StatusCode(502, new { Message = $"{interRecusou} ({removida.Error})" });
+
+        if (removida.Error is not null)
+            _logger.LogWarning("Cobrança {TxId} vencida encerrada localmente — o Inter recusou o PATCH: {Erro}",
+                pix.TxId, removida.Error);
+
+        pix.Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR";
+        await _db.SaveChangesAsync();
+
+        await _audit.LogAsync("CancelouPixReserva", "PixCobranca", pix.Id.ToString(),
+            details: $"{{\"groupId\":\"{pix.ReservationGroupId}\",\"txid\":\"{pix.TxId}\",\"vencida\":{jaVenceu.ToString().ToLowerInvariant()},\"motivo\":\"{motivo}\"}}",
+            httpContext: HttpContext);
+        return null;
     }
 
     // Avisa o admin (grupo do hub) que o estoque mudou — a tela de estoque
@@ -512,6 +583,8 @@ public class ReservationController : ControllerBase
         if (jaPaga && !User.IsInRole("Admin"))
             return BadRequest(new { Message = "Esta pré-venda já foi paga — fale com a loja pra cancelar e combinar o estorno." });
 
+        if (await DerrubarPixAntesDeCancelarAsync(res) is { } pixTravou) return pixTravou;
+
         var statusOriginal  = res.Status;
         var devolveuEstoque = false;
 
@@ -546,6 +619,10 @@ public class ReservationController : ControllerBase
         if (jaPaga)
             await _audit.LogAsync("CancelouPreVendaPaga", "ProductReservation", res.Id.ToString(),
                 details: $"{{\"produtoId\":\"{res.ProductId}\",\"valorPago\":true,\"observacao\":\"estorno manual pendente\"}}",
+                httpContext: HttpContext);
+        else
+            await _audit.LogAsync("CancelouPedido", "ProductReservation", res.Id.ToString(),
+                details: $"{{\"produtoId\":\"{res.ProductId}\",\"status\":\"{statusOriginal}\",\"pelaLoja\":{(res.UserId != userId).ToString().ToLowerInvariant()}}}",
                 httpContext: HttpContext);
 
         // Sobrou estoque? Puxa o próximo da fila.
@@ -634,6 +711,9 @@ public class ReservationController : ControllerBase
             return BadRequest(new { Message = "Só pré-vendas ativas podem ser marcadas como retiradas." });
 
         var jaPaga = req.Status == "cancelled" && res.Status == "active" && res.Kind == "pre_venda" && res.ExpiresAt is null;
+
+        if (req.Status == "cancelled" && await DerrubarPixAntesDeCancelarAsync(res) is { } pixTravou) return pixTravou;
+
         var statusOriginal  = res.Status;
         var devolveuEstoque = false;
 
@@ -1017,14 +1097,13 @@ public class ReservationController : ControllerBase
 
         // Antes de cancelar, confere no Inter: se o cliente acabou de pagar POR ESTA
         // cobrança, cancelar apagaria a única pista do pagamento. Nesse caso a
-        // reconciliação dá a baixa e o cancelamento é recusado.
+        // reconciliação dá a baixa e o cancelamento é recusado. Confere também a vencida
+        // (paga pouco antes de vencer, ainda não conciliada); se o Inter não responder,
+        // a vencida segue encerrando só aqui, como antes.
         var jaVenceu = pix.ExpiraEm is not null && pix.ExpiraEm <= DateTime.UtcNow;
-        if (!jaVenceu)
-        {
-            var conferida = await _pixReconciliation.ReconciliarAsync(pix);
-            if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
-                return Conflict(new { Message = "Esta cobrança acabou de ser paga pelo cliente e foi baixada agora — recarregue a tela." });
-        }
+        var conferida = await _pixReconciliation.ReconciliarAsync(pix);
+        if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
+            return Conflict(new { Message = "Esta cobrança acabou de ser paga pelo cliente e foi baixada agora — recarregue a tela." });
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
         var removida = cfg is null

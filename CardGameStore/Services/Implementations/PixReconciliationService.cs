@@ -13,6 +13,7 @@
 // =============================================================================
 
 using System.Text.Json;
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
@@ -29,10 +30,12 @@ public class PixReconciliationService : IPixReconciliationService
     private readonly IEmailService    _email;
     private readonly IPushService     _push;
     private readonly ILogger<PixReconciliationService> _logger;
+    private readonly FuncionalidadesService? _funcionalidades;
 
     public PixReconciliationService(
         AppDbContext db, InterSyncService inter, IComandaService comanda,
-        IEmailService email, IPushService push, ILogger<PixReconciliationService> logger)
+        IEmailService email, IPushService push, ILogger<PixReconciliationService> logger,
+        FuncionalidadesService? funcionalidades = null)
     {
         _db      = db;
         _inter   = inter;
@@ -40,7 +43,14 @@ public class PixReconciliationService : IPixReconciliationService
         _email   = email;
         _push    = push;
         _logger  = logger;
+        _funcionalidades = funcionalidades;
     }
+
+    /// <summary>Sem o serviço (testes antigos) vale o padrão do catálogo.</summary>
+    private async Task<bool> PedidoPixConsistenteAsync() =>
+        _funcionalidades is null
+            ? Funcionalidades.Buscar(Funcionalidades.PedidoPixConsistente)!.Padrao
+            : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoPixConsistente);
 
     /// <summary>Push que só pode sair depois do commit — dentro da transação, um
     /// envio lento seguraria o lock, e um rollback avisaria de um pagamento que
@@ -372,14 +382,39 @@ public class PixReconciliationService : IPixReconciliationService
         // Itens do snapshot cancelados entre a geração e o pagamento: o cliente pagou
         // por eles mesmo assim — fica sinalizado no lançamento financeiro e no log.
         var canceladosCobrados = 0;
+        var reativados = 0;
         if (snapshot is { Count: > 0 })
         {
-            canceladosCobrados = await _db.ProductReservations
-                .CountAsync(r => snapshot.Contains(r.Id) && r.Status == "cancelled");
+            var cancelados = await _db.ProductReservations
+                .Include(r => r.User)
+                .Where(r => snapshot.Contains(r.Id) && r.Status == "cancelled" && r.Kind == "pre_venda")
+                .ToListAsync();
+
+            // Chave "pedido-pix-consistente": quem pagou quer o produto. Se o estoque ainda
+            // der, o pedido volta como pago (aguardando retirada); senão os admins são avisados.
+            if (cancelados.Count > 0 && await PedidoPixConsistenteAsync())
+            {
+                foreach (var r in cancelados)
+                {
+                    if (!await TirarDoEstoqueAsync(r)) continue;
+                    r.Status        = "active";
+                    r.CancelledAt   = null;
+                    r.ExpiresAt     = null;
+                    r.PaymentMethod = "pix";
+                    reativados++;
+                }
+                await AvisarAdminsPixDePedidoCanceladoAsync(pix, cancelados[0].User?.Name, reativados, cancelados.Count - reativados);
+            }
+
+            canceladosCobrados = cancelados.Count - reativados;
             if (canceladosCobrados > 0)
                 _logger.LogWarning(
                     "Cobrança Pix {TxId} paga com {N} item(ns) cancelado(s) após a geração (grupo {GroupId}) — valor cobrado inclui itens cancelados; tratar estorno manualmente.",
                     pix.TxId, canceladosCobrados, groupId);
+            if (reativados > 0)
+                _logger.LogWarning(
+                    "Cobrança Pix {TxId} paga depois do cancelamento: {N} item(ns) reativado(s) como pago(s) (grupo {GroupId}).",
+                    pix.TxId, reativados, groupId);
         }
 
         // Lançamento financeiro deduplicado pelo txid (AnyAsync + índice único
@@ -389,6 +424,8 @@ public class PixReconciliationService : IPixReconciliationService
         if (!jaLancado)
         {
             var notas = $"Pagamento via Pix da pré-venda {groupId}";
+            if (reativados > 0)
+                notas += $" — pago depois de cancelado: {reativados} item(ns) reativado(s) como pago(s).";
             if (canceladosCobrados > 0)
                 notas += $" — ATENÇÃO: {canceladosCobrados} item(ns) cancelado(s) após a geração foram cobrados mesmo assim (verificar estorno).";
 
@@ -405,5 +442,40 @@ public class PixReconciliationService : IPixReconciliationService
                 Notes       = notas,
             });
         }
+    }
+
+    /// <summary>Tira do estoque de novo o item de um pedido reativado (mesmo decremento
+    /// atômico da criação). false = não tem mais estoque, o item fica cancelado.</summary>
+    private async Task<bool> TirarDoEstoqueAsync(ProductReservation r)
+    {
+        var baixado = r.VariantId.HasValue
+            ? await _db.ProductVariants
+                .Where(v => v.Id == r.VariantId.Value && v.StockQuantity >= r.Quantity)
+                .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity - r.Quantity))
+            : await _db.Products
+                .Where(p => p.Id == r.ProductId && p.StockQuantity >= r.Quantity)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity - r.Quantity));
+        return baixado > 0;
+    }
+
+    /// <summary>Sininho pros admins: Pix caiu num pedido já cancelado (reativado ou reembolso pendente).</summary>
+    private async Task AvisarAdminsPixDePedidoCanceladoAsync(PixCobranca pix, string? cliente, int reativados, int semEstoque)
+    {
+        var quem  = string.IsNullOrWhiteSpace(cliente) ? "Um cliente" : cliente;
+        var valor = (pix.ValorEmCentavos / 100m).ToString("C", new System.Globalization.CultureInfo("pt-BR"));
+        var (titulo, corpo) = semEstoque > 0
+            ? ("Pix pago de pedido cancelado: reembolso pendente",
+               $"{quem} pagou {valor} num pedido que estava cancelado e {semEstoque} item(ns) não têm mais estoque" +
+               (reativados > 0 ? $" ({reativados} voltou como pago)" : "") +
+               ". Separe o produto ou devolva o valor pelo Inter.")
+            : ("Pix pago de pedido cancelado: pedido reativado",
+               $"{quem} pagou {valor} num pedido que estava cancelado. O pedido voltou como pago e aguarda retirada.");
+
+        var admins = await _db.Users
+            .Where(u => u.Role == UserRole.Admin && u.IsActive)
+            .Select(u => u.Id)
+            .ToListAsync();
+        foreach (var id in admins)
+            _db.Notifications.Add(new Notification { UserId = id, Title = titulo, Body = corpo, Link = "/admin/reservas" });
     }
 }
