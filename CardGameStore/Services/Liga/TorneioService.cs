@@ -458,6 +458,54 @@ public class TorneioService
         await AvisarAsync(championshipId, "partida");
     }
 
+    /// <summary>
+    /// O jogador escolhe ou troca o próprio deck (o Pokémon que aparece no telão e na Liga).
+    /// Livre até a 1ª rodada sair; depois, só quem ainda está sem deck — trocar no meio do
+    /// torneio não vale. Sem deck e com rodada em aberto, a mesa atual também ganha o deck.
+    /// </summary>
+    public async Task TrocarMeuDeckAsync(Guid userId, Guid championshipId, Guid? deckId, string? deckNome)
+    {
+        if (!await _funcionalidades.LigadaAsync(Funcionalidades.LiguinhaEntradaSimples))
+            throw new TorneioException("Trocar o deck pela tela do torneio está desligado nesta loja.");
+        var ch = await CampeonatoAsync(championshipId);
+        if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
+            throw new TorneioException("Esse torneio já foi encerrado.");
+        var p = await _db.ChampionshipParticipants.FirstOrDefaultAsync(x => x.ChampionshipId == championshipId && x.UserId == userId)
+            ?? throw new TorneioException("Você não está neste torneio.", 404);
+        if (p.DesistiuNaRodada is not null)
+            throw new TorneioException("Você saiu deste torneio. Fale com o organizador.", 409);
+        var semDeck = string.IsNullOrWhiteSpace(p.DeckName);
+        if (ch.RodadaAtual > 0 && !semDeck)
+            throw new TorneioException("O torneio já começou — o deck não muda mais. Fale com o organizador se precisar.", 409);
+
+        if (deckId is not null)
+        {
+            var deck = await _db.Decks.FirstOrDefaultAsync(d => d.Id == deckId && d.UserId == userId)
+                ?? throw new TorneioException("Deck não encontrado na sua conta.");
+            deckNome = deck.Name;
+        }
+        deckNome = string.IsNullOrWhiteSpace(deckNome) ? null : deckNome.Trim()[..Math.Min(deckNome.Trim().Length, 200)];
+        if (deckNome is null) throw new TorneioException("Escolha um deck ou digite o nome.");
+
+        p.DeckId = deckId;
+        p.DeckName = deckNome;
+        if (ch.RodadaAtual > 0)
+        {
+            // A mesa em aberto guarda a foto do deck: sem isso o sprite só apareceria na próxima rodada
+            var abertas = await _db.TorneioPartidas
+                .Where(x => x.Rodada.ChampionshipId == championshipId && x.Rodada.Numero == ch.RodadaAtual && x.Resultado == null
+                            && (x.ParticipanteAId == p.Id || x.ParticipanteBId == p.Id))
+                .ToListAsync();
+            foreach (var m in abertas)
+            {
+                if (m.ParticipanteAId == p.Id) { m.DeckAId = deckId; m.DeckANome = deckNome; }
+                else { m.DeckBId = deckId; m.DeckBNome = deckNome; }
+            }
+        }
+        await _db.SaveChangesAsync();
+        await AvisarAsync(championshipId, "checkin");
+    }
+
     /// <summary>O próprio jogador sai do torneio.</summary>
     public async Task DesistirAsync(Guid userId, Guid championshipId)
     {

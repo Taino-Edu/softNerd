@@ -156,6 +156,15 @@ public class TorneioController : ControllerBase
         return NoContent();
     });
 
+    /// <summary>Escolhe ou troca o próprio deck: livre até a 1ª rodada; depois só quem está sem deck (409).</summary>
+    [HttpPut("{id:guid}/meu-deck")]
+    [Authorize]
+    public Task<IActionResult> MeuDeck(Guid id, [FromBody] MeuDeckRequest req) => Rodar(async () =>
+    {
+        await _torneio.TrocarMeuDeckAsync(UsuarioId(), id, req.DeckId, req.DeckNome);
+        return NoContent();
+    });
+
     /// <summary>"Estou pronto": setup montado (básicos em campo). 409 se a rodada já começou.</summary>
     [HttpPost("{id:guid}/pronto")]
     [Authorize]
@@ -204,3 +213,4 @@ public sealed record ResolverPartidaRequest(ResultadoPartida Resultado, int? Vit
 public sealed record EntrarTorneioRequest(string Codigo, Guid? DeckId, string? DeckNome);
 public sealed record LancarResultadoRequest(ResultadoJogador Resultado);
 public sealed record ProntoRequest(bool Pronto = true);
+public sealed record MeuDeckRequest(Guid? DeckId, string? DeckNome);

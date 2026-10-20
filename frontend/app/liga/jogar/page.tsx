@@ -58,7 +58,7 @@ function Jogar() {
             <ArrowLeft className="w-4 h-4" /> Liga
           </Link>
         )}
-        <span className="ml-auto flex items-center gap-1.5 text-sm font-semibold"><Swords className="w-4 h-4 text-brand-400" /> Liguinha</span>
+        <Link href="/liga/jogar" className="ml-auto flex items-center gap-1.5 text-sm font-semibold"><Swords className="w-4 h-4 text-brand-400" /> Liguinha</Link>
       </nav>
 
       <main className="max-w-md mx-auto px-4 py-5">
@@ -82,6 +82,10 @@ function Jogar() {
 // ── Entrar pelo código ───────────────────────────────────────────────────────
 
 function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
+  // Chave "liguinha-entrada-simples": código numa tela só; o deck se escolhe na tela do torneio
+  const simples = useFuncionalidade('liguinha-entrada-simples') !== false
+  const [carregou, setCarregou] = useState(false)
+  const [mostrarCodigo, setMostrarCodigo] = useState(false)
   const [codigo, setCodigo] = useState('')
   const [decks, setDecks] = useState<DeckListDto[]>([])
   const [deckId, setDeckId] = useState('')
@@ -92,7 +96,7 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
 
   useEffect(() => {
     deckApi.list().then(r => setDecks(r.data)).catch(() => {})
-    torneioApi.ativos().then(r => setAtivos(r.data)).catch(() => {})
+    torneioApi.ativos().then(r => setAtivos(r.data)).catch(() => {}).finally(() => setCarregou(true))
   }, [])
 
   async function entrar(e: React.FormEvent) {
@@ -102,8 +106,8 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
     try {
       const r = await torneioApi.entrar({
         codigo: codigo.trim(),
-        deckId: deckId || null,
-        deckNome: deckId ? null : (deckNome.trim() || null),
+        deckId: simples ? null : (deckId || null),
+        deckNome: simples || deckId ? null : (deckNome.trim() || null),
       })
       onEntrou(r.data.championshipId)
     } catch (e) {
@@ -112,6 +116,9 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
       setEnviando(false)
     }
   }
+
+  if (simples && !carregou) return <Carregando />
+  const formAberto = !simples || ativos.length === 0 || mostrarCodigo
 
   return (
     <div className="space-y-5">
@@ -129,6 +136,7 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
                     {t.checkIn ? ' · check-in feito' : ' · sem check-in'}
                   </span>
                 </span>
+                {simples && t.checkIn && <span className="text-sm font-semibold text-brand-400 shrink-0">Abrir →</span>}
               </button>
               {!t.checkIn && (
                 <button
@@ -145,7 +153,13 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
         </section>
       )}
 
-      <form onSubmit={entrar} className="bg-surface-800 border border-surface-500 rounded-2xl p-5 space-y-4">
+      {!formAberto && (
+        <button onClick={() => setMostrarCodigo(true)} className="btn-secondary w-full justify-center py-3">
+          <Swords className="w-4 h-4" /> Entrar em outro torneio com código
+        </button>
+      )}
+
+      {formAberto && <form onSubmit={entrar} className="bg-surface-800 border border-surface-500 rounded-2xl p-5 space-y-4">
         <div>
           <label className="block text-xs font-semibold text-gray-400 mb-1.5">Código do torneio</label>
           <input
@@ -157,7 +171,7 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
           />
         </div>
 
-        <div>
+        {!simples && <div>
           <label className="block text-xs font-semibold text-gray-400 mb-1.5">Seu deck nesta etapa</label>
           {decks.length > 0 && (
             <select value={deckId} onChange={e => setDeckId(e.target.value)} className="input w-full mb-2">
@@ -172,7 +186,8 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
           <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
             <Layers className="w-3.5 h-3.5" /> Os decks salvos em <Link href="/cliente/decks" className="text-brand-400">Meus decks</Link> aparecem aqui.
           </p>
-        </div>
+        </div>}
+        {simples && <p className="text-xs text-gray-500 text-center">O deck você escolhe na próxima tela.</p>}
 
         {erro && <p className="txt-erro text-sm flex items-start gap-1.5"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{erro}</p>}
 
@@ -180,7 +195,90 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
           {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />} Entrar no torneio
         </button>
         <p className="text-xs text-gray-500 text-center">Peça o código ao organizador.</p>
-      </form>
+      </form>}
+    </div>
+  )
+}
+
+// ── Meu deck no torneio ──────────────────────────────────────────────────────
+// O deck é o Pokémon que aparece no telão e na Liga. Quem entrou pelo "Estou aqui" ou foi
+// adicionado pelo organizador não passava pela escolha — aqui escolhe e troca (até a 1ª rodada).
+
+function MeuDeckNoTorneio({ torneioId, deck, podeTrocar, onSalvou }: {
+  torneioId: string; deck: string | null; podeTrocar: boolean; onSalvou: () => void
+}) {
+  const [editando, setEditando] = useState(false)
+  const [decks, setDecks] = useState<DeckListDto[]>([])
+  const [deckId, setDeckId] = useState('')
+  const [deckNome, setDeckNome] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+  const aberto = editando || (!deck && podeTrocar)
+
+  useEffect(() => {
+    if (aberto && decks.length === 0) deckApi.list().then(r => setDecks(r.data)).catch(() => {})
+  }, [aberto, decks.length])
+
+  async function salvar() {
+    setErro(''); setSalvando(true)
+    try {
+      await torneioApi.meuDeck(torneioId, { deckId: deckId || null, deckNome: deckId ? null : (deckNome.trim() || null) })
+      setEditando(false); setDeckId(''); setDeckNome('')
+      onSalvou()
+    } catch (e) {
+      setErro(mensagemDe(e, 'Não deu pra salvar o deck.'))
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  if (!aberto) {
+    return (
+      <div className="bg-surface-800 border border-surface-500 rounded-2xl p-3 flex items-center gap-3">
+        <span className="w-12 h-12 flex items-center justify-center shrink-0"><SpriteDeck deck={deck} tamanho={44} /></span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-xs text-gray-400">Seu deck</span>
+          <span className="block font-semibold text-white truncate">{deck ?? 'Sem deck'}</span>
+        </span>
+        {podeTrocar && (
+          <button onClick={() => setEditando(true)} className="btn-secondary text-sm shrink-0">Trocar</button>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-surface-800 border-2 border-brand-500 rounded-2xl p-4 space-y-3">
+      <div>
+        <p className="font-semibold text-white">{deck ? 'Trocar o deck' : 'Escolha seu deck'}</p>
+        <p className="text-xs text-gray-400">É o Pokémon que aparece no telão, na sua mesa e na Liga.</p>
+      </div>
+      {decks.length > 0 && (
+        <select value={deckId} onChange={e => setDeckId(e.target.value)} className="input w-full">
+          <option value="">Digitar o nome…</option>
+          {decks.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+      )}
+      {!deckId && (
+        <input value={deckNome} onChange={e => setDeckNome(e.target.value)} maxLength={200}
+          placeholder="Ex.: Charizard ex" className="input w-full" />
+      )}
+      {(deckId || deckNome.trim()) && (
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <SpriteDeck deck={deckId ? decks.find(d => d.id === deckId)?.name : deckNome} tamanho={36} /> Assim aparece no telão
+        </div>
+      )}
+      {erro && <p className="txt-erro text-sm">{erro}</p>}
+      <div className="flex gap-2">
+        {deck && <button onClick={() => setEditando(false)} className="btn-secondary flex-1 justify-center">Cancelar</button>}
+        <button onClick={salvar} disabled={salvando || (!deckId && !deckNome.trim())} className="btn-primary flex-1 justify-center">
+          {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Salvar deck
+        </button>
+      </div>
+      <p className="text-xs text-gray-500">
+        <Layers className="inline w-3.5 h-3.5 -mt-0.5 mr-1" />Salve seus decks em <Link href="/cliente/decks" className="text-brand-400">Meus decks</Link> pra escolher com um toque.
+        {' '}Depois que a 1ª rodada sai, o deck não muda mais.
+      </p>
     </div>
   )
 }
@@ -269,6 +367,7 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
 
   // "Estou pronto" (chave liguinha-pronto-na-mesa): setup montado, básicos em campo
   const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
+  const entradaSimples = useFuncionalidade('liguinha-entrada-simples') !== false
   const [marcandoPronto, setMarcandoPronto] = useState(false)
   async function marcarPronto(pronto: boolean) {
     setMarcandoPronto(true)
@@ -320,6 +419,11 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
       </header>
 
       {!encerrado && t.rodadaAtual > 0 && <Relogio timer={t.timer} />}
+
+      {entradaSimples && dados.participanteId && !encerrado && !dados.desistiuNaRodada && (
+        <MeuDeckNoTorneio torneioId={torneioId} deck={dados.deck ?? null}
+          podeTrocar={t.rodadaAtual === 0 || !dados.deck} onSalvou={recarregar} />
+      )}
 
       {erro && <p className="txt-erro text-sm">{erro}</p>}
 

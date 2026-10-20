@@ -140,6 +140,7 @@ CardGameStore/
 | POST | `api/torneios/entrar` `{codigo, deckId}` | Check-in (ou inscrição, se ainda aberta). Limite de tentativas |
 | GET | `api/torneios/{id}/minha-mesa` | Rodada, mesa, oponente, timer, o que cada um lançou |
 | POST | `api/torneios/{id}/partidas/{partidaId}/resultado` | Lança o próprio resultado (só A ou B da partida) |
+| PUT | `api/torneios/{id}/meu-deck` `{deckId, deckNome}` | Escolhe/troca o próprio deck (livre até a 1ª rodada; depois só quem está sem deck; 409 se desistiu) |
 | POST | `api/torneios/{id}/pronto` `{pronto}` | "Estou pronto" na mesa da rodada atual (bye não precisa); 409 se a rodada já começou |
 | POST | `api/torneios/{id}/desistir` | Sai do torneio |
 | GET | `api/torneios/ativos` | Torneios em andamento em que estou |
