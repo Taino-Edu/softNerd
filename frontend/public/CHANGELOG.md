@@ -4,6 +4,7 @@
 
 ### Segurança
 - **Chaves da API do Pokémon TCG e da Riot fora do código**: estavam escritas no `appsettings.json`, que vai pro repositório público. Agora ficam vazias no arquivo e vêm só do `.env` da VPS (`POKEMON_API_KEY` e o novo `RIOT_API_KEY`). Em produção nada muda — a chave do Pokémon já vinha do `.env` (vazia) e a da Riot não é usada pelo código
+- **`deploy/configurar-chave.sh`**: grava a chave nova no `.env` da VPS sem ela aparecer na tela nem no histórico (`bash deploy/configurar-chave.sh POKEMON_API_KEY`, cola a chave, depois o `update.sh` de sempre)
 
 ## [v1.59.0] — 2026-10-19
 
