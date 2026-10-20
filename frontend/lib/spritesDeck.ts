@@ -56,6 +56,10 @@ export function candidatosDoPokemon(parte: string): string[] {
   nome = nome.replace(/\b(origin|origem|forme|forma)\b/g, '').replace(ESTRATEGIA, '').replace(/\s+/g, ' ').trim()
   if (!nome) return []
 
+  // Ogerpon com máscara: "Cornerstone Ogerpon", "Ogerpon Wellspring" → ogerpon-cornerstone (cor da máscara)
+  const mascara = /\b(cornerstone|wellspring|hearthflame)\b/.exec(nome)
+  if (mascara && nome.includes('ogerpon')) return [`ogerpon-${mascara[1]}`, 'ogerpon']
+
   const juntos = limpaId(nome.replace(/\s+/g, ''))
   if (APELIDOS[juntos]) return [APELIDOS[juntos]]
 

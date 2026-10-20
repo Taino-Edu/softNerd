@@ -38,6 +38,15 @@ public class LigaMensalController : ControllerBase
     /// decks (uso, títulos, % de vitória) e resumo. periodo = semana | mes | ano.
     /// Público, como o ranking: só nomes, decks e números do torneio.
     /// </summary>
+    /// <summary>A Liga do jogador logado no período (área do cliente): posição, decks e etapas.</summary>
+    [HttpGet("minha")]
+    [Authorize]
+    [ProducesResponseType(typeof(MinhaLigaDto), 200)]
+    [ProducesResponseType(400)]
+    public Task<IActionResult> GetMinha([FromQuery] string? periodo, [FromQuery] int? ano, [FromQuery] int? mes,
+        [FromQuery] DateTime? dia) =>
+        Responder(async () => Ok(await _estatisticas.MinhaLigaAsync(GetUserId(), periodo, ano, mes, dia)));
+
     [HttpGet("estatisticas")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LigaEstatisticasDto), 200)]

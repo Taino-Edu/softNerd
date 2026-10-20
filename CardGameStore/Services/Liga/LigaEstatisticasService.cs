@@ -91,8 +91,141 @@ public class LigaDeckStatsDto
     public double? PctVitoria { get; init; }
 }
 
+/// <summary>Liga do próprio jogador (área do cliente): posição, desempenho por deck e etapas jogadas.</summary>
+public class MinhaLigaDto
+{
+    public string Periodo { get; init; } = "mes";
+    public string Rotulo { get; init; } = string.Empty;
+    /// <summary>Linha do jogador no ranking do período (null = não pontuou nele).</summary>
+    public LigaJogadorStatsDto? Eu { get; init; }
+    public int TotalJogadores { get; init; }
+    /// <summary>Desempenho com cada deck que ele usou no período — o "% de vitória com o deck montado".</summary>
+    public List<LigaDeckStatsDto> MeusDecks { get; init; } = [];
+    public List<MinhaEtapaDto> Etapas { get; init; } = [];
+}
+
+public class MinhaEtapaDto
+{
+    public Guid Id { get; init; }
+    public string Nome { get; init; } = string.Empty;
+    public DateTime Data { get; init; }
+    public int Colocacao { get; init; }
+    public int Jogadores { get; init; }
+    public int Pontos { get; init; }
+    public string? Deck { get; init; }
+}
+
 public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService funcionalidades)
 {
+    /// <summary>
+    /// A Liga do jogador logado no período: a linha dele no mesmo ranking da Liga, os decks que usou com
+    /// V/E/D (partidas do suíço, sem bye) e as etapas com colocação e pontos.
+    /// </summary>
+    public async Task<MinhaLigaDto> MinhaLigaAsync(Guid userId, string? periodo, int? ano, int? mes, DateTime? dia)
+    {
+        var geral = await EstatisticasAsync(periodo, ano, mes, dia);
+        var inicioUtc = Brasilia.DiaUtc(geral.Inicio).InicioUtc;
+        var fimUtc = Brasilia.DiaUtc(geral.Fim.AddDays(1)).InicioUtc;
+        var soLiga = await funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
+        var porJogador = await funcionalidades.LigadaAsync(Funcionalidades.LigaMensalPorJogador);
+
+        var minhas = await db.ChampionshipParticipants.AsNoTracking()
+            .Include(x => x.Championship)
+            .Where(x => x.UserId == userId && x.Placement != null
+                        && (!porJogador || x.Championship.Status != ChampionshipStatus.Cancelado)
+                        && x.Championship.StartDate >= inicioUtc && x.Championship.StartDate < fimUtc
+                        && (!soLiga || x.Championship.Modalidade == ModalidadeTorneio.Liga))
+            .ToListAsync();
+        var ids = minhas.Select(x => x.Id).ToList();
+        var etapaIds = minhas.Select(x => x.ChampionshipId).ToList();
+        var tamanhos = await db.ChampionshipParticipants.AsNoTracking()
+            .Where(x => etapaIds.Contains(x.ChampionshipId) && x.Placement != null)
+            .GroupBy(x => x.ChampionshipId).Select(g => new { g.Key, N = g.Count() })
+            .ToDictionaryAsync(g => g.Key, g => g.N);
+
+        // Minhas partidas (sem bye), com o deck que eu usei naquela partida
+        var partidas = await db.TorneioPartidas.AsNoTracking()
+            .Where(x => x.ParticipanteBId != null && x.Resultado != null
+                        && (ids.Contains(x.ParticipanteAId) || ids.Contains(x.ParticipanteBId!.Value)))
+            .Select(x => new { SouA = ids.Contains(x.ParticipanteAId), x.ParticipanteAId, x.ParticipanteBId, x.DeckANome, x.DeckBNome, x.Resultado })
+            .ToListAsync();
+
+        // Decks de cada etapa: o da inscrição e os das partidas (trocou no meio = os dois contam
+        // como usados naquela etapa, com o título/top 4 dela) — mesma regra das estatísticas gerais.
+        var decksDaEtapa = minhas.ToDictionary(x => x.Id, x =>
+        {
+            var s = new HashSet<string>();
+            if (ChaveDeck(x.DeckName) is { } k) s.Add(k);
+            return s;
+        });
+        var porDeck = new Dictionary<string, (string Nome, int V, int E, int D)>();
+        foreach (var x in partidas)
+        {
+            var deck = x.SouA ? x.DeckANome : x.DeckBNome;
+            if (ChaveDeck(deck) is not { } k) continue;
+            decksDaEtapa[x.SouA ? x.ParticipanteAId : x.ParticipanteBId!.Value].Add(k);
+            var venci = x.Resultado == (x.SouA ? ResultadoPartida.VitoriaA : ResultadoPartida.VitoriaB);
+            var empate = x.Resultado == ResultadoPartida.Empate;
+            var a = porDeck.GetValueOrDefault(k, (Nome: deck!.Trim(), V: 0, E: 0, D: 0));
+            porDeck[k] = (a.Nome, a.V + (venci ? 1 : 0), a.E + (empate ? 1 : 0), a.D + (!venci && !empate ? 1 : 0));
+        }
+        // Deck da inscrição também conta como "usado" (etapa lançada de fora não tem partida)
+        var etapasPorDeck = minhas.SelectMany(x => decksDaEtapa[x.Id].Select(k => (Chave: k, Etapa: x)))
+            .GroupBy(t => t.Chave).ToDictionary(g => g.Key, g => g.Select(t => t.Etapa).ToList());
+        var chaves = porDeck.Keys.Union(etapasPorDeck.Keys).ToList();
+        static double? Pct(int v, int e, int d) => v + e + d == 0 ? null : Math.Round(100.0 * v / (v + e + d), 1);
+        var meusDecks = chaves.Select(k =>
+        {
+            var p = porDeck.GetValueOrDefault(k);
+            var etapas = etapasPorDeck.GetValueOrDefault(k) ?? [];
+            var nome = p.Nome ?? etapas.FirstOrDefault()?.DeckName?.Trim() ?? k;
+            return new LigaDeckStatsDto
+            {
+                Deck = nome, Usos = etapas.Count, Jogadores = 1,
+                Titulos = etapas.Count(x => x.Placement == 1), Top4 = etapas.Count(x => x.Placement <= 4),
+                Partidas = p.V + p.E + p.D, Vitorias = p.V, Empates = p.E, Derrotas = p.D, PctVitoria = Pct(p.V, p.E, p.D),
+            };
+        }).OrderByDescending(d => d.Partidas).ThenByDescending(d => d.Usos).ThenBy(d => d.Deck).ToList();
+
+        return new MinhaLigaDto
+        {
+            Periodo = geral.Periodo, Rotulo = geral.Rotulo,
+            Eu = geral.Ranking.FirstOrDefault(l => l.UserId == userId) ?? await LinhaSoManualAsync(userId, geral.Ranking),
+            TotalJogadores = geral.Ranking.Count,
+            MeusDecks = meusDecks,
+            Etapas = minhas.OrderByDescending(x => x.Championship.StartDate).Select(x => new MinhaEtapaDto
+            {
+                Id = x.ChampionshipId, Nome = x.Championship.Name, Data = x.Championship.StartDate,
+                Colocacao = x.Placement!.Value, Jogadores = tamanhos.GetValueOrDefault(x.ChampionshipId),
+                Pontos = LigaMensalService.PontosPorColocacao(x.Placement!.Value), Deck = x.DeckName,
+            }).ToList(),
+        };
+    }
+
+    /// <summary>
+    /// Quem só tem lançamento manual no período (nenhuma etapa no sistema) aparece no ranking com o
+    /// id do lançamento, não o da conta. Liga pelo nome quando é a única linha com esse nome e nenhuma
+    /// outra conta tem o mesmo nome — com homônimo seria chute, e aí fica sem linha.
+    /// </summary>
+    private async Task<LigaJogadorStatsDto?> LinhaSoManualAsync(Guid userId, List<LigaJogadorStatsDto> ranking)
+    {
+        var nome = await db.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync();
+        if (string.IsNullOrWhiteSpace(nome)) return null;
+        var alvo = LigaMensalService.NomeNormalizado(nome);
+
+        var mesmoNome = ranking.Where(l => LigaMensalService.NomeNormalizado(l.Nome) == alvo).ToList();
+        if (mesmoNome.Count != 1) return null;
+        var linha = mesmoNome[0];
+        if (!await db.LigaMensalManualEntries.AnyAsync(m => m.Id == linha.UserId)) return null; // linha de outra conta
+
+        var primeiro = alvo.Split(' ')[0];
+        var homonimo = (await db.Users
+                .Where(u => u.Id != userId && u.Name.ToLower().Contains(primeiro))
+                .Select(u => u.Name).ToListAsync())
+            .Any(n => LigaMensalService.NomeNormalizado(n) == alvo);
+        return homonimo ? null : linha;
+    }
+
     public async Task<LigaEstatisticasDto> EstatisticasAsync(string? periodo, int? ano, int? mes, DateTime? dia)
     {
         var hoje = Brasilia.Hoje();

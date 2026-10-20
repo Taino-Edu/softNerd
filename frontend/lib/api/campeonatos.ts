@@ -182,11 +182,22 @@ export interface LigaEstatisticasDto {
   ranking: LigaJogadorStats[]; etapas: LigaEtapa[]; decks: LigaDeckStats[]
 }
 
+/** A Liga do jogador logado: a linha dele no ranking, o desempenho com cada deck e as etapas jogadas. */
+export interface MinhaLigaDto {
+  periodo: PeriodoLiga; rotulo: string
+  eu: LigaJogadorStats | null; totalJogadores: number
+  meusDecks: LigaDeckStats[]
+  etapas: { id: string; nome: string; data: string; colocacao: number; jogadores: number; pontos: number; deck: string | null }[]
+}
+
 export const ligaMensalApi = {
   ranking: (ano?: number, mes?: number) =>
     api.get<LigaMensalDto>('/api/liga-mensal', { params: { ano, mes } }),
   estatisticas: (params: { periodo: PeriodoLiga; ano?: number; mes?: number; dia?: string }) =>
     api.get<LigaEstatisticasDto>('/api/liga-mensal/estatisticas', { params }),
+  /** A Liga do jogador logado (área do cliente). */
+  minha: (params: { periodo: PeriodoLiga; ano?: number; mes?: number }) =>
+    api.get<MinhaLigaDto>('/api/liga-mensal/minha', { params }),
   meses: () => api.get<LigaMensalMesDto[]>('/api/liga-mensal/meses'),
   manualList:   (ano: number, mes: number) =>
     api.get<LigaMensalManualEntryDto[]>('/api/liga-mensal/manual', { params: { ano, mes } }),

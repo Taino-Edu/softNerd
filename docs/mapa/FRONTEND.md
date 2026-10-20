@@ -50,7 +50,7 @@
 | `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/notas/[id]` | `app/cliente/notas/[id]/page.tsx` | — |
 | `/cliente` | `app/cliente/page.tsx` | `cliente/NotificationBell` |
-| `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente` |
+| `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | — |
 | `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
 | `/janela/whatsapp` | `app/janela/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox` |
@@ -107,11 +107,12 @@ Mudou um componente? Confira as telas da última coluna.
 | `auth/Moldura` | `useMarca`, `MolduraEntrada`, `TituloEntrada`, `AbasEntrada`, `CampoEntrada`, `BotaoEntrada`, `LinhaEntrada`, `LinkEntrada` | `app/cadastro/page.tsx`<br>`app/entrar/page.tsx`<br>`app/login/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/reset-password/page.tsx` |
 | `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
+| `cliente/MinhaLiga` | `MinhaLiga` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
 | `liga/AnimacaoResultado` | `AnimacaoResultado` | `app/liga/jogar/page.tsx` |
 | `liga/PainelTorneio` | `PainelTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx` |
 | `liga/Relogio` | `Relogio` | `app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
-| `liga/SpriteDeck` | `SpriteDeck` | `app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/liga/AnimacaoResultado.tsx`<br>`components/liga/TelaoNovo.tsx`<br>`components/liga/admin/HistoricoRodadas.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| `liga/SpriteDeck` | `SpriteDeck` | `app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/cliente/MinhaLiga.tsx`<br>`components/liga/AnimacaoResultado.tsx`<br>`components/liga/TelaoNovo.tsx`<br>`components/liga/admin/HistoricoRodadas.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/liguinha/[id]/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
 | `liga/TelaoNovo` | `TelaoNovo` | `app/liga/torneio/[id]/page.tsx` |
 | `liga/admin/CriarTorneio` | `CriarTorneio` | `app/admin/liguinha/page.tsx` |
