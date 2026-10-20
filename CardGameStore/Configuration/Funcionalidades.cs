@@ -56,6 +56,7 @@ public static class Funcionalidades
     public const string LigaModalidades = "liga-modalidades";
     public const string LoginTelasUnificadas = "login-telas-unificadas";
     public const string PedidoPixConsistente = "pedido-pix-consistente";
+    public const string LiguinhaProntoNaMesa = "liguinha-pronto-na-mesa";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -262,6 +263,16 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.59.2",
             RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(LiguinhaProntoNaMesa,
+            Nome:       "Liguinha: botão \"Pronto\" na mesa",
+            OQueMuda:   "Depois que os pareamentos saem, cada jogador aperta \"Estou pronto\" no celular quando estiver com os básicos em campo. " +
+                        "O organizador vê quantas mesas estão prontas (e pode marcar a mesa de quem está sem celular); quando todas ficam " +
+                        "prontas, a Central avisa com som e destaque pra começar a rodada. O telão mostra quem já está pronto.",
+            SeDesligar: "Some o botão: o organizador volta a olhar as mesas e começar a rodada quando achar que todos montaram o setup.",
+            Padrao:     true,
+            Desde:      "v1.61.0",
+            RevisarEm:  new DateOnly(2027, 3, 1)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

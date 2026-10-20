@@ -43,7 +43,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j√
 | `push_subscriptions` | `PushSubscription` | `PushSubscriptions` | criada | `CardGameStore/Models/PostgreSQL/PushSubscription.cs` |
 | `site_config` | `SiteConfig` | `SiteConfigs` | criada, colunas | `CardGameStore/Models/PostgreSQL/SiteConfig.cs` |
 | `timers` | `TimerEntity` | `Timers` | criada, colunas | `CardGameStore/Models/PostgreSQL/Timer.cs` |
-| `torneio_partidas` | `TorneioPartida` | `TorneioPartidas` | criada | `CardGameStore/Models/PostgreSQL/Torneio.cs` |
+| `torneio_partidas` | `TorneioPartida` | `TorneioPartidas` | criada, colunas | `CardGameStore/Models/PostgreSQL/Torneio.cs` |
 | `torneio_rodadas` | `TorneioRodada` | `TorneioRodadas` | criada | `CardGameStore/Models/PostgreSQL/Torneio.cs` |
 | `user_sessions` | `UserSession` | `UserSessions` | criada | `CardGameStore/Models/PostgreSQL/UserSession.cs` |
 | `users` | `User` | `Users` | colunas | `CardGameStore/Models/PostgreSQL/User.cs` |

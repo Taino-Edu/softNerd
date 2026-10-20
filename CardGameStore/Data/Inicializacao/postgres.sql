@@ -784,6 +784,9 @@ CREATE TABLE IF NOT EXISTS torneio_partidas (
     fechada_em             TIMESTAMPTZ  NULL
 );
 CREATE INDEX IF NOT EXISTS ix_torneio_partidas_rodada ON torneio_partidas (rodada_id);
+-- "Estou pronto" de cada lado da mesa (v1.61.0)
+ALTER TABLE torneio_partidas ADD COLUMN IF NOT EXISTS pronto_a_em TIMESTAMPTZ NULL;
+ALTER TABLE torneio_partidas ADD COLUMN IF NOT EXISTS pronto_b_em TIMESTAMPTZ NULL;
 
 -- Bloqueio de conta por senha errada (Services/Implementations/ProtecaoLogin.cs)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS falhas_login        INTEGER     NOT NULL DEFAULT 0;

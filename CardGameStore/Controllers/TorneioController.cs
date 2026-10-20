@@ -83,6 +83,15 @@ public class TorneioController : ControllerBase
         return NoContent();
     });
 
+    /// <summary>Marca a mesa inteira como pronta (jogador sem celular). 409 se a rodada já começou.</summary>
+    [HttpPut("{id:guid}/partidas/{partidaId:guid}/pronto")]
+    [Authorize(Policy = "AdminOnly")]
+    public Task<IActionResult> MesaPronta(Guid id, Guid partidaId, [FromBody] ProntoRequest req) => Rodar(async () =>
+    {
+        await _torneio.MarcarMesaProntaAsync(id, partidaId, req.Pronto);
+        return NoContent();
+    });
+
     [HttpPost("{id:guid}/participantes/{participantId:guid}/desistencia")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> Desistencia(Guid id, Guid participantId) => Rodar(async () =>
@@ -147,6 +156,15 @@ public class TorneioController : ControllerBase
         return NoContent();
     });
 
+    /// <summary>"Estou pronto": setup montado (básicos em campo). 409 se a rodada já começou.</summary>
+    [HttpPost("{id:guid}/pronto")]
+    [Authorize]
+    public Task<IActionResult> Pronto(Guid id, [FromBody] ProntoRequest req) => Rodar(async () =>
+    {
+        await _torneio.MarcarProntoAsync(UsuarioId(), id, req.Pronto);
+        return NoContent();
+    });
+
     [HttpPost("{id:guid}/desistir")]
     [Authorize]
     public Task<IActionResult> Desistir(Guid id) => Rodar(async () =>
@@ -185,3 +203,4 @@ public sealed record GerarRodadaRequest(int? NumeroRodadas);
 public sealed record ResolverPartidaRequest(ResultadoPartida Resultado, int? VitoriasA, int? VitoriasB);
 public sealed record EntrarTorneioRequest(string Codigo, Guid? DeckId, string? DeckNome);
 public sealed record LancarResultadoRequest(ResultadoJogador Resultado);
+public sealed record ProntoRequest(bool Pronto = true);

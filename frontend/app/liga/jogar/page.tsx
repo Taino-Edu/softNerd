@@ -8,7 +8,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers, Hand, PartyPopper } from 'lucide-react'
+import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers, Hand, PartyPopper, ThumbsUp } from 'lucide-react'
 import {
   torneioApi, deckApi, DeckListDto, MinhaMesaDto, ResultadoJogador, TorneioResumoDto, rodadaComecou,
 } from '@/lib/api'
@@ -267,6 +267,16 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
     }
   }
 
+  // "Estou pronto" (chave liguinha-pronto-na-mesa): setup montado, básicos em campo
+  const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
+  const [marcandoPronto, setMarcandoPronto] = useState(false)
+  async function marcarPronto(pronto: boolean) {
+    setMarcandoPronto(true)
+    try { await torneioApi.pronto(torneioId, pronto); recarregar() }
+    catch (e) { setErro(mensagemDe(e, 'Não deu pra marcar.')) }
+    finally { setMarcandoPronto(false) }
+  }
+
   const [marcando, setMarcando] = useState(false)
   async function estouAqui() {
     setMarcando(true)
@@ -291,6 +301,9 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
   const oponente = mesa ? (souA ? mesa.b : mesa.a) : null
 
   const meuDeck = mesa ? ((souA ? mesa.a.deck : mesa.b?.deck) ?? dados.deck) : dados.deck
+  const emSetup = !!mesa && !mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual)
+  const euPronto = !!mesa && (souA ? mesa.prontoA : mesa.prontoB)
+  const oponentePronto = !!mesa && (souA ? mesa.prontoB : mesa.prontoA)
   const rever = animar ? (encerrado ? cenaFinal(dados) : cenaDaMesa(dados)) : null
 
   return (
@@ -367,11 +380,43 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
               <p className="text-5xl font-bold text-white leading-tight">{mesa.mesa}</p>
             </div>
           )}
-          {!mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual) && (
+          {emSetup && (prontoLigado ? (
+            <div className="bg-surface-700 rounded-xl p-4 space-y-3 text-center">
+              {euPronto ? (
+                <>
+                  <p className="flex items-center justify-center gap-2 txt-ok font-bold text-lg">
+                    <CheckCircle2 className="w-6 h-6" /> Setup confirmado
+                  </p>
+                  <p className="text-sm text-gray-300">
+                    {oponentePronto
+                      ? 'Seu oponente também confirmou. O relógio começa quando o organizador mandar.'
+                      : `Esperando ${oponente.nome.split(' ')[0]} confirmar.`}
+                  </p>
+                  <button onClick={() => marcarPronto(false)} disabled={marcandoPronto}
+                    className="text-xs text-gray-400 underline underline-offset-2">
+                    Desfazer
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-300">
+                    Vá pra mesa, monte o setup e coloque o <strong className="text-white">Pokémon básico em campo</strong>. Depois toque abaixo.
+                  </p>
+                  <button onClick={() => marcarPronto(true)} disabled={marcandoPronto}
+                    className="btn-primary w-full justify-center py-4 text-lg">
+                    {marcandoPronto ? <Loader2 className="w-5 h-5 animate-spin" /> : <ThumbsUp className="w-5 h-5" />} Estou pronto
+                  </button>
+                  <p className="text-xs text-gray-400">
+                    {oponentePronto ? `${oponente.nome.split(' ')[0]} já confirmou.` : 'Quando todas as mesas estiverem prontas, o organizador começa a rodada.'}
+                  </p>
+                </>
+              )}
+            </div>
+          ) : (
             <p className="text-sm text-center text-gray-300 bg-surface-700 rounded-xl p-3">
               Vá pra mesa e monte o setup. O relógio começa quando o organizador mandar.
             </p>
-          )}
+          ))}
           {animar ? (
             <div className="bg-surface-700 rounded-xl p-3 flex items-end gap-2">
               <div className="flex-1 min-w-0 flex flex-col items-center text-center">
@@ -399,7 +444,7 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
               <PartyPopper className="w-4 h-4" /> Ver a animação de novo
             </button>
           )}
-          {mesa.resultado ? (
+          {emSetup && prontoLigado ? null : mesa.resultado ? (
             <p className="flex items-center justify-center gap-2 txt-ok font-semibold">
               <CheckCircle2 className="w-5 h-5" /> Resultado confirmado: {dados.meuReport ? ROTULO[dados.meuReport] : 'definido pelo organizador'}
             </p>

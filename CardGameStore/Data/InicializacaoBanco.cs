@@ -39,6 +39,8 @@ public static class InicializacaoBanco
         "ALTER TABLE championship_participants ADD COLUMN desistiu_na_rodada INTEGER NULL;",
         "ALTER TABLE timers ADD COLUMN championship_id TEXT NULL;",
         "ALTER TABLE timers ADD COLUMN rodada INTEGER NULL;",
+        "ALTER TABLE torneio_partidas ADD COLUMN pronto_a_em TEXT NULL;",
+        "ALTER TABLE torneio_partidas ADD COLUMN pronto_b_em TEXT NULL;",
         "ALTER TABLE users ADD COLUMN falhas_login INTEGER NOT NULL DEFAULT 0;",
         "ALTER TABLE users ADD COLUMN login_bloqueado_ate TEXT NULL;",
         "ALTER TABLE users ADD COLUMN google_sub TEXT NULL;",

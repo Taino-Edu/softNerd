@@ -214,6 +214,80 @@ public class TorneioService
         await AvisarAsync(championshipId, "rodada");
     }
 
+    // ── "Estou pronto" (chave liguinha-pronto-na-mesa) ───────────────────────
+    // Pokémon: todo mundo precisa estar com os básicos em campo antes do relógio correr.
+    // Cada jogador confirma no celular; o organizador é avisado quando todas as mesas da
+    // loja estão prontas e ele mesmo começa a rodada (ComecarRodadaAsync), como antes.
+
+    /// <summary>O jogador marca (ou desfaz) "Estou pronto" na mesa dele da rodada atual.</summary>
+    public async Task MarcarProntoAsync(Guid userId, Guid championshipId, bool pronto)
+    {
+        var (ch, _) = await RodadaEmSetupAsync(championshipId);
+        var partida = await _db.TorneioPartidas
+            .Where(p => p.Rodada.ChampionshipId == championshipId && p.Rodada.Numero == ch.RodadaAtual
+                        && (p.ParticipanteA.UserId == userId || (p.ParticipanteB != null && p.ParticipanteB.UserId == userId)))
+            .Select(p => new { p.Id, SouA = p.ParticipanteA.UserId == userId, p.ParticipanteBId })
+            .FirstOrDefaultAsync()
+            ?? throw new TorneioException("Você não tem mesa nesta rodada.", 404);
+        if (partida.ParticipanteBId is null) throw new TorneioException("Você está de bye nesta rodada — não precisa montar o setup.");
+
+        DateTime? quando = pronto ? DateTime.UtcNow : null;
+        if (partida.SouA)
+            await _db.TorneioPartidas.Where(p => p.Id == partida.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.ProntoAEm, quando));
+        else
+            await _db.TorneioPartidas.Where(p => p.Id == partida.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.ProntoBEm, quando));
+
+        await AvisarProntosAsync(ch);
+    }
+
+    /// <summary>Organizador marca (ou desfaz) a mesa inteira como pronta — jogador sem celular.</summary>
+    public async Task MarcarMesaProntaAsync(Guid championshipId, Guid partidaId, bool pronta)
+    {
+        var (ch, _) = await RodadaEmSetupAsync(championshipId);
+        var partida = await PartidaAsync(championshipId, partidaId);
+        if (partida.EhBye) throw new TorneioException("Bye não tem mesa pra montar.");
+        // Tela antiga aberta depois de soltar a próxima rodada: não mexe na mesa de uma rodada passada
+        if (partida.Rodada.Numero != ch.RodadaAtual)
+            throw new TorneioException($"Essa mesa é da rodada {partida.Rodada.Numero}; a atual é a {ch.RodadaAtual}. Atualize a tela.", 409);
+
+        DateTime? quando = pronta ? DateTime.UtcNow : null;
+        partida.ProntoAEm = pronta ? partida.ProntoAEm ?? quando : null;
+        partida.ProntoBEm = pronta ? partida.ProntoBEm ?? quando : null;
+        await _db.SaveChangesAsync();
+
+        await AvisarProntosAsync(ch);
+    }
+
+    /// <summary>Rodada atual com pareamentos soltos e relógio ainda parado.</summary>
+    private async Task<(Championship Ch, TimerEntity? Timer)> RodadaEmSetupAsync(Guid championshipId)
+    {
+        if (!await _funcionalidades.LigadaAsync(Funcionalidades.LiguinhaProntoNaMesa))
+            throw new TorneioException("O botão \"Pronto\" está desligado nesta loja.");
+        var ch = await CampeonatoAsync(championshipId);
+        if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
+            throw new TorneioException("Torneio encerrado.");
+        if (ch.RodadaAtual == 0) throw new TorneioException("Os pareamentos ainda não saíram.");
+
+        var timer = await _db.Timers.AsNoTracking().FirstOrDefaultAsync(t => t.ChampionshipId == championshipId);
+        if (timer is not null && timer.Rodada == ch.RodadaAtual && timer.State != TimerState.Stopped)
+            throw new TorneioException($"A rodada {ch.RodadaAtual} já começou.", 409);
+        return (ch, timer);
+    }
+
+    /// <summary>
+    /// Todas as mesas que cabem na loja (as excedentes jogam depois) estão com os dois prontos?
+    /// Bye não conta. Rodada sem nenhuma mesa de verdade nunca fica "toda pronta".
+    /// </summary>
+    public async Task<bool> TodasProntasAsync(Guid championshipId, int rodada)
+    {
+        var mesas = (await MesasAsync(championshipId, rodada, comReports: false))
+            .Where(m => m.B is not null && !m.AguardandoMesa && m.Resultado is null).ToList();
+        return mesas.Count > 0 && mesas.All(m => m.ProntoA && m.ProntoB);
+    }
+
+    private async Task AvisarProntosAsync(Championship ch) =>
+        await AvisarAsync(ch.Id, await TodasProntasAsync(ch.Id, ch.RodadaAtual) ? "todos-prontos" : "pronto");
+
     /// <summary>Organizador define ou corrige o resultado (vale até o torneio encerrar).</summary>
     public async Task ResolverAsync(Guid championshipId, Guid partidaId, ResultadoPartida resultado, Guid adminId,
         int? vitoriasA = null, int? vitoriasB = null)
@@ -430,7 +504,7 @@ public class TorneioService
                 A = new JogadorMesa(p.ParticipanteAId, p.ParticipanteA.UserId, p.ParticipanteA.User.Name, p.DeckANome),
                 B = p.ParticipanteB == null ? null
                     : new JogadorMesa(p.ParticipanteB.Id, p.ParticipanteB.UserId, p.ParticipanteB.User.Name, p.DeckBNome),
-                p.ReportA, p.ReportB, p.Resultado,
+                p.ReportA, p.ReportB, p.Resultado, p.ProntoAEm, p.ProntoBEm,
             })
             .ToListAsync();
 
@@ -439,7 +513,8 @@ public class TorneioService
             comReports ? p.ReportA : null, comReports ? p.ReportB : null,
             p.Resultado,
             Divergente: p.ReportA != null && p.ReportB != null && p.ReportA != p.ReportB && p.Resultado == null,
-            AguardandoMesa: p.B != null && p.Mesa > mesasNaLoja))
+            AguardandoMesa: p.B != null && p.Mesa > mesasNaLoja,
+            ProntoA: p.ProntoAEm != null, ProntoB: p.ProntoBEm != null))
             .ToList();
     }
 
@@ -650,10 +725,11 @@ public sealed record LinhaTabela(
 public sealed record JogadorMesa(Guid ParticipanteId, Guid UserId, string Nome, string? Deck);
 
 /// <param name="AguardandoMesa">Mesa além dos lugares da loja: joga quando uma liberar.</param>
+/// <param name="ProntoA">Jogador A apertou "Estou pronto" (setup montado) — chave liguinha-pronto-na-mesa.</param>
 public sealed record MesaDto(
     Guid PartidaId, int Mesa, JogadorMesa A, JogadorMesa? B,
     ResultadoPartida? ReportA, ResultadoPartida? ReportB, ResultadoPartida? Resultado, bool Divergente,
-    bool AguardandoMesa = false);
+    bool AguardandoMesa = false, bool ProntoA = false, bool ProntoB = false);
 
 public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada)
 {
