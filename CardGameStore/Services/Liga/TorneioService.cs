@@ -246,6 +246,9 @@ public class TorneioService
         var (ch, _) = await RodadaEmSetupAsync(championshipId);
         var partida = await PartidaAsync(championshipId, partidaId);
         if (partida.EhBye) throw new TorneioException("Bye não tem mesa pra montar.");
+        // Tela antiga aberta depois de soltar a próxima rodada: não mexe na mesa de uma rodada passada
+        if (partida.Rodada.Numero != ch.RodadaAtual)
+            throw new TorneioException($"Essa mesa é da rodada {partida.Rodada.Numero}; a atual é a {ch.RodadaAtual}. Atualize a tela.", 409);
 
         DateTime? quando = pronta ? DateTime.UtcNow : null;
         partida.ProntoAEm = pronta ? partida.ProntoAEm ?? quando : null;

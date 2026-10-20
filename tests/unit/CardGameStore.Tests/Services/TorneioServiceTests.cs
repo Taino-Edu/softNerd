@@ -513,6 +513,22 @@ public class TorneioServiceTests
     }
 
     [Fact]
+    public async Task Pronto_OrganizadorComMesaDeRodadaPassada_409()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var antiga = (await MesasDaRodadaAsync(amb)).Single();
+        await FecharRodadaAsync(amb, 1);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+
+        var acao = () => amb.Torneio.MarcarMesaProntaAsync(amb.Ch.Id, antiga.Id, true);
+
+        (await acao.Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409);
+        (await amb.Db.TorneioPartidas.AsNoTracking().SingleAsync(p => p.Id == antiga.Id)).ProntoAEm.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Pronto_DepoisQueARodadaComecou_409()
     {
         var amb = Criar(2);
