@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-275 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+276 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -21,7 +21,7 @@
 - [Fiscal](#fiscal) (15)
 - [Funcionalidades](#funcionalidades) (3)
 - [Lgpd](#lgpd) (8)
-- [LigaMensal](#ligamensal) (6)
+- [LigaMensal](#ligamensal) (7)
 - [Marketplace](#marketplace) (7)
 - [Mensageria](#mensageria) (3)
 - [MinhasCompras](#minhascompras) (1)
@@ -283,12 +283,13 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/liga-mensal` | público | `GetRanking` (36) | `ligaMensalApi.ranking` | `app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/liga/page.tsx` |
-| GET | `/api/liga-mensal/manual` | AdminOnly | `GetManualEntries` (49) | `ligaMensalApi.manualList` | `app/admin/liga-mensal/page.tsx` |
-| POST | `/api/liga-mensal/manual` | AdminOnly | `CreateManualEntry` (57) | `ligaMensalApi.manualCreate` | `app/admin/liga-mensal/page.tsx` |
-| DELETE | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `DeleteManualEntry` (74) | `ligaMensalApi.manualDelete` | `app/admin/liga-mensal/page.tsx` |
-| PUT | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `UpdateManualEntry` (66) | `ligaMensalApi.manualUpdate` | `app/admin/liga-mensal/page.tsx` |
-| GET | `/api/liga-mensal/meses` | público | `GetMesesDisponiveis` (43) | `ligaMensalApi.meses` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
+| GET | `/api/liga-mensal` | público | `GetRanking` (54) | `ligaMensalApi.ranking` | `app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/liga/page.tsx` |
+| GET | `/api/liga-mensal/estatisticas` | público | `GetEstatisticas` (45) | `ligaMensalApi.estatisticas` | `app/admin/liguinha/liga/page.tsx` |
+| GET | `/api/liga-mensal/manual` | AdminOnly | `GetManualEntries` (67) | `ligaMensalApi.manualList` | `app/admin/liga-mensal/page.tsx` |
+| POST | `/api/liga-mensal/manual` | AdminOnly | `CreateManualEntry` (75) | `ligaMensalApi.manualCreate` | `app/admin/liga-mensal/page.tsx` |
+| DELETE | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `DeleteManualEntry` (92) | `ligaMensalApi.manualDelete` | `app/admin/liga-mensal/page.tsx` |
+| PUT | `/api/liga-mensal/manual/{id:guid}` | AdminOnly | `UpdateManualEntry` (84) | `ligaMensalApi.manualUpdate` | `app/admin/liga-mensal/page.tsx` |
+| GET | `/api/liga-mensal/meses` | público | `GetMesesDisponiveis` (61) | `ligaMensalApi.meses` | `app/admin/liga-mensal/page.tsx`<br>`app/liga/page.tsx` |
 
 ## Marketplace
 

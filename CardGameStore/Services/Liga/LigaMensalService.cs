@@ -216,7 +216,7 @@ public class LigaMensalService
     }
 
     /// <summary>Mais pontos primeiro; empate: quem jogou mais eventos; depois o nome.</summary>
-    private static List<LigaMensalRankingDto> Ordenar(IEnumerable<LigaMensalRankingDto> linhas) => linhas
+    internal static List<LigaMensalRankingDto> Ordenar(IEnumerable<LigaMensalRankingDto> linhas) => linhas
         .OrderByDescending(r => r.TotalPoints)
         .ThenByDescending(r => r.EventsPlayed)
         .ThenBy(r => r.PlayerName)

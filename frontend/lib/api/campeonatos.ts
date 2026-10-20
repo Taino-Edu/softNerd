@@ -160,9 +160,33 @@ export interface SaveLigaMensalManualEntry {
   observacao?: string
 }
 
+/** Métricas da Liga num período (semana seg–dom, mês ou temporada), calculadas na hora. */
+export type PeriodoLiga = 'semana' | 'mes' | 'ano'
+export interface LigaJogadorStats {
+  posicao: number; userId: string; nome: string; pontos: number; etapas: number; titulos: number; top4: number
+  /** 0 = só lançamento manual */
+  melhorColocacao: number
+  vitorias: number; empates: number; derrotas: number
+  /** null = sem partida do suíço registrada (etapa lançada de fora só tem colocação) */
+  pctVitoria: number | null
+  deckPrincipal: string | null; decks: string[]
+}
+export interface LigaEtapa { id: string; nome: string; data: string; jogadores: number; suico: boolean; campeao: string | null; deckCampeao: string | null }
+export interface LigaDeckStats {
+  deck: string; usos: number; jogadores: number; titulos: number; top4: number
+  partidas: number; vitorias: number; empates: number; derrotas: number; pctVitoria: number | null
+}
+export interface LigaEstatisticasDto {
+  periodo: PeriodoLiga; rotulo: string; inicio: string; fim: string
+  resumo: { etapas: number; jogadoresUnicos: number; mediaPorEtapa: number; novatos: number; partidas: number; maiorEtapa: number }
+  ranking: LigaJogadorStats[]; etapas: LigaEtapa[]; decks: LigaDeckStats[]
+}
+
 export const ligaMensalApi = {
   ranking: (ano?: number, mes?: number) =>
     api.get<LigaMensalDto>('/api/liga-mensal', { params: { ano, mes } }),
+  estatisticas: (params: { periodo: PeriodoLiga; ano?: number; mes?: number; dia?: string }) =>
+    api.get<LigaEstatisticasDto>('/api/liga-mensal/estatisticas', { params }),
   meses: () => api.get<LigaMensalMesDto[]>('/api/liga-mensal/meses'),
   manualList:   (ano: number, mes: number) =>
     api.get<LigaMensalManualEntryDto[]>('/api/liga-mensal/manual', { params: { ano, mes } }),

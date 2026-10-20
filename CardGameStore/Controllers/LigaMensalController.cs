@@ -25,8 +25,26 @@ namespace CardGameStore.Controllers;
 public class LigaMensalController : ControllerBase
 {
     private readonly LigaMensalService _liga;
+    private readonly LigaEstatisticasService _estatisticas;
 
-    public LigaMensalController(LigaMensalService liga) => _liga = liga;
+    public LigaMensalController(LigaMensalService liga, LigaEstatisticasService estatisticas)
+    {
+        _liga = liga;
+        _estatisticas = estatisticas;
+    }
+
+    /// <summary>
+    /// Métricas da Liga num período: ranking com V/E/D e % de vitória, etapas com campeão,
+    /// decks (uso, títulos, % de vitória) e resumo. periodo = semana | mes | ano.
+    /// Público, como o ranking: só nomes, decks e números do torneio.
+    /// </summary>
+    [HttpGet("estatisticas")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LigaEstatisticasDto), 200)]
+    [ProducesResponseType(400)]
+    public Task<IActionResult> GetEstatisticas([FromQuery] string? periodo, [FromQuery] int? ano, [FromQuery] int? mes,
+        [FromQuery] DateTime? dia) =>
+        Responder(async () => Ok(await _estatisticas.EstatisticasAsync(periodo, ano, mes, dia)));
 
     /// <summary>Ranking consolidado da Liga Mensal (campeonatos + lançamentos manuais).</summary>
     [HttpGet]
