@@ -100,13 +100,16 @@ public class ReservationController : ControllerBase
     /// </summary>
     private async Task<IActionResult?> DerrubarCobrancaAsync(PixCobranca pix, string pagaAgora, string interRecusou, string motivo)
     {
+        // Confere SEMPRE, mesmo vencida: Pix pago pouco antes de vencer e ainda não conciliado
+        // (o robô roda a cada 5 min) seria marcado como removido e o robô nunca mais olharia pra
+        // ele (só busca ATIVA) — o pagamento sumiria. Sem conseguir conferir, não cancela.
+        var conferida = await _pixReconciliation.ReconciliarAsync(pix);
+        if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
+            return Conflict(new { Message = pagaAgora });
+        if (conferida.Error is not null)
+            return StatusCode(502, new { Message = $"{interRecusou} ({conferida.Error})" });
+
         var jaVenceu = pix.ExpiraEm is not null && pix.ExpiraEm <= DateTime.UtcNow;
-        if (!jaVenceu)
-        {
-            var conferida = await _pixReconciliation.ReconciliarAsync(pix);
-            if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
-                return Conflict(new { Message = pagaAgora });
-        }
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
         var removida = cfg is null
@@ -1094,14 +1097,13 @@ public class ReservationController : ControllerBase
 
         // Antes de cancelar, confere no Inter: se o cliente acabou de pagar POR ESTA
         // cobrança, cancelar apagaria a única pista do pagamento. Nesse caso a
-        // reconciliação dá a baixa e o cancelamento é recusado.
+        // reconciliação dá a baixa e o cancelamento é recusado. Confere também a vencida
+        // (paga pouco antes de vencer, ainda não conciliada); se o Inter não responder,
+        // a vencida segue encerrando só aqui, como antes.
         var jaVenceu = pix.ExpiraEm is not null && pix.ExpiraEm <= DateTime.UtcNow;
-        if (!jaVenceu)
-        {
-            var conferida = await _pixReconciliation.ReconciliarAsync(pix);
-            if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
-                return Conflict(new { Message = "Esta cobrança acabou de ser paga pelo cliente e foi baixada agora — recarregue a tela." });
-        }
+        var conferida = await _pixReconciliation.ReconciliarAsync(pix);
+        if (conferida.PagoEm is not null || pix.Status == "CONCLUIDA")
+            return Conflict(new { Message = "Esta cobrança acabou de ser paga pelo cliente e foi baixada agora — recarregue a tela." });
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
         var removida = cfg is null

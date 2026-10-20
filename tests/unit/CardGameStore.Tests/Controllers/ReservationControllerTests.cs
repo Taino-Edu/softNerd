@@ -522,7 +522,10 @@ public class ReservationControllerTests
         // lojista do beco quando o cliente pagou por fora.
         var db      = CreateDb(nameof(ReservationControllerTests));
         var reserva = await SeedPreVendaComPixAsync(db, pixExpiraEm: DateTime.UtcNow.AddHours(-29));
-        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+        var semInter = new Mock<IPixReconciliationService>();
+        semInter.Setup(r => r.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()))
+                .ReturnsAsync(new PixReconciliationResult { Status = "ATIVA", Error = "Integração com o Inter não configurada." });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), pixReconciliation: semInter.Object);
 
         var result = await controller.CancelarPixReserva(reserva.ReservationGroupId);
 
@@ -644,6 +647,47 @@ public class ReservationControllerTests
 
         result.Should().BeOfType<ConflictObjectResult>();
         inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("active");
+    }
+
+    [Fact]
+    public async Task Cancel_PixVencidoMasPagoAntesDeVencer_NaoCancelaNemSomeComOPagamento()
+    {
+        // Codex no PR #87: pago pouco antes de vencer e ainda não conciliado. Pular a
+        // conferência por estar vencido marcaria a cobrança como removida e o pagamento sumiria.
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var pix = await db.PixCobrancas.SingleAsync();
+        pix.ExpiraEm = DateTime.UtcNow.AddMinutes(-2);
+        await db.SaveChangesAsync();
+        var pago = new Mock<IPixReconciliationService>();
+        pago.Setup(r => r.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()))
+            .ReturnsAsync(new PixReconciliationResult { Status = "CONCLUIDA", PagoEm = DateTime.UtcNow.AddMinutes(-3) });
+        var inter = CreateInterMockConfiguravel();
+        var controller = CreateController(db, loggedUserId: cliente.Id, pixReconciliation: pago.Object, inter: inter.Object);
+
+        var result = await controller.Cancel(reserva.Id);
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("active");
+        (await db.PixCobrancas.AsNoTracking().SingleAsync()).Status.Should().NotBe("REMOVIDA_PELO_USUARIO_RECEBEDOR");
+    }
+
+    [Fact]
+    public async Task Cancel_NaoConsegueConferirOPix_NaoCancela()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var foraDoAr = new Mock<IPixReconciliationService>();
+        foraDoAr.Setup(r => r.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()))
+                .ReturnsAsync(new PixReconciliationResult { Status = "ATIVA", Error = "timeout" });
+        var controller = CreateController(db, loggedUserId: cliente.Id, pixReconciliation: foraDoAr.Object,
+            inter: CreateInterMockConfiguravel().Object);
+
+        var result = await controller.Cancel(reserva.Id);
+
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(502);
         (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("active");
     }
 
