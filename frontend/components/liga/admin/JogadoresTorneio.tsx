@@ -14,6 +14,17 @@ import SpriteDeck from '@/components/liga/SpriteDeck'
 import EscolherCliente from './EscolherCliente'
 import { lerLista, normalizarNome } from './nomes'
 
+/**
+ * Mesmo jogo escrito de jeitos diferentes: o torneio usa "Magic", "One Piece", "Yu-Gi-Oh";
+ * o deck salvo usa "MTG", "One Piece TCG", "Yu-Gi-Oh!" (cliente/decks). Compara a forma curta.
+ */
+function chaveJogo(jogo?: string | null): string {
+  const k = (jogo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/tcg$/, '')
+  if (k === 'mtg' || k.startsWith('magic')) return 'magic'
+  if (k.includes('riftbound') || k === 'lol') return 'riftbound'
+  return k
+}
+
 function mensagemDe(e: unknown, padrao: string) {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? padrao
 }
@@ -51,7 +62,7 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false, 
       .then(r => {
         if (buscaDecksDe.current !== c.id) return
         // os do jogo do torneio primeiro, depois os mais recentes
-        const doJogo = (d: DeckDto) => (jogo && d.game?.toLowerCase() === jogo.toLowerCase() ? 0 : 1)
+        const doJogo = (d: DeckDto) => (jogo && chaveJogo(d.game) === chaveJogo(jogo) ? 0 : 1)
         const ordem = [...r.data].sort((a, b) => doJogo(a) - doJogo(b) || b.updatedAt.localeCompare(a.updatedAt))
         setDecksDele(ordem)
         if (ordem.length > 0 && doJogo(ordem[0]) === 0) setDeckId(ordem[0].id)
