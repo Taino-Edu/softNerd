@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.59.0] — 2026-10-19
+
+### Novo — deck salvo do jogador na Central
+- Ao adicionar um cliente na aba **Jogadores**, aparecem os **decks salvos em "Meus decks"** dele (os do jogo do torneio primeiro, depois os mais recentes), com o Pokémon do deck — o mesmo deck que ele escolheria entrando pelo código no celular
+- Dá pra escolher "Outro deck" e digitar; quem não tem deck salvo continua só digitando
+- O deck escolhido fica ligado à conta do jogador e vai pro telão, pras mesas, pra Liga e pras métricas por deck
+
 ## [v1.58.0] — 2026-10-19
 
 ### Novo — Liga e métricas (Central da Liguinha)

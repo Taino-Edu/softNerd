@@ -2,11 +2,13 @@
 // Aba "Jogadores" da Central da Liguinha — como no Challonge: adiciona pela busca, por nome
 // (quem não tem cadastro vira cliente de balcão só com o nome, igual ao caixa) ou vários de
 // uma vez colando a lista. Quem chega na hora já entra presente (check-in).
+// Cliente com conta: dá pra escolher um dos decks salvos em "Meus decks" (v1.59.0) — o mesmo
+// deck que ele escolheria entrando pelo código; o servidor confere que o deck é dele.
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
-import { ListPlus, Loader2, Trash2, UserPlus } from 'lucide-react'
-import { championshipApi, torneioApi, userApi, PainelTorneioDto } from '@/lib/api'
+import { Layers, ListPlus, Loader2, Trash2, UserPlus, X } from 'lucide-react'
+import { championshipApi, deckApi, torneioApi, userApi, DeckDto, PainelTorneioDto } from '@/lib/api'
 import { Switch } from '@/components/ui/Switch'
 import SpriteDeck from '@/components/liga/SpriteDeck'
 import EscolherCliente from './EscolherCliente'
@@ -17,7 +19,8 @@ function mensagemDe(e: unknown, padrao: string) {
 }
 
 /** inscricao: campeonato avulso (só inscrição e venda) — ninguém entra presente sozinho e o título vira "Inscritos". */
-export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false }: { p: PainelTorneioDto; pago: boolean; onMudou: () => void; inscricao?: boolean }) {
+/** jogo: os decks salvos desse jogo aparecem primeiro na escolha. */
+export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false, jogo }: { p: PainelTorneioDto; pago: boolean; onMudou: () => void; inscricao?: boolean; jogo?: string }) {
   const encerrado = p.status === 'Finalizado' || p.status === 'Cancelado'
   const [modo, setModo] = useState<'um' | 'varios'>('um')
   const [deck, setDeck] = useState('')
@@ -27,20 +30,40 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false }
   const [novoZap, setNovoZap] = useState('')
   const [lista, setLista] = useState('')
   const [ocupado, setOcupado] = useState<string | null>(null)
+  // Cliente escolhido na busca, esperando a escolha do deck
+  const [escolhido, setEscolhido] = useState<{ id: string; nome: string } | null>(null)
+  const [decksDele, setDecksDele] = useState<DeckDto[] | null>(null)
+  const [deckId, setDeckId] = useState('')   // '' = digitar o nome
+  const [deckTexto, setDeckTexto] = useState('')
 
-  async function inscrever(userId: string, deckNome: string | null) {
-    const { data: part } = await championshipApi.adminRegister(p.id, userId, deckNome || undefined)
+  async function inscrever(userId: string, deckNome: string | null, idDoDeck?: string) {
+    const { data: part } = await championshipApi.adminRegister(p.id, userId, deckNome || undefined, idDoDeck || undefined)
     if (presente) await torneioApi.checkIn(p.id, part.id, true)
   }
 
-  async function adicionarCliente(userId: string, nome: string) {
+  function escolher(c: { id: string; name: string }) {
+    setEscolhido({ id: c.id, nome: c.name })
+    setDecksDele(null); setDeckId(''); setDeckTexto('')
+    deckApi.getByUser(c.id)
+      .then(r => {
+        // os do jogo do torneio primeiro, depois os mais recentes
+        const doJogo = (d: DeckDto) => (jogo && d.game?.toLowerCase() === jogo.toLowerCase() ? 0 : 1)
+        const ordem = [...r.data].sort((a, b) => doJogo(a) - doJogo(b) || b.updatedAt.localeCompare(a.updatedAt))
+        setDecksDele(ordem)
+        if (ordem.length > 0 && doJogo(ordem[0]) === 0) setDeckId(ordem[0].id)
+      })
+      .catch(() => setDecksDele([]))
+  }
+
+  async function adicionarEscolhido() {
+    if (!escolhido) return
     setOcupado('um')
     try {
-      await inscrever(userId, deck.trim() || null)
-      toast.success(`${nome} entrou no torneio.`)
-      setDeck('')
+      await inscrever(escolhido.id, deckId ? null : deckTexto.trim() || null, deckId || undefined)
+      toast.success(`${escolhido.nome} entrou no torneio.`)
+      setEscolhido(null); setDecksDele(null)
       onMudou()
-    } catch (e) { toast.error(mensagemDe(e, `Não deu pra adicionar ${nome}.`)) }
+    } catch (e) { toast.error(mensagemDe(e, `Não deu pra adicionar ${escolhido.nome}.`)) }
     finally { setOcupado(null) }
   }
 
@@ -107,13 +130,42 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false }
 
           {modo === 'um' ? (
             <>
-              <label className="block text-sm">
-                <span className="block text-xs font-semibold text-gray-400 mb-1.5">Deck (opcional)</span>
-                <input value={deck} onChange={e => setDeck(e.target.value)} maxLength={200} placeholder="Ex.: Dragapult ex" className="input w-full" />
-              </label>
               <div>
                 <span className="block text-xs font-semibold text-gray-400 mb-1.5">Cliente da loja</span>
-                <EscolherCliente onEscolher={c => adicionarCliente(c.id, c.name)} />
+                {!escolhido ? (
+                  <EscolherCliente onEscolher={escolher} />
+                ) : (
+                  <div className="rounded-xl border border-surface-400 p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 min-w-0 text-sm font-semibold text-white truncate">{escolhido.nome}</span>
+                      <button type="button" onClick={() => setEscolhido(null)} title="Escolher outro cliente"
+                        className="text-gray-500 hover:text-white p-1"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="text-sm">
+                      <span className="mb-1.5 text-xs font-semibold text-gray-400 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5" /> Deck
+                      </span>
+                      {decksDele === null ? (
+                        <Loader2 className="w-4 h-4 text-brand-400 animate-spin" />
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          {deckId && <span className="w-9 flex justify-center shrink-0"><SpriteDeck deck={decksDele.find(d => d.id === deckId)?.name} tamanho={32} /></span>}
+                          <select value={deckId} onChange={e => setDeckId(e.target.value)} className="input w-full" aria-label="Deck do jogador">
+                            {decksDele.map(d => <option key={d.id} value={d.id}>{d.name}{d.game ? ` · ${d.game}` : ''}</option>)}
+                            <option value="">{decksDele.length ? 'Outro deck (digitar)' : 'Sem deck salvo (digitar)'}</option>
+                          </select>
+                        </span>
+                      )}
+                    </div>
+                    {deckId === '' && decksDele !== null && (
+                      <input value={deckTexto} onChange={e => setDeckTexto(e.target.value)} maxLength={200}
+                        placeholder="Nome do deck (opcional)" className="input w-full" aria-label="Nome do deck" />
+                    )}
+                    <button type="button" onClick={adicionarEscolhido} disabled={ocupado !== null || decksDele === null} className="btn-primary w-full justify-center">
+                      {ocupado === 'um' ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />} Adicionar {escolhido.nome.split(' ')[0]}
+                    </button>
+                  </div>
+                )}
               </div>
               <form onSubmit={adicionarNovo} className="rounded-xl border border-dashed border-surface-400 p-3 space-y-2">
                 <p className="text-xs font-semibold text-gray-400">Não tem cadastro? Entra só com o nome</p>
@@ -121,6 +173,7 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false }
                   <input value={novoNome} onChange={e => setNovoNome(e.target.value)} maxLength={150} placeholder="Nome do jogador" className="input flex-1" />
                   <input value={novoZap} onChange={e => setNovoZap(e.target.value)} inputMode="tel" placeholder="WhatsApp (opcional)" className="input sm:w-44" />
                 </div>
+                <input value={deck} onChange={e => setDeck(e.target.value)} maxLength={200} placeholder="Deck (opcional)" className="input w-full" aria-label="Deck do jogador novo" />
                 <button type="submit" disabled={!novoNome.trim() || ocupado !== null} className="btn-secondary text-sm w-full justify-center">
                   {ocupado === 'novo' ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />} Cadastrar e adicionar
                 </button>
