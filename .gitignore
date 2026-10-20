@@ -63,6 +63,10 @@ appsettings.*.json
 
 # Environment variables
 .env
+# cópias e variações do .env (o .env.example é o único que vai pro git)
+.env.*
+!.env.example
+!.env.local.example
 .env.local
 
 # Database files
