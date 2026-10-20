@@ -21,6 +21,16 @@ export interface MesaDto {
   resultado: ResultadoPartida | null; divergente: boolean
   /** Mesa além dos lugares da loja: joga quando uma liberar. */
   aguardandoMesa: boolean
+  /** Jogador A/B apertou "Estou pronto" (setup montado) — chave liguinha-pronto-na-mesa. */
+  prontoA?: boolean
+  prontoB?: boolean
+}
+
+/** Mesas que contam pro "todas prontas": com oponente, dentro dos lugares da loja e ainda sem resultado. */
+export function mesasDeSetup(mesas: MesaDto[]) {
+  const jogo = mesas.filter(m => m.b && !m.aguardandoMesa && !m.resultado)
+  const prontas = jogo.filter(m => m.prontoA && m.prontoB)
+  return { total: jogo.length, prontas: prontas.length, todas: jogo.length > 0 && prontas.length === jogo.length }
 }
 
 export interface TimerTorneioDto {
@@ -90,6 +100,9 @@ export const torneioApi = {
   comecarRodada: (id: string) => api.post(`/api/torneios/${id}/rodadas/atual/comecar`),
   resolver:    (id: string, partidaId: string, resultado: ResultadoPartida) =>
     api.put(`/api/torneios/${id}/partidas/${partidaId}`, { resultado }),
+  /** Marca a mesa inteira como pronta (jogador sem celular). */
+  mesaPronta:  (id: string, partidaId: string, pronto: boolean) =>
+    api.put(`/api/torneios/${id}/partidas/${partidaId}/pronto`, { pronto }),
   desistencia: (id: string, participantId: string) =>
     api.post(`/api/torneios/${id}/participantes/${participantId}/desistencia`),
   encerrar:    (id: string) => api.post<LinhaTabela[]>(`/api/torneios/${id}/encerrar`),
@@ -108,6 +121,8 @@ export const torneioApi = {
   lancar:      (id: string, partidaId: string, resultado: ResultadoJogador) =>
     api.post(`/api/torneios/${id}/partidas/${partidaId}/resultado`, { resultado }),
   desistir:    (id: string) => api.post(`/api/torneios/${id}/desistir`),
+  /** "Estou pronto": setup montado, básicos em campo. */
+  pronto:      (id: string, pronto: boolean) => api.post(`/api/torneios/${id}/pronto`, { pronto }),
 
   // Público (telão)
   publico:     (id: string) => api.get<TorneioPublicoDto>(`/api/torneios/${id}`),

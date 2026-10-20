@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.61.0] — 2026-10-20
+
+### Novo — botão "Estou pronto" na liguinha (pedido do Maikon)
+- Quando os pareamentos saem, cada jogador vê no celular **"Estou pronto"**: monta o setup, coloca o Pokémon básico em campo e confirma. Dá pra desfazer, e mostra se o oponente já confirmou
+- **Na Central**: "X de Y mesas prontas" com barra, quem está pronto e quem está montando em cada mesa, e **"Marcar mesa pronta"** pra quem está sem celular
+- **Todas as mesas prontas → a Central avisa** com som, mensagem e o quadro em verde: aí é só clicar em "Começar rodada" (quem solta a rodada continua sendo o organizador)
+- **Telão**: selo "PRONTO" ao lado de quem confirmou e a contagem de mesas prontas
+- Bye não precisa confirmar, e mesa que ainda espera lugar na loja não segura o aviso
+- O lançamento do resultado continua igual (cada um marca Venci/Perdi no celular e fecha quando os dois batem)
+- Chave `liguinha-pronto-na-mesa` em Funcionalidades: desligada, volta a ser só "Começar rodada"
+
 ## [v1.60.0] — 2026-10-20
 
 ### Novo — métricas na Liga pública e na conta do jogador

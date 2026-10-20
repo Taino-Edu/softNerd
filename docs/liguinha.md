@@ -45,6 +45,7 @@ o lançamento manual de pontos, as telas de campeonato que já existem.
 | Inscrever | Jogador / organizador | Igual hoje, com ou sem Pix | `/register`, `/admin-register`, Pix |
 | Iniciar | Organizador | Gera o código (ex.: KX7P2), status `EmAndamento`, rodada 1 sorteada, timer liga e conta | `PUT /status`, `TimerEntity` |
 | Entrar | Jogador | Digita o código e escolhe o deck (check-in). Se não estava inscrito e as inscrições estão abertas, inscreve | `RegisterParticipantAsync` |
+| Pronto | Jogadores | Com os pareamentos soltos e o relógio parado, cada um aperta "Estou pronto" (básicos em campo). Quando todas as mesas da loja estão prontas, a Central avisa (som + destaque) e o organizador começa a rodada. Chave `liguinha-pronto-na-mesa` | `ComecarRodadaAsync` |
 | Jogar | Jogadores | Cada um lança o próprio resultado; se baterem, fecha; se divergirem, vai pro organizador | — |
 | Próxima rodada | Organizador | Um clique: emparelha por pontos, sem revanche, com bye; timer reinicia | — |
 | Encerrar | Organizador | Classificação final vira `Placement` e pódio | `SetPlacementAsync`, `SetPodioAsync` |
@@ -128,6 +129,7 @@ CardGameStore/
 | POST | `api/torneios/{id}/rodadas` | Gera a próxima rodada (409 se houver partida aberta) |
 | PUT | `api/torneios/{id}/partidas/{partidaId}` | Organizador define ou corrige o resultado |
 | POST | `api/torneios/{id}/participantes/{pid}/desistencia` | Desistência (sai das próximas rodadas) |
+| PUT | `api/torneios/{id}/partidas/{partidaId}/pronto` `{pronto}` | Marca a mesa inteira pronta (jogador sem celular); 409 se a rodada já começou |
 | POST | `api/torneios/{id}/encerrar` | Colocação final → `Placement` + pódio → `Finalizado` |
 | POST | `api/torneios/{id}/codigo` | Gera um código novo (se vazou) |
 | GET/POST/PUT | `api/liga/arquetipos` (+ `/{id}/juntar`) | Lista de arquétipos; juntar duplicados |
@@ -138,6 +140,7 @@ CardGameStore/
 | POST | `api/torneios/entrar` `{codigo, deckId}` | Check-in (ou inscrição, se ainda aberta). Limite de tentativas |
 | GET | `api/torneios/{id}/minha-mesa` | Rodada, mesa, oponente, timer, o que cada um lançou |
 | POST | `api/torneios/{id}/partidas/{partidaId}/resultado` | Lança o próprio resultado (só A ou B da partida) |
+| POST | `api/torneios/{id}/pronto` `{pronto}` | "Estou pronto" na mesa da rodada atual (bye não precisa); 409 se a rodada já começou |
 | POST | `api/torneios/{id}/desistir` | Sai do torneio |
 | GET | `api/torneios/ativos` | Torneios em andamento em que estou |
 

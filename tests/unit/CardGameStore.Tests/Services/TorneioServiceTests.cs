@@ -454,4 +454,120 @@ public class TorneioServiceTests
         mesa.ReportOponente.Should().BeNull();
         mesa.Mesa!.ReportA.Should().BeNull(); // o detalhe cru não vaza
     }
+
+    // ── "Estou pronto" na mesa (pedido do Maikon, 20/10/2026) ────────────────
+    // Pokémon: todos com os básicos em campo antes do relógio correr. Quando todas as mesas
+    // estão prontas o organizador é avisado e ele mesmo começa a rodada.
+
+    private static async Task<List<TorneioPartida>> MesasDaRodadaAsync(Ambiente amb) =>
+        await amb.Db.TorneioPartidas.AsNoTracking().Include(p => p.ParticipanteA).Include(p => p.ParticipanteB)
+            .Where(p => p.Rodada.ChampionshipId == amb.Ch.Id).OrderBy(p => p.Mesa).ToListAsync();
+
+    [Fact]
+    public async Task Pronto_TodasAsMesasSoQuandoOsDoisLadosDeTodasConfirmam()
+    {
+        var amb = Criar(4);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesas = await MesasDaRodadaAsync(amb);
+
+        await amb.Torneio.MarcarProntoAsync(mesas[0].ParticipanteA.UserId, amb.Ch.Id, true);
+        await amb.Torneio.MarcarProntoAsync(mesas[0].ParticipanteB!.UserId, amb.Ch.Id, true);
+        await amb.Torneio.MarcarProntoAsync(mesas[1].ParticipanteA.UserId, amb.Ch.Id, true);
+        (await amb.Torneio.TodasProntasAsync(amb.Ch.Id, 1)).Should().BeFalse("falta um jogador da mesa 2");
+
+        await amb.Torneio.MarcarProntoAsync(mesas[1].ParticipanteB!.UserId, amb.Ch.Id, true);
+
+        (await amb.Torneio.TodasProntasAsync(amb.Ch.Id, 1)).Should().BeTrue();
+        var painel = await amb.Torneio.PainelAsync(amb.Ch.Id);
+        painel.Mesas.Should().OnlyContain(m => m.ProntoA && m.ProntoB);
+        (await amb.Db.Timers.AsNoTracking().SingleAsync()).State.Should().Be(TimerState.Stopped,
+            "quem solta a rodada é o organizador");
+    }
+
+    [Fact]
+    public async Task Pronto_Desfazer_VoltaAAguardar()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesa = (await MesasDaRodadaAsync(amb)).Single();
+        await amb.Torneio.MarcarProntoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, true);
+
+        await amb.Torneio.MarcarProntoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, false);
+
+        (await amb.Db.TorneioPartidas.AsNoTracking().SingleAsync()).ProntoAEm.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Pronto_OrganizadorMarcaAMesaDeQuemEstaSemCelular()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesa = (await MesasDaRodadaAsync(amb)).Single();
+
+        await amb.Torneio.MarcarMesaProntaAsync(amb.Ch.Id, mesa.Id, true);
+
+        (await amb.Torneio.TodasProntasAsync(amb.Ch.Id, 1)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Pronto_DepoisQueARodadaComecou_409()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        await amb.Torneio.ComecarRodadaAsync(amb.Ch.Id);
+        var mesa = (await MesasDaRodadaAsync(amb)).Single();
+
+        var acao = () => amb.Torneio.MarcarProntoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, true);
+
+        (await acao.Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409);
+    }
+
+    [Fact]
+    public async Task Pronto_ByeNaoPrecisaENaoTravaOAviso()
+    {
+        var amb = Criar(3);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesas = await MesasDaRodadaAsync(amb);
+        var bye = mesas.Single(m => m.ParticipanteBId == null);
+        var jogo = mesas.Single(m => m.ParticipanteBId != null);
+
+        await FluentActions.Awaiting(() => amb.Torneio.MarcarProntoAsync(bye.ParticipanteA.UserId, amb.Ch.Id, true))
+            .Should().ThrowAsync<TorneioException>();
+        await amb.Torneio.MarcarMesaProntaAsync(amb.Ch.Id, jogo.Id, true);
+
+        (await amb.Torneio.TodasProntasAsync(amb.Ch.Id, 1)).Should().BeTrue("o bye não monta setup");
+    }
+
+    [Fact]
+    public async Task Pronto_MesaQueAguardaLugarNaLojaNaoTravaOAviso()
+    {
+        var amb = Criar(6);                                  // 3 mesas
+        await InscreverEEntrarTodosAsync(amb, lugares: 4);   // cabem 2
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesas = await MesasDaRodadaAsync(amb);
+
+        await amb.Torneio.MarcarMesaProntaAsync(amb.Ch.Id, mesas[0].Id, true);
+        await amb.Torneio.MarcarMesaProntaAsync(amb.Ch.Id, mesas[1].Id, true);
+
+        (await amb.Torneio.TodasProntasAsync(amb.Ch.Id, 1)).Should().BeTrue("a mesa 3 joga quando uma liberar");
+    }
+
+    [Fact]
+    public async Task Pronto_ChaveDesligada_Recusa()
+    {
+        var amb = Criar(2);
+        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LiguinhaProntoNaMesa, false, Guid.NewGuid());
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesa = (await MesasDaRodadaAsync(amb)).Single();
+
+        await FluentActions.Awaiting(() => amb.Torneio.MarcarProntoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, true))
+            .Should().ThrowAsync<TorneioException>();
+        (await amb.Db.TorneioPartidas.AsNoTracking().SingleAsync()).ProntoAEm.Should().BeNull();
+    }
 }

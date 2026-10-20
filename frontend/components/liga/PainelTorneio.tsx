@@ -11,14 +11,15 @@
 // Atualiza sozinho pelo /hubs/torneio. Regras: Services/Liga/TorneioService.cs.
 // =============================================================================
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import {
-  ArrowLeft, Loader2, Swords, Play, RefreshCw, Flag, Monitor, Copy, AlertTriangle, CheckCircle2, UserX,
+  ArrowLeft, Loader2, Swords, Play, RefreshCw, Flag, Monitor, Copy, AlertTriangle, CheckCircle2, UserX, ThumbsUp,
 } from 'lucide-react'
-import { torneioApi, PainelTorneioDto, MesaDto, ResultadoPartida, rodadaComecou } from '@/lib/api'
+import { torneioApi, PainelTorneioDto, MesaDto, ResultadoPartida, rodadaComecou, mesasDeSetup } from '@/lib/api'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
 import { Switch } from '@/components/ui/Switch'
 import Relogio from '@/components/liga/Relogio'
@@ -53,6 +54,19 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
 
   useEffect(() => { recarregar() }, [recarregar])
   useTorneioAoVivo(id, recarregar)
+
+  // "Estou pronto" (chave liguinha-pronto-na-mesa): quando a última mesa fica pronta, avisa
+  // com som e toast — o organizador pode estar longe do computador, olhando as mesas.
+  const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
+  const setupAgora = p && p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual) ? mesasDeSetup(p.mesas) : null
+  const todasProntas = !!prontoLigado && !!setupAgora?.todas
+  const avisouRodada = useRef<number | null>(null)
+  useEffect(() => {
+    if (!todasProntas || !p || avisouRodada.current === p.rodadaAtual) return
+    avisouRodada.current = p.rodadaAtual
+    toast.success(`Todas as mesas prontas! Pode começar a rodada ${p.rodadaAtual}.`, { duration: 8000 })
+    tocarAviso()
+  }, [todasProntas, p])
 
   // Formulário começa com o que está salvo
   useEffect(() => {
@@ -212,11 +226,29 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
           )}
 
           {esperandoComecar && (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-surface-400 bg-surface-700 px-4 py-3">
-              <p className="text-sm text-gray-300 flex-1 min-w-[14rem]">
-                Pareamentos soltos — os jogadores já veem a mesa deles. Quando todo mundo estiver com o setup pronto,
-                comece a rodada: aí o relógio corre.
-              </p>
+            <div className={clsx('flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3',
+              todasProntas ? 'border-green-500 bg-green-500/10' : 'border-surface-400 bg-surface-700')}>
+              {prontoLigado && setupAgora ? (
+                <div className="flex-1 min-w-[14rem] space-y-2">
+                  <p className={clsx('text-sm font-semibold flex items-center gap-1.5', todasProntas ? 'txt-ok' : 'text-white')}>
+                    {todasProntas
+                      ? <><CheckCircle2 className="w-4 h-4" /> Todas as mesas prontas — pode começar a rodada</>
+                      : <><ThumbsUp className="w-4 h-4" /> {setupAgora.prontas} de {setupAgora.total} mesas prontas</>}
+                  </p>
+                  <div className="h-2 rounded-full bg-surface-600 overflow-hidden">
+                    <div className="h-full rounded-full bg-green-500 transition-[width]"
+                      style={{ width: `${setupAgora.total ? (setupAgora.prontas / setupAgora.total) * 100 : 0}%` }} />
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Cada jogador aperta &quot;Estou pronto&quot; no celular com os básicos em campo. Quem está sem celular: marque a mesa abaixo.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-300 flex-1 min-w-[14rem]">
+                  Pareamentos soltos — os jogadores já veem a mesa deles. Quando todo mundo estiver com o setup pronto,
+                  comece a rodada: aí o relógio corre.
+                </p>
+              )}
               <button onClick={() => acao('comecar', () => torneioApi.comecarRodada(id), `Rodada ${p.rodadaAtual} começou!`)}
                 disabled={ocupado !== null} className="btn-primary">
                 {ocupado === 'comecar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -237,7 +269,9 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
             <div className="space-y-2">
               {p.mesas.map(m => (
                 <Mesa key={m.partidaId} m={m} ocupado={ocupado !== null}
-                  resolver={r => acao(`m${m.partidaId}`, () => torneioApi.resolver(id, m.partidaId, r))} />
+                  resolver={r => acao(`m${m.partidaId}`, () => torneioApi.resolver(id, m.partidaId, r))}
+                  setup={prontoLigado && esperandoComecar}
+                  marcarPronta={v => acao(`p${m.partidaId}`, () => torneioApi.mesaPronta(id, m.partidaId, v))} />
               ))}
             </div>
           )}
@@ -304,7 +338,33 @@ function StatusMesa({ m }: { m: MesaDto }) {
     : <span className="ml-auto text-xs text-gray-400">Aguardando resultado</span>
 }
 
-function Mesa({ m, resolver, ocupado }: { m: MesaDto; resolver: (r: ResultadoPartida) => void; ocupado: boolean }) {
+/** Bipe curto de aviso (Web Audio, sem arquivo). Navegador sem áudio liberado: só o toast. */
+function tocarAviso() {
+  try {
+    const ctx = new AudioContext()
+    ;[0, 0.18].forEach(t => {
+      const o = ctx.createOscillator(), g = ctx.createGain()
+      o.frequency.value = 880
+      g.gain.setValueAtTime(0.2, ctx.currentTime + t)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.15)
+      o.connect(g).connect(ctx.destination)
+      o.start(ctx.currentTime + t)
+      o.stop(ctx.currentTime + t + 0.15)
+    })
+  } catch { /* sem áudio */ }
+}
+
+/** Selo de pronto de um lado da mesa (fase de setup). */
+function SeloPronto({ pronto, nome }: { pronto?: boolean; nome: string }) {
+  return pronto
+    ? <span className="txt-ok font-semibold">{nome.split(' ')[0]}: pronto</span>
+    : <span className="txt-alerta">{nome.split(' ')[0]}: montando</span>
+}
+
+function Mesa({ m, resolver, ocupado, setup = false, marcarPronta }: {
+  m: MesaDto; resolver: (r: ResultadoPartida) => void; ocupado: boolean
+  setup?: boolean; marcarPronta?: (pronta: boolean) => void
+}) {
   if (!m.b) {
     return (
       <div className="bg-surface-700 rounded-xl px-4 py-3 text-sm text-gray-300">
@@ -326,8 +386,23 @@ function Mesa({ m, resolver, ocupado }: { m: MesaDto; resolver: (r: ResultadoPar
         <span className="text-white font-semibold">{m.a.nome}</span>
         <span className="text-gray-500">×</span>
         <span className="text-white font-semibold">{m.b.nome}</span>
-        <StatusMesa m={m} />
+        {setup && !m.aguardandoMesa
+          ? <span className={clsx('ml-auto text-xs font-semibold flex items-center gap-1', m.prontoA && m.prontoB ? 'txt-ok' : 'text-gray-400')}>
+              {m.prontoA && m.prontoB ? <><CheckCircle2 className="w-4 h-4" /> Mesa pronta</> : 'Montando o setup'}
+            </span>
+          : <StatusMesa m={m} />}
       </div>
+      {setup && !m.aguardandoMesa && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs pl-10">
+          <SeloPronto pronto={m.prontoA} nome={m.a.nome} />
+          <SeloPronto pronto={m.prontoB} nome={m.b.nome} />
+          <button disabled={ocupado} onClick={() => marcarPronta?.(!(m.prontoA && m.prontoB))}
+            className="ml-auto text-xs px-3 py-1.5 rounded-lg btn-secondary">
+            {m.prontoA && m.prontoB ? 'Desfazer' : 'Marcar mesa pronta'}
+          </button>
+        </div>
+      )}
+      {!setup && <>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 pl-10">
         <span>{m.a.nome.split(' ')[0]}: {m.reportA ? LANCOU[m.reportA](m) : 'não lançou'}</span>
         <span>{m.b.nome.split(' ')[0]}: {m.reportB ? LANCOU[m.reportB](m) : 'não lançou'}</span>
@@ -340,6 +415,7 @@ function Mesa({ m, resolver, ocupado }: { m: MesaDto; resolver: (r: ResultadoPar
           </button>
         ))}
       </div>
+      </>}
     </div>
   )
 }

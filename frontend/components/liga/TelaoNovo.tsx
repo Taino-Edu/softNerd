@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { pixel } from '@/lib/fontePixel'
 import { ArrowLeft, Swords, CheckCircle2, Clock, Crown } from 'lucide-react'
-import { TorneioPublicoDto, MesaDto, LinhaTabela, rodadaComecou, segundosRestantes } from '@/lib/api'
+import { TorneioPublicoDto, MesaDto, LinhaTabela, rodadaComecou, segundosRestantes, mesasDeSetup } from '@/lib/api'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { mixHex } from '@/lib/colors'
 import { useSiteConfig } from '@/lib/useSiteConfig'
 import SpriteDeck from '@/components/liga/SpriteDeck'
@@ -58,13 +59,14 @@ function RelogioTelao({ t, cor, compacto }: { t: TorneioPublicoDto; cor: string;
   )
 }
 
-function Jogador({ nome, deck, venceu, perdeu, compacto }: { nome: string; deck?: string | null; venceu?: boolean; perdeu?: boolean; compacto?: boolean }) {
+function Jogador({ nome, deck, venceu, perdeu, compacto, pronto }: { nome: string; deck?: string | null; venceu?: boolean; perdeu?: boolean; compacto?: boolean; pronto?: boolean }) {
   return (
     <div className={`flex items-center ${compacto ? 'gap-2' : 'gap-3'} min-w-0 ${perdeu ? 'opacity-50' : ''}`}>
       <span className={`${compacto ? 'w-9 h-9' : 'w-12 h-12'} shrink-0 flex items-end justify-center`}><SpriteDeck deck={deck} tamanho={compacto ? 36 : 48} /></span>
       <div className="min-w-0 flex-1">
         <p className={`${compacto ? 'text-sm md:text-base' : 'text-base md:text-lg'} font-black leading-tight truncate`} style={{ color: B }}>
           {nome}{venceu && <CheckCircle2 className="inline w-4 h-4 ml-1.5 -mt-0.5" style={{ color: '#4ADE80' }} />}
+          {pronto && <span className={`${pixel.className} ml-2 text-[8px] align-middle px-1.5 py-0.5 rounded`} style={{ backgroundColor: 'rgba(74,222,128,0.18)', color: '#4ADE80' }}>PRONTO</span>}
         </p>
         {deck && <p className={`${compacto ? 'text-[11px]' : 'text-xs'} truncate`} style={{ color: FRACO }}>{deck}</p>}
       </div>
@@ -72,7 +74,7 @@ function Jogador({ nome, deck, venceu, perdeu, compacto }: { nome: string; deck?
   )
 }
 
-function CartaoMesa({ m, compacto }: { m: MesaDto; compacto?: boolean }) {
+function CartaoMesa({ m, compacto, setup }: { m: MesaDto; compacto?: boolean; setup?: boolean }) {
   const recuo = compacto ? 'pl-[44px]' : 'pl-[60px]'
   const venceuA = m.resultado === 'VitoriaA', venceuB = m.resultado === 'VitoriaB'
   return (
@@ -90,11 +92,11 @@ function CartaoMesa({ m, compacto }: { m: MesaDto; compacto?: boolean }) {
         )}
       </div>
       <div className={`flex-1 min-w-0 ${compacto ? 'space-y-1' : 'space-y-2'}`}>
-        <Jogador nome={m.a.nome} deck={m.a.deck} venceu={venceuA || !m.b} perdeu={venceuB} compacto={compacto} />
+        <Jogador nome={m.a.nome} deck={m.a.deck} venceu={venceuA || !m.b} perdeu={venceuB} compacto={compacto} pronto={setup && !!m.b && m.prontoA} />
         {m.b ? (
           <>
             <p className={`${pixel.className} text-[8px] ${recuo}`} style={{ color: FRACO }}>{m.resultado === 'Empate' ? 'EMPATE' : 'VS'}</p>
-            <Jogador nome={m.b.nome} deck={m.b.deck} venceu={venceuB} perdeu={venceuA} compacto={compacto} />
+            <Jogador nome={m.b.nome} deck={m.b.deck} venceu={venceuB} perdeu={venceuA} compacto={compacto} pronto={setup && m.prontoB} />
           </>
         ) : (
           <p className={`text-xs ${recuo}`} style={{ color: SUAVE }}>Vitória automática nesta rodada</p>
@@ -171,12 +173,14 @@ function Podio({ linhas }: { linhas: LinhaTabela[] }) {
 
 export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
   const site = useSiteConfig()
+  const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
   const cor = site?.colorHero ?? '#1E4FD6'
   const encerrado = t.status === 'Finalizado'
   const emJogo = !encerrado && t.rodadaAtual > 0
   // Muitas mesas (16+ jogadores): relógio menor e mesas em 3 colunas na TV, pra rodada caber em 1080px
   const muitasMesas = t.mesas.length > 6
   const setup = emJogo && !rodadaComecou(t.timer, t.rodadaAtual) && t.mesas.some(m => !m.resultado)
+  const setupInfo = mesasDeSetup(t.mesas)
   const situacao = encerrado ? 'TORNEIO ENCERRADO'
     : t.rodadaAtual > 0 ? `RODADA ${t.rodadaAtual}${t.numeroRodadas ? ` DE ${t.numeroRodadas}` : ''}`
     : 'CHECK-IN ABERTO'
@@ -228,13 +232,18 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
                 <p className={`${pixel.className} text-center text-[10px] md:text-sm leading-relaxed rounded-2xl py-4 px-3`}
                   style={{ backgroundColor: 'rgba(255,228,94,0.12)', color: AMARELO, border: '1px solid rgba(255,228,94,0.35)' }}>
                   PAREAMENTOS DA RODADA {t.rodadaAtual} SAÍRAM — VÁ PRA SUA MESA E MONTE O SETUP
+                  {prontoLigado && setupInfo.total > 0 && (
+                    <span className="block mt-2" style={{ color: setupInfo.todas ? '#4ADE80' : AMARELO }}>
+                      {setupInfo.todas ? 'TODAS AS MESAS PRONTAS!' : `${setupInfo.prontas} DE ${setupInfo.total} MESAS PRONTAS — APERTE "ESTOU PRONTO" NO CELULAR`}
+                    </span>
+                  )}
                 </p>
               )}
               {t.mesas.length > 0 && (
                 <section className="space-y-3">
                   <h2 className={`${pixel.className} text-[11px]`} style={{ color: AMARELO }}>MESAS DA RODADA {t.rodadaAtual}</h2>
                   <div className={`grid md:grid-cols-2 gap-3 ${muitasMesas ? '2xl:grid-cols-3' : ''}`}>
-                    {t.mesas.map(m => <CartaoMesa key={m.partidaId} m={m} compacto={muitasMesas} />)}
+                    {t.mesas.map(m => <CartaoMesa key={m.partidaId} m={m} compacto={muitasMesas} setup={setup && prontoLigado} />)}
                   </div>
                 </section>
               )}

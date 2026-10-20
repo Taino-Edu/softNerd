@@ -144,7 +144,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/funcionalidades.ts` | `funcionalidadesApi` |
 | `lib/api/index.ts` | — |
 | `lib/api/lgpd.ts` | `lgpdApi`, `lgpdAdminApi` |
-| `lib/api/liga.ts` | `torneioApi`, `rodadaComecou`, `segundosRestantes` |
+| `lib/api/liga.ts` | `mesasDeSetup`, `torneioApi`, `rodadaComecou`, `segundosRestantes` |
 | `lib/api/produtos.ts` | `categoryApi`, `productApi`, `variantApi`, `uploadApi` |
 | `lib/api/relatorios.ts` | `analyticsApi`, `relatorioApi` |
 | `lib/api/reservas.ts` | `reservationApi` |

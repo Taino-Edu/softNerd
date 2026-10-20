@@ -115,6 +115,14 @@ public class TorneioPartida
     [Column("fechada_em")]
     public DateTime? FechadaEm { get; set; }
 
+    /// <summary>Jogador A apertou "Estou pronto" (setup montado, básicos em campo) nesta rodada.</summary>
+    [Column("pronto_a_em")]
+    public DateTime? ProntoAEm { get; set; }
+
+    /// <summary>Jogador B apertou "Estou pronto".</summary>
+    [Column("pronto_b_em")]
+    public DateTime? ProntoBEm { get; set; }
+
     [NotMapped]
     public bool EhBye => ParticipanteBId is null;
 
