@@ -316,7 +316,7 @@ public class LigaMensalService
     }
 
     /// <summary>"  Ana   Souza " e "ana souza" são o mesmo nome.</summary>
-    private static string NomeNormalizado(string nome) =>
+    internal static string NomeNormalizado(string nome) =>
         string.Join(' ', nome.Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 
     private static IEnumerable<string?> DecksDoLancamento(LigaMensalManualEntry m) =>

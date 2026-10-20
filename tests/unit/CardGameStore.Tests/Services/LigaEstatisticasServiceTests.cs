@@ -223,6 +223,53 @@ public class LigaEstatisticasServiceTests
     }
 
     [Fact]
+    public async Task MinhaLiga_TrocouDeDeckNoMeio_OsDoisContamComoUsadosComOTitulo()
+    {
+        var a = Criar();
+        var ana = a.Jogador("Ana"); var beto = a.Jogador("Beto");
+        var (ch, p) = a.Etapa(Br(2026, 10, 3), (ana, "Dragapult ex"), (beto, "Lugia"));
+        a.Rodada(ch, (p[0], p[1], ResultadoPartida.VitoriaA));
+        var partida = a.Db.TorneioPartidas.Single();
+        partida.DeckANome = "Gardevoir ex"; // jogou a mesa com outro deck
+        a.Db.SaveChanges();
+
+        var r = await a.Stats.MinhaLigaAsync(ana.Id, "mes", 2026, 10, null);
+
+        var gardevoir = r.MeusDecks.Single(d => d.Deck == "Gardevoir ex");
+        (gardevoir.Usos, gardevoir.Titulos, gardevoir.Vitorias).Should().Be((1, 1, 1),
+            "o deck da partida foi usado naquela etapa e levou o título");
+        r.MeusDecks.Single(d => d.Deck == "Dragapult ex").Usos.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task MinhaLiga_SoLancamentoManual_AchaALinhaPeloNome()
+    {
+        var a = Criar();
+        var ana = a.Jogador("Ana Souza"); var beto = a.Jogador("Beto");
+        a.Etapa(Br(2026, 10, 3), (beto, null));
+        a.Db.LigaMensalManualEntries.Add(new LigaMensalManualEntry { Ano = 2026, Mes = 10, PlayerName = "ana  souza", TotalPoints = 24, CreatedByAdminId = AdminId });
+        a.Db.SaveChanges();
+
+        var r = await a.Stats.MinhaLigaAsync(ana.Id, "mes", 2026, 10, null);
+
+        r.Eu.Should().NotBeNull("os pontos dela aparecem no ranking público");
+        r.Eu!.Pontos.Should().Be(24);
+    }
+
+    [Fact]
+    public async Task MinhaLiga_SoLancamentoManual_ComHomonimo_NaoChuta()
+    {
+        var a = Criar();
+        var ana = a.Jogador("Ana Souza"); a.Jogador("Ana Souza");
+        a.Db.LigaMensalManualEntries.Add(new LigaMensalManualEntry { Ano = 2026, Mes = 10, PlayerName = "Ana Souza", TotalPoints = 24, CreatedByAdminId = AdminId });
+        a.Db.SaveChanges();
+
+        var r = await a.Stats.MinhaLigaAsync(ana.Id, "mes", 2026, 10, null);
+
+        r.Eu.Should().BeNull("duas contas com o mesmo nome: não dá pra saber de quem são os pontos");
+    }
+
+    [Fact]
     public async Task MinhaLiga_QuemNaoJogou_VemSemLinha()
     {
         var a = Criar();

@@ -173,20 +173,25 @@ function PaginaNova() {
   }, [])
 
   useEffect(() => {
+    // Trocou de mês com a resposta anterior no ar: a velha não pode chegar por último e
+    // misturar o ranking de um mês com as métricas de outro
+    let vivo = true
     setLoading(true)
     const [ano, mes] = selecionado ? selecionado.split('-').map(Number) : [undefined, undefined]
     ligaMensalApi.ranking(ano, mes)
       .then(r => {
+        if (!vivo) return
         setData(r.data)
         if (!selecionado) setSelecionado(`${r.data.ano}-${r.data.mes}`)
       })
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
+      .catch(() => { if (vivo) setData(null) })
+      .finally(() => { if (vivo) setLoading(false) })
     // Métricas são extra: se falharem, a página fica como era
     setStats(null)
     ligaMensalApi.estatisticas({ periodo: 'mes', ano, mes })
-      .then(r => setStats(r.data))
-      .catch(() => setStats(null))
+      .then(r => { if (vivo) setStats(r.data) })
+      .catch(() => { if (vivo) setStats(null) })
+    return () => { vivo = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selecionado])
 

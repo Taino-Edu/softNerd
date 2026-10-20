@@ -147,22 +147,31 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
         var partidas = await db.TorneioPartidas.AsNoTracking()
             .Where(x => x.ParticipanteBId != null && x.Resultado != null
                         && (ids.Contains(x.ParticipanteAId) || ids.Contains(x.ParticipanteBId!.Value)))
-            .Select(x => new { SouA = ids.Contains(x.ParticipanteAId), x.DeckANome, x.DeckBNome, x.Resultado })
+            .Select(x => new { SouA = ids.Contains(x.ParticipanteAId), x.ParticipanteAId, x.ParticipanteBId, x.DeckANome, x.DeckBNome, x.Resultado })
             .ToListAsync();
 
+        // Decks de cada etapa: o da inscrição e os das partidas (trocou no meio = os dois contam
+        // como usados naquela etapa, com o título/top 4 dela) — mesma regra das estatísticas gerais.
+        var decksDaEtapa = minhas.ToDictionary(x => x.Id, x =>
+        {
+            var s = new HashSet<string>();
+            if (ChaveDeck(x.DeckName) is { } k) s.Add(k);
+            return s;
+        });
         var porDeck = new Dictionary<string, (string Nome, int V, int E, int D)>();
         foreach (var x in partidas)
         {
             var deck = x.SouA ? x.DeckANome : x.DeckBNome;
             if (ChaveDeck(deck) is not { } k) continue;
+            decksDaEtapa[x.SouA ? x.ParticipanteAId : x.ParticipanteBId!.Value].Add(k);
             var venci = x.Resultado == (x.SouA ? ResultadoPartida.VitoriaA : ResultadoPartida.VitoriaB);
             var empate = x.Resultado == ResultadoPartida.Empate;
             var a = porDeck.GetValueOrDefault(k, (Nome: deck!.Trim(), V: 0, E: 0, D: 0));
             porDeck[k] = (a.Nome, a.V + (venci ? 1 : 0), a.E + (empate ? 1 : 0), a.D + (!venci && !empate ? 1 : 0));
         }
         // Deck da inscrição também conta como "usado" (etapa lançada de fora não tem partida)
-        var etapasPorDeck = minhas.Where(x => ChaveDeck(x.DeckName) is not null)
-            .GroupBy(x => ChaveDeck(x.DeckName)!).ToDictionary(g => g.Key, g => g.ToList());
+        var etapasPorDeck = minhas.SelectMany(x => decksDaEtapa[x.Id].Select(k => (Chave: k, Etapa: x)))
+            .GroupBy(t => t.Chave).ToDictionary(g => g.Key, g => g.Select(t => t.Etapa).ToList());
         var chaves = porDeck.Keys.Union(etapasPorDeck.Keys).ToList();
         static double? Pct(int v, int e, int d) => v + e + d == 0 ? null : Math.Round(100.0 * v / (v + e + d), 1);
         var meusDecks = chaves.Select(k =>
@@ -181,7 +190,7 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
         return new MinhaLigaDto
         {
             Periodo = geral.Periodo, Rotulo = geral.Rotulo,
-            Eu = geral.Ranking.FirstOrDefault(l => l.UserId == userId),
+            Eu = geral.Ranking.FirstOrDefault(l => l.UserId == userId) ?? await LinhaSoManualAsync(userId, geral.Ranking),
             TotalJogadores = geral.Ranking.Count,
             MeusDecks = meusDecks,
             Etapas = minhas.OrderByDescending(x => x.Championship.StartDate).Select(x => new MinhaEtapaDto
@@ -191,6 +200,30 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
                 Pontos = LigaMensalService.PontosPorColocacao(x.Placement!.Value), Deck = x.DeckName,
             }).ToList(),
         };
+    }
+
+    /// <summary>
+    /// Quem só tem lançamento manual no período (nenhuma etapa no sistema) aparece no ranking com o
+    /// id do lançamento, não o da conta. Liga pelo nome quando é a única linha com esse nome e nenhuma
+    /// outra conta tem o mesmo nome — com homônimo seria chute, e aí fica sem linha.
+    /// </summary>
+    private async Task<LigaJogadorStatsDto?> LinhaSoManualAsync(Guid userId, List<LigaJogadorStatsDto> ranking)
+    {
+        var nome = await db.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync();
+        if (string.IsNullOrWhiteSpace(nome)) return null;
+        var alvo = LigaMensalService.NomeNormalizado(nome);
+
+        var mesmoNome = ranking.Where(l => LigaMensalService.NomeNormalizado(l.Nome) == alvo).ToList();
+        if (mesmoNome.Count != 1) return null;
+        var linha = mesmoNome[0];
+        if (!await db.LigaMensalManualEntries.AnyAsync(m => m.Id == linha.UserId)) return null; // linha de outra conta
+
+        var primeiro = alvo.Split(' ')[0];
+        var homonimo = (await db.Users
+                .Where(u => u.Id != userId && u.Name.ToLower().Contains(primeiro))
+                .Select(u => u.Name).ToListAsync())
+            .Any(n => LigaMensalService.NomeNormalizado(n) == alvo);
+        return homonimo ? null : linha;
     }
 
     public async Task<LigaEstatisticasDto> EstatisticasAsync(string? periodo, int? ano, int? mes, DateTime? dia)
