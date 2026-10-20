@@ -135,6 +135,10 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
 - Pedido do site (reserva): cancelar pedido não pago **derruba o Pix antes** (`ReservationController.DerrubarPixAntesDeCancelarAsync`);
   Pix que cai em pedido cancelado reativa o pedido se tiver estoque ou avisa os admins (`BaixarReservaAsync`).
   Chave `pedido-pix-consistente`. Fluxo novo que cancela pedido? Passe pelo mesmo método.
+- Pedido do site vira venda **no pagamento** (`PedidoVendaService`, chamado pela baixa do Pix depois do commit):
+  preço congelado em `product_reservations.unit_price_in_cents`, a venda que ele gerou em `venda_avulsa_id`
+  (`registrando:<txid>` = claim). Homologar só vende o que ainda não tem venda; cancelar pedido vendido estorna.
+  Chave `pedido-venda-no-pagamento`.
 - Crediário tem regra própria (reaproveitar cobrança, pagar parte, pagar tudo): `CrediarioPixService.cs`.
 
 ### Crediário

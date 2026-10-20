@@ -157,6 +157,10 @@ public class VendaAvulsaService : IVendaAvulsaService
                 }
             }
 
+            // Pedido do site: vale o preço congelado na hora do pedido (o que o cliente viu e pagou)
+            if (reqItem.UnitPriceInCents is { } congelado && request.SkipStockDecrement && request.Origem == "Reserva")
+                effectivePrice = congelado;
+
             var subtotal = effectivePrice * reqItem.Quantity;
             total += subtotal;
 

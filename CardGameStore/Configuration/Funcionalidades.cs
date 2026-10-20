@@ -58,6 +58,7 @@ public static class Funcionalidades
     public const string PedidoPixConsistente = "pedido-pix-consistente";
     public const string LiguinhaProntoNaMesa = "liguinha-pronto-na-mesa";
     public const string LiguinhaEntradaSimples = "liguinha-entrada-simples";
+    public const string PedidoVendaNoPagamento = "pedido-venda-no-pagamento";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -283,6 +284,16 @@ public static class Funcionalidades
             SeDesligar: "Volta a tela de antes: torneios e formulário de código com deck juntos, e o deck só se escolhe ao entrar pelo código.",
             Padrao:     true,
             Desde:      "v1.61.1",
+            RevisarEm:  new DateOnly(2027, 3, 1)),
+
+        new(PedidoVendaNoPagamento,
+            Nome:       "Pedidos do site: venda conta no pagamento",
+            OQueMuda:   "Pedido do site pago no Pix vira venda na hora, no Financeiro do dia do pagamento, como Pix e pelo valor cobrado. " +
+                        "O preço fica congelado no momento do pedido. Na retirada é só \"Entregar\" (sem forma de pagamento nem desconto). " +
+                        "Pedido \"pagar na retirada\" vira venda quando é pago no balcão (Homologar). Cancelar pedido pago estorna a venda.",
+            SeDesligar: "Volta como era: o pedido só vira venda no Financeiro quando alguém clica em Homologar, com o preço do produto naquele momento.",
+            Padrao:     true,
+            Desde:      "v1.62.0",
             RevisarEm:  new DateOnly(2027, 3, 1)),
     ];
 

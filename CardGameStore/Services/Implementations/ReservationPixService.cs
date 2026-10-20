@@ -83,10 +83,15 @@ public sealed class ReservationPixService : IReservationPixService
             if (pixAtivo is not null)
                 return ReservationPixResult.Ok(pixAtivo, reused: true);
 
+            var congelado = _funcionalidades is null
+                ? Funcionalidades.Buscar(Funcionalidades.PedidoVendaNoPagamento)!.Padrao
+                : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoVendaNoPagamento);
             var valorEmCentavos = preVendas.Sum(r =>
             {
-                var precoUnit = r.Variant?.PriceInCents
-                    ?? (r.Product.IsOnPromo ? r.Product.DiscountPriceInCents!.Value : r.Product.PriceInCents);
+                // Chave "pedido-venda-no-pagamento": cobra o preço congelado no pedido
+                var precoUnit = congelado ? PedidoVendaService.PrecoDoPedido(r)
+                    : r.Variant?.PriceInCents
+                      ?? (r.Product.IsOnPromo ? r.Product.DiscountPriceInCents!.Value : r.Product.PriceInCents);
                 return precoUnit * r.Quantity;
             });
 

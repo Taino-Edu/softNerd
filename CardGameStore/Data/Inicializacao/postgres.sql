@@ -153,6 +153,9 @@ CREATE INDEX IF NOT EXISTS ix_product_reservations_kind ON product_reservations 
 
 -- Intenção de pagamento declarada na reserva online (pix ou retirada)
 ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) NULL;
+-- Pedido do site no padrão e-commerce (v1.62.0): preço congelado e a venda que ele gerou
+ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS unit_price_in_cents INTEGER NULL;
+ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS venda_avulsa_id VARCHAR(80) NULL;
 -- Snapshot JSON dos itens cobrados numa cobrança Pix de reserva (baixa vinculada)
 ALTER TABLE pix_cobrancas ADD COLUMN IF NOT EXISTS reservation_item_ids TEXT NULL;
 

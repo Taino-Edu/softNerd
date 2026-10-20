@@ -173,6 +173,7 @@ public static class ServicosDaLoja
         // Pix — sem webhook do Inter: o robô reconcilia cobranças ATIVA a cada 5 min e
         // dá a baixa por origem (mesmo caminho dos controllers, com claim atômico no
         // banco pra reconciliação concorrente não aplicar efeito duas vezes).
+        services.AddScoped<PedidoVendaService>();
         services.AddScoped<IPixReconciliationService, PixReconciliationService>();
         services.AddHostedService<PixReconciliationBackgroundService>();
 

@@ -57,12 +57,12 @@ public class PixReconciliationServiceTests
     private static PixReconciliationService CreateService(
         AppDbContext db, InterSyncService inter, IComandaService comanda,
         IEmailService? email = null, IPushService? push = null,
-        FuncionalidadesService? funcionalidades = null) =>
+        FuncionalidadesService? funcionalidades = null, PedidoVendaService? pedidoVenda = null) =>
         new(db, inter, comanda,
             email ?? new Mock<IEmailService>().Object,
             push ?? new Mock<IPushService>().Object,
             NullLogger<PixReconciliationService>.Instance,
-            funcionalidades);
+            funcionalidades, pedidoVenda);
 
     private static async Task<User> SeedBaseAsync(AppDbContext db)
     {
@@ -549,6 +549,103 @@ public class PixReconciliationServiceTests
         (await db.Notifications.CountAsync()).Should().Be(0);
         (await db.ExternalTransactions.SingleAsync(x => x.ExternalId == pix.TxId)).Notes
             .Should().Contain("ATENÇÃO", "o jeito antigo só anota no lançamento");
+    }
+
+    // ── Pedido pago = venda do dia (chave "pedido-venda-no-pagamento") ───────
+
+    private static async Task<(ProductReservation Reserva, PixCobranca Pix, User Admin)> SeedPedidoNaoPagoAsync(AppDbContext db)
+    {
+        var user  = await SeedBaseAsync(db);
+        var admin = new User { Id = Guid.NewGuid(), Name = "Maikon", Email = "adm@test.com", PasswordHash = "h", Role = UserRole.Admin };
+        db.Users.Add(admin);
+        var produto = new Product { Name = "Blister", Category = "Selado", PriceInCents = 9999, StockQuantity = 3, IsActive = true };
+        db.Products.Add(produto);
+        var groupId = Guid.NewGuid();
+        var reserva = new ProductReservation
+        {
+            ReservationGroupId = groupId, UserId = user.Id, ProductId = produto.Id, Quantity = 2,
+            Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
+            UnitPriceInCents = 4000, // preço do dia do pedido; o produto subiu depois
+        };
+        db.ProductReservations.Add(reserva);
+        var pix = NovaCobranca(PixCobrancaOrigem.Reserva, 8000);
+        pix.ReservationGroupId     = groupId;
+        pix.ReservationItemIdsJson = System.Text.Json.JsonSerializer.Serialize(new[] { reserva.Id });
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+        return (reserva, pix, admin);
+    }
+
+    private static (Mock<IVendaAvulsaService> Mock, List<VendaAvulsaRequest> Pedidos) VendaSpy(bool falhar = false)
+    {
+        var pedidos = new List<VendaAvulsaRequest>();
+        var mock = new Mock<IVendaAvulsaService>();
+        var setup = mock.Setup(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()))
+            .Callback<VendaAvulsaRequest, Guid, string>((r, _, _) => pedidos.Add(r));
+        if (falhar) setup.ThrowsAsync(new InvalidOperationException("Mongo fora"));
+        else setup.ReturnsAsync(new VendaAvulsaDto { Id = "venda-1", TotalInReais = 80m });
+        return (mock, pedidos);
+    }
+
+    private static PedidoVendaService PedidoVenda(AppDbContext db, IVendaAvulsaService vendas, FuncionalidadesService? chaves = null) =>
+        new(db, vendas, chaves ?? new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions())),
+            NullLogger<PedidoVendaService>.Instance);
+
+    [Fact]
+    public async Task Reconciliar_PedidoPago_RegistraUmaVendaPixComPrecoCongelado()
+    {
+        var db = CreateDb(nameof(Reconciliar_PedidoPago_RegistraUmaVendaPixComPrecoCongelado));
+        var (reserva, pix, _) = await SeedPedidoNaoPagoAsync(db);
+        var (vendas, pedidos) = VendaSpy();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
+            pedidoVenda: PedidoVenda(db, vendas.Object));
+
+        await service.ReconciliarAsync(pix);
+        await service.ReconciliarAsync(pix); // robô e tela juntos
+
+        pedidos.Should().ContainSingle("um pagamento, uma venda");
+        var req = pedidos[0];
+        req.PaymentMethod.Should().Be("Pix");
+        req.SkipStockDecrement.Should().BeTrue("o estoque saiu quando o pedido foi feito");
+        req.Origem.Should().Be("Reserva");
+        req.Items.Single().UnitPriceInCents.Should().Be(4000, "vale o preço que o cliente viu e pagou");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().Be("venda-1");
+    }
+
+    [Fact]
+    public async Task Reconciliar_PedidoPago_VendaFalha_LiberaEAvisaOsAdmins()
+    {
+        var db = CreateDb(nameof(Reconciliar_PedidoPago_VendaFalha_LiberaEAvisaOsAdmins));
+        var (_, pix, admin) = await SeedPedidoNaoPagoAsync(db);
+        var (vendas, _) = VendaSpy(falhar: true);
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
+            pedidoVenda: PedidoVenda(db, vendas.Object));
+
+        var r = await service.ReconciliarAsync(pix);
+
+        r.BaixaEfetuada.Should().BeTrue("o pagamento continua baixado");
+        var reserva = await db.ProductReservations.AsNoTracking().SingleAsync();
+        reserva.ExpiresAt.Should().BeNull();
+        reserva.VendaAvulsaId.Should().BeNull("o Homologar continua podendo registrar a venda");
+        (await db.Notifications.Where(n => n.UserId == admin.Id).Select(n => n.Title).SingleAsync())
+            .Should().Contain("sem venda");
+    }
+
+    [Fact]
+    public async Task Reconciliar_PedidoPago_ChaveDesligada_NaoRegistraVenda()
+    {
+        var db = CreateDb(nameof(Reconciliar_PedidoPago_ChaveDesligada_NaoRegistraVenda));
+        var (_, pix, admin) = await SeedPedidoNaoPagoAsync(db);
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        await chaves.DefinirAsync(Funcionalidades.PedidoVendaNoPagamento, false, admin.Id);
+        var (vendas, pedidos) = VendaSpy();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
+            pedidoVenda: PedidoVenda(db, vendas.Object, chaves));
+
+        await service.ReconciliarAsync(pix);
+
+        pedidos.Should().BeEmpty("jeito antigo: vira venda só no Homologar");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().BeNull();
     }
 
     // ── Casos sem baixa ───────────────────────────────────────────────────────

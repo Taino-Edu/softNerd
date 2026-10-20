@@ -91,4 +91,15 @@ public class ProductReservation
 
     [Column("cancelled_at")]
     public DateTime? CancelledAt { get; set; }
+
+    /// <summary>Preço unitário congelado na criação do pedido (variante > promoção > preço).
+    /// Null em pedidos de antes da v1.62.0 — esses usam o preço atual.</summary>
+    [Column("unit_price_in_cents")]
+    public int? UnitPriceInCents { get; set; }
+
+    /// <summary>Venda (Mongo) que este item gerou. "registrando:&lt;txid&gt;" enquanto está sendo
+    /// gravada (claim). Null = ainda não virou venda. Ver PedidoVendaService.</summary>
+    [MaxLength(80)]
+    [Column("venda_avulsa_id")]
+    public string? VendaAvulsaId { get; set; }
 }
