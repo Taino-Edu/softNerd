@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { pixel } from '@/lib/fontePixel'
 import { ArrowLeft, Trophy, Medal, Award, Loader2, Layers, ChevronDown, Swords, Gift } from 'lucide-react'
-import { ligaMensalApi, siteConfigApi, LigaMensalDto, LigaMensalMesDto } from '@/lib/api'
+import { ligaMensalApi, siteConfigApi, LigaMensalDto, LigaMensalMesDto, LigaEstatisticasDto } from '@/lib/api'
 import { mixHex } from '@/lib/colors'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import SpriteDeck from '@/components/liga/SpriteDeck'
@@ -160,6 +160,8 @@ function eventos(n: number) {
 
 function PaginaNova() {
   const [data, setData]   = useState<LigaMensalDto | null>(null)
+  // Métricas do mês (v1.60.0): títulos, V-E-D, campeões das etapas e decks com % de vitória
+  const [stats, setStats] = useState<LigaEstatisticasDto | null>(null)
   const [meses, setMeses] = useState<LigaMensalMesDto[]>([])
   const [loading, setLoading] = useState(true)
   const [selecionado, setSelecionado] = useState<string>('') // "ano-mes"
@@ -180,11 +182,17 @@ function PaginaNova() {
       })
       .catch(() => setData(null))
       .finally(() => setLoading(false))
+    // Métricas são extra: se falharem, a página fica como era
+    setStats(null)
+    ligaMensalApi.estatisticas({ periodo: 'mes', ano, mes })
+      .then(r => setStats(r.data))
+      .catch(() => setStats(null))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selecionado])
 
   const ranking = data?.ranking ?? []
   const top3 = ranking.slice(0, 3)
+  const statsDe = useMemo(() => new Map((stats?.ranking ?? []).map(l => [l.userId, l])), [stats])
 
   // Decks do mês: quantos jogadores usaram cada deck (o nome como foi digitado, sem repetir por maiúscula)
   const decksDoMes = useMemo(() => {
@@ -249,6 +257,13 @@ function PaginaNova() {
           <p className={`${pixel.className} mt-4 text-[9px] sm:text-[10px] leading-relaxed`} style={{ color: 'rgba(255,255,255,0.75)' }}>
             1º 10 PTS · 2º 7 · 3º 5 · 4º 3 · DEMAIS 1
           </p>
+          {stats && stats.resumo.etapas > 0 && (
+            <div className="mt-5 inline-flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
+              <span><strong style={{ color: '#FFE45E' }}>{stats.resumo.etapas}</strong> etapa{stats.resumo.etapas === 1 ? '' : 's'}</span>
+              <span><strong style={{ color: '#FFE45E' }}>{stats.resumo.jogadoresUnicos}</strong> jogadores</span>
+              <span><strong style={{ color: '#FFE45E' }}>{stats.resumo.mediaPorEtapa.toLocaleString('pt-BR')}</strong> por etapa</span>
+            </div>
+          )}
 
           {botoesMes.length > 1 && (
             <div className="mt-6 flex gap-2 overflow-x-auto justify-start sm:justify-center pb-1 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
@@ -321,7 +336,7 @@ function PaginaNova() {
               </div>
             </section>
 
-            <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_300px] items-start">
+            <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px] items-start">
               {/* ── Classificação completa ── */}
               <section>
                 <h2 className={`${pixel.className} text-[11px] text-brand-400 mb-3`}>CLASSIFICAÇÃO</h2>
@@ -353,6 +368,18 @@ function PaginaNova() {
                               {r.decks.join(' · ')}
                             </p>
                           )}
+                          {(() => {
+                            const s = statsDe.get(r.userId)
+                            if (!s) return null
+                            const ved = s.vitorias + s.empates + s.derrotas
+                            if (!s.titulos && !ved) return null
+                            return (
+                              <p className="text-[11px] text-gray-400 mt-0.5 flex flex-wrap gap-x-2">
+                                {s.titulos > 0 && <span className="inline-flex items-center gap-1"><Trophy className="w-3 h-3 text-accent-gold" /> {s.titulos} título{s.titulos === 1 ? '' : 's'}</span>}
+                                {ved > 0 && <span title="Vitórias-Empates-Derrotas nas partidas">{s.vitorias}-{s.empates}-{s.derrotas}{s.pctVitoria !== null ? ` · ${s.pctVitoria.toFixed(0)}% vit.` : ''}</span>}
+                              </p>
+                            )
+                          })()}
                         </div>
                         <div className="text-right shrink-0">
                           <p className={`${pixel.className} text-sm text-brand-400`}>{r.totalPoints}</p>
@@ -364,9 +391,61 @@ function PaginaNova() {
                 </div>
               </section>
 
+              <div className="space-y-6 lg:sticky lg:top-4">
+              {/* ── Campeões das etapas ── */}
+              {stats && stats.etapas.length > 0 && (
+                <aside className="bg-surface-800 rounded-2xl border border-surface-500 p-4">
+                  <h2 className={`${pixel.className} text-[11px] text-brand-400 mb-3`}>CAMPEÕES DAS ETAPAS</h2>
+                  <ul className="space-y-2.5">
+                    {stats.etapas.map(e => (
+                      <li key={e.id} className="flex items-center gap-2.5">
+                        <span className="w-10 text-center shrink-0">
+                          <span className={`${pixel.className} block text-[10px] text-white`}>{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit' }).format(new Date(e.data))}</span>
+                          <span className="block text-[9px] uppercase text-gray-500">{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', month: 'short' }).format(new Date(e.data)).replace('.', '')}</span>
+                        </span>
+                        <span className="w-10 shrink-0 flex justify-center"><SpriteDeck deck={e.deckCampeao} tamanho={32} /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-white truncate">{e.campeao ?? '—'}</span>
+                          <span className="block text-[11px] text-gray-500 truncate">{e.deckCampeao ?? 'sem deck'} · {e.jogadores} jogadores</span>
+                        </span>
+                        <Trophy className="w-4 h-4 text-accent-gold shrink-0" />
+                      </li>
+                    ))}
+                  </ul>
+                </aside>
+              )}
+
               {/* ── Decks do mês ── */}
-              {decksDoMes.length > 0 && (
-                <aside className="bg-surface-800 rounded-2xl border border-surface-500 p-4 lg:sticky lg:top-4">
+              {stats && stats.decks.length > 0 ? (
+                <aside className="bg-surface-800 rounded-2xl border border-surface-500 p-4">
+                  <h2 className={`${pixel.className} text-[11px] text-brand-400 mb-1`}>DECKS DO MÊS</h2>
+                  <p className="text-xs text-gray-500 mb-3">Mais usados, títulos e % de vitória nas partidas</p>
+                  <div className="space-y-2.5">
+                    {stats.decks.slice(0, 8).map((d, i) => {
+                      const max = stats.decks[0].usos
+                      return (
+                        <div key={d.deck} className="flex items-center gap-2.5">
+                          <span className="w-12 shrink-0 flex justify-center"><SpriteDeck deck={d.deck} tamanho={36} /></span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <p className="text-sm font-semibold text-white truncate">{d.deck}</p>
+                              <p className="text-xs text-gray-400 shrink-0">{d.usos}×</p>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-surface-600 mt-1 overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${(d.usos / max) * 100}%`, backgroundColor: i === 0 ? '#F5C518' : '#3EC2F2' }} />
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-0.5">
+                              {d.titulos > 0 ? `${d.titulos} título${d.titulos === 1 ? '' : 's'}` : 'sem título'}
+                              {d.pctVitoria !== null ? ` · ${d.pctVitoria.toFixed(0)}% de vitória` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </aside>
+              ) : decksDoMes.length > 0 && (
+                <aside className="bg-surface-800 rounded-2xl border border-surface-500 p-4">
                   <h2 className={`${pixel.className} text-[11px] text-brand-400 mb-1`}>DECKS DO MÊS</h2>
                   <p className="text-xs text-gray-500 mb-3">Quantos jogadores da liga usaram cada deck</p>
                   <div className="space-y-2">
@@ -390,6 +469,7 @@ function PaginaNova() {
                   </div>
                 </aside>
               )}
+              </div>
             </div>
           </>
         )}

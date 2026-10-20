@@ -1,5 +1,17 @@
 # Changelog — Santuário Nerd
 
+## [v1.60.0] — 2026-10-20
+
+### Novo — métricas na Liga pública e na conta do jogador
+- **Página /liga**: no topo, quantas etapas, jogadores e a média por etapa no mês; em cada linha da classificação, os títulos e o V-E-D com % de vitória nas partidas
+- **Campeões das etapas** do mês ao lado da classificação, com o deck que venceu
+- **Decks do mês** agora com títulos e % de vitória de cada deck (se as métricas não carregarem, fica a lista de antes)
+- **Minha conta → Campeonatos → "Minha Liga"**: posição no mês ou na temporada ("2º de 43"), pontos, etapas, títulos, V-E-D, o **% de vitória com cada deck** que o jogador usou e as etapas jogadas com colocação e pontos. Pontos lançados à mão pela loja aparecem numa linha própria
+
+### Corrigido
+- **Pokémon do deck**: Ogerpon com máscara ("Cornerstone Ogerpon", "Ogerpon Wellspring", "Hearthflame") agora mostra a forma certa da máscara
+- **/liga no celular** não rola mais pro lado
+
 ## [v1.59.1] — 2026-10-20
 
 ### Segurança

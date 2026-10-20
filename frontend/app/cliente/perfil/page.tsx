@@ -18,6 +18,7 @@ import {
   QrCode, ShoppingCart, ChevronRight,
 } from 'lucide-react'
 import PixReservaModal from '@/components/PixReservaModal'
+import MinhaLiga from '@/components/cliente/MinhaLiga'
 import clsx from 'clsx'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import toast, { Toaster } from 'react-hot-toast'
@@ -902,6 +903,8 @@ export default function PerfilPage() {
             {/* ── TAB: TORNEIOS ── */}
             {tab === 'torneios' && (
               <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* Liga do jogador (v1.60.0): posição, decks com % de vitória e etapas */}
+                {contaNova && <MinhaLiga />}
                 {participations.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
                     <Trophy className="w-10 h-10 mx-auto mb-3 text-gray-200" />

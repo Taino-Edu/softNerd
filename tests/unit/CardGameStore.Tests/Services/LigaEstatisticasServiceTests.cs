@@ -202,6 +202,40 @@ public class LigaEstatisticasServiceTests
         r.Resumo.Novatos.Should().Be(0, "os dois já jogavam em 2025");
     }
 
+    [Fact]
+    public async Task MinhaLiga_PosicaoDecksComPctEEtapas_SoDoJogador()
+    {
+        var a = Criar();
+        var ana = a.Jogador("Ana"); var beto = a.Jogador("Beto"); var caio = a.Jogador("Caio");
+        var (ch1, p1) = a.Etapa(Br(2026, 10, 3), (ana, "Dragapult ex"), (beto, "Gardevoir ex"), (caio, "Lugia"));
+        a.Rodada(ch1, (p1[0], p1[1], ResultadoPartida.VitoriaA), (p1[2], null, ResultadoPartida.VitoriaA));
+        var (ch2, p2) = a.Etapa(Br(2026, 10, 10), (beto, "Gardevoir ex"), (ana, "Dragapult ex"));
+        a.Rodada(ch2, (p2[0], p2[1], ResultadoPartida.VitoriaA));
+
+        var r = await a.Stats.MinhaLigaAsync(ana.Id, "mes", 2026, 10, null);
+
+        r.Eu!.Posicao.Should().Be(1);
+        r.Eu.Pontos.Should().Be(17);
+        r.TotalJogadores.Should().Be(3);
+        var dragapult = r.MeusDecks.Single();
+        (dragapult.Deck, dragapult.Usos, dragapult.Vitorias, dragapult.Derrotas, dragapult.PctVitoria).Should().Be(("Dragapult ex", 2, 1, 1, 50.0));
+        r.Etapas.Select(e => (e.Colocacao, e.Pontos, e.Jogadores)).Should().Equal((2, 7, 2), (1, 10, 3));
+    }
+
+    [Fact]
+    public async Task MinhaLiga_QuemNaoJogou_VemSemLinha()
+    {
+        var a = Criar();
+        var ana = a.Jogador("Ana"); var beto = a.Jogador("Beto"); var ze = a.Jogador("Zé");
+        a.Etapa(Br(2026, 10, 3), (ana, null), (beto, null));
+
+        var r = await a.Stats.MinhaLigaAsync(ze.Id, "mes", 2026, 10, null);
+
+        r.Eu.Should().BeNull();
+        r.MeusDecks.Should().BeEmpty();
+        r.Etapas.Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData("dia", null)]
     [InlineData("mes", 13)]
