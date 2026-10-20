@@ -149,7 +149,7 @@ function TorneioCentral() {
       )}
       {avulso && ch && <ResumoVendas id={id} taxaEmCentavos={ch.entryFeeInCents} vagas={ch.maxParticipants} versao={p.participantes.length} />}
       {aba === 'painel' && <PainelTorneio id={id} embutido somaNaLiga={somaNaLiga} />}
-      {aba === 'jogadores' && <JogadoresTorneio p={p} pago={(ch?.entryFeeInCents ?? 0) > 0} onMudou={recarregar} inscricao={avulso} />}
+      {aba === 'jogadores' && <JogadoresTorneio p={p} pago={(ch?.entryFeeInCents ?? 0) > 0} onMudou={recarregar} inscricao={avulso} jogo={ch?.game} />}
       {aba === 'rodadas' && <HistoricoRodadas id={id} rodadaAtual={p.rodadaAtual} />}
       {aba === 'classificacao' && (
         lancado ? <Colocacao colocados={colocados} somaNaLiga={somaNaLiga} /> :

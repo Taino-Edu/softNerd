@@ -225,7 +225,7 @@
 |---|---|---|---|---|---|
 | GET | `/api/deck` | logado | `GetMyDecks` (42) | `deckApi.list` | `app/cliente/decks/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/page.tsx` |
 | POST | `/api/deck` | logado | `Create` (93) | `deckApi.create` | `app/cliente/decks/[id]/page.tsx` |
-| GET | `/api/deck/user/{userId:guid}` | AdminOnly | `GetByUser` (156) | `deckApi.getByUser` | `app/admin/campeonatos/page.tsx`<br>`app/admin/usuarios/page.tsx` |
+| GET | `/api/deck/user/{userId:guid}` | AdminOnly | `GetByUser` (156) | `deckApi.getByUser` | `app/admin/campeonatos/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | DELETE | `/api/deck/{id:guid}` | logado | `Delete` (139) | `deckApi.delete` | `app/cliente/decks/page.tsx` |
 | GET | `/api/deck/{id:guid}` | logado | `GetById` (75) | `deckApi.get` | `app/cliente/decks/[id]/page.tsx`<br>`components/admin/ConferenciaDecksModal.tsx`<br>`components/admin/DeckViewerModal.tsx` |
 | PUT | `/api/deck/{id:guid}` | logado | `Update` (115) | `deckApi.update` | `app/cliente/decks/[id]/page.tsx` |
