@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.59.1] — 2026-10-20
+
+### Segurança
+- **Chaves da API do Pokémon TCG e da Riot fora do código**: estavam escritas no `appsettings.json`, que vai pro repositório público. Agora ficam vazias no arquivo e vêm só do `.env` da VPS (`POKEMON_API_KEY` e o novo `RIOT_API_KEY`). Em produção nada muda — a chave do Pokémon já vinha do `.env` (vazia) e a da Riot não é usada pelo código
+
 ## [v1.59.0] — 2026-10-19
 
 ### Novo — deck salvo do jogador na Central

@@ -139,6 +139,7 @@ services:
       Evolution__ApiKey: "${EVOLUTION_API_KEY:-}"
       Evolution__InstanceName: "${EVOLUTION_INSTANCE_NAME:-santuarionerd}"
       TcgSettings__PokemonApiKey: "${POKEMON_API_KEY:-}"
+      TcgSettings__RiotApiKey: "${RIOT_API_KEY:-}"
       # Tenant-ERP — credencial tecnica criada no dominio da loja
       TenantErp__Enabled: "${TENANT_ERP_ENABLED:-false}"
       TenantErp__BaseUrl: "${TENANT_ERP_BASE_URL:-}"
