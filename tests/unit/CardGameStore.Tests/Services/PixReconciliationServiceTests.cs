@@ -4,6 +4,7 @@
 // Executar: dotnet test  (na pasta tests/unit/CardGameStore.Tests)
 // =============================================================================
 
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
@@ -11,6 +12,7 @@ using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -54,11 +56,13 @@ public class PixReconciliationServiceTests
 
     private static PixReconciliationService CreateService(
         AppDbContext db, InterSyncService inter, IComandaService comanda,
-        IEmailService? email = null, IPushService? push = null) =>
+        IEmailService? email = null, IPushService? push = null,
+        FuncionalidadesService? funcionalidades = null) =>
         new(db, inter, comanda,
             email ?? new Mock<IEmailService>().Object,
             push ?? new Mock<IPushService>().Object,
-            NullLogger<PixReconciliationService>.Instance);
+            NullLogger<PixReconciliationService>.Instance,
+            funcionalidades);
 
     private static async Task<User> SeedBaseAsync(AppDbContext db)
     {
@@ -446,6 +450,105 @@ public class PixReconciliationServiceTests
         await service.ReconciliarAsync(pix);
         (await db.ExternalTransactions.CountAsync(x => x.ExternalId == pix.TxId))
             .Should().Be(1);
+    }
+
+    // ── Pix pago depois do pedido cancelado (chave "pedido-pix-consistente") ──
+    // Caso real de 20/10/2026: pedido criado 11:32, cancelado 11:36, Pix pago 11:37.
+    // O dinheiro entrou, o estoque já tinha voltado e nada virou venda nem aviso.
+
+    private static async Task<(ProductReservation Reserva, Product Produto, PixCobranca Pix, User Admin)> SeedPedidoCanceladoComPixAsync(
+        AppDbContext db, int estoque)
+    {
+        var user  = await SeedBaseAsync(db);
+        var admin = new User
+        {
+            Id = Guid.NewGuid(), Name = "Maikon", Email = "admin@test.com",
+            PasswordHash = "hash", Role = UserRole.Admin,
+        };
+        db.Users.Add(admin);
+        var produto = new Product
+        {
+            Name = "Mini Tin", Category = "Selado", PriceInCents = 8500,
+            StockQuantity = estoque, IsActive = true,
+        };
+        db.Products.Add(produto);
+
+        var groupId = Guid.NewGuid();
+        var reserva = new ProductReservation
+        {
+            ReservationGroupId = groupId, UserId = user.Id, ProductId = produto.Id, Quantity = 1,
+            Kind = "pre_venda", Status = "cancelled", CancelledAt = DateTime.UtcNow.AddMinutes(-1),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-5),
+        };
+        db.ProductReservations.Add(reserva);
+        var pix = NovaCobranca(PixCobrancaOrigem.Reserva, 8500);
+        pix.ReservationGroupId     = groupId;
+        pix.ReservationItemIdsJson = System.Text.Json.JsonSerializer.Serialize(new[] { reserva.Id });
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+        return (reserva, produto, pix, admin);
+    }
+
+    [Fact]
+    public async Task Reconciliar_PixDePedidoCancelado_ComEstoque_ReativaComoPagoEAvisaAdmin()
+    {
+        var db = CreateDb(nameof(Reconciliar_PixDePedidoCancelado_ComEstoque_ReativaComoPagoEAvisaAdmin));
+        var (reserva, produto, pix, admin) = await SeedPedidoCanceladoComPixAsync(db, estoque: 3);
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+
+        await service.ReconciliarAsync(pix);
+
+        await db.Entry(reserva).ReloadAsync();
+        await db.Entry(produto).ReloadAsync();
+        reserva.Status.Should().Be("active", "o cliente pagou — o pedido volta e aguarda retirada");
+        reserva.ExpiresAt.Should().BeNull("pago");
+        reserva.CancelledAt.Should().BeNull();
+        reserva.PaymentMethod.Should().Be("pix");
+        produto.StockQuantity.Should().Be(2, "o item sai do estoque de novo");
+        (await db.Notifications.Where(n => n.UserId == admin.Id).Select(n => n.Title).ToListAsync())
+            .Should().ContainSingle().Which.Should().Contain("reativado");
+        (await db.ExternalTransactions.SingleAsync(x => x.ExternalId == pix.TxId)).Notes
+            .Should().Contain("pago depois de cancelado");
+    }
+
+    [Fact]
+    public async Task Reconciliar_PixDePedidoCancelado_SemEstoque_FicaCanceladoEAvisaReembolso()
+    {
+        var db = CreateDb(nameof(Reconciliar_PixDePedidoCancelado_SemEstoque_FicaCanceladoEAvisaReembolso));
+        var (reserva, produto, pix, admin) = await SeedPedidoCanceladoComPixAsync(db, estoque: 0);
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+
+        await service.ReconciliarAsync(pix);
+
+        await db.Entry(reserva).ReloadAsync();
+        await db.Entry(produto).ReloadAsync();
+        reserva.Status.Should().Be("cancelled");
+        produto.StockQuantity.Should().Be(0, "não pode vender o que não tem");
+        (await db.Notifications.Where(n => n.UserId == admin.Id).Select(n => n.Title).ToListAsync())
+            .Should().ContainSingle().Which.Should().Contain("reembolso pendente");
+        (await db.ExternalTransactions.SingleAsync(x => x.ExternalId == pix.TxId)).Notes
+            .Should().Contain("ATENÇÃO");
+    }
+
+    [Fact]
+    public async Task Reconciliar_PixDePedidoCancelado_ChaveDesligada_ComportamentoAntigo()
+    {
+        var db = CreateDb(nameof(Reconciliar_PixDePedidoCancelado_ChaveDesligada_ComportamentoAntigo));
+        var (reserva, produto, pix, admin) = await SeedPedidoCanceladoComPixAsync(db, estoque: 3);
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        await chaves.DefinirAsync(Funcionalidades.PedidoPixConsistente, false, admin.Id);
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
+            funcionalidades: chaves);
+
+        await service.ReconciliarAsync(pix);
+
+        await db.Entry(reserva).ReloadAsync();
+        await db.Entry(produto).ReloadAsync();
+        reserva.Status.Should().Be("cancelled");
+        produto.StockQuantity.Should().Be(3);
+        (await db.Notifications.CountAsync()).Should().Be(0);
+        (await db.ExternalTransactions.SingleAsync(x => x.ExternalId == pix.TxId)).Notes
+            .Should().Contain("ATENÇÃO", "o jeito antigo só anota no lançamento");
     }
 
     // ── Casos sem baixa ───────────────────────────────────────────────────────

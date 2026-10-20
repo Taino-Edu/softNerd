@@ -226,7 +226,7 @@ public class InterSyncService
     // Comanda ou Venda Avulsa). Segue a API Pix padrão do Banco Central (mesmos
     // endpoints /pix/v2/cob e /pix/v2/cob/{txid} usados por todos os PSPs),
     // hospedada pelo Inter em cdpj.partners.bancointer.com.br.
-    public async Task<PixCobrancaResult> CriarCobrancaAsync(
+    public virtual async Task<PixCobrancaResult> CriarCobrancaAsync(
         IntegrationConfig cfg, int valorEmCentavos, string? nomeDevedor, string? cpfDevedor,
         string descricao = "Cobrança Santuário Nerd")
     {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Collections.Concurrent;
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
@@ -17,11 +18,13 @@ public sealed class ReservationPixService : IReservationPixService
 
     private readonly AppDbContext _db;
     private readonly InterSyncService _inter;
+    private readonly FuncionalidadesService? _funcionalidades;
 
-    public ReservationPixService(AppDbContext db, InterSyncService inter)
+    public ReservationPixService(AppDbContext db, InterSyncService inter, FuncionalidadesService? funcionalidades = null)
     {
         _db = db;
         _inter = inter;
+        _funcionalidades = funcionalidades;
     }
 
     public async Task<ReservationPixResult> GerarAsync(
@@ -50,12 +53,24 @@ public sealed class ReservationPixService : IReservationPixService
             if (items[0].UserId != solicitanteId && !podeGerarParaTerceiros)
                 return ReservationPixResult.Fail(StatusCodes.Status403Forbidden, "Esta reserva pertence a outro cliente.");
 
+            var consistente = _funcionalidades is null
+                ? Funcionalidades.Buscar(Funcionalidades.PedidoPixConsistente)!.Padrao
+                : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoPixConsistente);
+
             var preVendas = items.Where(r => r.Kind == "pre_venda" && r.Status == "active").ToList();
             if (preVendas.Count == 0)
                 return ReservationPixResult.Fail(StatusCodes.Status400BadRequest,
                     "Itens de fila não cobram — o Pix é gerado quando o produto chegar.");
 
-            if (items.Any(r => r.Kind == "pre_venda" && r.Status != "active"))
+            if (consistente)
+            {
+                // Chave "pedido-pix-consistente": item cancelado do carrinho não trava o resto,
+                // e o que já foi pago não entra de novo na cobrança.
+                preVendas = preVendas.Where(r => r.ExpiresAt is not null).ToList();
+                if (preVendas.Count == 0)
+                    return ReservationPixResult.Fail(StatusCodes.Status400BadRequest, "Este pedido já está pago.");
+            }
+            else if (items.Any(r => r.Kind == "pre_venda" && r.Status != "active"))
                 return ReservationPixResult.Fail(StatusCodes.Status400BadRequest,
                     "Só é possível gerar Pix para pré-vendas ativas.");
 

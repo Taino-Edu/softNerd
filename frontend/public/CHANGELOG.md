@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.59.2] — 2026-10-20
+
+### Corrigido — compra do site paga depois de cancelada
+- **Cancelar um pedido não pago derruba o Pix dele no banco.** Antes o QR continuava valendo: o cliente pagava um pedido já cancelado, o dinheiro entrava, o produto tinha voltado pro estoque e nada virava venda. Antes de derrubar, o sistema confere se o Pix não acabou de ser pago (aí o pedido fica pago e não é cancelado). Se o banco não responder, o pedido não é cancelado e aparece o aviso pra tentar de novo
+- **Pix que cai num pedido cancelado não passa mais despercebido**: se ainda tem estoque, o pedido volta como pago e aguardando retirada; se não tem, os admins recebem no sininho "reembolso pendente" com o valor e o cliente
+- **Carrinho com um item cancelado** volta a gerar Pix dos outros itens (só dos ativos e ainda não pagos)
+- Todo cancelamento de pedido fica registrado na auditoria (quem cancelou e se foi a loja)
+- Chave `pedido-pix-consistente` em Funcionalidades: desligada, volta tudo como era
+
 ## [v1.59.1] — 2026-10-20
 
 ### Segurança

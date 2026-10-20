@@ -55,6 +55,7 @@ public static class Funcionalidades
     public const string AdminLiguinhaCentral = "admin-liguinha-central";
     public const string LigaModalidades = "liga-modalidades";
     public const string LoginTelasUnificadas = "login-telas-unificadas";
+    public const string PedidoPixConsistente = "pedido-pix-consistente";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -249,6 +250,17 @@ public static class Funcionalidades
             SeDesligar: "Essas telas voltam ao cartão escuro de antes (o /entrar segue a chave \"visual-topo-e-login\").",
             Padrao:     true,
             Desde:      "v1.57.0",
+            RevisarEm:  new DateOnly(2027, 2, 1)),
+
+        new(PedidoPixConsistente,
+            Nome:       "Pedidos do site: Pix sempre junto com o pedido",
+            OQueMuda:   "Cancelar um pedido não pago derruba o Pix dele no Inter (antes confere se não acabou de ser pago). " +
+                        "Se um Pix cair num pedido já cancelado, o pedido volta como pago quando ainda tem estoque; sem estoque, " +
+                        "os admins recebem aviso de reembolso pendente. Cancelar um item do carrinho não trava mais o Pix dos outros.",
+            SeDesligar: "Cancelar o pedido deixa o Pix aberto (o cliente ainda consegue pagar), o Pix pago de pedido cancelado " +
+                        "só fica anotado em Contas a receber, e o carrinho com item cancelado não gera mais Pix.",
+            Padrao:     true,
+            Desde:      "v1.59.2",
             RevisarEm:  new DateOnly(2027, 2, 1)),
     ];
 

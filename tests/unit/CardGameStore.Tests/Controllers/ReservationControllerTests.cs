@@ -13,6 +13,7 @@
 // =============================================================================
 
 using System.Security.Claims;
+using CardGameStore.Configuration;
 using CardGameStore.Controllers;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
@@ -27,6 +28,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -69,7 +71,9 @@ public class ReservationControllerTests
     /// InterSyncService é classe concreta; o mock só precisa existir porque o controller
     /// o recebe. Os métodos usados no cancelamento de cobrança são virtuais.
     /// </summary>
-    private static InterSyncService CreateInterMock()
+    private static InterSyncService CreateInterMock() => CreateInterMockConfiguravel().Object;
+
+    private static Mock<InterSyncService> CreateInterMockConfiguravel()
     {
         var env = new Mock<IWebHostEnvironment>();
         env.Setup(e => e.EnvironmentName).Returns("Development");
@@ -79,12 +83,13 @@ public class ReservationControllerTests
             new Mock<IServiceScopeFactory>().Object,
             new EncryptionService(config, env.Object),
             config,
-            NullLogger<InterSyncService>.Instance).Object;
+            NullLogger<InterSyncService>.Instance);
     }
 
     private static ReservationController CreateController(
         AppDbContext db, Guid? loggedUserId = null, IVendaAvulsaService? vendaService = null,
-        IPixReconciliationService? pixReconciliation = null)
+        IPixReconciliationService? pixReconciliation = null, InterSyncService? inter = null,
+        FuncionalidadesService? funcionalidades = null)
     {
         var controller = new ReservationController(
             db,
@@ -94,8 +99,9 @@ public class ReservationControllerTests
             new Mock<IPushService>().Object,
             new Mock<IAuditService>().Object,
             CreateHubMock(),
-            CreateInterMock(),
-            NullLogger<ReservationController>.Instance);
+            inter ?? CreateInterMock(),
+            NullLogger<ReservationController>.Instance,
+            funcionalidades);
 
         var claims = new List<Claim>();
         if (loggedUserId.HasValue) claims.Add(new Claim("sub", loggedUserId.Value.ToString()));
@@ -548,6 +554,132 @@ public class ReservationControllerTests
         result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(502);
         var pix = await db.PixCobrancas.FirstAsync(p => p.ReservationGroupId == reserva.ReservationGroupId);
         pix.Status.Should().Be("ATIVA");
+    }
+
+    // ── Cancelar pedido não pago derruba o Pix (chave "pedido-pix-consistente") ──
+    // Caso real de 20/10/2026: pedido cancelado 11:36 com o QR ainda de pé; o cliente
+    // pagou 11:37 e o dinheiro caiu num pedido cancelado.
+
+    private static async Task<(ProductReservation Reserva, Product Produto, User Cliente)> SeedPedidoNaoPagoComPixAsync(AppDbContext db)
+    {
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 4);
+        var groupId = Guid.NewGuid();
+        var reserva = new ProductReservation
+        {
+            Id = Guid.NewGuid(), ReservationGroupId = groupId, UserId = cliente.Id, ProductId = produto.Id,
+            Quantity = 1, Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow, // não pago
+        };
+        db.ProductReservations.Add(reserva);
+        db.PixCobrancas.Add(new PixCobranca
+        {
+            Id = Guid.NewGuid(), Origem = PixCobrancaOrigem.Reserva, ReservationGroupId = groupId,
+            TxId = Guid.NewGuid().ToString("N"), ValorEmCentavos = 1500, Status = "ATIVA",
+            ExpiraEm = DateTime.UtcNow.AddMinutes(50), CriadoPorAdminId = cliente.Id,
+        });
+        db.IntegrationConfigs.Add(new IntegrationConfig { Source = "inter" });
+        await db.SaveChangesAsync();
+        return (reserva, produto, cliente);
+    }
+
+    private static Mock<IPixReconciliationService> PixAindaAberto()
+    {
+        var m = new Mock<IPixReconciliationService>();
+        m.Setup(r => r.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()))
+         .ReturnsAsync(new PixReconciliationResult { Status = "ATIVA" });
+        return m;
+    }
+
+    [Fact]
+    public async Task Cancel_PedidoNaoPagoComPix_DerrubaACobrancaNoInter()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, produto, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var inter = CreateInterMockConfiguravel();
+        inter.Setup(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()))
+             .ReturnsAsync(new PixCobrancaResult { Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR" });
+        var controller = CreateController(db, loggedUserId: cliente.Id,
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object);
+
+        var result = await controller.Cancel(reserva.Id);
+
+        result.Should().BeOfType<OkObjectResult>();
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Once);
+        (await db.PixCobrancas.SingleAsync()).Status.Should().Be("REMOVIDA_PELO_USUARIO_RECEBEDOR");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("cancelled");
+        (await db.Products.AsNoTracking().SingleAsync(p => p.Id == produto.Id)).StockQuantity.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task Cancel_InterRecusaDerrubarPixNoPrazo_NaoCancelaOPedido()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, produto, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var inter = CreateInterMockConfiguravel();
+        inter.Setup(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()))
+             .ReturnsAsync(new PixCobrancaResult { Error = "timeout" });
+        var controller = CreateController(db, loggedUserId: cliente.Id,
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object);
+
+        var result = await controller.Cancel(reserva.Id);
+
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(502,
+            "cancelar com o QR de pé é exatamente o que fez o dinheiro cair em pedido cancelado");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("active");
+        (await db.PixCobrancas.SingleAsync()).Status.Should().Be("ATIVA");
+    }
+
+    [Fact]
+    public async Task Cancel_PixAcabouDeSerPago_NaoCancela()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var pago = new Mock<IPixReconciliationService>();
+        pago.Setup(r => r.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()))
+            .ReturnsAsync(new PixReconciliationResult { Status = "CONCLUIDA", PagoEm = DateTime.UtcNow });
+        var inter = CreateInterMockConfiguravel();
+        var controller = CreateController(db, loggedUserId: cliente.Id, pixReconciliation: pago.Object, inter: inter.Object);
+
+        var result = await controller.Cancel(reserva.Id);
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("active");
+    }
+
+    [Fact]
+    public async Task UpdateStatusCancelado_PeloAdmin_TambemDerrubaOPix()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, _, _) = await SeedPedidoNaoPagoComPixAsync(db);
+        var inter = CreateInterMockConfiguravel();
+        inter.Setup(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()))
+             .ReturnsAsync(new PixCobrancaResult { Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR" });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(),
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object);
+
+        var result = await controller.UpdateStatus(reserva.Id, new UpdateReservationStatusRequest { Status = "cancelled" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        (await db.PixCobrancas.SingleAsync()).Status.Should().Be("REMOVIDA_PELO_USUARIO_RECEBEDOR");
+    }
+
+    [Fact]
+    public async Task Cancel_ChaveDesligada_DeixaOPixAbertoComoAntes()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        await chaves.DefinirAsync(Funcionalidades.PedidoPixConsistente, false, cliente.Id);
+        var inter = CreateInterMockConfiguravel();
+        var controller = CreateController(db, loggedUserId: cliente.Id, inter: inter.Object, funcionalidades: chaves);
+
+        var result = await controller.Cancel(reserva.Id);
+
+        result.Should().BeOfType<OkObjectResult>();
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+        (await db.PixCobrancas.SingleAsync()).Status.Should().Be("ATIVA");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("cancelled");
     }
 
     // ── Timer de expiração removido ─────────────────────────────────────────────
