@@ -132,7 +132,7 @@ public class PedidoVendaService
             // depois): se a venda chegou a ser gravada, ela vale — liberar o claim faria o Homologar
             // vender de novo. Sem conseguir conferir, o claim fica (Homologar recusa) e os admins conferem.
             VendaAvulsaDto? gravada;
-            try { gravada = await _vendas.BuscarVendaDoPedidoAsync(groupId, inicio); }
+            try { gravada = await _vendas.BuscarVendaDoPedidoAsync(groupId, primeiro.Id, inicio); }
             catch (Exception ex2)
             {
                 _logger.LogError(ex2, "Não deu pra conferir se a venda do pedido {Grupo} foi gravada; claim mantido.", groupId);

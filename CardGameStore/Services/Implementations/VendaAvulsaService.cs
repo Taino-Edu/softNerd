@@ -509,10 +509,14 @@ public class VendaAvulsaService : IVendaAvulsaService
     /// ela gerou e tira o valor do faturamento. A venda não é apagada — fica marcada com
     /// motivo e autor, e continua aparecendo no extrato como estornada.
     /// </summary>
-    public async Task<VendaAvulsaDto?> BuscarVendaDoPedidoAsync(Guid reservationGroupId, DateTime desde)
+    public async Task<VendaAvulsaDto?> BuscarVendaDoPedidoAsync(Guid reservationGroupId, Guid reservationId, DateTime desde)
     {
+        // Exata: mesmo grupo, mesmo item de origem e Pix — uma venda de balcão (Homologar) de outro
+        // item do mesmo carrinho no mesmo instante não pode ser confundida com a venda do pagamento
         var venda = await _collection.Find(
                 Builders<VendaAvulsa>.Filter.Eq(v => v.ReservationGroupId, reservationGroupId)
+              & Builders<VendaAvulsa>.Filter.Eq(v => v.ReservationId, reservationId)
+              & Builders<VendaAvulsa>.Filter.Eq(v => v.PaymentMethod, PaymentMethod.Pix)
               & Builders<VendaAvulsa>.Filter.Gte(v => v.SoldAt, desde)
               & Builders<VendaAvulsa>.Filter.Eq(v => v.CanceladaEm, null))
             .SortByDescending(v => v.SoldAt)

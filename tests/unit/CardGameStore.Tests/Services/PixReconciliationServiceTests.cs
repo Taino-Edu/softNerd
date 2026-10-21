@@ -637,7 +637,8 @@ public class PixReconciliationServiceTests
         var db = CreateDb(nameof(Reconciliar_PedidoPago_FalhaDepoisDeGravarAVenda_NaoLiberaPraVenderDeNovo));
         var (_, pix, _) = await SeedPedidoNaoPagoAsync(db);
         var (vendas, _) = VendaSpy(falhar: true);
-        vendas.Setup(v => v.BuscarVendaDoPedidoAsync(pix.ReservationGroupId!.Value, It.IsAny<DateTime>()))
+        var reserva = await db.ProductReservations.AsNoTracking().SingleAsync();
+        vendas.Setup(v => v.BuscarVendaDoPedidoAsync(pix.ReservationGroupId!.Value, reserva.Id, It.IsAny<DateTime>()))
               .ReturnsAsync(new VendaAvulsaDto { Id = "venda-gravada" }); // o insert no Mongo aconteceu
         var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
             pedidoVenda: PedidoVenda(db, vendas.Object));
