@@ -21,6 +21,10 @@
 # TodoRobo_EsperaPeloMenos1MinutoAntesDaPrimeiraVolta falha.
 #
 # Se a troca falhar no meio, rodar de novo é seguro: começa sempre do estado atual.
+#
+# Logs: antes de apagar um container, o log dele vai pra $LOGS_DIR (compactado, 30 dias).
+# Antes disso o log sumia a cada deploy — `bash logs.sh "texto"` procura em tudo.
+# Todo `docker rm` daqui precisa do guardar_log antes (teste TodoDockerRm_GuardaOLogAntes).
 # =============================================================================
 
 set -euo pipefail
@@ -35,6 +39,24 @@ ESPERA_DNS=7         # > valid=5s do resolver (o update.sh recria o nginx ANTES 
 
 AMARELO='\033[1;33m'; VERDE='\033[0;32m'; VERMELHO='\033[0;31m'; NC='\033[0m'
 log() { echo -e "${AMARELO}[rollout $SERVICO]${NC} $*"; }
+
+LOGS_DIR="${LOGS_DIR:-/var/log/santuarionerd}"
+LOGS_DIAS="${LOGS_DIAS:-30}"
+# Guarda o log do container antes de ele ser apagado. Nunca derruba o deploy: se não
+# der pra guardar (disco, permissão), avisa e segue.
+guardar_log() {
+  local id="$1" quando arquivo
+  quando=$(date -u +%Y%m%d-%H%M%S)
+  arquivo="$LOGS_DIR/$SERVICO-$quando-${id:0:12}.log.gz"
+  # Log pode ter dado de cliente (LGPD): pasta e arquivos só do root (700/600)
+  mkdir -p -m 0700 "$LOGS_DIR" 2>/dev/null || true; chmod 700 "$LOGS_DIR" 2>/dev/null || true
+  if [ -d "$LOGS_DIR" ] && ( umask 077; docker logs --timestamps "$id" 2>&1 | gzip > "$arquivo" ) 2>/dev/null; then
+    log "log guardado em $arquivo"
+  else
+    log "não deu pra guardar o log de ${id:0:12} — seguindo"
+  fi
+  find "$LOGS_DIR" -name "$SERVICO-*.log.gz" -mtime +"$LOGS_DIAS" -delete 2>/dev/null || true
+}
 
 ANTIGOS=$("${COMPOSE[@]}" ps -q "$SERVICO")
 QTD_ANTIGOS=$(echo "$ANTIGOS" | grep -c . || true)
@@ -52,6 +74,7 @@ if [ "$QTD_ANTIGOS" -gt 1 ]; then
   for id in $ANTIGOS; do
     if [ "$id" != "$MAIS_NOVA" ]; then
       docker stop -t 30 "$id" >/dev/null || true
+      guardar_log "$id"
       docker rm "$id" >/dev/null || true
     fi
   done
@@ -92,6 +115,7 @@ if [ "$ESTADO" != "healthy" ]; then
   echo -e "${VERMELHO}[rollout $SERVICO] a cópia nova não ficou saudável ($ESTADO) — desfazendo; a antiga continua no ar${NC}"
   docker logs --tail 40 "$NOVO" || true
   docker stop -t 10 "$NOVO" >/dev/null || true
+  guardar_log "$NOVO"
   docker rm "$NOVO" >/dev/null || true
   exit 1
 fi
@@ -103,6 +127,7 @@ sleep "$ESPERA_DNS"
 for id in $ANTIGOS; do
   log "desligando a antiga ${id:0:12} (termina o que está fazendo, até 30s)…"
   docker stop -t 30 "$id" >/dev/null
+  guardar_log "$id"
   docker rm "$id" >/dev/null
 done
 

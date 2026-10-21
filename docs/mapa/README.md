@@ -251,6 +251,12 @@ Regras que isso cria:
   ainda atende com o código velho.
 - `api` e `frontend` **não têm nome fixo de container**. Logs:
   `cd /opt/santuarionerd/deploy && docker compose -f docker-compose.prod.yml logs api --since 10m`.
+- **Log não some no deploy** (v1.63.1): antes de todo `docker rm`, o rollout guarda o log do container em
+  `/var/log/santuarionerd/<servico>-<data>-<id>.log.gz` (700/600, 30 dias). Procurar em tudo (no ar + guardados):
+  `bash deploy/logs.sh "texto"` (`--dias 30`, `--servico frontend`, `--erros`). Teste `TodoDockerRm_GuardaOLogAntes`
+  falha se um `docker rm` novo esquecer o `guardar_log`.
+- **Firewall**: só a Cloudflare fala com 80/443 (`deploy/firewall-cloudflare.sh`, chain DOCKER-USER, cron no boot e
+  toda segunda) — por isso `CF-Connecting-IP` é confiável nos limites por IP. Conferido em 21/10/2026.
 - Telão e celulares da liguinha reconectam sozinhos na troca (o tempo real cai e volta em segundos).
 - Medir uma troca: `python scripts/vigia-deploy.py --segundos 120` durante o deploy (só lê; pode em produção).
 - Todo deploy faz backup dos bancos antes (`deploy/backup.sh` → `backups/`, 7 dias). Emergência sem backup:

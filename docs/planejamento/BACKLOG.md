@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **21/10/2026** — produção na **v1.62.1**.
+Atualizado em **21/10/2026** — produção na **v1.63.0**.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -14,8 +14,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Vigia do sistema** — gatilhos automáticos a cada 10 min, tela Configuração → Alertas do sistema com busca, erros de tela registrados, tela "algo deu errado" no lugar da página branca | v1.63.0 | Base pra crescer: gatilho novo = uma classe em `Services/Vigia` + uma linha em `ServicosDaLoja`. Chave `vigia-sistema` |
-| **Furo do PDV** — campos internos da venda (`SkipStockDecrement`, `Origem`, reserva) não entram mais pelo JSON | v1.63.0 | |
+| **Logs que não somem no deploy** — rollout guarda o log antes de apagar o container; busca com `deploy/logs.sh` | v1.63.1 | Os guardados começam no 1º deploy depois desta versão |
 
 ## ⏳ Esperando alguém
 
@@ -34,21 +33,21 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 ## 📋 Na fila (ordem sugerida)
 
-1. **Logs que não somem no deploy** — hoje o log da API vai embora a cada deploy (container novo). Gravar em volume/arquivo com rotação e deixar buscável (o Vigia cobre o "o que deu errado", o log cobre o "por quê").
-2. **Mais gatilhos no Vigia**: comanda aberta há mais de 12 h, NFC-e rejeitada/pendente, Pix de comanda pago sem fechar, crediário vencido sem aviso, torneio com rodada parada, robôs que pararam de rodar (Pix, NFC-e).
-3. **IP forjável nos limites de acesso** — a origem responde direto, sem passar pela Cloudflare, então o cabeçalho `CF-Connecting-IP` pode ser inventado. Aceitar só de IPs da Cloudflare (ou fechar a porta 80/443 pra quem não é Cloudflare).
-4. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
-5. **Limpeza das chaves vencidas** (RevisarEm 01/12 e 15/12): apagar o jeito antigo do código.
-6. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
-7. Botão "Voltar versão" e checks obrigatórios novos no `main`.
-8. Dependabot grandes (.NET 10, Next 16, TS 7) — um por vez, com teste.
-9. **Relatórios por subcategoria com total na categoria-pai** — Maikon quer vendas por subcategoria (Pokémon, One Piece, Riftbound…) e o total da categoria-pai (soma das filhas) em `admin/relatorios` e `AnalyticsController`. `Product.Category` é string com o nome da folha, sem FK; caminho rápido: resolver o pai na leitura cruzando o nome com `ProductCategory` (risco: duas subcategorias com o mesmo nome em famílias diferentes; se acontecer, migrar pra `Product.ProductCategoryId` com backfill). A linha do pai é **sempre** a soma das filhas.
-10. Produto, mais adiante: "excluir minha conta" (LGPD), auditoria de acessibilidade, SaaS multi-loja (pausado).
+1. **Mais gatilhos no Vigia**: comanda aberta há mais de 12 h, NFC-e rejeitada/pendente, Pix de comanda pago sem fechar, crediário vencido sem aviso, torneio com rodada parada, robôs que pararam de rodar (Pix, NFC-e).
+2. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
+3. **Limpeza das chaves vencidas** (RevisarEm 01/12 e 15/12): apagar o jeito antigo do código.
+4. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
+5. Botão "Voltar versão" e checks obrigatórios novos no `main`.
+6. Dependabot grandes (.NET 10, Next 16, TS 7) — um por vez, com teste.
+7. **Relatórios por subcategoria com total na categoria-pai** — Maikon quer vendas por subcategoria (Pokémon, One Piece, Riftbound…) e o total da categoria-pai (soma das filhas) em `admin/relatorios` e `AnalyticsController`. `Product.Category` é string com o nome da folha, sem FK; caminho rápido: resolver o pai na leitura cruzando o nome com `ProductCategory` (risco: duas subcategorias com o mesmo nome em famílias diferentes; se acontecer, migrar pra `Product.ProductCategoryId` com backfill). A linha do pai é **sempre** a soma das filhas.
+8. Produto, mais adiante: "excluir minha conta" (LGPD), auditoria de acessibilidade, SaaS multi-loja (pausado).
 
 ## ✅ Feito recentemente
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.63.0 | 21/10 | **Vigia do sistema** (gatilhos a cada 10 min, Alertas do sistema com busca, erro de tela registrado + tela "algo deu errado") e furo do PDV fechado. Gatilho novo = uma classe em `Services/Vigia` + uma linha em `ServicosDaLoja` |
+| — | 21/10 | Conferido: firewall só deixa a Cloudflare falar com 80/443 (o IP forjável que estava na fila já estava resolvido) |
 | v1.62.1 | 21/10 | Pódio e telão cabem no celular (cortava ao mexer no zoom) |
 | v1.62.0 | 21/10 | Pedido do site vira venda no pagamento (Pix), preço congelado, retirada vira "Entregar", travas contra venda dupla |
 | v1.61.1 | 21/10 | Entrada da liguinha em uma tela; deck escolhido na tela do torneio |

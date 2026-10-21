@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.63.1] — 2026-10-21
+
+### Operação — o log não some mais no deploy
+- Antes de apagar o container antigo na troca sem queda, o log dele é guardado na VPS (`/var/log/santuarionerd`, compactado, só o root lê, 30 dias). Até agora cada deploy levava o log embora — quando algo dava errado, não havia o que ler
+- Busca: `bash deploy/logs.sh "texto"` procura no que está no ar e em todos os guardados (`--dias 30`, `--servico frontend`, `--erros`)
+- Se guardar o log falhar (disco, permissão), o deploy segue normalmente
 ## [v1.63.0] — 2026-10-21
 
 ### Novo — Vigia do sistema (Configuração → Alertas do sistema)
