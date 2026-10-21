@@ -26,6 +26,9 @@ public static class Brasilia
 
     public static DateTime Agora() => ParaBrasilia(DateTime.UtcNow);
 
+    /// <summary>"21/10 às 14:05" no relógio de Brasília — pra texto de gente (alertas, avisos).</summary>
+    public static string Formatar(DateTime utc) => ParaBrasilia(utc).ToString("dd/MM 'às' HH:mm");
+
     /// <summary>Data de hoje no calendário de Brasília (hora zerada).</summary>
     public static DateTime Hoje() => Agora().Date;
 

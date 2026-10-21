@@ -8,6 +8,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 
 | Tabela | Classe | DbSet | No startup | Arquivo |
 |---|---|---|---|---|
+| `alertas_sistema` | `AlertaSistema` | `AlertasSistema` | criada | `CardGameStore/Models/PostgreSQL/AlertaSistema.cs` |
 | `announcements` | `Announcement` | `Announcements` | — | `CardGameStore/Models/PostgreSQL/Announcement.cs` |
 | `audit_logs` | `AuditLog` | `AuditLogs` | — | `CardGameStore/Models/PostgreSQL/AuditLog.cs` |
 | `card_listings` | `CardListing` | `CardListings` | criada | `CardGameStore/Models/PostgreSQL/CardListing.cs` |
@@ -73,6 +74,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | `FiscalAlertBackgroundService` | Verifica diariamente o vencimento do | `CardGameStore/Services/Implementations/FiscalAlertBackgroundService.cs` |
 | `FiscalXmlExportBackgroundService` | Todo dia 1 (fuso de Brasília), gera e | `CardGameStore/Services/Implementations/FiscalXmlExportBackgroundService.cs` |
 | `SefazDistBackgroundService` | "DDA" fiscal: roda a Manifestação do | `CardGameStore/Services/Implementations/SefazDistBackgroundService.cs` |
+| `CardGameStore.Services.Vigia.VigiaBackgroundService` | roda o Vigia a cada 10 minutos (chave "vigia-sistema") | `CardGameStore/Services/Vigia/VigiaBackgroundService.cs` |
 | `PixReconciliationBackgroundService` | Robô de confirmação de Pix. | `CardGameStore/Services/Implementations/PixReconciliationBackgroundService.cs` |
 | `CrediarioAvisoBackgroundService` | Roda os lembretes de vencimento do | `CardGameStore/Services/Implementations/CrediarioAvisoBackgroundService.cs` |
 
@@ -109,6 +111,13 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `INfceEmissionService → TenantErpNfceEmissionService` | `CardGameStore/Services/Implementations/TenantErpNfceEmissionService.cs` |
 | Scoped | `INfceEmissionService → NfceEmissionService` | `CardGameStore/Services/Implementations/NfceEmissionService.cs` |
 | Scoped | `PedidoVendaService` | `CardGameStore/Services/Implementations/PedidoVendaService.cs` |
+| Scoped | `CardGameStore.Services.Vigia.VigiaService` | `CardGameStore/Services/Vigia/VigiaService.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPixPagoPedidoCancelado` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPedidoPagoSemVenda` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoVendaTravada` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoValorPixDiferente` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoEstoqueNegativo` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPedidoParado` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
 | Scoped | `IPixReconciliationService → PixReconciliationService` | `CardGameStore/Services/Implementations/PixReconciliationService.cs` |
 | Scoped | `CrediarioAvisoService` | `CardGameStore/Services/Implementations/CrediarioAvisoService.cs` |
 | Scoped | `CrediarioPixService` | `CardGameStore/Services/Implementations/CrediarioPixService.cs` |

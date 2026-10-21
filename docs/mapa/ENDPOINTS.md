@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-280 endpoints em 38 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+285 endpoints em 39 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -43,6 +43,7 @@
 - [Upload](#upload) (3)
 - [User](#user) (15)
 - [VendaAvulsa](#vendaavulsa) (6)
+- [Vigia](#vigia) (5)
 - [WhatsAppAdmin](#whatsappadmin) (8)
 - [WhatsAppAutomation](#whatsappautomation) (2)
 
@@ -567,6 +568,18 @@
 | GET | `/api/venda-avulsa/recent` | AdminOnly | `GetRecent` (72) | — | — |
 | POST | `/api/venda-avulsa/{id}/estornar` | AdminOnly | `Estornar` (127) | `vendaAvulsaApi.estornar` | `app/admin/venda-avulsa/page.tsx` |
 | PATCH | `/api/venda-avulsa/{id}/pagamento` | AdminOnly | `EditarPagamento` (106) | `vendaAvulsaApi.editarPagamento` | `app/admin/venda-avulsa/page.tsx` |
+
+## Vigia
+
+`CardGameStore/Controllers/VigiaController.cs`
+
+| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
+|---|---|---|---|---|---|
+| GET | `/api/admin/vigia/alertas` | AdminOnly | `Alertas` (22) | `vigiaApi.alertas` | `app/admin/alertas/page.tsx` |
+| POST | `/api/admin/vigia/alertas/{id:guid}/resolver` | AdminOnly | `Resolver` (38) | `vigiaApi.resolver` | `app/admin/alertas/page.tsx` |
+| GET | `/api/admin/vigia/resumo` | AdminOnly | `Resumo` (28) | `vigiaApi.resumo` | `app/admin/alertas/page.tsx` |
+| POST | `/api/admin/vigia/rodar` | AdminOnly | `Rodar` (48) | `vigiaApi.rodar` | `app/admin/alertas/page.tsx` |
+| POST | `/api/vigia/erro-tela` | público | `ErroTela` (60) | — | `lib/reportarErro.ts` |
 
 ## WhatsAppAdmin
 

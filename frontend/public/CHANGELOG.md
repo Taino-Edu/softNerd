@@ -1,5 +1,20 @@
 # Changelog — Santuário Nerd
 
+## [v1.63.0] — 2026-10-21
+
+### Novo — Vigia do sistema (Configuração → Alertas do sistema)
+- **Gatilhos automáticos**: a cada 10 minutos o sistema procura o que ficou torto e registra: Pix pago de pedido cancelado (reembolso pendente), pedido pago sem venda no Financeiro, venda travada no registro, Pix com valor diferente do pedido, estoque negativo e pedido parado há mais de 3 dias
+- **Tela de alertas** com busca por texto (cliente, produto, tela, Pix), filtro por tipo e gravidade, "Rodar agora" e "Resolver". O que some se resolve sozinho; o que você resolve não volta a aparecer
+- Críticos e avisos novos vão pro **sininho** dos admins (uma vez por caso, não a cada conferência)
+- **Erro de tela**: quando uma tela do site quebra, em vez da página branca aparece "Algo deu errado nesta tela — Tentar de novo", e o erro vira alerta com a tela, a mensagem e quantas vezes aconteceu. É o que vai mostrar onde o sistema "cai"
+- Chave `vigia-sistema` em Funcionalidades
+
+### Segurança
+- Frente de caixa: campos internos da venda (não baixar estoque, marcar como pedido do site) não são mais aceitos de fora — só o próprio sistema preenche
+
+### Processo
+- `docs/planejamento/BACKLOG.md` voltou a ser o backlog vivo, atualizado a cada versão (em andamento, esperando alguém, na fila, feito)
+
 ## [v1.62.1] — 2026-10-21
 
 ### Corrigido — telão e pódio no celular (Maikon)

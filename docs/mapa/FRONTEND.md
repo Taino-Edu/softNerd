@@ -6,6 +6,7 @@
 
 | URL | Arquivo | Componentes usados |
 |---|---|---|
+| `/admin/alertas` | `app/admin/alertas/page.tsx` | `ui/Badge`, `ui/PageHeader` |
 | `/admin/anuncios` | `app/admin/anuncios/page.tsx` | `admin/ImageUpload`, `ui/PageHeader` |
 | `/admin/campeonatos/[id]/torneio` | `app/admin/campeonatos/[id]/torneio/page.tsx` | `liga/PainelTorneio` |
 | `/admin/campeonatos` | `app/admin/campeonatos/page.tsx` | `admin/ConferenciaDecksModal`, `admin/DeckViewerModal`, `liga/admin/EscolherModalidade`, `ui/Badge` |
@@ -86,6 +87,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `LegalActions` | `LegalActions` | `app/privacidade/page.tsx`<br>`app/termos/page.tsx` |
 | `PWAInstallButton` | `PWAInstallButton` | `app/layout.tsx` |
 | `PixReservaModal` | `PixReservaModal` | `app/admin/reservas/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| `RelatorDeErros` | `RelatorDeErros` | `components/ClientProviders.tsx` |
 | `ThemeToggle` | `ThemeToggle` | `app/lgpd/page.tsx`<br>`app/privacidade/page.tsx`<br>`app/termos/page.tsx`<br>`components/admin/Sidebar.tsx` |
 | `TimerWidget` | `TimerWidget` | `app/admin/layout.tsx` |
 | `VLibrasController` | `VLibrasController` | `app/layout.tsx` |
@@ -124,8 +126,8 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/admin/JogadoresTorneio` | `JogadoresTorneio` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/LancarEtapa` | `LancarEtapa` | `app/admin/liguinha/page.tsx` |
 | `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
-| `ui/Badge` | `Badge` | `app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
-| `ui/PageHeader` | `PageHeader` | `app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
+| `ui/Badge` | `Badge` | `app/admin/alertas/page.tsx`<br>`app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
+| `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
 | `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
 
@@ -151,6 +153,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/site.ts` | `ANNOUNCEMENT_TYPES`, `announcementApi`, `siteConfigApi` |
 | `lib/api/usuarios.ts` | `DEFAULT_DASHBOARD_PANELS`, `DEFAULT_PREFERENCES`, `perfisApi`, `userApi`, `publicProfileApi` |
 | `lib/api/vendas.ts` | `vendaAvulsaApi`, `minhasComprasApi` |
+| `lib/api/vigia.ts` | `vigiaApi` |
 | `lib/auth.ts` | `saveAuth`, `clearAuth`, `getRole`, `getUserName`, `getUserId`, `isAdmin`, `isOperator`, `isLoggedIn`, `getPermissions`, `hasPermission` |
 | `lib/colors.ts` | `mixHex`, `isDark`, `getContrastText` |
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |
@@ -169,6 +172,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/relatorio-admin.ts` | `gerarRelatorioClientes`, `gerarRelatorioPDV`, `gerarRelatorioComandas`, `gerarRelatorioCrediario` |
 | `lib/relatorio-estoque.ts` | `gerarRelatorioOperacional`, `gerarRelatorioGerencial` |
 | `lib/relatorio.ts` | `gerarRelatorioPDF` |
+| `lib/reportarErro.ts` | `reportarErro` |
 | `lib/sessionKeepAlive.ts` | `renovarSessao`, `iniciarKeepAlive` |
 | `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |

@@ -239,6 +239,9 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("auth",   ctx => PorIp(ctx, 30));
     options.AddPolicy("sessao", ctx => PorIp(ctx, 120));
     options.AddPolicy("api",    ctx => PorIp(ctx, 200));
+    // Erro de tela (Vigia): o site manda sozinho quando uma tela quebra — 30/min por IP
+    // segura um loop de erro sem engolir o resto da loja no mesmo wi-fi
+    options.AddPolicy("erro-tela", ctx => PorIp(ctx, 30));
 
     // Código de torneio: por USUÁRIO, não por IP — a loja inteira sai pelo mesmo IP no
     // dia do campeonato. 10 tentativas/min deixa errar a digitação e impede adivinhar.

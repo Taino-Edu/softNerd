@@ -20,6 +20,7 @@
 //   comunicacao.ts   Assistente IA, notificações, push, mensageria, WhatsApp
 //   liga.ts          Liguinha: torneio suíço (rodadas, mesas, resultados)
 //   funcionalidades.ts  Chaves de funcionalidade (mudança grande com volta)
+//   vigia.ts         Vigia do sistema: alertas dos gatilhos e erros de tela
 // =============================================================================
 export * from './client'
 export * from './auth'
@@ -38,3 +39,4 @@ export * from './lgpd'
 export * from './comunicacao'
 export * from './liga'
 export * from './funcionalidades'
+export * from './vigia'

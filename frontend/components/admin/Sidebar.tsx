@@ -15,6 +15,7 @@ import {
   LogOut, User, ShoppingBag, Users, Megaphone,
   Loader2, X, Menu, CreditCard, Store, Shield, TrendingUp, Tag, BarChart2, Info, UserCog, Settings, Timer, BookOpen, History,
   Wallet, Plug, ClipboardList, MessageSquare, Receipt, Palette, ChevronsLeft, ChevronsRight, Award, RotateCcw,
+  BellRing,
 } from 'lucide-react'
 import clsx from 'clsx'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -92,6 +93,7 @@ const sections = [
       { href: '/admin/integracoes', label: 'Integrações',       icon: Plug,    perm: null },
       { href: '/admin/perfis',      label: 'Perfis de Acesso',  icon: UserCog, perm: null },
       { href: '/admin/funcionalidades', label: 'Mudanças com volta', icon: RotateCcw, perm: null },
+      { href: '/admin/alertas',     label: 'Alertas do sistema', icon: BellRing, perm: null, chave: 'vigia-sistema' },
     ],
   },
   {
@@ -116,6 +118,7 @@ function NavItems({ pathname, onClose, unreadCount, whatsappUnread, fiscalAlerta
   // sai diferente do navegador e a hidratação falha)
   const montado = useMontado()
   const central = useFuncionalidade('admin-liguinha-central') !== false
+  const vigia = useFuncionalidade('vigia-sistema') !== false
   const role = montado ? getRole() : ''
   const isAdmin = role === 'Admin'
 
@@ -125,7 +128,8 @@ function NavItems({ pathname, onClose, unreadCount, whatsappUnread, fiscalAlerta
         if (adminOnly && !isAdmin) return null
         const visibleItems = montado
           ? items.filter((i: { perm: string | null; chave?: string }) =>
-              (i.perm === null || hasPermission(i.perm)) && (i.chave !== 'admin-liguinha-central' || central))
+              (i.perm === null || hasPermission(i.perm)) && (i.chave !== 'admin-liguinha-central' || central)
+              && (i.chave !== 'vigia-sistema' || vigia))
           : []
         if (visibleItems.length === 0) return null
         return (

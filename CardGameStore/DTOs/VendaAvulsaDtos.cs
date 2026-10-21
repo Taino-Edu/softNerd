@@ -55,23 +55,28 @@ public class VendaAvulsaRequest
     /// onde o estoque já foi baixado no ato da reserva (a venda só registra a saída).
     /// Uso interno do backend; o PDV nunca envia.
     /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore] // só o back preenche (homologação/pagamento); o PDV não manda
     public bool SkipStockDecrement { get; set; } = false;
 
     /// <summary>"Reserva" quando vem da homologação de um pedido do site. Uso interno do
     /// backend; o PDV nunca envia — fica null pra venda de balcão comum.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] // só o back preenche (homologação/pagamento); o PDV não manda
     public string? Origem { get; set; }
 
     /// <summary>Id da ProductReservation de origem, quando Origem == "Reserva".
     /// Num carrinho homologado de uma vez, é o primeiro item — quem identifica a venda
     /// inteira é o ReservationGroupId.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] // só o back preenche (homologação/pagamento); o PDV não manda
     public Guid? ReservationId { get; set; }
 
     /// <summary>Grupo (carrinho) de origem, quando Origem == "Reserva". Uma venda por grupo,
     /// mesmo que o cliente tenha reservado vários itens de uma vez.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] // só o back preenche (homologação/pagamento); o PDV não manda
     public Guid? ReservationGroupId { get; set; }
 
     /// <summary>Snapshot de Product.IsPreVenda no momento da homologação — separa "Site" de
     /// "Pré-venda" no Financeiro. Só relevante quando Origem == "Reserva".</summary>
+    [System.Text.Json.Serialization.JsonIgnore] // só o back preenche (homologação/pagamento); o PDV não manda
     public bool ProductIsPreVenda { get; set; }
 
     public bool IsPaymentMethodValid() =>

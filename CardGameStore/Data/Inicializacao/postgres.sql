@@ -807,3 +807,21 @@ CREATE TABLE IF NOT EXISTS funcionalidades (
     alterada_em     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     alterada_por_id UUID        NULL
 );
+
+-- Vigia do sistema (Services/Vigia): alertas dos gatilhos e erros de tela (v1.63.0)
+CREATE TABLE IF NOT EXISTS alertas_sistema (
+    id            UUID          PRIMARY KEY,
+    codigo        VARCHAR(60)   NOT NULL,
+    chave         VARCHAR(200)  NOT NULL,
+    gravidade     VARCHAR(10)   NOT NULL,
+    titulo        VARCHAR(200)  NOT NULL,
+    detalhe       VARCHAR(2000) NOT NULL,
+    link          VARCHAR(300)  NULL,
+    ocorrencias   INTEGER       NOT NULL DEFAULT 1,
+    criado_em     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    ultima_vez_em TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    resolvido_em  TIMESTAMPTZ   NULL,
+    resolvido_por VARCHAR(120)  NULL
+);
+CREATE INDEX IF NOT EXISTS ix_alertas_sistema_abertos ON alertas_sistema (codigo, chave) WHERE resolvido_em IS NULL;
+CREATE INDEX IF NOT EXISTS ix_alertas_sistema_ultima ON alertas_sistema (ultima_vez_em DESC);

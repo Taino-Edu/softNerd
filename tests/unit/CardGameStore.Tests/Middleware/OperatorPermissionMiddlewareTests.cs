@@ -131,6 +131,7 @@ public class OperatorPermissionMiddlewareTests
         "/api/admin/whatsapp",              // pareamento do WhatsApp da loja
         "/api/integrations/tenant-erp",     // integração com o ERP
         "/api/ai",                          // assistente IA do painel
+        "/api/admin/vigia",                 // alertas do sistema (Configuração → Alertas, só dono)
         "/api/auth",                        // ignorada pelo middleware
     ];
 

@@ -174,6 +174,16 @@ public static class ServicosDaLoja
         // dá a baixa por origem (mesmo caminho dos controllers, com claim atômico no
         // banco pra reconciliação concorrente não aplicar efeito duas vezes).
         services.AddScoped<PedidoVendaService>();
+
+        // Vigia do sistema (Services/Vigia): gatilho novo = uma classe + uma linha aqui
+        services.AddScoped<CardGameStore.Services.Vigia.VigiaService>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoPixPagoPedidoCancelado>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoPedidoPagoSemVenda>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoVendaTravada>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoValorPixDiferente>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoEstoqueNegativo>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoPedidoParado>();
+        services.AddHostedService<CardGameStore.Services.Vigia.VigiaBackgroundService>();
         services.AddScoped<IPixReconciliationService, PixReconciliationService>();
         services.AddHostedService<PixReconciliationBackgroundService>();
 
