@@ -3,9 +3,9 @@
 ## [v1.64.1] — 2026-10-21
 
 ### Vigia do sistema — os últimos gatilhos da fila
-- **Crediário vencido sem aviso**: conta vencida há 1 a 7 dias sem nenhum lembrete daquele vencimento, com os avisos ligados — o robô devia ter avisado o cliente e não avisou
+- **Crediário sem lembrete**: um dos dias de aviso configurados (ex.: 3 dias antes, no dia, 3 dias de atraso) passou há 1 a 7 dias e o lembrete não chegou ao cliente — o robô não mandou, ou tentou e nenhum canal entregou
 - **Rodada da liguinha parada**: o tempo da rodada acabou há mais de 30 minutos e ainda tem mesa sem resultado
-- **Backup atrasado** (crítico): o backup diário não registra execução há mais de 26 horas. O `deploy/backup.sh` agora deixa um registro no banco quando termina (a API não enxerga os arquivos da VPS); falhar nesse registro nunca derruba o backup
+- **Backup atrasado** (crítico): o backup diário não registra execução há mais de 26 horas. O `deploy/backup.sh` agora deixa um registro no banco quando termina (a API não enxerga os arquivos da VPS); falhar nesse registro nunca derruba o backup. A cópia no Google Drive (`backup-drive.sh`) tem registro próprio, gravado só depois do upload — se um dia ela for ligada e parar, o alerta é separado
 
 ## [v1.64.0] — 2026-10-21
 

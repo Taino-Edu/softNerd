@@ -373,21 +373,31 @@ public class VigiaServiceTests
     // ── Gatilhos de rotina (v1.64.1) ─────────────────────────────────────────
 
     [Fact]
-    public async Task CrediarioVencidoSemAviso_Alerta_ComAvisoOuDesligadoNao()
+    public async Task CrediarioSemAviso_SoMarcoConfiguradoSemEntrega_ComAvisoEntregueOuDesligadoNao()
     {
         var a = Criar();
-        a.Db.CrediarioAvisoConfigs.Add(new CrediarioAvisoConfig { Ativo = true });
-        var sem = new Crediario { UserId = a.Cliente.Id, ValorEmCentavos = 5000, DataAbertura = DateTime.UtcNow.AddDays(-20), DataVencimento = DateTime.UtcNow.AddDays(-3) };
-        var com = new Crediario { UserId = a.Cliente.Id, ValorEmCentavos = 5000, DataAbertura = DateTime.UtcNow.AddDays(-20), DataVencimento = DateTime.UtcNow.AddDays(-3) };
+        a.Db.CrediarioAvisoConfigs.Add(new CrediarioAvisoConfig { Ativo = true, MarcosJson = "[0]" });
+        Crediario Conta() => new() { UserId = a.Cliente.Id, ValorEmCentavos = 5000, DataAbertura = DateTime.UtcNow.AddDays(-20), DataVencimento = DateTime.UtcNow.AddDays(-3) };
+        var sem = Conta(); var entregue = Conta(); var falhou = Conta(); var pulado = Conta();
         var antiga = new Crediario { UserId = a.Cliente.Id, ValorEmCentavos = 5000, DataAbertura = DateTime.UtcNow.AddDays(-60), DataVencimento = DateTime.UtcNow.AddDays(-20) };
-        a.Db.Crediarios.AddRange(sem, com, antiga);
-        a.Db.CrediarioAvisos.Add(new CrediarioAviso { CrediarioId = com.Id, Marco = 0, VencimentoReferencia = com.DataVencimento, Canais = "app" });
+        a.Db.Crediarios.AddRange(sem, entregue, falhou, pulado, antiga);
+        a.Db.CrediarioAvisos.AddRange(
+            new CrediarioAviso { CrediarioId = entregue.Id, Marco = 0, VencimentoReferencia = entregue.DataVencimento, Canais = "app" },
+            new CrediarioAviso { CrediarioId = falhou.Id, Marco = 0, VencimentoReferencia = falhou.DataVencimento, Canais = "", Falhas = "email: smtp fora" },
+            new CrediarioAviso { CrediarioId = pulado.Id, Marco = 0, VencimentoReferencia = pulado.DataVencimento, Canais = "", Falhas = "pulado: cliente já foi avisado hoje" });
         a.Db.SaveChanges();
 
         var achados = await new VerificacaoCrediarioSemAviso(a.Db).VerificarAsync(default);
-        achados.Should().ContainSingle().Which.Referencia.Should().Be(sem.Id.ToString(), "fora da janela de 7 dias não conta");
+        achados.Select(x => x.Referencia.Split(':')[0]).Should().BeEquivalentTo(
+            new[] { sem.Id.ToString(), falhou.Id.ToString() }, "tentativa sem nenhum canal entregue não conta como aviso; fora da janela não conta");
 
-        var cfg = a.Db.CrediarioAvisoConfigs.Single(); cfg.Ativo = false; a.Db.SaveChanges();
+        // Marcos sem o dia do vencimento: 3 dias de atraso ainda não chegou no marco de 7;
+        // a conta de 20 dias perdeu o de 15 (há 5 dias)
+        var cfg = a.Db.CrediarioAvisoConfigs.Single(); cfg.MarcosJson = "[7,15,30]"; a.Db.SaveChanges();
+        (await new VerificacaoCrediarioSemAviso(a.Db).VerificarAsync(default)).Should().ContainSingle("só o marco de 15 da conta antiga já passou")
+            .Which.Referencia.Should().StartWith(antiga.Id + ":").And.EndWith(":15");
+
+        cfg.MarcosJson = "[0]"; cfg.Ativo = false; a.Db.SaveChanges();
         (await new VerificacaoCrediarioSemAviso(a.Db).VerificarAsync(default)).Should().BeEmpty("avisos desligados não é falha");
     }
 
@@ -440,6 +450,13 @@ public class VigiaServiceTests
             marco.Quando = DateTime.UtcNow.AddHours(-28).AddMinutes(-7); a.Db.SaveChanges();
             var segundo = (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Single();
             segundo.Referencia.Should().NotBe(primeiro.Referencia, "resolver um atraso não pode silenciar o próximo");
+
+            // Dump local em dia, mas a cópia no Drive parada: alerta separado
+            marco.Quando = DateTime.UtcNow.AddHours(-2);
+            a.Db.MarcosOperacao.Add(new MarcoOperacao { Chave = MarcoOperacao.BackupDrive, Quando = DateTime.UtcNow.AddHours(-50) });
+            a.Db.SaveChanges();
+            (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Should().ContainSingle()
+                .Which.Referencia.Should().StartWith("drive-atrasado:");
         }
         finally { VerificacaoBackupAtrasado.NoArDesde = original; }
     }

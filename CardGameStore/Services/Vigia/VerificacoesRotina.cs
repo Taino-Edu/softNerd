@@ -8,39 +8,67 @@ using System.Diagnostics;
 using CardGameStore.Common;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
+using CardGameStore.Services.Implementations;
 using Microsoft.EntityFrameworkCore;
 
 namespace CardGameStore.Services.Vigia;
 
 /// <summary>
-/// Conta vencida há 1 a 7 dias sem nenhum aviso daquele vencimento, com os avisos ligados:
-/// o robô do crediário devia ter avisado o cliente no dia do vencimento e não avisou.
+/// Marco de aviso configurado (ex.: -3, 0, 3 dias do vencimento) que já passou há 1 a 7 dias
+/// sem lembrete entregue, com os avisos ligados: o robô do crediário devia ter avisado e não
+/// avisou (ou tentou e nenhum canal entregou). Só os marcos da configuração contam.
 /// </summary>
 public class VerificacaoCrediarioSemAviso(AppDbContext db) : IVerificacaoVigia
 {
+    public const int JanelaDias = 7;
     public string Codigo => "crediario-sem-aviso";
-    public string Nome => "Crediário vencido sem aviso ao cliente";
+    public string Nome => "Crediário sem lembrete ao cliente";
 
     public async Task<IReadOnlyList<Achado>> VerificarAsync(CancellationToken ct)
     {
         var config = await db.CrediarioAvisoConfigs.AsNoTracking().FirstOrDefaultAsync(ct);
         if (config is null || !config.Ativo) return []; // avisos desligados: não é falha
+        var marcos = CrediarioAvisoService.LerMarcos(config.MarcosJson);
+        if (marcos.Count == 0) return [];
 
-        var agora = DateTime.UtcNow;
-        var de = agora.AddDays(-7);
-        var ate = agora.AddDays(-1);
-        var vencidas = await db.Crediarios.AsNoTracking().Include(c => c.User)
-            .Where(c => c.Status == CrediariosStatus.Aberto && c.DataVencimento >= de && c.DataVencimento < ate
-                        // Conta aberta já vencida não teve como receber o aviso do dia
-                        && c.DataAbertura < c.DataVencimento
-                        && !db.CrediarioAvisos.Any(a => a.CrediarioId == c.Id && a.VencimentoReferencia == c.DataVencimento))
+        var hoje = CrediarioLancamentos.ParaBrasilia(DateTime.UtcNow).Date;
+        // Vencimento mais antigo que ainda tem marco dentro da janela
+        var desde = DateTime.UtcNow.AddDays(-(marcos.Max() + JanelaDias + 2));
+        var abertas = await db.Crediarios.AsNoTracking().Include(c => c.User).Include(c => c.Avisos)
+            .Where(c => c.Status == CrediariosStatus.Aberto && c.ValorEmCentavos > c.ValorPagoEmCentavos
+                        && c.DataVencimento >= desde)
             .ToListAsync(ct);
-        return vencidas.Select(c => new Achado(c.Id.ToString(), VigiaGravidade.Aviso,
-            $"Crediário vencido sem aviso: {c.User?.Name ?? "cliente"}",
-            $"{VigiaPedidos.Reais(c.ValorEmCentavos - c.ValorPagoEmCentavos)} em aberto, venceu em {Brasilia.Formatar(c.DataVencimento)} " +
-            "e o cliente não recebeu nenhum lembrete desse vencimento. Confira o robô do crediário e avise o cliente.",
-            "/admin/crediario")).ToList();
+
+        var achados = new List<Achado>();
+        foreach (var c in abertas.Where(c => c.User is { IsActive: true }))
+        {
+            var dias = CrediarioAvisoService.DiasDoVencimento(c, hoje);
+            var abertura = CrediarioLancamentos.ParaBrasilia(c.DataAbertura).Date;
+            // Marcos cujo dia já terminou há 1 a 7 dias e em que a conta já existia
+            var perdidos = marcos
+                .Where(m => dias - m >= 1 && dias - m <= JanelaDias && hoje.AddDays(m - dias) >= abertura)
+                .Where(m => !c.Avisos.Any(a => a.Marco == m && a.VencimentoReferencia == c.DataVencimento
+                                              // Entregue em algum canal, ou pulado porque o cliente já tinha sido avisado no dia
+                                              && (a.Canais.Length > 0 || (a.Falhas ?? "").StartsWith("pulado"))))
+                .ToList();
+            if (perdidos.Count == 0) continue;
+            var m0 = perdidos.Max();
+            achados.Add(new Achado($"{c.Id}:{c.DataVencimento:yyyyMMdd}:{m0}", VigiaGravidade.Aviso,
+                $"Crediário sem lembrete: {c.User!.Name}",
+                $"{VigiaPedidos.Reais(c.ValorEmCentavos - c.ValorPagoEmCentavos)} em aberto, vence(u) em {Brasilia.Formatar(c.DataVencimento)}. " +
+                $"O lembrete de {Descrever(m0)} não chegou ao cliente (o robô não mandou ou nenhum canal entregou). " +
+                "Confira o robô do crediário e avise o cliente.",
+                "/admin/crediario"));
+        }
+        return achados;
     }
+
+    static string Descrever(int marco) => marco switch
+    {
+        < 0 => $"{-marco} dia(s) antes do vencimento",
+        0   => "dia do vencimento",
+        _   => $"{marco} dia(s) de atraso",
+    };
 }
 
 /// <summary>Rodada da liguinha cujo relógio acabou há mais de 30 min e ainda tem mesa sem resultado.</summary>
@@ -85,7 +113,11 @@ public class VerificacaoRodadaParada(AppDbContext db) : IVerificacaoVigia
     }
 }
 
-/// <summary>Backup diário (deploy/backup.sh) sem registro há mais de 26 h.</summary>
+/// <summary>
+/// Backup diário sem registro há mais de 26 h: os dumps locais (deploy/backup.sh) e, se a cópia
+/// no Google Drive (deploy/backup-drive.sh) já rodou alguma vez, ela também — cada um com sua marca,
+/// pra um upload que falha todo dia não ficar escondido atrás do dump local que deu certo.
+/// </summary>
 public class VerificacaoBackupAtrasado(AppDbContext db) : IVerificacaoVigia
 {
     public static readonly TimeSpan Prazo = TimeSpan.FromHours(26);
@@ -98,18 +130,33 @@ public class VerificacaoBackupAtrasado(AppDbContext db) : IVerificacaoVigia
     public async Task<IReadOnlyList<Achado>> VerificarAsync(CancellationToken ct)
     {
         var agora = DateTime.UtcNow;
-        var marco = await db.MarcosOperacao.AsNoTracking().FirstOrDefaultAsync(m => m.Chave == MarcoOperacao.BackupDiario, ct);
-        if (marco is null)
-            return agora - NoArDesde < Prazo ? []
-                : [new Achado("sem-registro", VigiaGravidade.Critico, "Nenhum backup registrado",
+        var marcos = await db.MarcosOperacao.AsNoTracking()
+            .Where(m => m.Chave == MarcoOperacao.BackupDiario || m.Chave == MarcoOperacao.BackupDrive)
+            .ToDictionaryAsync(m => m.Chave, ct);
+        var achados = new List<Achado>();
+
+        if (!marcos.TryGetValue(MarcoOperacao.BackupDiario, out var local))
+        {
+            if (agora - NoArDesde >= Prazo)
+                achados.Add(new Achado("sem-registro", VigiaGravidade.Critico, "Nenhum backup registrado",
                     "O backup diário (3h, deploy/backup.sh) nunca registrou execução. Confira o cron na VPS: crontab -l",
-                    null)];
-        if (agora - marco.Quando < Prazo) return [];
-        // A data do último backup na referência: cada atraso é um caso novo (resolver um não silencia o próximo)
-        return [new Achado($"atrasado:{marco.Quando:yyyyMMddHHmm}", VigiaGravidade.Critico,
-            $"Backup não roda há {(int)(agora - marco.Quando).TotalHours} h",
-            $"Último backup em {Brasilia.Formatar(marco.Quando)} ({marco.Detalhe ?? "sem detalhe"}). " +
-            "Ele roda todo dia às 3h e antes de todo deploy. Confira na VPS: tail /var/log/santuarionerd-backup.log",
-            null)];
+                    null));
+        }
+        else if (agora - local.Quando >= Prazo)
+            // A data do último backup na referência: cada atraso é um caso novo (resolver um não silencia o próximo)
+            achados.Add(new Achado($"atrasado:{local.Quando:yyyyMMddHHmm}", VigiaGravidade.Critico,
+                $"Backup não roda há {(int)(agora - local.Quando).TotalHours} h",
+                $"Último backup em {Brasilia.Formatar(local.Quando)} ({local.Detalhe ?? "sem detalhe"}). " +
+                "Ele roda todo dia às 3h e antes de todo deploy. Confira na VPS: tail /var/log/santuarionerd-backup.log",
+                null));
+
+        // A cópia no Drive só é cobrada depois de ter rodado uma vez (sem rclone configurado, não existe)
+        if (marcos.TryGetValue(MarcoOperacao.BackupDrive, out var drive) && agora - drive.Quando >= Prazo)
+            achados.Add(new Achado($"drive-atrasado:{drive.Quando:yyyyMMddHHmm}", VigiaGravidade.Critico,
+                $"Cópia do backup no Drive parada há {(int)(agora - drive.Quando).TotalHours} h",
+                $"Última cópia no Google Drive em {Brasilia.Formatar(drive.Quando)} ({drive.Detalhe ?? "sem detalhe"}). " +
+                "Os dumps podem estar saindo na VPS, mas a cópia fora dela não. Confira: tail /opt/santuarionerd/backups/backup-drive.log",
+                null));
+        return achados;
     }
 }

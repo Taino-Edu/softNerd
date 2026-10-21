@@ -15,6 +15,8 @@ namespace CardGameStore.Models.PostgreSQL;
 public class MarcoOperacao
 {
     public const string BackupDiario = "backup-diario";
+    /// <summary>Fim do deploy/backup-drive.sh (cópia no Google Drive) — só gravado depois do upload.</summary>
+    public const string BackupDrive = "backup-drive";
 
     [Key, MaxLength(60)] [Column("chave")]
     public string Chave { get; set; } = string.Empty;
