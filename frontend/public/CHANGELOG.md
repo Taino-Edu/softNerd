@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.64.1] — 2026-10-21
+
+### Vigia do sistema — os últimos gatilhos da fila
+- **Crediário vencido sem aviso**: conta vencida há 1 a 7 dias sem nenhum lembrete daquele vencimento, com os avisos ligados — o robô devia ter avisado o cliente e não avisou
+- **Rodada da liguinha parada**: o tempo da rodada acabou há mais de 30 minutos e ainda tem mesa sem resultado
+- **Backup atrasado** (crítico): o backup diário não registra execução há mais de 26 horas. O `deploy/backup.sh` agora deixa um registro no banco quando termina (a API não enxerga os arquivos da VPS); falhar nesse registro nunca derruba o backup
+
 ## [v1.64.0] — 2026-10-21
 
 ### Vigia do sistema — gatilhos novos (Alertas do sistema)

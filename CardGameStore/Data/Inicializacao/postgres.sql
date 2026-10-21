@@ -825,3 +825,10 @@ CREATE TABLE IF NOT EXISTS alertas_sistema (
 );
 CREATE INDEX IF NOT EXISTS ix_alertas_sistema_abertos ON alertas_sistema (codigo, chave) WHERE resolvido_em IS NULL;
 CREATE INDEX IF NOT EXISTS ix_alertas_sistema_ultima ON alertas_sistema (ultima_vez_em DESC);
+
+-- "Rodou por último em…" de coisas fora da API (deploy/backup.sh grava "backup-diario") (v1.64.1)
+CREATE TABLE IF NOT EXISTS marcos_operacao (
+    chave   VARCHAR(60)  PRIMARY KEY,
+    quando  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    detalhe VARCHAR(500) NULL
+);

@@ -87,6 +87,8 @@ public class AppDbContext : DbContext
 
     // Vigia do sistema (Services/Vigia): o que os gatilhos acharam e os erros de tela
     public DbSet<AlertaSistema> AlertasSistema { get; set; }
+    // "Rodou por último em…" de coisas fora da API (backup.sh) — Vigia confere a idade
+    public DbSet<MarcoOperacao> MarcosOperacao { get; set; }
 
     // -------------------------------------------------------------------------
     // OnModelCreating — Fluent API para configurações avançadas

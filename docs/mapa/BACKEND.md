@@ -30,6 +30,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | `lgpd_requests` | `LgpdRequest` | `LgpdRequests` | colunas | `CardGameStore/Models/PostgreSQL/LgpdRequest.cs` |
 | `liga_mensal_manual_entries` | `LigaMensalManualEntry` | `LigaMensalManualEntries` | criada | `CardGameStore/Models/PostgreSQL/LigaMensalManualEntry.cs` |
 | `listing_interests` | `ListingInterest` | `ListingInterests` | criada, colunas | `CardGameStore/Models/PostgreSQL/CardListing.cs` |
+| `marcos_operacao` | `MarcoOperacao` | `MarcosOperacao` | criada | `CardGameStore/Models/PostgreSQL/MarcoOperacao.cs` |
 | `naturezas_operacao` | `NaturezaOperacao` | `NaturezasOperacao` | criada, colunas | `CardGameStore/Models/PostgreSQL/NaturezaOperacao.cs` |
 | `notas_destinadas` | `NotaDestinada` | `NotasDestinadas` | criada | `CardGameStore/Models/PostgreSQL/NotaDestinada.cs` |
 | `notas_fiscais_emitidas` | `NotaFiscalEmitida` | `NotasFiscaisEmitidas` | criada, colunas | `CardGameStore/Models/PostgreSQL/NotaFiscalEmitida.cs` |
@@ -123,6 +124,9 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoNfceComProblema` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoTorneioNaoEncerrado` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoRobosParados` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoCrediarioSemAviso` | `CardGameStore/Services/Vigia/VerificacoesRotina.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoRodadaParada` | `CardGameStore/Services/Vigia/VerificacoesRotina.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoBackupAtrasado` | `CardGameStore/Services/Vigia/VerificacoesRotina.cs` |
 | Scoped | `IPixReconciliationService → PixReconciliationService` | `CardGameStore/Services/Implementations/PixReconciliationService.cs` |
 | Scoped | `CrediarioAvisoService` | `CardGameStore/Services/Implementations/CrediarioAvisoService.cs` |
 | Scoped | `CrediarioPixService` | `CardGameStore/Services/Implementations/CrediarioPixService.cs` |
