@@ -9,6 +9,7 @@ using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using CardGameStore.Configuration;
 using Microsoft.Extensions.Options;
+using CardGameStore.Services.Vigia;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -30,6 +31,7 @@ public class FiscalRetryBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        BatimentoRobos.Iniciou("NFC-e (reenvio)", TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15)); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(5), ct);
 
         while (!ct.IsCancellationRequested)
@@ -37,9 +39,11 @@ public class FiscalRetryBackgroundService : BackgroundService
             try
             {
                 await ReprocessarPendentesAsync();
+                BatimentoRobos.Bateu("NFC-e (reenvio)");
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("NFC-e (reenvio)", ex);
                 _logger.LogError(ex, "Erro no reprocessamento automático de notas fiscais pendentes");
             }
 

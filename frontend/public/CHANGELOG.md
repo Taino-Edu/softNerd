@@ -1,5 +1,20 @@
 # Changelog — Santuário Nerd
 
+## [v1.64.0] — 2026-10-21
+
+### Vigia do sistema — gatilhos novos (Alertas do sistema)
+- **Comanda aberta há mais de 12 horas**: comanda esquecida não entra no faturamento até fechar
+- **Pix de comanda pago e a comanda continua aberta** (crítico): o cliente pagou e ninguém fechou
+- **NFC-e rejeitada** pela SEFAZ (com o motivo) ou **pendente/em contingência há mais de 2 horas**
+- **Torneio sem encerrar** há mais de 12 horas: a colocação não grava e a Liga Mensal não soma até encerrar
+- **Robô parado ou falhando** (crítico): Pix, NFC-e, Inter, crediário, SEFAZ, XML fiscal e certificado agora "batem o ponto" a cada volta; se um para de bater ou falha 3 vezes seguidas, vira alerta com o último erro
+
+### Operação
+- **Fontes dentro do projeto** (Nunito e a fonte de videogame da liguinha, pelos pacotes @fontsource): o build não baixa mais nada do Google. Esse download falhava de vez em quando e já tinha derrubado o build do CI três vezes e um deploy — o visual não muda
+
+### Segurança
+- Biblioteca `follow-redirects` (usada pelo axios) atualizada pra 1.16.1 — alerta alto publicado hoje (cabeçalhos de login vazando em redirecionamento)
+
 ## [v1.63.1] — 2026-10-21
 
 ### Operação — o log não some mais no deploy

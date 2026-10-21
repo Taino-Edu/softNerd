@@ -10,6 +10,7 @@ using System.Net;
 using CardGameStore.Data;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using CardGameStore.Services.Vigia;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -28,6 +29,7 @@ public class PixReconciliationBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         // aguarda 1 min após startup para não competir com EnsureCreated
+        BatimentoRobos.Iniciou("Pix (cobranças)", TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5)); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(1), ct);
 
         while (!ct.IsCancellationRequested)
@@ -35,9 +37,11 @@ public class PixReconciliationBackgroundService : BackgroundService
             try
             {
                 await ReconciliarPendentesAsync();
+                BatimentoRobos.Bateu("Pix (cobranças)");
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("Pix (cobranças)", ex);
                 _logger.LogError(ex, "Erro no ciclo de reconciliação de cobranças Pix");
             }
 

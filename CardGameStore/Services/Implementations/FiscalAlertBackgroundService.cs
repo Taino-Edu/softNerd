@@ -7,6 +7,7 @@ using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using CardGameStore.Services.Vigia;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -24,6 +25,7 @@ public class FiscalAlertBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         // aguarda 2 min após startup para não competir com EnsureCreated
+        BatimentoRobos.Iniciou("Certificado fiscal (vencimento)", TimeSpan.FromMinutes(2), TimeSpan.FromHours(12)); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(2), ct);
 
         while (!ct.IsCancellationRequested)
@@ -31,9 +33,11 @@ public class FiscalAlertBackgroundService : BackgroundService
             try
             {
                 await CheckAsync();
+                BatimentoRobos.Bateu("Certificado fiscal (vencimento)");
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("Certificado fiscal (vencimento)", ex);
                 _logger.LogError(ex, "Erro ao checar vencimento do certificado fiscal");
             }
 

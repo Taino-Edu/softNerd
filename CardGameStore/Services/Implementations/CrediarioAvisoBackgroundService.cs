@@ -4,6 +4,8 @@
 // CrediarioAvisoService; aqui é só o relógio.
 // =============================================================================
 
+using CardGameStore.Services.Vigia;
+
 namespace CardGameStore.Services.Implementations;
 
 public class CrediarioAvisoBackgroundService : BackgroundService
@@ -23,6 +25,7 @@ public class CrediarioAvisoBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         // Espera o startup terminar (criação de tabelas e conversões).
+        BatimentoRobos.Iniciou("Crediário (avisos)", TimeSpan.FromMinutes(3), Intervalo); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(3), ct);
 
         while (!ct.IsCancellationRequested)
@@ -32,6 +35,7 @@ public class CrediarioAvisoBackgroundService : BackgroundService
                 using var scope = _scopeFactory.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<CrediarioAvisoService>();
                 await service.ExecutarRodadaAsync(DateTime.UtcNow, ct);
+                BatimentoRobos.Bateu("Crediário (avisos)");
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -39,6 +43,7 @@ public class CrediarioAvisoBackgroundService : BackgroundService
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("Crediário (avisos)", ex);
                 _logger.LogError(ex, "Erro na rodada de avisos de vencimento do crediário.");
             }
 

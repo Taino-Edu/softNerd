@@ -118,6 +118,11 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoValorPixDiferente` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoEstoqueNegativo` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPedidoParado` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoComandaEsquecida` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPixComandaSemFechar` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoNfceComProblema` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoTorneioNaoEncerrado` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
+| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoRobosParados` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
 | Scoped | `IPixReconciliationService → PixReconciliationService` | `CardGameStore/Services/Implementations/PixReconciliationService.cs` |
 | Scoped | `CrediarioAvisoService` | `CardGameStore/Services/Implementations/CrediarioAvisoService.cs` |
 | Scoped | `CrediarioPixService` | `CardGameStore/Services/Implementations/CrediarioPixService.cs` |

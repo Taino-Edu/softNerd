@@ -7,6 +7,7 @@ using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using CardGameStore.Services.Vigia;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -27,6 +28,7 @@ public class FiscalXmlExportBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        BatimentoRobos.Iniciou("XML fiscal (envio mensal)", TimeSpan.FromMinutes(3), TimeSpan.FromHours(12)); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(3), ct);
 
         while (!ct.IsCancellationRequested)
@@ -34,9 +36,11 @@ public class FiscalXmlExportBackgroundService : BackgroundService
             try
             {
                 await CheckAsync();
+                BatimentoRobos.Bateu("XML fiscal (envio mensal)");
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("XML fiscal (envio mensal)", ex);
                 _logger.LogError(ex, "Erro no envio mensal automático de XMLs fiscais");
             }
 

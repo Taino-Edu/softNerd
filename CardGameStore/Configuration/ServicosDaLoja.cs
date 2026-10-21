@@ -183,6 +183,11 @@ public static class ServicosDaLoja
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoValorPixDiferente>();
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoEstoqueNegativo>();
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoPedidoParado>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoComandaEsquecida>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoPixComandaSemFechar>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoNfceComProblema>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoTorneioNaoEncerrado>();
+        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoRobosParados>();
         services.AddHostedService<CardGameStore.Services.Vigia.VigiaBackgroundService>();
         services.AddScoped<IPixReconciliationService, PixReconciliationService>();
         services.AddHostedService<PixReconciliationBackgroundService>();

@@ -10,6 +10,7 @@
 
 using CardGameStore.Data;
 using Microsoft.EntityFrameworkCore;
+using CardGameStore.Services.Vigia;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -26,6 +27,7 @@ public class SefazDistBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        BatimentoRobos.Iniciou("SEFAZ (notas recebidas)", TimeSpan.FromMinutes(3), TimeSpan.FromHours(2)); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(3), ct);
 
         while (!ct.IsCancellationRequested)
@@ -33,9 +35,11 @@ public class SefazDistBackgroundService : BackgroundService
             try
             {
                 await SincronizarAsync(ct);
+                BatimentoRobos.Bateu("SEFAZ (notas recebidas)");
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("SEFAZ (notas recebidas)", ex);
                 _logger.LogError(ex, "Erro no ciclo automático de Manifestação do Destinatário");
             }
 

@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **21/10/2026** — produção na **v1.63.0**.
+Atualizado em **21/10/2026** — produção na **v1.63.1**.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -14,7 +14,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Logs que não somem no deploy** — rollout guarda o log antes de apagar o container; busca com `deploy/logs.sh` | v1.63.1 | Os guardados começam no 1º deploy depois desta versão |
+| **Mais gatilhos no Vigia** — comanda esquecida, Pix de comanda sem fechar, NFC-e com problema, torneio sem encerrar, robô parado (os robôs batem o ponto) | v1.64.0 | Robô novo precisa chamar `BatimentoRobos` (teste `TodoRobo_DeclaraBateEFalhaNoBatimento`) |
+| **Fontes dentro do projeto** (@fontsource) — o build não depende mais do Google | v1.64.0 | O download do Google derrubou 3 builds do CI e o 1º deploy da v1.63.1 |
 
 ## ⏳ Esperando alguém
 
@@ -33,7 +34,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 ## 📋 Na fila (ordem sugerida)
 
-1. **Mais gatilhos no Vigia**: comanda aberta há mais de 12 h, NFC-e rejeitada/pendente, Pix de comanda pago sem fechar, crediário vencido sem aviso, torneio com rodada parada, robôs que pararam de rodar (Pix, NFC-e).
+1. **Gatilhos que faltam**: crediário vencido sem aviso enviado, rodada da liguinha parada (relógio zerado há muito tempo sem resultado), backup diário que não rodou (arquivo de hoje não existe).
 2. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
 3. **Limpeza das chaves vencidas** (RevisarEm 01/12 e 15/12): apagar o jeito antigo do código.
 4. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
@@ -46,6 +47,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.63.1 | 21/10 | **Logs não somem no deploy**: o rollout guarda o log antes de apagar o container (`/var/log/santuarionerd`, 30 dias, limpeza também no backup diário); busca com `bash deploy/logs.sh "texto"` |
 | v1.63.0 | 21/10 | **Vigia do sistema** (gatilhos a cada 10 min, Alertas do sistema com busca, erro de tela registrado + tela "algo deu errado") e furo do PDV fechado. Gatilho novo = uma classe em `Services/Vigia` + uma linha em `ServicosDaLoja` |
 | — | 21/10 | Conferido: firewall só deixa a Cloudflare falar com 80/443 (o IP forjável que estava na fila já estava resolvido) |
 | v1.62.1 | 21/10 | Pódio e telão cabem no celular (cortava ao mexer no zoom) |

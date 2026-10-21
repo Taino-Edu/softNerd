@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Nunito } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import PWAInstallButton from '@/components/PWAInstallButton'
 import CookieBanner from '@/components/CookieBanner'
@@ -7,11 +7,20 @@ import Footer from '@/components/Footer'
 import VLibrasController from '@/components/VLibrasController'
 import ClientProviders from '@/components/ClientProviders'
 
-const nunito = Nunito({
-  subsets: ['latin'],
+// Nunito do pacote @fontsource (npm), não do Google na hora do build: o download do Google
+// falhava de vez em quando e derrubava o build do CI e do deploy (v1.64.0). Mesmos arquivos.
+// next/font exige os caminhos por extenso (sem montar com variável)
+const nunito = localFont({
+  src: [
+    { path: '../node_modules/@fontsource/nunito/files/nunito-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../node_modules/@fontsource/nunito/files/nunito-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: '../node_modules/@fontsource/nunito/files/nunito-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: '../node_modules/@fontsource/nunito/files/nunito-latin-700-normal.woff2', weight: '700', style: 'normal' },
+    { path: '../node_modules/@fontsource/nunito/files/nunito-latin-800-normal.woff2', weight: '800', style: 'normal' },
+    { path: '../node_modules/@fontsource/nunito/files/nunito-latin-900-normal.woff2', weight: '900', style: 'normal' },
+  ],
   variable: '--font-nunito',
   display: 'swap',
-  weight: ['400', '500', '600', '700', '800', '900'],
 })
 
 export const viewport: Viewport = {
