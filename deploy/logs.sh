@@ -35,6 +35,9 @@ cd "$(dirname "$0")"
 COMPOSE=(docker compose -f docker-compose.prod.yml)
 
 echo "== procurando \"$TEXTO\" em $SERVICO (últimos $DIAS dias)"
+# Corte por linha: um container que ficou semanas no ar e saiu ontem tem log antigo no
+# arquivo guardado. As linhas começam com a hora RFC3339 do --timestamps (ordem de texto = ordem de tempo).
+DESDE=$(date -u -d "$DIAS days ago" +%Y-%m-%dT%H:%M:%S 2>/dev/null || echo "0000")
 
 for id in $("${COMPOSE[@]}" ps -q "$SERVICO" 2>/dev/null); do
   docker logs --timestamps --since "${DIAS}d" "$id" 2>&1 | grep -E -i -- "$TEXTO" | sed "s/^/[no ar ${id:0:12}] /"
@@ -43,7 +46,7 @@ done
 if [ -d "$LOGS_DIR" ]; then
   find "$LOGS_DIR" -name "$SERVICO-*.log.gz" -mtime -"$DIAS" -print0 2>/dev/null | sort -z | \
     while IFS= read -r -d '' arq; do
-      zgrep -E -i -- "$TEXTO" "$arq" | sed "s|^|[$(basename "$arq" .log.gz)] |"
+      zgrep -E -i -- "$TEXTO" "$arq" | awk -v desde="$DESDE" '$1 >= desde' | sed "s|^|[$(basename "$arq" .log.gz)] |"
     done
 else
   echo "(ainda não há logs guardados em $LOGS_DIR — eles começam no próximo deploy)"
