@@ -74,4 +74,12 @@ REMOVED=$(find "$BACKUP_DIR" \( -name "*.sql.gz" -o -name "*.archive.gz" \) \
   -mtime +"$MAX_DAYS" -print -delete | wc -l)
 echo "[$(date '+%H:%M:%S')] $REMOVED arquivo(s) com mais de $MAX_DAYS dias removidos"
 
+# ── Prazo dos logs guardados pelo rollout.sh (30 dias) ─────────────────────────
+# Roda aqui (cron diário) e não só no deploy: sem deploy por mais de 30 dias, log com
+# dado de cliente passaria do prazo. Falha aqui nunca derruba o backup.
+LOGS_DIR="${LOGS_DIR:-/var/log/santuarionerd}"
+LOGS_DIAS="${LOGS_DIAS:-30}"
+LOGS_REMOVIDOS=$(find "$LOGS_DIR" -name "*.log.gz" -mtime +"$LOGS_DIAS" -print -delete 2>/dev/null | wc -l || true)
+echo "[$(date '+%H:%M:%S')] ${LOGS_REMOVIDOS:-0} log(s) guardado(s) com mais de $LOGS_DIAS dias removidos"
+
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] === Backup concluído. Arquivos em: $BACKUP_DIR ==="
