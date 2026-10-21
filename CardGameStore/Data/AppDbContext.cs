@@ -85,6 +85,9 @@ public class AppDbContext : DbContext
     // ── Chaves de funcionalidade: mudança grande com volta (Configuration/Funcionalidades.cs) ──
     public DbSet<FuncionalidadeEstado> FuncionalidadesEstado { get; set; }
 
+    // Vigia do sistema (Services/Vigia): o que os gatilhos acharam e os erros de tela
+    public DbSet<AlertaSistema> AlertasSistema { get; set; }
+
     // -------------------------------------------------------------------------
     // OnModelCreating — Fluent API para configurações avançadas
     // -------------------------------------------------------------------------

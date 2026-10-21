@@ -101,3 +101,20 @@ CREATE TABLE IF NOT EXISTS funcionalidades (
     alterada_em     TEXT    NOT NULL,
     alterada_por_id TEXT    NULL
 );
+
+-- Vigia do sistema (Services/Vigia)
+CREATE TABLE IF NOT EXISTS alertas_sistema (
+    id            TEXT    NOT NULL PRIMARY KEY,
+    codigo        TEXT    NOT NULL,
+    chave         TEXT    NOT NULL,
+    gravidade     TEXT    NOT NULL,
+    titulo        TEXT    NOT NULL,
+    detalhe       TEXT    NOT NULL,
+    link          TEXT    NULL,
+    ocorrencias   INTEGER NOT NULL DEFAULT 1,
+    criado_em     TEXT    NOT NULL,
+    ultima_vez_em TEXT    NOT NULL,
+    resolvido_em  TEXT    NULL,
+    resolvido_por TEXT    NULL
+);
+CREATE INDEX IF NOT EXISTS ix_alertas_sistema_abertos ON alertas_sistema (codigo, chave);

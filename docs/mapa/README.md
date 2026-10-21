@@ -141,6 +141,15 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
   Chave `pedido-venda-no-pagamento`.
 - Crediário tem regra própria (reaproveitar cobrança, pagar parte, pagar tudo): `CrediarioPixService.cs`.
 
+### Vigia do sistema (alertas e erros de tela)
+- Motor: `Services/Vigia/VigiaService.cs` — roda as verificações, abre/soma/resolve alertas na tabela
+  `alertas_sistema`; resolvido por admin = ciente (o mesmo caso não volta). Robô: `VigiaBackgroundService` (10 min).
+- **Gatilho novo** = uma classe `IVerificacaoVigia` (ver `VerificacoesPedidos.cs`) + uma linha em `ServicosDaLoja`.
+  Cada uma responde UMA pergunta sobre o banco; regra de negócio continua no serviço dela.
+- Erro de tela: `app/error.tsx`, `app/global-error.tsx` e `components/RelatorDeErros.tsx` → `lib/reportarErro.ts`
+  → `POST /api/vigia/erro-tela` (anônimo: sem link, sininho no máx. 1×/hora, teto de 200 abertos).
+- Tela: `/admin/alertas` (só dono). Chave `vigia-sistema`.
+
 ### Crediário
 | O quê | Onde |
 |---|---|

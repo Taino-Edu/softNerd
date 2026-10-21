@@ -15,7 +15,7 @@ Regras que mais quebraram até hoje:
 - Datas "do dia" sempre no calendário de Brasília (nunca `toISOString().slice(0, 10)` no front).
 - Cor nova no front precisa de versão no bloco `html.light` de `frontend/app/globals.css`.
 - Liga/desliga: `frontend/components/ui/Switch.tsx`.
-- Toda versão atualiza `frontend/public/CHANGELOG.md`.
+- Toda versão atualiza `frontend/public/CHANGELOG.md` e o backlog/progresso em `docs/planejamento/BACKLOG.md`.
 - Mudança grande de comportamento entra atrás de chave de funcionalidade, com o jeito antigo guardado
   (`Configuration/Funcionalidades.cs`, tela `/admin/funcionalidades`). Ver "Mudança grande: sempre com volta" no mapa.
 - Rota de admin nova: prefixo em `Permissao.RotasPrefixo` (ou na lista do dono no teste) — senão operador leva 403.

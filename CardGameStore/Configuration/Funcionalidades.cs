@@ -59,6 +59,7 @@ public static class Funcionalidades
     public const string LiguinhaProntoNaMesa = "liguinha-pronto-na-mesa";
     public const string LiguinhaEntradaSimples = "liguinha-entrada-simples";
     public const string PedidoVendaNoPagamento = "pedido-venda-no-pagamento";
+    public const string VigiaSistema = "vigia-sistema";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -295,6 +296,16 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.62.0",
             RevisarEm:  new DateOnly(2027, 3, 1)),
+
+        new(VigiaSistema,
+            Nome:       "Vigia do sistema: alertas automáticos e erros de tela",
+            OQueMuda:   "A cada 10 minutos o sistema procura o que ficou torto (Pix pago de pedido cancelado, pedido pago sem venda, " +
+                        "venda travada, Pix com valor diferente, estoque negativo, pedido parado) e mostra em Configuração → Alertas do sistema; " +
+                        "os importantes vão pro sininho. Erro numa tela do site mostra \"Algo deu errado — tentar de novo\" e vira alerta com a tela e o erro.",
+            SeDesligar: "O robô para, a tela de alertas some e os erros de tela deixam de ser registrados (a tela amigável de erro continua).",
+            Padrao:     true,
+            Desde:      "v1.63.0",
+            RevisarEm:  new DateOnly(2027, 4, 1)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>
