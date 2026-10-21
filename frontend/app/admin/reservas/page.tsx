@@ -784,8 +784,10 @@ export default function ReservasPage() {
                     {item.quantity}×{item.subtotalEmReais != null ? ` · ${brl(item.subtotalEmReais)}` : ''}
                   </p>
                 </div>
-                <button onClick={() => openEditQty(item)} title="Corrigir quantidade"
-                  className="p-1 rounded text-brand-300 hover:bg-brand-500/15"><Pencil className="w-3 h-3" /></button>
+                {!item.vendaRegistrada && (
+                  <button onClick={() => openEditQty(item)} title="Corrigir quantidade"
+                    className="p-1 rounded text-brand-300 hover:bg-brand-500/15"><Pencil className="w-3 h-3" /></button>
+                )}
                 <button onClick={() => handleCancel(item)} title="Cancelar este item"
                   className="p-1 rounded text-red-400 hover:bg-red-500/15"><XCircle className="w-3 h-3" /></button>
               </div>

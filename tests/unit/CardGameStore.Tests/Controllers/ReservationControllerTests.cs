@@ -834,6 +834,48 @@ public class ReservationControllerTests
     }
 
     [Fact]
+    public async Task UpdateQuantity_PedidoJaVendido_Recusa()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 2));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.UpdateQuantity(itens[0].Id, new UpdateReservationQuantityRequest { Quantity = 1 });
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Quantity.Should().Be(2);
+        (await db.Products.AsNoTracking().SingleAsync()).StockQuantity.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task CancelarPedidoComVenda_ChaveDesligada_AindaEstorna()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
+        await db.SaveChangesAsync();
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        await chaves.DefinirAsync(Funcionalidades.PedidoVendaNoPagamento, false, cliente.Id);
+        var vendas = new Mock<IVendaAvulsaService>();
+        vendas.Setup(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()))
+              .ReturnsAsync(new VendaAvulsaDto { Id = "venda-pix" });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: vendas.Object, funcionalidades: chaves);
+        controller.ControllerContext.HttpContext.User.AddIdentity(
+            new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin")]));
+
+        var result = await controller.UpdateStatus(itens[0].Id, new UpdateReservationStatusRequest { Status = "cancelled" });
+
+        result.Should().BeOfType<OkObjectResult>("venda que já existe sempre cancela pelo estorno");
+        vendas.Verify(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
     public async Task UpdateStatusRetirado_SemVenda_Recusa()
     {
         var db = CreateDb(nameof(ReservationControllerTests));

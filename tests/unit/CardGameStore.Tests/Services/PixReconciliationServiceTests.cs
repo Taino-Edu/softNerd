@@ -632,6 +632,23 @@ public class PixReconciliationServiceTests
     }
 
     [Fact]
+    public async Task Reconciliar_PedidoPago_FalhaDepoisDeGravarAVenda_NaoLiberaPraVenderDeNovo()
+    {
+        var db = CreateDb(nameof(Reconciliar_PedidoPago_FalhaDepoisDeGravarAVenda_NaoLiberaPraVenderDeNovo));
+        var (_, pix, _) = await SeedPedidoNaoPagoAsync(db);
+        var (vendas, _) = VendaSpy(falhar: true);
+        vendas.Setup(v => v.BuscarVendaDoPedidoAsync(pix.ReservationGroupId!.Value, It.IsAny<DateTime>()))
+              .ReturnsAsync(new VendaAvulsaDto { Id = "venda-gravada" }); // o insert no Mongo aconteceu
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
+            pedidoVenda: PedidoVenda(db, vendas.Object));
+
+        await service.ReconciliarAsync(pix);
+
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().Be("venda-gravada",
+            "liberar faria o Homologar vender o mesmo pedido de novo");
+    }
+
+    [Fact]
     public async Task Reconciliar_PedidoPago_ChaveDesligada_NaoRegistraVenda()
     {
         var db = CreateDb(nameof(Reconciliar_PedidoPago_ChaveDesligada_NaoRegistraVenda));

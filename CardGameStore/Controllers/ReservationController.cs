@@ -83,7 +83,8 @@ public class ReservationController : ControllerBase
                 return Conflict(new { Message = "A venda deste pedido está sendo registrada agora — tente de novo em instantes." });
             return null;
         }
-        if (!await VendaNoPagamentoAsync()) return null;
+        // Sem checar a chave: venda que já existe sempre se cancela pelo estorno (a chave só decide
+        // se vendas NOVAS nascem no pagamento) — senão o pedido ficaria impossível de cancelar.
         if (!User.IsInRole("Admin"))
             return BadRequest(new { Message = "Esta pré-venda já foi paga — fale com a loja pra cancelar e combinar o estorno." });
 
@@ -99,6 +100,9 @@ public class ReservationController : ControllerBase
         }
 
         // Estorno já devolveu o estoque: aqui só fecha os itens (sem DevolverEstoqueAsync)
+        var produtos = await _db.ProductReservations
+            .Where(r => r.VendaAvulsaId == vendaId && r.Status == "active")
+            .Select(r => r.ProductId).Distinct().ToListAsync();
         var agora = DateTime.UtcNow;
         var itens = await _db.ProductReservations
             .Where(r => r.VendaAvulsaId == vendaId && r.Status == "active")
@@ -108,7 +112,8 @@ public class ReservationController : ControllerBase
             details: $"{{\"vendaAvulsaId\":\"{vendaId}\",\"itens\":{itens},\"observacao\":\"devolver o valor pelo Inter\"}}",
             httpContext: HttpContext);
 
-        await ProcessarFilaSeguroAsync(res.ProductId);
+        // Todo produto que voltou pro estoque puxa a fila dele, não só o da linha clicada
+        foreach (var produtoId in produtos) await ProcessarFilaSeguroAsync(produtoId);
         await AvisarEstoqueMudouAsync();
         return Ok(new { jaPaga = true, vendaEstornada = true, itens });
     }
@@ -850,6 +855,9 @@ public class ReservationController : ControllerBase
         if (res is null) return NotFound();
         if (res.Status is not ("active" or "waiting"))
             return BadRequest(new { Message = "Só é possível alterar a quantidade de reservas em aberto." });
+        // A venda já está no Financeiro com a quantidade do pedido: mudar aqui desalinharia venda e estoque
+        if (res.VendaAvulsaId is not null)
+            return Conflict(new { Message = "Este pedido já virou venda — pra mudar a quantidade, cancele (a venda é estornada) e faça um pedido novo." });
 
         var quantidadeAntiga = res.Quantity;
         var delta = req.Quantity - quantidadeAntiga;

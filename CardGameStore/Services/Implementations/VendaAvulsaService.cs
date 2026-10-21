@@ -509,6 +509,17 @@ public class VendaAvulsaService : IVendaAvulsaService
     /// ela gerou e tira o valor do faturamento. A venda não é apagada — fica marcada com
     /// motivo e autor, e continua aparecendo no extrato como estornada.
     /// </summary>
+    public async Task<VendaAvulsaDto?> BuscarVendaDoPedidoAsync(Guid reservationGroupId, DateTime desde)
+    {
+        var venda = await _collection.Find(
+                Builders<VendaAvulsa>.Filter.Eq(v => v.ReservationGroupId, reservationGroupId)
+              & Builders<VendaAvulsa>.Filter.Gte(v => v.SoldAt, desde)
+              & Builders<VendaAvulsa>.Filter.Eq(v => v.CanceladaEm, null))
+            .SortByDescending(v => v.SoldAt)
+            .FirstOrDefaultAsync();
+        return venda is null ? null : MapToDto(venda);
+    }
+
     public async Task<VendaAvulsaDto> EstornarAsync(string id, Guid adminId, string adminNome, string motivo)
     {
         if (string.IsNullOrWhiteSpace(motivo))

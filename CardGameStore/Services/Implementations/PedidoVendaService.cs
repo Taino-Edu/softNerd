@@ -94,6 +94,7 @@ public class PedidoVendaService
             .OrderBy(r => r.ReservedAt)
             .ToListAsync();
         var primeiro = itens[0];
+        var inicio = DateTime.UtcNow.AddSeconds(-5); // folga de relógio entre API e Mongo
 
         try
         {
@@ -126,6 +127,28 @@ public class PedidoVendaService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Pix {TxId} pago, mas a venda do pedido {Grupo} não foi registrada.", pix.TxId, groupId);
+
+            // O RegisterAsync grava no Mongo antes de outras etapas (e o UPDATE acima pode falhar
+            // depois): se a venda chegou a ser gravada, ela vale — liberar o claim faria o Homologar
+            // vender de novo. Sem conseguir conferir, o claim fica (Homologar recusa) e os admins conferem.
+            VendaAvulsaDto? gravada;
+            try { gravada = await _vendas.BuscarVendaDoPedidoAsync(groupId, inicio); }
+            catch (Exception ex2)
+            {
+                _logger.LogError(ex2, "Não deu pra conferir se a venda do pedido {Grupo} foi gravada; claim mantido.", groupId);
+                await AvisarAdminsAsync("Pedido pago: conferir a venda",
+                    $"{primeiro.User?.Name ?? "Um cliente"} pagou o Pix do pedido e não deu pra confirmar se a venda entrou no Financeiro. " +
+                    "Confira em Vendas antes de mexer no pedido.");
+                return null;
+            }
+            if (gravada is not null)
+            {
+                await _db.ProductReservations
+                    .Where(r => ids.Contains(r.Id) && r.VendaAvulsaId == marca)
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.VendaAvulsaId, gravada.Id));
+                return gravada.Id;
+            }
+
             await LiberarAsync(ids, marca);
             await AvisarAdminsAsync("Pedido pago sem venda registrada",
                 $"{primeiro.User?.Name ?? "Um cliente"} pagou o Pix do pedido, mas a venda não entrou no Financeiro. " +
