@@ -15,6 +15,9 @@ errado na vida real, e cada etapa confere a regra e marca ✓/✗:
      - ninguém joga duas vezes contra o mesmo adversário
      - rodada 2: os dois jogadores de uma mesa dizem "Venci" → a loja resolve
      - rodada 3: um jogador desiste → não é mais pareado
+  3b. pedidos do Maikon (20–21/10): deck escolhido na tela do torneio por quem entrou sem deck,
+      "Seus torneios" na entrada, "Estou pronto" na rodada 1 (loja marca a mesa de quem está sem
+      celular, bye não confirma, depois de começar é recusado) e deck travado depois da 1ª rodada
   4. encerra: colocações 1..N, pontos = 3×V + E, ordem por pontos e desempate (OWP),
      campeonato Finalizado, pódio, telão público e a Liga Mensal somando 10/7/5/3/1
 
@@ -112,8 +115,9 @@ for i, (nome, deck) in enumerate(zip(NOMES, DECKS), start=1):
     jogadores.append(j)
 
 inscritos, avulsos = jogadores[:8], jogadores[8:]          # 8 pelo site; 2 chegam na hora
+sem_deck = inscritos[5]       # se inscreve sem deck e escolhe na tela do torneio (pedido do Maikon)
 for j in inscritos:
-    st, r = j['cli'].req('POST', f'/api/championship/{cid}/register', {'deckName': j['deck']})
+    st, r = j['cli'].req('POST', f'/api/championship/{cid}/register', {'deckName': None if j is sem_deck else j['deck']})
     j['inscricaoSite'] = st
 ok(all(j['inscricaoSite'] < 300 for j in inscritos), '8 jogadores se inscreveram pelo site com o deck')
 st, publico = Cliente('visitante').req('GET', '/api/championship')
@@ -153,6 +157,17 @@ ok(len(presentes) == 9, f'9 presentes, 1 faltou ({len(presentes)} presentes)')
 ok(painel.get('rodadasSugeridas') in (3, 4), f"rodadas sugeridas pra 9 jogadores: {painel.get('rodadasSugeridas')}")
 pid_por_user = {p['userId']: p['id'] for p in painel['participantes']}
 nome_por_pid = {p['id']: p['nome'] for p in painel['participantes']}
+
+# ── 2b. Entrada e deck pela tela do torneio (pedidos do Maikon, 20/10) ───────
+etapa('2b. Entrada e deck pela tela do torneio')
+st, ativos = inscritos[0]['cli'].req('GET', '/api/torneios/ativos')
+ok(st == 200 and any(t['id'] == cid and t['checkIn'] for t in (ativos or [])),
+   '"Seus torneios" mostra o torneio de quem já fez check-in (a tela abre nele, sem o formulário do código)')
+st, mm = sem_deck['cli'].req('GET', f'/api/torneios/{cid}/minha-mesa')
+ok(st == 200 and not mm.get('deck'), f"{sem_deck['nome']} entrou pelo \"Estou aqui\" sem deck")
+st, _ = sem_deck['cli'].req('PUT', f'/api/torneios/{cid}/meu-deck', {'deckNome': sem_deck['deck']})
+st2, mm = sem_deck['cli'].req('GET', f'/api/torneios/{cid}/minha-mesa')
+ok(st < 300 and mm.get('deck') == sem_deck['deck'], f"escolheu o deck na tela do torneio ({sem_deck['deck']})")
 
 # ── 3. Rodadas ───────────────────────────────────────────────────────────────
 confrontos: set[frozenset] = set()
@@ -201,9 +216,46 @@ while True:
         if m['b']:
             confrontos.add(frozenset((m['a']['participanteId'], m['b']['participanteId'])))
 
+    if r == 1:
+        # "Estou pronto" (pedido do Maikon): cada um confirma com os básicos em campo; a loja marca
+        # a mesa de quem está sem celular; o bye não confirma
+        na_loja = [m for m in mesas if m['b'] and not m.get('aguardandoMesa')]
+        sem_celular = na_loja[0]
+        for m in na_loja[1:]:
+            for lado in ('a', 'b'):
+                jj = next(j for j in jogadores if j['userId'] == m[lado]['userId'])
+                jj['cli'].req('POST', f'/api/torneios/{cid}/pronto', {'pronto': True})
+        st, p1 = adm.req('GET', f'/api/torneios/{cid}/painel')
+        parciais = [m for m in p1['mesas'] if m['b'] and not m.get('aguardandoMesa')]
+        ok(not all(m.get('prontoA') and m.get('prontoB') for m in parciais),
+           'com uma mesa ainda montando, a loja NÃO vê "todas prontas"')
+        st, _ = adm.req('PUT', f"/api/torneios/{cid}/partidas/{sem_celular['partidaId']}/pronto", {'pronto': True})
+        st2, p1 = adm.req('GET', f'/api/torneios/{cid}/painel')
+        prontas = [m for m in p1['mesas'] if m['b'] and not m.get('aguardandoMesa')]
+        ok(st < 300 and all(m.get('prontoA') and m.get('prontoB') for m in prontas),
+           f'loja marcou a mesa de quem está sem celular → todas as {len(prontas)} mesas da loja prontas')
+        if byes:
+            jb = next(j for j in jogadores if j['userId'] == byes[0]['a']['userId'])
+            st, _ = jb['cli'].req('POST', f'/api/torneios/{cid}/pronto', {'pronto': True})
+            ok(st == 400, f'bye não precisa confirmar ({st})')
+        timer = p1.get('timer')
+        ok(not timer or timer.get('state') != 'running', 'todos prontos não liga o relógio sozinho: quem começa é a loja')
+
     st, _ = adm.req('POST', f'/api/torneios/{cid}/rodadas/atual/comecar')
     st2, painel = adm.req('GET', f'/api/torneios/{cid}/painel')
     ok(st < 300 and (painel.get('timer') or {}).get('state') == 'running', '"Começar rodada" ligou o relógio')
+    if r == 1:
+        jp = next(j for j in jogadores if j['userId'] == next(m for m in mesas if m['b'])['a']['userId'])
+        st, _ = jp['cli'].req('POST', f'/api/torneios/{cid}/pronto', {'pronto': False})
+        ok(st == 409, f'depois de começar, "pronto" é recusado ({st})')
+    if r == 2:
+        # Deck travado depois da 1ª rodada, até pelo código (Codex no #90)
+        jt = avulsos[0]
+        jt['cli'].req('POST', '/api/torneios/entrar', {'codigo': codigo, 'deckNome': 'Deck Trocado ex'})
+        st, mm = jt['cli'].req('GET', f'/api/torneios/{cid}/minha-mesa')
+        ok(mm.get('deck') == jt['deck'], f"entrar de novo pelo código com outro deck no meio do torneio não troca ({mm.get('deck')})")
+        st, _ = jt['cli'].req('PUT', f'/api/torneios/{cid}/meu-deck', {'deckNome': 'Deck Trocado ex'})
+        ok(st == 409, f'trocar o deck pela tela do torneio depois da 1ª rodada é recusado ({st})')
 
     # Tela do jogador: mostra a mesa e o oponente
     exemplo = next(m for m in mesas if m['b'])

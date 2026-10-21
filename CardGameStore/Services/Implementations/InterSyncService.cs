@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CardGameStore.Services.Vigia;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -530,6 +531,7 @@ public class InterSyncBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         // aguarda 2 min após startup para não competir com EnsureCreated
+        BatimentoRobos.Iniciou("Inter (extrato)", TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(15)); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(2), ct);
 
         while (!ct.IsCancellationRequested)
@@ -544,9 +546,13 @@ public class InterSyncBackgroundService : BackgroundService
                     _logger.LogInformation(
                         "Inter sync: {imported} importadas, {dup} duplicatas, erro={error}",
                         result.Imported, result.Duplicates, result.Error ?? "-");
+                // SyncAsync devolve o erro (não lança): volta com erro não é volta boa pro Vigia
+                if (result.Error is not null) BatimentoRobos.Falhou("Inter (extrato)", result.Error);
+                else BatimentoRobos.Bateu("Inter (extrato)");
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("Inter (extrato)", ex);
                 _logger.LogError(ex, "Erro no background sync do Inter");
             }
 

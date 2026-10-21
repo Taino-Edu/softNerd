@@ -266,4 +266,107 @@ public class VigiaServiceTests
         (await vigia.ListarAsync("resolvidos", null, null, null)).Should().BeEmpty();
         (await vigia.ResumoAsync()).Should().Match<ResumoVigia>(r => r.Abertos == 2 && r.Criticos == 1 && r.Avisos == 1);
     }
+
+    // ── Gatilhos da operação (v1.63.2) ───────────────────────────────────────
+
+    private static Comanda Comanda(Amb a, int horasAtras, ComandaStatus status = ComandaStatus.EmAndamento)
+    {
+        var c = new Comanda { UserId = a.Cliente.Id, TableIdentifier = "4", Status = status,
+            OpenedAt = DateTime.UtcNow.AddHours(-horasAtras), TotalInCents = 4500 };
+        a.Db.Comandas.Add(c);
+        a.Db.SaveChanges();
+        return c;
+    }
+
+    [Fact]
+    public async Task ComandaEsquecida_SoDepoisDe12Horas_EFechadaNaoConta()
+    {
+        var a = Criar();
+        var velha = Comanda(a, 13);
+        Comanda(a, 2);
+        Comanda(a, 30, ComandaStatus.Fechada);
+
+        var achados = await new VerificacaoComandaEsquecida(a.Db).VerificarAsync(default);
+
+        achados.Should().ContainSingle().Which.Referencia.Should().Be(velha.Id.ToString());
+    }
+
+    [Fact]
+    public async Task PixDeComandaPago_EComandaAberta_Critico()
+    {
+        var a = Criar();
+        var aberta = Comanda(a, 1);
+        var fechada = Comanda(a, 1, ComandaStatus.Fechada);
+        foreach (var c in new[] { aberta, fechada })
+            a.Db.PixCobrancas.Add(new PixCobranca
+            {
+                Origem = PixCobrancaOrigem.Comanda, ComandaId = c.Id, TxId = Guid.NewGuid().ToString("N"),
+                ValorEmCentavos = 4500, Status = "CONCLUIDA", PagoEm = DateTime.UtcNow.AddMinutes(-30), CriadoPorAdminId = a.Admin.Id,
+            });
+        a.Db.SaveChanges();
+
+        var achados = await new VerificacaoPixComandaSemFechar(a.Db).VerificarAsync(default);
+
+        achados.Should().ContainSingle().Which.Gravidade.Should().Be(VigiaGravidade.Critico);
+    }
+
+    [Fact]
+    public async Task NfceRejeitada_EPendenteParada_Alertam_AutorizadaNao()
+    {
+        var a = Criar();
+        a.Db.NotasFiscaisEmitidas.AddRange(
+            new NotaFiscalEmitida { Status = NotaFiscalStatus.Rejeitada, MotivoRejeicao = "539 - Duplicidade", ValorTotalEmCentavos = 1000 },
+            // Criada há 3 h, mas o reenvio acabou de mexer nela (UpdatedAt agora): continua parada
+            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 2000,
+                CreatedAt = DateTime.UtcNow.AddHours(-3), UpdatedAt = DateTime.UtcNow },
+            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 3000, CreatedAt = DateTime.UtcNow.AddMinutes(-10) },
+            new NotaFiscalEmitida { Status = NotaFiscalStatus.Autorizada, ValorTotalEmCentavos = 4000 });
+        a.Db.SaveChanges();
+
+        var achados = await new VerificacaoNfceComProblema(a.Db).VerificarAsync(default);
+
+        achados.Should().HaveCount(2);
+        achados.Should().Contain(x => x.Detalhe.Contains("539 - Duplicidade"));
+    }
+
+    [Fact]
+    public async Task TorneioEmAndamentoHaMaisDe12Horas_Alerta()
+    {
+        var a = Criar();
+        var atrasada = new Championship { Name = "Liguinha que atrasou", Game = "Pokemon", StartDate = DateTime.UtcNow.AddHours(-20), Status = ChampionshipStatus.EmAndamento, RodadaAtual = 1 };
+        a.Db.Championships.AddRange(
+            new Championship { Name = "Liguinha esquecida", Game = "Pokemon", StartDate = DateTime.UtcNow.AddHours(-20), Status = ChampionshipStatus.EmAndamento, RodadaAtual = 3 },
+            new Championship { Name = "Liguinha de agora", Game = "Pokemon", StartDate = DateTime.UtcNow.AddHours(-2), Status = ChampionshipStatus.EmAndamento },
+            atrasada);
+        // Marcada pra 20 h atrás, mas a 1ª rodada só saiu há 1 h: não está esquecida
+        a.Db.TorneioRodadas.Add(new TorneioRodada { ChampionshipId = atrasada.Id, Numero = 1, IniciadaEm = DateTime.UtcNow.AddHours(-1) });
+        a.Db.SaveChanges();
+
+        var achados = await new VerificacaoTorneioNaoEncerrado(a.Db).VerificarAsync(default);
+
+        achados.Should().ContainSingle().Which.Titulo.Should().Contain("esquecida");
+    }
+
+    [Fact]
+    public async Task Robos_ParadoOuFalhandoAlerta_OSaudavelNao()
+    {
+        BatimentoRobos.Limpar();
+        try
+        {
+            BatimentoRobos.Iniciou("saudável", TimeSpan.Zero, TimeSpan.FromMinutes(5));
+            BatimentoRobos.Bateu("saudável");
+            // Parado: começou há 1 h com espera de 1 min e intervalo de 5 — nunca completou volta
+            BatimentoRobos.Definir(new EstadoRobo("parado", DateTime.UtcNow.AddHours(-1), TimeSpan.FromMinutes(1),
+                TimeSpan.FromMinutes(5), UltimaVoltaOk: null, FalhasSeguidas: 0, UltimoErro: null));
+            BatimentoRobos.Iniciou("falhando", TimeSpan.Zero, TimeSpan.FromMinutes(5));
+            for (var i = 0; i < VerificacaoRobosParados.FalhasParaAlertar; i++)
+                BatimentoRobos.Falhou("falhando", new InvalidOperationException("Inter fora do ar"));
+
+            var achados = await new VerificacaoRobosParados().VerificarAsync(default);
+
+            achados.Select(x => x.Referencia).Should().BeEquivalentTo(["parado", "falhando"]);
+            achados.Single(x => x.Referencia == "falhando").Detalhe.Should().Contain("Inter fora do ar");
+        }
+        finally { BatimentoRobos.Limpar(); }
+    }
 }

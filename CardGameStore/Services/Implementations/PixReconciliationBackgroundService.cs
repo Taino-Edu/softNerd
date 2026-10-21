@@ -10,6 +10,7 @@ using System.Net;
 using CardGameStore.Data;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using CardGameStore.Services.Vigia;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -28,16 +29,22 @@ public class PixReconciliationBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         // aguarda 1 min após startup para não competir com EnsureCreated
+        BatimentoRobos.Iniciou("Pix (cobranças)", TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5)); // Vigia: robô parado vira alerta
         await Task.Delay(TimeSpan.FromMinutes(1), ct);
 
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                await ReconciliarPendentesAsync();
+                var (tentadas, falhas, erro) = await ReconciliarPendentesAsync();
+                // Todas as consultas do ciclo falharam = o robô não está conseguindo trabalhar (Inter fora,
+                // certificado vencido…). Uma cobrança com problema no meio das outras não conta.
+                if (tentadas > 0 && falhas == tentadas) BatimentoRobos.Falhou("Pix (cobranças)", erro ?? "todas as consultas falharam");
+                else BatimentoRobos.Bateu("Pix (cobranças)");
             }
             catch (Exception ex)
             {
+                BatimentoRobos.Falhou("Pix (cobranças)", ex);
                 _logger.LogError(ex, "Erro no ciclo de reconciliação de cobranças Pix");
             }
 
@@ -45,8 +52,11 @@ public class PixReconciliationBackgroundService : BackgroundService
         }
     }
 
-    private async Task ReconciliarPendentesAsync()
+    /// <returns>Quantas cobranças tentou consultar, quantas falharam e o último erro.</returns>
+    private async Task<(int Tentadas, int Falhas, string? UltimoErro)> ReconciliarPendentesAsync()
     {
+        int tentadas = 0, falhas = 0;
+        string? ultimoErro = null;
         // Janela de 24h: a cobrança Pix imediata expira em 1h — mais velha que isso
         // ou já foi removida pelo PSP ou nunca será paga, não vale consultar pra sempre.
         var limite = DateTime.UtcNow.AddHours(-24);
@@ -76,7 +86,9 @@ public class PixReconciliationBackgroundService : BackgroundService
                 // A tela pode ter confirmado no meio do ciclo — relê o status antes de consultar o Inter.
                 if (pix is null || pix.Status != "ATIVA") continue;
 
+                tentadas++;
                 var result = await svc.ReconciliarAsync(pix);
+                if (result.Error is not null) { falhas++; ultimoErro = result.Error; }
                 if (result.BaixaEfetuada)
                     _logger.LogInformation("Pix {TxId} ({Origem}) confirmado pelo robô — baixa efetuada.", pix.TxId, pix.Origem);
             }
@@ -89,10 +101,12 @@ public class PixReconciliationBackgroundService : BackgroundService
                     "Inter respondeu 429 (excesso de requisições) ao reconciliar Pix {Id}. " +
                     "Ciclo interrompido com {Restantes} cobrança(s) na fila — retomando no próximo ciclo.",
                     id, pendentes.Count - pendentes.IndexOf(id) - 1);
-                return;
+                return (tentadas, falhas + 1, "Inter respondeu 429 (excesso de requisições)");
             }
             catch (Exception ex)
             {
+                falhas++;
+                ultimoErro = ex.GetType().Name + ": " + ex.Message;
                 _logger.LogError(ex, "Falha ao reconciliar cobrança Pix {Id} — seguindo para as demais", id);
             }
 
@@ -102,5 +116,7 @@ public class PixReconciliationBackgroundService : BackgroundService
             // bem dentro da janela de 5 min do ciclo.
             await Task.Delay(TimeSpan.FromMilliseconds(250));
         }
+
+        return (tentadas, falhas, ultimoErro);
     }
 }
