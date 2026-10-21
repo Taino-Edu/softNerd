@@ -153,6 +153,11 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
         </section>
       )}
 
+      {/* Erro do "Estou aqui" com o formulário recolhido: o do formulário não aparece */}
+      {!formAberto && erro && (
+        <p className="txt-erro text-sm flex items-start gap-1.5"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{erro}</p>
+      )}
+
       {!formAberto && (
         <button onClick={() => setMostrarCodigo(true)} className="btn-secondary w-full justify-center py-3">
           <Swords className="w-4 h-4" /> Entrar em outro torneio com código

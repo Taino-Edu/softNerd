@@ -489,6 +489,26 @@ public class TorneioServiceTests
     }
 
     [Fact]
+    public async Task Entrar_DeNovoComOutroDeckDepoisDeComecar_NaoTrocaODeck()
+    {
+        // Codex no PR #90: o código driblava a trava do meu-deck
+        var amb = Criar(2);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30);
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, "Lugia");
+        await amb.Torneio.EntrarAsync(amb.Jogadores[1].Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, "Dragapult ex");
+        await amb.Torneio.EntrarAsync(amb.Jogadores[1].Id, ch.CodigoEntrada!, null, "Raging Bolt ex");
+
+        var mesa = (await amb.Torneio.PainelAsync(amb.Ch.Id)).Mesas.Single();
+        new[] { mesa.A.Deck, mesa.B!.Deck }.Should().BeEquivalentTo(["Lugia", "Raging Bolt ex"],
+            "quem tinha deck não troca; quem estava sem escolhe e a mesa já mostra");
+        (await amb.Db.ChampionshipParticipants.AsNoTracking().Select(p => p.DeckName).ToListAsync())
+            .Should().BeEquivalentTo(["Lugia", "Raging Bolt ex"]);
+    }
+
+    [Fact]
     public async Task MeuDeck_QuemDesistiu_Recusa()
     {
         var amb = Criar(2);

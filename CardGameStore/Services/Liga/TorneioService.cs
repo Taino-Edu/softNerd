@@ -408,7 +408,10 @@ public class TorneioService
         }
 
         if (p.DesistiuNaRodada is not null) throw new TorneioException("Você desistiu deste torneio. Fale com o organizador.");
-        if (deckNome is not null) { p.DeckId = deckId; p.DeckName = deckNome; }
+        // Mesma trava do TrocarMeuDeckAsync: depois da 1ª rodada o deck não muda (entrar de novo pelo
+        // código com outro deck só faz o check-in). Quem ainda está sem deck pode escolher.
+        if (deckNome is not null && (ch.RodadaAtual == 0 || string.IsNullOrWhiteSpace(p.DeckName)))
+            await AplicarDeckAsync(ch, p, deckId, deckNome);
         p.CheckInEm ??= DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await AvisarAsync(ch.Id, "checkin");
@@ -487,13 +490,21 @@ public class TorneioService
         deckNome = string.IsNullOrWhiteSpace(deckNome) ? null : deckNome.Trim()[..Math.Min(deckNome.Trim().Length, 200)];
         if (deckNome is null) throw new TorneioException("Escolha um deck ou digite o nome.");
 
+        await AplicarDeckAsync(ch, p, deckId, deckNome);
+        await _db.SaveChangesAsync();
+        await AvisarAsync(championshipId, "checkin");
+    }
+
+    /// <summary>Grava o deck do participante; com rodada em aberto, a mesa dele também ganha o deck.</summary>
+    private async Task AplicarDeckAsync(Championship ch, ChampionshipParticipant p, Guid? deckId, string deckNome)
+    {
         p.DeckId = deckId;
         p.DeckName = deckNome;
         if (ch.RodadaAtual > 0)
         {
             // A mesa em aberto guarda a foto do deck: sem isso o sprite só apareceria na próxima rodada
             var abertas = await _db.TorneioPartidas
-                .Where(x => x.Rodada.ChampionshipId == championshipId && x.Rodada.Numero == ch.RodadaAtual && x.Resultado == null
+                .Where(x => x.Rodada.ChampionshipId == ch.Id && x.Rodada.Numero == ch.RodadaAtual && x.Resultado == null
                             && (x.ParticipanteAId == p.Id || x.ParticipanteBId == p.Id))
                 .ToListAsync();
             foreach (var m in abertas)
@@ -502,8 +513,6 @@ public class TorneioService
                 else { m.DeckBId = deckId; m.DeckBNome = deckNome; }
             }
         }
-        await _db.SaveChangesAsync();
-        await AvisarAsync(championshipId, "checkin");
     }
 
     /// <summary>O próprio jogador sai do torneio.</summary>
