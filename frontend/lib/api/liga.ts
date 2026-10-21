@@ -121,6 +121,9 @@ export const torneioApi = {
   lancar:      (id: string, partidaId: string, resultado: ResultadoJogador) =>
     api.post(`/api/torneios/${id}/partidas/${partidaId}/resultado`, { resultado }),
   desistir:    (id: string) => api.post(`/api/torneios/${id}/desistir`),
+  /** Escolhe/troca o próprio deck (livre até a 1ª rodada; depois só quem está sem deck). */
+  meuDeck:     (id: string, body: { deckId?: string | null; deckNome?: string | null }) =>
+    api.put(`/api/torneios/${id}/meu-deck`, body),
   /** "Estou pronto": setup montado, básicos em campo. */
   pronto:      (id: string, pronto: boolean) => api.post(`/api/torneios/${id}/pronto`, { pronto }),
 

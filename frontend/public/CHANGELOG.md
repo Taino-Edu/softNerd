@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.61.1] — 2026-10-20
+
+### Corrigido — entrada na liguinha pelo celular (teste do Maikon)
+- **Quem já está num torneio vê só o torneio dele**, com "Abrir →". Antes aparecia também o formulário de código com o botão "Entrar no torneio" apagado (parecia quebrado) — o jeito era deslogar e entrar pelo código
+- **Quem não está em nenhum vê só o código**; depois de entrar, vai direto pra tela do torneio. Outro torneio: botão "Entrar em outro torneio com código"
+- **Deck (o Pokémon que aparece no telão e na Liga) na tela do torneio**: quem entrou pelo "Estou aqui" ou foi adicionado pelo organizador agora escolhe ali, com o sprite de prévia; dá pra trocar até a 1ª rodada sair (depois, só quem ainda está sem deck)
+- "Liguinha" no topo da tela do jogador agora é um link (parecia botão e não fazia nada)
+- Chave `liguinha-entrada-simples` em Funcionalidades: desligada, volta a tela de antes
+
 ## [v1.61.0] — 2026-10-20
 
 ### Novo — botão "Estou pronto" na liguinha (pedido do Maikon)

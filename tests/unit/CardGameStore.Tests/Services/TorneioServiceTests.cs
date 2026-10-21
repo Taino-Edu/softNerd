@@ -455,6 +455,95 @@ public class TorneioServiceTests
         mesa.Mesa!.ReportA.Should().BeNull(); // o detalhe cru não vaza
     }
 
+    // ── Deck pela tela do torneio (pedido do Maikon, 20/10/2026) ────────────
+    // Quem entrou pelo "Estou aqui" ou foi adicionado pelo organizador não tinha onde escolher o deck.
+
+    [Fact]
+    public async Task MeuDeck_AntesDeComecar_TrocaLivre()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+
+        await amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, null, "Dragapult ex");
+        await amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, null, " Gardevoir ex ");
+
+        (await amb.Db.ChampionshipParticipants.AsNoTracking().SingleAsync(p => p.UserId == amb.Jogadores[0].Id))
+            .DeckName.Should().Be("Gardevoir ex");
+    }
+
+    [Fact]
+    public async Task MeuDeck_TorneioComecado_QuemTemDeckNaoTroca_QuemNaoTemEscolheEApareceNaMesa()
+    {
+        var amb = Criar(2);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30);
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, "Lugia");
+        await amb.Torneio.EntrarAsync(amb.Jogadores[1].Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+
+        var trocar = () => amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, null, "Dragapult ex");
+        (await trocar.Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409);
+
+        await amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[1].Id, amb.Ch.Id, null, "Raging Bolt ex");
+        var mesa = (await amb.Torneio.PainelAsync(amb.Ch.Id)).Mesas.Single();
+        new[] { mesa.A.Deck, mesa.B!.Deck }.Should().BeEquivalentTo("Lugia", "Raging Bolt ex");
+    }
+
+    [Fact]
+    public async Task Entrar_DeNovoComOutroDeckDepoisDeComecar_NaoTrocaODeck()
+    {
+        // Codex no PR #90: o código driblava a trava do meu-deck
+        var amb = Criar(2);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 30);
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, "Lugia");
+        await amb.Torneio.EntrarAsync(amb.Jogadores[1].Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, "Dragapult ex");
+        await amb.Torneio.EntrarAsync(amb.Jogadores[1].Id, ch.CodigoEntrada!, null, "Raging Bolt ex");
+
+        var mesa = (await amb.Torneio.PainelAsync(amb.Ch.Id)).Mesas.Single();
+        new[] { mesa.A.Deck, mesa.B!.Deck }.Should().BeEquivalentTo(["Lugia", "Raging Bolt ex"],
+            "quem tinha deck não troca; quem estava sem escolhe e a mesa já mostra");
+        (await amb.Db.ChampionshipParticipants.AsNoTracking().Select(p => p.DeckName).ToListAsync())
+            .Should().BeEquivalentTo(["Lugia", "Raging Bolt ex"]);
+    }
+
+    [Fact]
+    public async Task MeuDeck_QuemDesistiu_Recusa()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.DesistirAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+
+        var acao = () => amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, null, "Lugia");
+
+        (await acao.Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409);
+    }
+
+    [Fact]
+    public async Task MeuDeck_ChaveDesligada_Recusa()
+    {
+        var amb = Criar(2);
+        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LiguinhaEntradaSimples, false, Guid.NewGuid());
+        await InscreverEEntrarTodosAsync(amb);
+
+        await FluentActions.Awaiting(() => amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, null, "Lugia"))
+            .Should().ThrowAsync<TorneioException>();
+    }
+
+    [Fact]
+    public async Task MeuDeck_DeckDeOutraConta_Recusa()
+    {
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        var deckDoOutro = new Deck { UserId = amb.Jogadores[1].Id, Name = "Do outro", Game = "Pokemon" };
+        amb.Db.Decks.Add(deckDoOutro);
+        await amb.Db.SaveChangesAsync();
+
+        await FluentActions.Awaiting(() => amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, deckDoOutro.Id, null))
+            .Should().ThrowAsync<TorneioException>();
+    }
+
     // ── "Estou pronto" na mesa (pedido do Maikon, 20/10/2026) ────────────────
     // Pokémon: todos com os básicos em campo antes do relógio correr. Quando todas as mesas
     // estão prontas o organizador é avisado e ele mesmo começa a rodada.

@@ -57,6 +57,7 @@ public static class Funcionalidades
     public const string LoginTelasUnificadas = "login-telas-unificadas";
     public const string PedidoPixConsistente = "pedido-pix-consistente";
     public const string LiguinhaProntoNaMesa = "liguinha-pronto-na-mesa";
+    public const string LiguinhaEntradaSimples = "liguinha-entrada-simples";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -272,6 +273,16 @@ public static class Funcionalidades
             SeDesligar: "Some o botão: o organizador volta a olhar as mesas e começar a rodada quando achar que todos montaram o setup.",
             Padrao:     true,
             Desde:      "v1.61.0",
+            RevisarEm:  new DateOnly(2027, 3, 1)),
+
+        new(LiguinhaEntradaSimples,
+            Nome:       "Liguinha: entrada em uma tela e deck na tela do torneio",
+            OQueMuda:   "No celular, quem já está num torneio vê só os torneios dele (o código fica atrás de \"Entrar em outro torneio\"). " +
+                        "Quem não está vê só o código; depois de entrar vai pra tela do torneio. O deck (o Pokémon que aparece no telão e na Liga) " +
+                        "se escolhe e troca na tela do torneio — vale pra quem entrou pelo \"Estou aqui\" ou foi adicionado pelo organizador.",
+            SeDesligar: "Volta a tela de antes: torneios e formulário de código com deck juntos, e o deck só se escolhe ao entrar pelo código.",
+            Padrao:     true,
+            Desde:      "v1.61.1",
             RevisarEm:  new DateOnly(2027, 3, 1)),
     ];
 
