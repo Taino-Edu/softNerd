@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.62.1] — 2026-10-21
+
+### Corrigido — telão e pódio no celular (Maikon)
+- **Pódio cortava no celular**: os 3 cartões não encolhiam e a página ficava mais larga que a tela (cortava ao mexer no zoom). Agora dividem a largura, o sprite fica num tamanho que cabe no cartão (deck com dois Pokémon não invade o vizinho) e os textos diminuem no celular
+- Classificação e mesas do telão também não passam mais da tela em celular estreito (320px); o selo PRONTO fica ao lado do nome sem empurrar a linha, e o relógio diminui um pouco em telas bem pequenas
+- Na TV e no computador nada muda
+
 ## [v1.62.0] — 2026-10-21
 
 ### Pedidos do site no padrão de e-commerce — a venda conta no pagamento

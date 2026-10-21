@@ -47,7 +47,7 @@ function RelogioTelao({ t, cor, compacto }: { t: TorneioPublicoDto; cor: string;
         <Clock className="inline w-4 h-4 -mt-1 mr-2" />
         {t.timer?.state === 'paused' ? 'RELÓGIO PAUSADO' : `TEMPO DA RODADA ${t.rodadaAtual}`}
       </p>
-      <p className={`${pixel.className} ${compacto ? 'mt-3 text-6xl md:text-7xl' : 'mt-4 text-6xl md:text-8xl 2xl:text-9xl'} leading-none ${acabou ? 'animate-pulse' : ''}`}
+      <p className={`${pixel.className} ${compacto ? 'mt-3 text-5xl min-[360px]:text-6xl md:text-7xl' : 'mt-4 text-5xl min-[360px]:text-6xl md:text-8xl 2xl:text-9xl'} leading-none ${acabou ? 'animate-pulse' : ''}`}
         style={{ color: corTempo, textShadow: `0 6px 0 ${mixHex(cor, '#000000', 0.5)}` }}>
         {acabou ? 'TEMPO!' : `${mm}:${ss}`}
       </p>
@@ -64,10 +64,13 @@ function Jogador({ nome, deck, venceu, perdeu, compacto, pronto }: { nome: strin
     <div className={`flex items-center ${compacto ? 'gap-2' : 'gap-3'} min-w-0 ${perdeu ? 'opacity-50' : ''}`}>
       <span className={`${compacto ? 'w-9 h-9' : 'w-12 h-12'} shrink-0 flex items-end justify-center`}><SpriteDeck deck={deck} tamanho={compacto ? 36 : 48} /></span>
       <div className="min-w-0 flex-1">
-        <p className={`${compacto ? 'text-sm md:text-base' : 'text-base md:text-lg'} font-black leading-tight truncate`} style={{ color: B }}>
-          {nome}{venceu && <CheckCircle2 className="inline w-4 h-4 ml-1.5 -mt-0.5" style={{ color: '#4ADE80' }} />}
-          {pronto && <span className={`${pixel.className} ml-2 text-[8px] align-middle px-1.5 py-0.5 rounded`} style={{ backgroundColor: 'rgba(74,222,128,0.18)', color: '#4ADE80' }}>PRONTO</span>}
-        </p>
+        {/* Selo fora do texto cortado: dentro dele empurrava a linha pra fora da tela no celular */}
+        <div className="flex items-center gap-2 min-w-0">
+          <p className={`${compacto ? 'text-sm md:text-base' : 'text-base md:text-lg'} font-black leading-tight truncate min-w-0`} style={{ color: B }}>
+            {nome}{venceu && <CheckCircle2 className="inline w-4 h-4 ml-1.5 -mt-0.5" style={{ color: '#4ADE80' }} />}
+          </p>
+          {pronto && <span className={`${pixel.className} shrink-0 text-[8px] px-1.5 py-0.5 rounded`} style={{ backgroundColor: 'rgba(74,222,128,0.18)', color: '#4ADE80' }}>PRONTO</span>}
+        </div>
         {deck && <p className={`${compacto ? 'text-[11px]' : 'text-xs'} truncate`} style={{ color: FRACO }}>{deck}</p>}
       </div>
     </div>
@@ -113,7 +116,7 @@ function Classificacao({ linhas, cheia }: { linhas: LinhaTabela[]; cheia: boolea
   return (
     <section className="rounded-3xl p-4 md:p-5" style={CARD}>
       <h2 className={`${pixel.className} text-[11px] mb-3`} style={{ color: AMARELO }}>CLASSIFICAÇÃO</h2>
-      <div className={`grid ${compacta ? 'gap-1 2xl:grid-cols-2 2xl:gap-x-4' : 'gap-1.5'} ${cheia ? 'xl:grid-cols-2 xl:gap-x-6' : ''}`}>
+      <div className={`grid grid-cols-1 ${compacta ? 'gap-1 2xl:grid-cols-2 2xl:gap-x-4' : 'gap-1.5'} ${cheia ? 'xl:grid-cols-2 xl:gap-x-6' : ''}`}>
         {linhas.map(l => {
           const p = PODIO[l.posicao - 1]
           return (
@@ -149,21 +152,27 @@ function Classificacao({ linhas, cheia }: { linhas: LinhaTabela[]; cheia: boolea
 function Podio({ linhas }: { linhas: LinhaTabela[] }) {
   const top = [linhas[1], linhas[0], linhas[2]].filter(Boolean)
   return (
-    <section className="flex items-end justify-center gap-3 md:gap-6 pt-4">
+    // Celular: os 3 cartões dividem a largura e encolhem (min-w-0); o sprite se ajusta ao cartão em vez
+    // de empurrar a página pra fora da tela (cortava ao mexer no zoom — Maikon, 20/10/2026)
+    <section className="flex items-end justify-center gap-2 sm:gap-3 md:gap-6 pt-4">
       {top.map(l => {
         const p = PODIO[l.posicao - 1]
         const campeao = l.posicao === 1
         return (
-          <div key={l.participanteId} className={`flex-1 max-w-[240px] rounded-3xl px-3 pt-4 pb-5 text-center ${campeao ? 'md:-translate-y-4' : ''}`}
+          <div key={l.participanteId} className={`flex-1 min-w-0 max-w-[240px] rounded-2xl sm:rounded-3xl px-2 sm:px-3 pt-4 pb-5 text-center ${campeao ? 'md:-translate-y-4' : ''}`}
             style={{ ...CARD, borderColor: p.cor, boxShadow: campeao ? `0 0 40px -10px ${p.cor}` : undefined }}>
             {campeao && <Crown className="w-8 h-8 mx-auto mb-1 animate-bounce" style={{ color: AMARELO }} />}
-            <span className={`${pixel.className} inline-flex w-11 h-11 rounded-xl items-center justify-center text-xs`} style={{ backgroundColor: p.cor, color: p.texto }}>
+            <span className={`${pixel.className} inline-flex w-9 h-9 sm:w-11 sm:h-11 rounded-xl items-center justify-center text-[10px] sm:text-xs`} style={{ backgroundColor: p.cor, color: p.texto }}>
               {p.rotulo}
             </span>
-            <div className="mt-3 flex justify-center h-24 items-end"><SpriteDeck deck={l.deck} tamanho={campeao ? 96 : 72} /></div>
-            <p className="mt-2 text-lg md:text-xl font-black truncate" style={{ color: B }}>{l.nome}</p>
+            {/* Celular: sprite de 56px (o tamanho vem inline do SpriteDeck — o !important passa por cima); deck de
+                dois Pokémon cabe no cartão sem invadir o vizinho */}
+            <div className="mt-3 flex justify-center h-20 sm:h-24 items-end min-w-0 max-sm:[&_img]:!w-14 max-sm:[&_img]:!h-14">
+              <SpriteDeck deck={l.deck} tamanho={campeao ? 96 : 72} />
+            </div>
+            <p className="mt-2 text-sm sm:text-lg md:text-xl font-black truncate" style={{ color: B }}>{l.nome}</p>
             {l.deck && <p className="text-xs truncate" style={{ color: FRACO }}>{l.deck}</p>}
-            <p className={`${pixel.className} mt-3 text-base md:text-xl`} style={{ color: p.cor }}>{l.pontos} PTS</p>
+            <p className={`${pixel.className} mt-3 text-xs sm:text-base md:text-xl`} style={{ color: p.cor }}>{l.pontos} PTS</p>
           </div>
         )
       })}
@@ -224,7 +233,7 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
         {encerrado && t.classificacao.length > 0 && <Podio linhas={t.classificacao} />}
 
         {/* Em jogo: relógio e mesas na esquerda, classificação na direita — cabe numa TV 1920×1080 sem rolar */}
-        <div className={`grid gap-6 items-start ${emJogo && t.classificacao.length > 0 ? 'xl:grid-cols-[1.15fr_1fr]' : ''}`}>
+        <div className={`grid grid-cols-1 gap-6 items-start ${emJogo && t.classificacao.length > 0 ? 'xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]' : ''}`}>
           {emJogo && (
             <div className="space-y-5 min-w-0">
               <RelogioTelao t={t} cor={cor} compacto={muitasMesas} />
@@ -242,7 +251,7 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
               {t.mesas.length > 0 && (
                 <section className="space-y-3">
                   <h2 className={`${pixel.className} text-[11px]`} style={{ color: AMARELO }}>MESAS DA RODADA {t.rodadaAtual}</h2>
-                  <div className={`grid md:grid-cols-2 gap-3 ${muitasMesas ? '2xl:grid-cols-3' : ''}`}>
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${muitasMesas ? '2xl:grid-cols-3' : ''}`}>
                     {t.mesas.map(m => <CartaoMesa key={m.partidaId} m={m} compacto={muitasMesas} setup={setup && prontoLigado} />)}
                   </div>
                 </section>
