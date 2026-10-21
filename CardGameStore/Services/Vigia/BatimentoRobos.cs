@@ -34,6 +34,9 @@ public static class BatimentoRobos
             _ => new EstadoRobo(nome, DateTime.UtcNow, TimeSpan.Zero, TimeSpan.Zero, null, 1, Resumo(ex)),
             (_, e) => e with { FalhasSeguidas = e.FalhasSeguidas + 1, UltimoErro = Resumo(ex) });
 
+    /// <summary>Volta falhou sem exceção (o serviço devolveu o erro em vez de lançar).</summary>
+    public static void Falhou(string nome, string erro) => Falhou(nome, new Exception(erro));
+
     public static IReadOnlyCollection<EstadoRobo> Estado => Robos.Values.ToList();
 
     /// <summary>Só pros testes.</summary>

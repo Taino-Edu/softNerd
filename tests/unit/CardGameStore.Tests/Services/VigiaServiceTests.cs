@@ -316,8 +316,10 @@ public class VigiaServiceTests
         var a = Criar();
         a.Db.NotasFiscaisEmitidas.AddRange(
             new NotaFiscalEmitida { Status = NotaFiscalStatus.Rejeitada, MotivoRejeicao = "539 - Duplicidade", ValorTotalEmCentavos = 1000 },
-            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 2000, UpdatedAt = DateTime.UtcNow.AddHours(-3) },
-            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 3000, UpdatedAt = DateTime.UtcNow.AddMinutes(-10) },
+            // Criada há 3 h, mas o reenvio acabou de mexer nela (UpdatedAt agora): continua parada
+            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 2000,
+                CreatedAt = DateTime.UtcNow.AddHours(-3), UpdatedAt = DateTime.UtcNow },
+            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 3000, CreatedAt = DateTime.UtcNow.AddMinutes(-10) },
             new NotaFiscalEmitida { Status = NotaFiscalStatus.Autorizada, ValorTotalEmCentavos = 4000 });
         a.Db.SaveChanges();
 
@@ -331,9 +333,13 @@ public class VigiaServiceTests
     public async Task TorneioEmAndamentoHaMaisDe12Horas_Alerta()
     {
         var a = Criar();
+        var atrasada = new Championship { Name = "Liguinha que atrasou", Game = "Pokemon", StartDate = DateTime.UtcNow.AddHours(-20), Status = ChampionshipStatus.EmAndamento, RodadaAtual = 1 };
         a.Db.Championships.AddRange(
             new Championship { Name = "Liguinha esquecida", Game = "Pokemon", StartDate = DateTime.UtcNow.AddHours(-20), Status = ChampionshipStatus.EmAndamento, RodadaAtual = 3 },
-            new Championship { Name = "Liguinha de agora", Game = "Pokemon", StartDate = DateTime.UtcNow.AddHours(-2), Status = ChampionshipStatus.EmAndamento });
+            new Championship { Name = "Liguinha de agora", Game = "Pokemon", StartDate = DateTime.UtcNow.AddHours(-2), Status = ChampionshipStatus.EmAndamento },
+            atrasada);
+        // Marcada pra 20 h atrás, mas a 1ª rodada só saiu há 1 h: não está esquecida
+        a.Db.TorneioRodadas.Add(new TorneioRodada { ChampionshipId = atrasada.Id, Numero = 1, IniciadaEm = DateTime.UtcNow.AddHours(-1) });
         a.Db.SaveChanges();
 
         var achados = await new VerificacaoTorneioNaoEncerrado(a.Db).VerificarAsync(default);

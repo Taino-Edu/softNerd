@@ -77,7 +77,9 @@ public class VerificacaoNfceComProblema(AppDbContext db) : IVerificacaoVigia
             .Where(n => n.CreatedAt >= desde &&
                         (n.Status == NotaFiscalStatus.Rejeitada
                          || ((n.Status == NotaFiscalStatus.PendenteEmissao || n.Status == NotaFiscalStatus.AutorizadaContingencia)
-                             && n.UpdatedAt < paradaDesde)))
+                             // CreatedAt, não UpdatedAt: cada reenvio que falha atualiza o UpdatedAt e a nota
+                             // nunca pareceria parada durante uma queda da SEFAZ
+                             && n.CreatedAt < paradaDesde)))
             .Select(n => new { n.Id, n.Status, n.Numero, n.ValorTotalEmCentavos, n.MotivoRejeicao, n.CreatedAt })
             .ToListAsync(ct);
         return notas.Select(n => n.Status == NotaFiscalStatus.Rejeitada
@@ -101,13 +103,19 @@ public class VerificacaoTorneioNaoEncerrado(AppDbContext db) : IVerificacaoVigia
     public async Task<IReadOnlyList<Achado>> VerificarAsync(CancellationToken ct)
     {
         var limite = DateTime.UtcNow.AddHours(-12);
+        // Começou de verdade = 1ª rodada solta (StartDate é a data marcada; o evento pode atrasar).
+        // Sem rodada (campeonato que não é suíço), vale a data marcada.
         var abertos = await db.Championships.AsNoTracking()
-            .Where(c => c.Status == ChampionshipStatus.EmAndamento && c.StartDate < limite)
-            .Select(c => new { c.Id, c.Name, c.StartDate, c.RodadaAtual, c.NumeroRodadas })
+            .Where(c => c.Status == ChampionshipStatus.EmAndamento)
+            .Select(c => new
+            {
+                c.Id, c.Name, c.RodadaAtual, c.NumeroRodadas,
+                Inicio = db.TorneioRodadas.Where(r => r.ChampionshipId == c.Id).Min(r => (DateTime?)r.IniciadaEm) ?? c.StartDate,
+            })
             .ToListAsync(ct);
-        return abertos.Select(c => new Achado(c.Id.ToString(), VigiaGravidade.Aviso,
+        return abertos.Where(c => c.Inicio < limite).Select(c => new Achado(c.Id.ToString(), VigiaGravidade.Aviso,
             $"Torneio sem encerrar: {c.Name}",
-            $"Começou em {Brasilia.Formatar(c.StartDate)} e está na rodada {c.RodadaAtual}" +
+            $"Começou em {Brasilia.Formatar(c.Inicio)} e está na rodada {c.RodadaAtual}" +
             (c.NumeroRodadas is null ? "" : $" de {c.NumeroRodadas}") +
             ". Enquanto não encerrar, a colocação não grava e a Liga Mensal não soma.",
             $"/admin/liguinha/{c.Id}")).ToList();

@@ -546,7 +546,9 @@ public class InterSyncBackgroundService : BackgroundService
                     _logger.LogInformation(
                         "Inter sync: {imported} importadas, {dup} duplicatas, erro={error}",
                         result.Imported, result.Duplicates, result.Error ?? "-");
-                BatimentoRobos.Bateu("Inter (extrato)");
+                // SyncAsync devolve o erro (não lança): volta com erro não é volta boa pro Vigia
+                if (result.Error is not null) BatimentoRobos.Falhou("Inter (extrato)", result.Error);
+                else BatimentoRobos.Bateu("Inter (extrato)");
             }
             catch (Exception ex)
             {
