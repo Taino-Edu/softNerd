@@ -31,12 +31,14 @@ public class PixReconciliationService : IPixReconciliationService
     private readonly IPushService     _push;
     private readonly ILogger<PixReconciliationService> _logger;
     private readonly FuncionalidadesService? _funcionalidades;
+    private readonly PedidoVendaService? _pedidoVenda;
 
     public PixReconciliationService(
         AppDbContext db, InterSyncService inter, IComandaService comanda,
         IEmailService email, IPushService push, ILogger<PixReconciliationService> logger,
-        FuncionalidadesService? funcionalidades = null)
+        FuncionalidadesService? funcionalidades = null, PedidoVendaService? pedidoVenda = null)
     {
+        _pedidoVenda = pedidoVenda;
         _db      = db;
         _inter   = inter;
         _comanda = comanda;
@@ -140,6 +142,15 @@ public class PixReconciliationService : IPixReconciliationService
             // Outro fluxo ganhou o claim — relê pra devolver o estado real gravado por ele.
             await _db.Entry(pix).ReloadAsync();
             return new PixReconciliationResult { Status = pix.Status, PagoEm = pix.PagoEm };
+        }
+
+        // Pedido do site pago = venda do dia (chave "pedido-venda-no-pagamento"). Fora da
+        // transação: a venda mora no Mongo. Falha aqui não desfaz a baixa — o serviço avisa
+        // os admins e o "Homologar" continua resolvendo.
+        if (pix.Origem == PixCobrancaOrigem.Reserva && _pedidoVenda is not null)
+        {
+            try { await _pedidoVenda.RegistrarVendaDoPagamentoAsync(pix); }
+            catch (Exception ex) { _logger.LogError(ex, "Venda do pedido não registrada após o Pix {TxId}.", pix.TxId); }
         }
 
         if (aviso is not null)

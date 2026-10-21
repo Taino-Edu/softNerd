@@ -726,6 +726,222 @@ public class ReservationControllerTests
         (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("cancelled");
     }
 
+    // ── Venda no pagamento (chave "pedido-venda-no-pagamento") ─────────────────
+
+    [Fact]
+    public async Task Create_CongelaOPrecoDoPedido()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var controller = CreateController(db, loggedUserId: cliente.Id);
+
+        await controller.Create(new CreateReservationRequest { ProductId = produto.Id, Quantity = 1 });
+
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).UnitPriceInCents.Should().Be(1500);
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_JaVendidoNoPagamento_SoEntrega()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 1));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
+        await db.SaveChangesAsync();
+        var (venda, capturadas) = CreateVendaSpy();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        var result = await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        capturadas.Should().BeEmpty("a venda já entrou no Financeiro quando o Pix caiu");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("fulfilled");
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_Misturado_VendeSoOQueFaltaComPrecoCongelado()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var pago = await SeedProductAsync(db, stock: 5);
+        var balcao = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, groupId, (pago.Id, 1), (balcao.Id, 2));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
+        itens[1].UnitPriceInCents = 1200;
+        await db.SaveChangesAsync();
+        var mock = new Mock<IVendaAvulsaService>();
+        var capturadas = new List<VendaAvulsaRequest>();
+        mock.Setup(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()))
+            .Callback<VendaAvulsaRequest, Guid, string>((r, _, _) => capturadas.Add(r))
+            .ReturnsAsync(new VendaAvulsaDto { Id = "venda-balcao" });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: mock.Object);
+
+        await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        var item = capturadas.Single().Items.Single();
+        (item.ProductId, item.Quantity, item.UnitPriceInCents).Should().Be((balcao.Id, 2, 1200));
+        (await db.ProductReservations.AsNoTracking().SingleAsync(r => r.ProductId == balcao.Id)).VendaAvulsaId.Should().Be("venda-balcao");
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_PixRegistrouAVendaNoMeio_NaoVendeDuasVezes()
+    {
+        // Corrida: o Homologar leu o item sem venda; antes do UPDATE dele, o Pix registrou a venda.
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 1));
+        var mock = new Mock<IVendaAvulsaService>();
+        mock.Setup(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()))
+            .ReturnsAsync(new VendaAvulsaDto { Id = "venda-balcao" });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: mock.Object);
+        var lidos = await db.ProductReservations.Include(r => r.Product).Include(r => r.User)
+            .Where(r => r.ReservationGroupId == groupId).ToListAsync();      // o que o Homologar leu
+        await db.ProductReservations.Where(r => r.Id == itens[0].Id)          // o Pix chegou antes
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.VendaAvulsaId, "venda-pix").SetProperty(r => r.ExpiresAt, (DateTime?)null));
+
+        var result = await controller.HomologarItensParaTesteAsync(lidos, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        mock.Verify(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()), Times.Never);
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().Be("venda-pix");
+    }
+
+    [Fact]
+    public async Task Cancelar_VendaSendoRegistradaAgora_RecusaSemDevolverEstoque()
+    {
+        // O Pix acabou de cair e a venda está sendo gravada: cancelar agora deixaria venda sem pedido
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "registrando:tx1";
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+        controller.ControllerContext.HttpContext.User.AddIdentity(
+            new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin")]));
+
+        var result = await controller.UpdateStatus(itens[0].Id, new UpdateReservationStatusRequest { Status = "cancelled" });
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("active");
+        (await db.Products.AsNoTracking().SingleAsync()).StockQuantity.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task UpdateQuantity_PedidoJaVendido_Recusa()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 2));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.UpdateQuantity(itens[0].Id, new UpdateReservationQuantityRequest { Quantity = 1 });
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Quantity.Should().Be(2);
+        (await db.Products.AsNoTracking().SingleAsync()).StockQuantity.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task CancelarPedidoComVenda_ChaveDesligada_AindaEstorna()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
+        await db.SaveChangesAsync();
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        await chaves.DefinirAsync(Funcionalidades.PedidoVendaNoPagamento, false, cliente.Id);
+        var vendas = new Mock<IVendaAvulsaService>();
+        vendas.Setup(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()))
+              .ReturnsAsync(new VendaAvulsaDto { Id = "venda-pix" });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: vendas.Object, funcionalidades: chaves);
+        controller.ControllerContext.HttpContext.User.AddIdentity(
+            new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin")]));
+
+        var result = await controller.UpdateStatus(itens[0].Id, new UpdateReservationStatusRequest { Status = "cancelled" });
+
+        result.Should().BeOfType<OkObjectResult>("venda que já existe sempre cancela pelo estorno");
+        vendas.Verify(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateStatusRetirado_SemVenda_Recusa()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var result = await controller.UpdateStatus(itens[0].Id, new UpdateReservationStatusRequest { Status = "fulfilled" });
+
+        result.Should().BeOfType<BadRequestObjectResult>("retirar sem venda some com o faturamento");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("active");
+    }
+
+    [Fact]
+    public async Task CancelarPedidoPagoComVenda_EstornaAVendaECancelaOPedidoInteiroSemDevolverEstoqueDuasVezes()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var a = await SeedProductAsync(db, stock: 5);
+        var b = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, groupId, (a.Id, 1), (b.Id, 1));
+        foreach (var r in itens) { r.ExpiresAt = null; r.VendaAvulsaId = "venda-pix"; }
+        await db.SaveChangesAsync();
+        var vendas = new Mock<IVendaAvulsaService>();
+        vendas.Setup(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()))
+              .ReturnsAsync(new VendaAvulsaDto { Id = "venda-pix" });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: vendas.Object);
+        controller.ControllerContext.HttpContext.User.AddIdentity(
+            new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin")]));
+
+        var result = await controller.UpdateStatus(itens[0].Id, new UpdateReservationStatusRequest { Status = "cancelled" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        vendas.Verify(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        (await db.ProductReservations.AsNoTracking().ToListAsync()).Should().OnlyContain(r => r.Status == "cancelled");
+        (await db.Products.AsNoTracking().Select(p => p.StockQuantity).ToListAsync())
+            .Should().OnlyContain(q => q == 5, "quem devolve o estoque é o estorno da venda");
+    }
+
+    [Fact]
+    public async Task HomologarGrupo_ChaveDesligada_VendePeloPrecoDoMomentoMasNuncaVendeDuasVezes()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var vendidoNoPix = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 1), (vendidoNoPix.Id, 1));
+        itens[0].UnitPriceInCents = 1200;
+        itens[1].ExpiresAt = null; itens[1].VendaAvulsaId = "venda-pix"; // vendeu enquanto a chave estava ligada
+        await db.SaveChangesAsync();
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        await chaves.DefinirAsync(Funcionalidades.PedidoVendaNoPagamento, false, cliente.Id);
+        var (venda, capturadas) = CreateVendaSpy();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda, funcionalidades: chaves);
+
+        await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        capturadas.Should().ContainSingle();
+        var item = capturadas[0].Items.Single();
+        item.ProductId.Should().Be(produto.Id, "o que já virou venda no Pix não entra de novo");
+        item.UnitPriceInCents.Should().BeNull("jeito antigo: preço do momento");
+    }
+
     // ── Timer de expiração removido ─────────────────────────────────────────────
 
     [Fact]

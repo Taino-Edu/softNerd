@@ -108,6 +108,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `FiscalXmlExportService` | `CardGameStore/Services/Implementations/FiscalXmlExportService.cs` |
 | Scoped | `INfceEmissionService → TenantErpNfceEmissionService` | `CardGameStore/Services/Implementations/TenantErpNfceEmissionService.cs` |
 | Scoped | `INfceEmissionService → NfceEmissionService` | `CardGameStore/Services/Implementations/NfceEmissionService.cs` |
+| Scoped | `PedidoVendaService` | `CardGameStore/Services/Implementations/PedidoVendaService.cs` |
 | Scoped | `IPixReconciliationService → PixReconciliationService` | `CardGameStore/Services/Implementations/PixReconciliationService.cs` |
 | Scoped | `CrediarioAvisoService` | `CardGameStore/Services/Implementations/CrediarioAvisoService.cs` |
 | Scoped | `CrediarioPixService` | `CardGameStore/Services/Implementations/CrediarioPixService.cs` |

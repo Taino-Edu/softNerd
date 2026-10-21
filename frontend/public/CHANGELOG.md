@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.62.0] — 2026-10-21
+
+### Pedidos do site no padrão de e-commerce — a venda conta no pagamento
+- **Pagou o Pix, é venda**: o pedido do site entra no Financeiro na hora do pagamento, no dia certo, como **Pix** e pelo valor que o cliente pagou. Antes só entrava quando alguém clicava em "Homologar" na retirada — pedido pago e não retirado ficava fora do relatório
+- **Preço congelado no pedido**: o cliente paga o preço que viu na hora de pedir, mesmo se o produto mudar de preço antes do Pix ou da retirada
+- **Na retirada é só "Entregar"**: pedido que já virou venda não pede forma de pagamento nem desconto (o valor já entrou). Pedido "pagar na retirada" continua no "Homologar", que é quando ele vira venda
+- Pedido pago de antes desta versão (ainda sem venda): o "Homologar" já abre com **Pix** marcado, não mais "Dinheiro"
+- **Cancelar pedido pago** que já virou venda estorna a venda no Financeiro, cancela o pedido inteiro e devolve o estoque uma vez só; o valor ao cliente se devolve pelo Inter
+- "Retirado" sem venda é recusado (era um jeito de o faturamento sumir); se o registro da venda falhar no pagamento, os admins recebem aviso no sininho e o "Homologar" resolve
+- Proteção contra venda em dobro quando o Pix e o "Homologar" acontecem no mesmo instante
+- Chave `pedido-venda-no-pagamento` em Funcionalidades: desligada, volta a vender só no "Homologar" (sem nunca vender de novo o que já virou venda)
 ## [v1.61.1] — 2026-10-20
 
 ### Corrigido — entrada na liguinha pelo celular (teste do Maikon)

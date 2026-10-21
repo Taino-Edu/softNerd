@@ -65,6 +65,59 @@ public class ReservationController : ControllerBase
         _funcionalidades   = funcionalidades;
     }
 
+    private async Task<bool> VendaNoPagamentoAsync() =>
+        _funcionalidades is null
+            ? Funcionalidades.Buscar(Funcionalidades.PedidoVendaNoPagamento)!.Padrao
+            : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoVendaNoPagamento);
+
+    /// <summary>
+    /// Chave "pedido-venda-no-pagamento": cancelar um item pago que já virou venda estorna a
+    /// venda (que devolve o estoque) e cancela o pedido pago inteiro que ela cobria — uma venda
+    /// por pedido, sem estorno parcial. null = não é o caso, segue o cancelamento normal.
+    /// </summary>
+    private async Task<IActionResult?> CancelarPedidoComVendaAsync(ProductReservation res)
+    {
+        if (!PedidoVendaService.TemVenda(res))
+        {
+            if (res.VendaAvulsaId is not null)
+                return Conflict(new { Message = "A venda deste pedido está sendo registrada agora — tente de novo em instantes." });
+            return null;
+        }
+        // Sem checar a chave: venda que já existe sempre se cancela pelo estorno (a chave só decide
+        // se vendas NOVAS nascem no pagamento) — senão o pedido ficaria impossível de cancelar.
+        if (!User.IsInRole("Admin"))
+            return BadRequest(new { Message = "Esta pré-venda já foi paga — fale com a loja pra cancelar e combinar o estorno." });
+
+        var vendaId = res.VendaAvulsaId!;
+        var adminName = User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst("name")?.Value ?? "Admin";
+        try
+        {
+            await _vendaService.EstornarAsync(vendaId, GetUserId(), adminName, "Pedido do site cancelado");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException)
+        {
+            return BadRequest(new { Message = $"Não deu pra estornar a venda do pedido: {ex.Message}" });
+        }
+
+        // Estorno já devolveu o estoque: aqui só fecha os itens (sem DevolverEstoqueAsync)
+        var produtos = await _db.ProductReservations
+            .Where(r => r.VendaAvulsaId == vendaId && r.Status == "active")
+            .Select(r => r.ProductId).Distinct().ToListAsync();
+        var agora = DateTime.UtcNow;
+        var itens = await _db.ProductReservations
+            .Where(r => r.VendaAvulsaId == vendaId && r.Status == "active")
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, "cancelled").SetProperty(r => r.CancelledAt, agora));
+
+        await _audit.LogAsync("CancelouPedidoPagoEstornouVenda", "ProductReservation", res.Id.ToString(),
+            details: $"{{\"vendaAvulsaId\":\"{vendaId}\",\"itens\":{itens},\"observacao\":\"devolver o valor pelo Inter\"}}",
+            httpContext: HttpContext);
+
+        // Todo produto que voltou pro estoque puxa a fila dele, não só o da linha clicada
+        foreach (var produtoId in produtos) await ProcessarFilaSeguroAsync(produtoId);
+        await AvisarEstoqueMudouAsync();
+        return Ok(new { jaPaga = true, vendaEstornada = true, itens });
+    }
+
     private async Task<bool> PedidoPixConsistenteAsync() =>
         _funcionalidades is null
             ? Funcionalidades.Buscar(Funcionalidades.PedidoPixConsistente)!.Padrao
@@ -526,6 +579,9 @@ public class ReservationController : ControllerBase
                 Quantity = qty, Notes = notes,
                 Kind = "pre_venda", Status = "active", ExpiresAt = DateTime.UtcNow,
                 PaymentMethod = paymentMethod,
+                // Preço congelado: o que o cliente viu é o que paga, mesmo se o preço mudar depois
+                UnitPriceInCents = variant?.PriceInCents
+                    ?? (product.IsOnPromo ? product.DiscountPriceInCents!.Value : product.PriceInCents),
             }, null, null);
         }
 
@@ -583,6 +639,7 @@ public class ReservationController : ControllerBase
         if (jaPaga && !User.IsInRole("Admin"))
             return BadRequest(new { Message = "Esta pré-venda já foi paga — fale com a loja pra cancelar e combinar o estorno." });
 
+        if (res.Status == "active" && await CancelarPedidoComVendaAsync(res) is { } comVenda) return comVenda;
         if (await DerrubarPixAntesDeCancelarAsync(res) is { } pixTravou) return pixTravou;
 
         var statusOriginal  = res.Status;
@@ -595,13 +652,16 @@ public class ReservationController : ControllerBase
             await using var tx = await _db.Database.BeginTransactionAsync();
 
             var claimed = await _db.ProductReservations
-                .Where(r => r.Id == id && r.Status == statusOriginal)
+                .Where(r => r.Id == id && r.Status == statusOriginal
+                            // Virou venda no meio do caminho (Pix acabou de cair): esse cancelamento
+                            // não estornaria a venda — recusa e o admin cancela de novo pelo caminho com estorno
+                            && r.VendaAvulsaId == null)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(r => r.Status, "cancelled")
                     .SetProperty(r => r.CancelledAt, DateTime.UtcNow));
             if (claimed == 0)
             {
-                falha = BadRequest(new { Message = "Esta reserva já foi encerrada." });
+                falha = BadRequest(new { Message = "Esta reserva já foi encerrada ou acabou de virar venda — recarregue e tente de novo." });
                 return;
             }
 
@@ -712,7 +772,11 @@ public class ReservationController : ControllerBase
 
         var jaPaga = req.Status == "cancelled" && res.Status == "active" && res.Kind == "pre_venda" && res.ExpiresAt is null;
 
+        if (req.Status == "cancelled" && res.Status == "active" && await CancelarPedidoComVendaAsync(res) is { } comVenda) return comVenda;
         if (req.Status == "cancelled" && await DerrubarPixAntesDeCancelarAsync(res) is { } pixTravou) return pixTravou;
+        // Chave "pedido-venda-no-pagamento": "retirado" sem venda perderia o faturamento
+        if (req.Status == "fulfilled" && res.Kind == "pre_venda" && !PedidoVendaService.TemVenda(res) && await VendaNoPagamentoAsync())
+            return BadRequest(new { Message = "Este pedido ainda não virou venda — use \"Homologar\" pra registrar o pagamento na retirada." });
 
         var statusOriginal  = res.Status;
         var devolveuEstoque = false;
@@ -735,14 +799,17 @@ public class ReservationController : ControllerBase
             else
             {
                 claimed = await _db.ProductReservations
-                    .Where(r => r.Id == id && r.Status == statusOriginal)
+                    .Where(r => r.Id == id && r.Status == statusOriginal
+                            // Virou venda no meio do caminho (Pix acabou de cair): esse cancelamento
+                            // não estornaria a venda — recusa e o admin cancela de novo pelo caminho com estorno
+                            && r.VendaAvulsaId == null)
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(r => r.Status, "cancelled")
                         .SetProperty(r => r.CancelledAt, DateTime.UtcNow));
             }
             if (claimed == 0)
             {
-                falha = BadRequest(new { Message = "Esta reserva já foi encerrada." });
+                falha = BadRequest(new { Message = "Esta reserva já foi encerrada ou acabou de virar venda — recarregue e tente de novo." });
                 return;
             }
 
@@ -788,6 +855,9 @@ public class ReservationController : ControllerBase
         if (res is null) return NotFound();
         if (res.Status is not ("active" or "waiting"))
             return BadRequest(new { Message = "Só é possível alterar a quantidade de reservas em aberto." });
+        // A venda já está no Financeiro com a quantidade do pedido: mudar aqui desalinharia venda e estoque
+        if (res.VendaAvulsaId is not null)
+            return Conflict(new { Message = "Este pedido já virou venda — pra mudar a quantidade, cancele (a venda é estornada) e faça um pedido novo." });
 
         var quantidadeAntiga = res.Quantity;
         var delta = req.Quantity - quantidadeAntiga;
@@ -933,10 +1003,23 @@ public class ReservationController : ControllerBase
     /// ficava impossível separar "Pré-venda" de "Comanda" no Financeiro com segurança.
     /// SkipStockDecrement: o estoque JÁ saiu no ato da pré-venda; aqui só se registra a venda.
     /// </summary>
+    /// <summary>Só pros testes da corrida Homologar × Pix (itens lidos antes do outro fluxo gravar).</summary>
+    internal Task<IActionResult> HomologarItensParaTesteAsync(List<ProductReservation> itens, HomologarRequest req) =>
+        HomologarItensAsync(itens, req);
+
     private async Task<IActionResult> HomologarItensAsync(List<ProductReservation> itens, HomologarRequest req)
     {
         var ids       = itens.Select(r => r.Id).ToList();
         var primeiro  = itens[0];
+
+        // O que já virou venda no pagamento só é entregue — vale mesmo com a chave desligada depois,
+        // senão a venda entraria duas vezes. Vende só o que falta: pedido "pagar na retirada" ou pago
+        // antes da chave. Com a chave "pedido-venda-no-pagamento" ligada, pelo preço congelado.
+        var novo = await VendaNoPagamentoAsync();
+        if (itens.Any(r => r.VendaAvulsaId is not null && !PedidoVendaService.TemVenda(r)))
+            return Conflict(new { Message = "A venda deste pedido está sendo registrada agora — tente de novo em instantes." });
+        var aVender = itens.Where(r => !PedidoVendaService.TemVenda(r)).ToList();
+        var idsAVender = aVender.Select(r => r.Id).ToList();
         var adminId   = GetUserId();
         var adminName = User.FindFirst(ClaimTypes.Name)?.Value
                      ?? User.FindFirst("name")?.Value
@@ -957,8 +1040,11 @@ public class ReservationController : ControllerBase
 
             await using var tx = await _db.Database.BeginTransactionAsync();
 
+            // Item a vender só é fechado se ainda não virou venda: se o Pix acabou de registrar a
+            // venda dele (PedidoVendaService), a contagem não bate e nada é homologado — sem venda dupla.
             var claimed = await _db.ProductReservations
-                .Where(r => ids.Contains(r.Id) && r.Status == "active" && r.Kind == "pre_venda")
+                .Where(r => ids.Contains(r.Id) && r.Status == "active" && r.Kind == "pre_venda"
+                            && (!idsAVender.Contains(r.Id) || r.VendaAvulsaId == null))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(r => r.Status, "fulfilled")
                     .SetProperty(r => r.FulfilledAt, DateTime.UtcNow));
@@ -968,6 +1054,12 @@ public class ReservationController : ControllerBase
                     ? "Esta pré-venda já foi processada."
                     : "Algum item deste pedido foi cancelado ou homologado enquanto você preenchia — abra de novo pra ver como ficou." });
                 return; // sem Commit: rollback desfaz o claim parcial
+            }
+
+            if (aVender.Count == 0)
+            {
+                await tx.CommitAsync(); // tudo já vendido no pagamento: só entrega
+                return;
             }
 
             try
@@ -992,12 +1084,18 @@ public class ReservationController : ControllerBase
                     Origem                     = "Reserva",
                     ReservationId              = primeiro.Id,
                     ReservationGroupId         = primeiro.ReservationGroupId,
-                    ProductIsPreVenda          = itens.All(r => r.Product?.IsPreVenda ?? false),
-                    Items                      = itens
-                        .Select(r => new VendaAvulsaItemRequest { ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity })
+                    ProductIsPreVenda          = aVender.All(r => r.Product?.IsPreVenda ?? false),
+                    Items                      = aVender
+                        .Select(r => new VendaAvulsaItemRequest
+                        {
+                            ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity,
+                            UnitPriceInCents = novo ? PedidoVendaService.PrecoDoPedido(r) : null,
+                        })
                         .ToList(),
                 };
                 vendaResult = await _vendaService.RegisterAsync(vendaReq, adminId, adminName);
+                await _db.ProductReservations.Where(r => idsAVender.Contains(r.Id) && r.VendaAvulsaId == null)
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.VendaAvulsaId, vendaResult.Id));
             }
             catch (InvalidOperationException ex)
             {
@@ -1011,9 +1109,12 @@ public class ReservationController : ControllerBase
         if (falha is not null) return falha;
 
         return Ok(new {
-            message = itens.Count == 1
+            message = aVender.Count == 0
+                ? (itens.Count == 1 ? "Pedido entregue." : $"{itens.Count} itens entregues.")
+                : itens.Count == 1
                 ? "Pré-venda homologada com sucesso."
                 : $"{itens.Count} itens do carrinho homologados de uma vez.",
+            vendaRegistrada = aVender.Count > 0,
             reservationId   = primeiro.Id,   // compatibilidade com quem já consumia o endpoint de 1 item
             reservationIds  = ids,
             itemCount       = itens.Count,
@@ -1160,9 +1261,10 @@ public class ReservationController : ControllerBase
     {
         // Preço unitário no momento da consulta — mesma regra do GerarPixReserva
         // (variante tem prioridade; senão preço promocional se ativo).
-        int? precoUnitario = r.Product is null ? null
-            : r.Variant?.PriceInCents
-              ?? (r.Product.IsOnPromo ? r.Product.DiscountPriceInCents!.Value : r.Product.PriceInCents);
+        int? precoUnitario = r.UnitPriceInCents
+            ?? (r.Product is null ? null
+                : r.Variant?.PriceInCents
+                  ?? (r.Product.IsOnPromo ? r.Product.DiscountPriceInCents!.Value : r.Product.PriceInCents));
 
         return new
         {
@@ -1190,6 +1292,8 @@ public class ReservationController : ControllerBase
             r.FulfilledAt,
             r.CancelledAt,
             posicaoFila,
+            // Já virou venda no Financeiro (pago no Pix com a chave "pedido-venda-no-pagamento")
+            vendaRegistrada = PedidoVendaService.TemVenda(r),
             preVendaReleaseDate = r.Product?.PreVendaReleaseDate,
             precoUnitarioEmReais = precoUnitario.HasValue ? precoUnitario.Value / 100m : (decimal?)null,
             subtotalEmReais      = precoUnitario.HasValue ? precoUnitario.Value * r.Quantity / 100m : (decimal?)null,

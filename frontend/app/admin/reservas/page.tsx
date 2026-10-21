@@ -628,7 +628,8 @@ export default function ReservasPage() {
 
   function openHomModal(r: AdminReservation) {
     setHomModal(r)
-    setHomPayment('Dinheiro')
+    // Pago no Pix pelo site (pedido de antes da venda no pagamento): a forma certa é Pix
+    setHomPayment(r.kind === 'pre_venda' && r.expiresAt === null ? 'Pix' : 'Dinheiro')
     setHomSplit(false)
     setHomSecondPayment('')
     setHomSecondAmount('')
@@ -681,13 +682,28 @@ export default function ReservasPage() {
     } finally { setSubmitting(false) }
   }
 
+  // Pedido pago que já virou venda: entregar não pede pagamento nem desconto (o valor já entrou)
+  async function entregar(r: AdminReservation) {
+    if (!confirm(`Entregar o pedido de ${r.userName}? A venda já está no Financeiro (paga no Pix).`)) return
+    try {
+      const { data } = await reservationApi.homologarGrupo(r.reservationGroupId, { paymentMethod: 'Pix' })
+      toast.success(data.itemCount > 1 ? `${data.itemCount} itens entregues!` : 'Pedido entregue!')
+      load()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Erro ao entregar')
+    }
+  }
+
   async function handleCancel(r: AdminReservation) {
-    if (!confirm(`Cancelar a pré-venda de "${r.productName}" para ${r.userName}? O estoque volta pra loja.`)) return
+    const pergunta = r.vendaRegistrada
+      ? `Cancelar o pedido PAGO de ${r.userName}? A venda é estornada no Financeiro, o pedido inteiro é cancelado e o estoque volta. Devolva o valor ao cliente pelo Inter.`
+      : `Cancelar a pré-venda de "${r.productName}" para ${r.userName}? O estoque volta pra loja.`
+    if (!confirm(pergunta)) return
     try {
       await api.delete(`/api/reservations/${r.id}`)
-      toast.success('Pré-venda cancelada — estoque devolvido')
+      toast.success(r.vendaRegistrada ? 'Pedido cancelado e venda estornada — devolva o valor pelo Inter' : 'Pré-venda cancelada — estoque devolvido')
       load()
-    } catch { toast.error('Erro ao cancelar') }
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Erro ao cancelar') }
   }
 
   function refreshAll() {
@@ -734,6 +750,7 @@ export default function ReservasPage() {
   function renderCard(cart: ReservationCart) {
     const r = cart.representative
     const aguardandoPagamento = !!cart.expiresAt
+    const jaVendido = cart.items.every(i => i.vendaRegistrada)
     const releaseDate = cart.items.find(item => item.preVendaReleaseDate)?.preVendaReleaseDate
     return (
       <div key={cart.groupId} className="card !p-3">
@@ -767,8 +784,10 @@ export default function ReservasPage() {
                     {item.quantity}×{item.subtotalEmReais != null ? ` · ${brl(item.subtotalEmReais)}` : ''}
                   </p>
                 </div>
-                <button onClick={() => openEditQty(item)} title="Corrigir quantidade"
-                  className="p-1 rounded text-brand-300 hover:bg-brand-500/15"><Pencil className="w-3 h-3" /></button>
+                {!item.vendaRegistrada && (
+                  <button onClick={() => openEditQty(item)} title="Corrigir quantidade"
+                    className="p-1 rounded text-brand-300 hover:bg-brand-500/15"><Pencil className="w-3 h-3" /></button>
+                )}
                 <button onClick={() => handleCancel(item)} title="Cancelar este item"
                   className="p-1 rounded text-red-400 hover:bg-red-500/15"><XCircle className="w-3 h-3" /></button>
               </div>
@@ -807,16 +826,16 @@ export default function ReservasPage() {
           )}
           {!aguardandoPagamento && (
             <p className="flex items-center gap-1 text-[11px] text-green-400 mt-1">
-              <CheckCircle className="w-2.5 h-2.5" />Paga — aguardando retirada
+              <CheckCircle className="w-2.5 h-2.5" />{jaVendido ? 'Paga — venda registrada, aguardando retirada' : 'Paga — aguardando retirada'}
             </p>
           )}
           {r.notes && <p className="text-[11px] text-gray-500 mt-1 italic truncate">"{r.notes}"</p>}
 
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <button onClick={() => openHomModal(r)}
+              <button onClick={() => jaVendido ? entregar(r) : openHomModal(r)}
                 className="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30
                            hover:bg-green-500/30 text-[11px] font-semibold transition-colors flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" /> Homologar
+                <CheckCircle className="w-3 h-3" /> {jaVendido ? 'Entregar' : 'Homologar'}
               </button>
               {cart.expiresAt && (
                 <button onClick={() => setPixGroup(r)}

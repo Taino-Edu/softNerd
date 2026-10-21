@@ -55,6 +55,11 @@ public interface IVendaAvulsaService
     /// gerado e tira o valor do faturamento. A venda fica marcada, não é apagada.</summary>
     Task<VendaAvulsaDto> EstornarAsync(string id, Guid adminId, string adminNome, string motivo);
 
+    /// <summary>Venda Pix não estornada de um pedido do site — mesmo grupo e mesmo item de origem —
+    /// gravada a partir de <paramref name="desde"/>. Usada pra não vender de novo quando o registro
+    /// falha depois do insert no Mongo.</summary>
+    Task<VendaAvulsaDto?> BuscarVendaDoPedidoAsync(Guid reservationGroupId, Guid reservationId, DateTime desde);
+
     /// <summary>Vendas do período incluindo as estornadas — exclusivo do extrato.</summary>
     Task<IEnumerable<VendaAvulsaDto>> GetPeriodoComCanceladasAsync(DateTime inicio, DateTime fim);
 }

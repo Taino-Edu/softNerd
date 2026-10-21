@@ -89,6 +89,11 @@ public class VendaAvulsaItemRequest
 
     [Range(1, 999)]
     public int Quantity { get; set; } = 1;
+
+    /// <summary>Preço congelado no pedido do site. Uso interno (homologação/pagamento de pedido):
+    /// fora do JSON, então o PDV não consegue mandar; só vale com Origem "Reserva".</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int? UnitPriceInCents { get; set; }
 }
 
 public class VendaAvulsaDto

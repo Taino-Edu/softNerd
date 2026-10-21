@@ -53,6 +53,8 @@ export interface AdminReservation {
   paymentMethod?: string | null
   precoUnitarioEmReais?: number | null
   subtotalEmReais?: number | null
+  /** Já virou venda no Financeiro (pago no Pix — chave pedido-venda-no-pagamento): retirada é só entregar. */
+  vendaRegistrada?: boolean
 }
 
 export const reservationApi = {
