@@ -4,7 +4,7 @@
 
 ### Conta do cliente — "Qual o seu Pokémon preferido?" (pedido do Maikon)
 - Logo depois de criar a conta, a Minha Conta abre perguntando **qual o seu Pokémon preferido**. Dá pra pular e escolher depois em **Trocar Pokémon**
-- Busca por nome ou número da Pokédex (1139 Pokémon: as 1025 espécies, Megas e formas regionais), grade com os queridinhos e botão **Me surpreenda**
+- Busca por nome ou número da Pokédex (1140 Pokémon: as 1025 espécies, Megas e formas regionais), grade com os queridinhos e botão **Me surpreenda**
 - **Versão brilhante** (shiny) e prévia animada antes de escolher
 - O escolhido fica **animado ao lado da foto** na Minha Conta e no perfil público; **tocar nele faz carinho** (ele pula e sobe um coração)
 - Não é o deck do torneio: o deck continua sendo escolhido na tela do torneio

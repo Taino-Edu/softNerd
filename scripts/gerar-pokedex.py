@@ -24,7 +24,7 @@ SAIDA = Path(__file__).resolve().parent.parent / "frontend" / "public" / "pokede
 FORMAS = {
     "Mega": "Mega {n}", "Mega-X": "Mega {n} X", "Mega-Y": "Mega {n} Y",
     "Alola": "{n} de Alola", "Galar": "{n} de Galar", "Hisui": "{n} de Hisui",
-    "Paldea-Combat": "{n} de Paldea", "Paldea-Blaze": "{n} de Paldea (Fogo)", "Paldea-Aqua": "{n} de Paldea (Água)",
+    "Paldea": "{n} de Paldea", "Paldea-Combat": "{n} de Paldea", "Paldea-Blaze": "{n} de Paldea (Fogo)", "Paldea-Aqua": "{n} de Paldea (Água)",
     "Primal": "{n} Primal", "Origin": "{n} Origem", "Therian": "{n} Therian",
 }
 

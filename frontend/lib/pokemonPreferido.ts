@@ -24,7 +24,7 @@ export function spritesAnimados(id: string, shiny = false) {
 
 let cache: Promise<PokemonDex[]> | null = null
 
-/** Lista completa (1139 Pokémon), baixada uma vez por visita. */
+/** Lista completa (1140 Pokémon), baixada uma vez por visita. */
 export function carregarPokedex(): Promise<PokemonDex[]> {
   cache ??= fetch('/pokedex.json')
     .then(r => { if (!r.ok) throw new Error('pokedex'); return r.json() as Promise<[string, string, number][]> })
@@ -45,7 +45,8 @@ export function buscarPokemon(lista: PokemonDex[], termo: string, limite = 60): 
   const palavras = t.split(/\s+/)
   const achados = lista.filter(p => { const n = semAcento(p.nome); return palavras.every(w => n.includes(w)) })
   return achados
-    .sort((a, b) => Number(!semAcento(b.nome).startsWith(palavras[0])) - Number(!semAcento(a.nome).startsWith(palavras[0])) || a.numero - b.numero)
+    // Quem começa com o termo vem antes (0 < 1); sem isso "m" escondia o Mew depois do corte de 60
+    .sort((a, b) => Number(!semAcento(a.nome).startsWith(palavras[0])) - Number(!semAcento(b.nome).startsWith(palavras[0])) || a.numero - b.numero)
     .slice(0, limite)
 }
 

@@ -51,7 +51,8 @@ export default function PrimeiroAcessoPage() {
       const { data } = await authApi.setupAccount(cpf, email, password)
       saveAuth(data)
       toast.success('Conta criada! Bem-vindo, ' + data.userName)
-      router.push('/cliente/perfil')
+      // A Minha Conta abre perguntando o Pokémon preferido (chave pokemon-preferido)
+      router.push('/cliente/perfil?pokemon=escolher')
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(msg || 'Erro ao criar conta.')

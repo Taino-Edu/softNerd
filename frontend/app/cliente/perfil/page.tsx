@@ -278,15 +278,23 @@ export default function PerfilPage() {
     if (new URLSearchParams(window.location.search).get('tab') === 'crediario') setTab('crediario')
   }, [])
 
-  // Cadastro novo chega com ?pokemon=escolher: o seletor abre sozinho uma vez (e o link some da barra,
-  // pra atualizar a página não abrir de novo). Quem já tem Pokémon não é perguntado.
+  // Conta nova pergunta o Pokémon preferido UMA vez: cadastro e primeiro acesso chegam com
+  // ?pokemon=escolher; quem nasceu por outro caminho (primeiro login com Google, QR da mesa) é
+  // reconhecido pela conta criada há menos de 15 min. O link some da barra e o navegador lembra
+  // que já perguntou — atualizar a página não abre de novo. Quem já tem Pokémon não é perguntado.
   useEffect(() => {
     if (!pokemonLigado || !profile) return
     const url = new URL(window.location.href)
-    if (url.searchParams.get('pokemon') !== 'escolher') return
-    url.searchParams.delete('pokemon')
-    window.history.replaceState(null, '', url.pathname + url.search)
-    if (!profile.pokemonFavorito) setEscolhendoPokemon('boas-vindas')
+    const pedido = url.searchParams.get('pokemon') === 'escolher'
+    if (pedido) {
+      url.searchParams.delete('pokemon')
+      window.history.replaceState(null, '', url.pathname + url.search)
+    }
+    const contaNovinha = Date.now() - new Date(profile.createdAt).getTime() < 15 * 60_000
+    if (profile.pokemonFavorito || !(pedido || contaNovinha)) return
+    const chave = `pokemon-perguntado:${profile.id}`
+    try { if (localStorage.getItem(chave)) return; localStorage.setItem(chave, '1') } catch { /* sem storage: pergunta assim mesmo */ }
+    setEscolhendoPokemon('boas-vindas')
   }, [pokemonLigado, profile])
   const [filtroPagamento, setFiltroPagamento] = useState<string | null>(null)
   const [isUploading,    setIsUploading]    = useState(false)
