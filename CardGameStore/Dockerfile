@@ -18,7 +18,7 @@ COPY . .
 RUN dotnet publish -c Release -o /app/publish
 
 # ---- STAGE 2: RUNTIME ----
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # curl é necessário para o healthcheck do docker-compose; openssl para verificar
