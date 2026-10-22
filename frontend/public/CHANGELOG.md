@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.64.3] — 2026-10-22
+
+### Segurança
+- **nginx 1.27.5 → 1.30.6** (a porta de entrada do site). Em 14/10 saíram correções de falhas graves no nginx (estouro de memória em `map`/`alias`/`rewrite`, falha de TLS); a linha 1.27 não recebe mais correção. Versão presa no número exato
+- O deploy agora **troca o nginx de verdade** quando a versão muda no compose: antes ele só recarregava a configuração e o programa velho continuava no ar. Baixa a imagem antes, valida a nossa config com a versão nova e só então troca — cerca de 1 segundo em que conexão nova é recusada (medido: 1 pedido em ~250). Nos deploys seguintes volta a ser só recarga, sem nenhuma pausa
+
 ## [v1.64.2] — 2026-10-22
 
 ### Segurança

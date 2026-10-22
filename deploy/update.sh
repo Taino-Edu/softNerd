@@ -71,11 +71,21 @@ docker compose -f docker-compose.prod.yml build --build-arg CACHEBUST="$(date +%
 # sem derrubar nenhuma conexão. Config quebrada: o "nginx -t" falha, o reload não
 # acontece, o deploy para e o nginx segue no ar com a config anterior.
 #
-# Uma vez só, na troca de montagem (antes era arquivo por arquivo, que prendia o
-# container ao arquivo antigo): o nginx é recriado. Valida antes num container
-# descartável e solta as portas em 3 s (stop_grace_period).
+# O nginx é RECRIADO só quando precisa: montagem antiga (antes era arquivo por arquivo,
+# que prendia o container ao arquivo antigo) ou versão nova da imagem no compose (o
+# reload não troca o programa, só a config). Baixa a imagem antes (o site segue no ar),
+# valida a config num container descartável com a imagem NOVA (e confere que ele enxerga
+# os NOSSOS arquivos — montagem vazia validaria a config padrão e passaria) e só então troca: o
+# nginx antigo termina os pedidos em andamento (SIGQUIT, até 3 s) e o novo sobe —
+# ~1 s em que conexão nova é recusada.
+IMAGEM_NGINX=$(sed -n '/^  nginx:/,/^  [a-z]/p' docker-compose.prod.yml | tr -d '\r' | awk '$1=="image:"{print $2; exit}')
+if [ -z "$IMAGEM_NGINX" ]; then
+    echo -e "${YELLOW}   ⚠️  imagem do nginx não encontrada no docker-compose.prod.yml — deploy abortado${NC}"
+    exit 1
+fi
+IMAGEM_NGINX_NO_AR=$(docker inspect santuarionerd_nginx --format '{{.Config.Image}}' 2>/dev/null || true)
 MONTAGENS_NGINX=$(docker inspect santuarionerd_nginx --format '{{range .Mounts}}{{println .Destination}}{{end}}' 2>/dev/null || true)
-if echo "$MONTAGENS_NGINX" | grep -qx "/etc/nginx/snippets"; then
+if echo "$MONTAGENS_NGINX" | grep -qx "/etc/nginx/snippets" && [ "$IMAGEM_NGINX_NO_AR" = "$IMAGEM_NGINX" ]; then
     echo -e "${YELLOW}🔁 Validando e recarregando o nginx...${NC}"
     if docker exec santuarionerd_nginx nginx -t; then
         docker exec santuarionerd_nginx nginx -s reload
@@ -85,14 +95,14 @@ if echo "$MONTAGENS_NGINX" | grep -qx "/etc/nginx/snippets"; then
         exit 1
     fi
 else
-    echo -e "${YELLOW}🔁 nginx na montagem antiga — validando e recriando (uma vez só)...${NC}"
-    if docker run --rm \
+    echo -e "${YELLOW}🔁 nginx precisa ser recriado (${IMAGEM_NGINX_NO_AR:-nenhum} → $IMAGEM_NGINX) — baixando e validando...${NC}"
+    if docker pull -q "$IMAGEM_NGINX" && docker run --rm \
         -v "$PWD/nginx/entrada.conf:/etc/nginx/conf.d/default.conf:ro" \
         -v "$PWD/nginx:/etc/nginx/snippets:ro" \
         -v "$PWD/nginx/certs:/etc/nginx/certs:ro" \
-        nginx:1.27-alpine nginx -t; then
+        "$IMAGEM_NGINX" sh -c 'test -s /etc/nginx/snippets/locations.conf && grep -q snippets /etc/nginx/conf.d/default.conf && nginx -t'; then
         docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx
-        echo -e "${GREEN}   nginx recriado na montagem nova${NC}"
+        echo -e "${GREEN}   nginx recriado: $(docker exec santuarionerd_nginx nginx -v 2>&1)${NC}"
     else
         echo -e "${YELLOW}   ⚠️  config do nginx inválida — deploy abortado, nginx anterior mantido no ar${NC}"
         exit 1
