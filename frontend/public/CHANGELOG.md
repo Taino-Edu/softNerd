@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.66.1] — 2026-10-22
+
+### Página inicial
+- O "Nerd" do título volta pro **azul padrão da loja** (Cor principal em Personalizar Site — o mesmo azul do "NERD" da logo); o resto da home segue num azul só
+
 ## [v1.66.0] — 2026-10-22
 
 ### Página inicial — um azul só e letras no mesmo tamanho (pedido do Maikon)

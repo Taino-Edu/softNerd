@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **22/10/2026** — produção na **v1.65.1** (nginx 1.30.6, Node 24.22.1).
+Atualizado em **22/10/2026** — produção na **v1.66.0** (nginx 1.30.6, Node 24.22.1).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -45,6 +45,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.66.1 | 22/10 | "Nerd" do título no azul padrão da loja |
 | v1.66.0 | 22/10 | Home com **um azul só** (faixa, menu e rodapé no mesmo tom; sem azul-céu/petróleo misturados), topo sem círculos e sem espaço vazio, nenhum texto abaixo de 12px |
 | v1.65.1 | 22/10 | O `update.sh` recomeça com a versão nova quando ele mesmo muda no deploy (antes só valia no deploy seguinte) |
 | v1.65.0 | 22/10 | **"Qual o seu Pokémon preferido?"** — escolha depois do cadastro e na Minha Conta (busca, Me surpreenda, brilhante), animado ao lado da foto e no perfil público |
