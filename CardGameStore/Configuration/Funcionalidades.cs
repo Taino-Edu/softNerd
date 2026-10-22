@@ -60,6 +60,7 @@ public static class Funcionalidades
     public const string LiguinhaEntradaSimples = "liguinha-entrada-simples";
     public const string PedidoVendaNoPagamento = "pedido-venda-no-pagamento";
     public const string VigiaSistema = "vigia-sistema";
+    public const string PokemonPreferido = "pokemon-preferido";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -305,6 +306,15 @@ public static class Funcionalidades
             SeDesligar: "O robô para, a tela de alertas some e os erros de tela deixam de ser registrados (a tela amigável de erro continua).",
             Padrao:     true,
             Desde:      "v1.63.0",
+            RevisarEm:  new DateOnly(2027, 4, 1)),
+
+        new(PokemonPreferido,
+            Nome:       "Conta do cliente: \"Qual o seu Pokémon preferido?\"",
+            OQueMuda:   "Depois de criar a conta e em Minha Conta, o cliente escolhe o Pokémon preferido (busca por nome ou número, " +
+                        "\"Me surpreenda\", versão brilhante). Ele aparece animado ao lado da foto em Minha Conta e no perfil público.",
+            SeDesligar: "Some a escolha e o Pokémon do perfil; o que o cliente já escolheu fica guardado e volta se ligar de novo.",
+            Padrao:     true,
+            Desde:      "v1.65.0",
             RevisarEm:  new DateOnly(2027, 4, 1)),
     ];
 

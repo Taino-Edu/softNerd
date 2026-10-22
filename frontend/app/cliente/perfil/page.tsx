@@ -25,6 +25,9 @@ import toast, { Toaster } from 'react-hot-toast'
 import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
 import { brl as fmtBRL, brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
+import EscolherPokemon from '@/components/pokemon/EscolherPokemon'
+import ParceiroDaConta from '@/components/pokemon/ParceiroDaConta'
+import { nomeDoId } from '@/lib/pokemonPreferido'
 
 
 /** Data com hora — "12/08/2026 às 14:32". Sem a hora, duas compras no mesmo dia
@@ -265,11 +268,34 @@ export default function PerfilPage() {
   const [expanded,       setExpanded]       = useState<string | null>(null)
   const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas' | 'notas'>('pontos')
 
+  // "Qual o seu Pokémon preferido?" (chave pokemon-preferido): 'boas-vindas' = acabou de criar a conta
+  const [escolhendoPokemon, setEscolhendoPokemon] = useState<false | 'boas-vindas' | 'trocar'>(false)
+  const pokemonLigado = useFuncionalidade('pokemon-preferido') === true
+
   // Link do lembrete de vencimento abre direto na aba da dívida (/cliente/perfil?tab=crediario).
   // Lido do window em vez de useSearchParams pra não precisar de Suspense na página inteira.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'crediario') setTab('crediario')
   }, [])
+
+  // Conta nova pergunta o Pokémon preferido UMA vez: cadastro e primeiro acesso chegam com
+  // ?pokemon=escolher; quem nasceu por outro caminho (primeiro login com Google, QR da mesa) é
+  // reconhecido pela conta criada há menos de 15 min. O link some da barra e o navegador lembra
+  // que já perguntou — atualizar a página não abre de novo. Quem já tem Pokémon não é perguntado.
+  useEffect(() => {
+    if (!pokemonLigado || !profile) return
+    const url = new URL(window.location.href)
+    const pedido = url.searchParams.get('pokemon') === 'escolher'
+    if (pedido) {
+      url.searchParams.delete('pokemon')
+      window.history.replaceState(null, '', url.pathname + url.search)
+    }
+    const contaNovinha = Date.now() - new Date(profile.createdAt).getTime() < 15 * 60_000
+    if (profile.pokemonFavorito || !(pedido || contaNovinha)) return
+    const chave = `pokemon-perguntado:${profile.id}`
+    try { if (localStorage.getItem(chave)) return; localStorage.setItem(chave, '1') } catch { /* sem storage: pergunta assim mesmo */ }
+    setEscolhendoPokemon('boas-vindas')
+  }, [pokemonLigado, profile])
   const [filtroPagamento, setFiltroPagamento] = useState<string | null>(null)
   const [isUploading,    setIsUploading]    = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -478,6 +504,8 @@ export default function PerfilPage() {
             className="hidden"
             onChange={handleFileChange}
           />
+          {/* Foto + Pokémon preferido sentado ao lado (a foto fica no centro; o Pokémon não empurra) */}
+          <div className="relative">
           <button
             onClick={handleAvatarClick}
             disabled={isUploading}
@@ -508,6 +536,12 @@ export default function PerfilPage() {
               </div>
             )}
           </button>
+          {pokemonLigado && profile?.pokemonFavorito && (
+            <div className="absolute left-full bottom-0 ml-1">
+              <ParceiroDaConta id={profile.pokemonFavorito} shiny={!!profile.pokemonFavoritoShiny} nome={nomeDoId(profile.pokemonFavorito)} />
+            </div>
+          )}
+          </div>
 
           {!loading && (
             <div className="mt-3 text-center">
@@ -534,10 +568,29 @@ export default function PerfilPage() {
               >
                 <Pencil className="w-3 h-3" /> Editar dados
               </button>
+              {pokemonLigado && profile && (
+                <button
+                  onClick={() => setEscolhendoPokemon('trocar')}
+                  className="mt-2 ml-2 inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 hover:bg-white/25 transition-colors px-3 py-1.5 rounded-full"
+                  style={{ color: '#FFFFFF' }}
+                >
+                  {profile.pokemonFavorito ? 'Trocar Pokémon' : 'Qual o seu Pokémon preferido?'}
+                </button>
+              )}
             </div>
           )}
         </div>
       </header>
+
+      {escolhendoPokemon && profile && (
+        <EscolherPokemon
+          atual={profile.pokemonFavorito ? { id: profile.pokemonFavorito, shiny: !!profile.pokemonFavoritoShiny } : null}
+          titulo={escolhendoPokemon === 'boas-vindas' ? 'Conta criada! Qual o seu Pokémon preferido?' : undefined}
+          subtitulo={escolhendoPokemon === 'boas-vindas' ? 'Ele vai ficar do seu lado aqui na sua conta. Dá pra trocar quando quiser.' : undefined}
+          onClose={() => setEscolhendoPokemon(false)}
+          onSalvo={(pokemonFavorito, pokemonFavoritoShiny) => setProfile(prev => prev ? { ...prev, pokemonFavorito, pokemonFavoritoShiny } : prev)}
+        />
+      )}
 
       {editingProfile && profile && (
         <EditProfileModal

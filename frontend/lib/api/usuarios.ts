@@ -20,6 +20,9 @@ export interface UserProfile {
   hasPassword: boolean; profileComplete: boolean
   /** Conta ligada ao Google: completar o cadastro pede WhatsApp, não senha. */
   entrouComGoogle?: boolean
+  /** Pokémon preferido (id do sprite do Showdown) — v1.65.0, chave pokemon-preferido. */
+  pokemonFavorito?: string | null
+  pokemonFavoritoShiny?: boolean
 }
 
 type PrefCorner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
@@ -176,6 +179,9 @@ export const userApi = {
   // Preferências pessoais
   getPreferences:    ()                        => api.get<UserPreferences>('/api/user/me/preferences'),
   updatePreferences: (data: UserPreferences)   => api.put<UserPreferences>('/api/user/me/preferences', data),
+  // Pokémon preferido do perfil (null tira)
+  definirPokemon: (pokemon: string | null, shiny: boolean) =>
+    api.put<{ pokemon: string | null; shiny: boolean }>('/api/user/me/pokemon', { pokemon, shiny }),
 }
 
 // ── Perfil público ────────────────────────────────────────────────────────────
@@ -191,6 +197,7 @@ export interface PublicChampionshipDto {
 
 export interface PublicProfileDto {
   id: string; name: string; profileImageUrl: string | null; memberSince: string
+  pokemonFavorito?: string | null; pokemonFavoritoShiny?: boolean
   publicDecks: PublicDeckDto[]
   championships: PublicChampionshipDto[]
 }

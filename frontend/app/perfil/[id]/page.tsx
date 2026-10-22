@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { publicProfileApi, PublicProfileDto } from '@/lib/api'
 import Link from 'next/link'
+import ParceiroDaConta from '@/components/pokemon/ParceiroDaConta'
+import { nomeDoId } from '@/lib/pokemonPreferido'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import {
   ArrowLeft, User as UserIcon, Trophy, BookOpen,
   Loader2, Shield, Star, Calendar, Layers,
@@ -26,6 +29,7 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [tab, setTab] = useState<'decks' | 'trophies'>('decks')
+  const pokemonLigado = useFuncionalidade('pokemon-preferido') === true
 
   useEffect(() => {
     if (!id) return
@@ -60,7 +64,7 @@ export default function PublicProfilePage() {
       {/* Banner + avatar */}
       <div className="relative">
         <div className="h-36 bg-gradient-to-br from-brand-900 via-surface-800 to-surface-900" />
-        <div className="absolute -bottom-14 left-6">
+        <div className="absolute -bottom-14 left-6 flex items-end gap-1">
           {profile.profileImageUrl ? (
             <img
               src={`${BASE}${profile.profileImageUrl}`}
@@ -71,6 +75,10 @@ export default function PublicProfilePage() {
             <div className="w-24 h-24 rounded-full border-4 border-surface-900 bg-surface-700 flex items-center justify-center shadow-xl">
               <UserIcon className="w-10 h-10 text-surface-400" />
             </div>
+          )}
+          {/* Pokémon preferido do jogador (chave pokemon-preferido) */}
+          {pokemonLigado && profile.pokemonFavorito && (
+            <ParceiroDaConta id={profile.pokemonFavorito} shiny={!!profile.pokemonFavoritoShiny} nome={nomeDoId(profile.pokemonFavorito)} />
           )}
         </div>
       </div>

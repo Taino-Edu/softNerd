@@ -50,7 +50,9 @@ function CadastroForm() {
       const { data } = await authApi.register(name.trim(), email.trim(), password, whatsApp.trim() || undefined)
       saveAuth(data)
       toast.success('Conta criada! Bem-vindo, ' + data.userName)
-      router.push(returnTo)
+      // Indo pra Minha Conta, ela já abre perguntando o Pokémon preferido (se a chave estiver ligada);
+      // quem veio de uma compra ou de outra tela segue direto pra lá
+      router.push(returnTo === '/cliente/perfil' ? '/cliente/perfil?pokemon=escolher' : returnTo)
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string; campo?: string } } })?.response?.data
       const msg  = data?.message || 'Erro ao criar conta.'

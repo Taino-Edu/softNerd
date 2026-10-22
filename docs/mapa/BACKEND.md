@@ -89,6 +89,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `ICategoryService → CategoryService` | `CardGameStore/Services/Implementations/CategoryService.cs` |
 | Scoped | `IChampionshipService → ChampionshipService` | `CardGameStore/Services/Implementations/ChampionshipService.cs` |
 | Scoped | `IUserService → UserService` | `CardGameStore/Services/Implementations/UserService.cs` |
+| Scoped | `PokemonFavoritoService` | `CardGameStore/Services/Implementations/PokemonFavoritoService.cs` |
 | Scoped | `IVendaAvulsaService → VendaAvulsaService` | `CardGameStore/Services/Implementations/VendaAvulsaService.cs` |
 | Scoped | `IAnnouncementService → AnnouncementService` | `CardGameStore/Services/Implementations/AnnouncementService.cs` |
 | Scoped | `IEmailService → EmailService` | `CardGameStore/Services/Implementations/EmailService.cs` |

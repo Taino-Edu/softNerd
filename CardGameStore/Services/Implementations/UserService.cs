@@ -76,6 +76,8 @@ public class UserService : IUserService
             ProfileComplete = user.Email != null
                               && (user.PasswordHash != null || (user.GoogleSub != null && user.WhatsApp != null)),
             EntrouComGoogle = user.GoogleSub != null,
+            PokemonFavorito      = user.PokemonFavorito,
+            PokemonFavoritoShiny = user.PokemonFavoritoShiny,
         };
     }
 

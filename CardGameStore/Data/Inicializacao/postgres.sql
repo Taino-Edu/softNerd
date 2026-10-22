@@ -795,6 +795,10 @@ ALTER TABLE torneio_partidas ADD COLUMN IF NOT EXISTS pronto_b_em TIMESTAMPTZ NU
 ALTER TABLE users ADD COLUMN IF NOT EXISTS falhas_login        INTEGER     NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS login_bloqueado_ate TIMESTAMPTZ NULL;
 
+-- Pokémon preferido do perfil (v1.65.0): id do sprite do Showdown + versão brilhante
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pokemon_favorito       VARCHAR(45) NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pokemon_favorito_shiny BOOLEAN     NOT NULL DEFAULT FALSE;
+
 -- Entrar com Google (Services/Implementations/LoginGoogle.cs): uma conta Google por usuário
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(64) NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_google_sub ON users (google_sub) WHERE google_sub IS NOT NULL;

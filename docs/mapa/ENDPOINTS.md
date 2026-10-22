@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-285 endpoints em 39 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+286 endpoints em 40 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -29,6 +29,7 @@
 - [Notifications](#notifications) (5)
 - [PagamentoCrediario](#pagamentocrediario) (3)
 - [Perfis](#perfis) (6)
+- [PokemonFavorito](#pokemonfavorito) (1)
 - [Product](#product) (10)
 - [ProductVariant](#productvariant) (5)
 - [PublicProfile](#publicprofile) (1)
@@ -368,6 +369,14 @@
 | DELETE | `/api/perfis/{id:guid}` | papéis Admin | `Delete` (163) | `perfisApi.delete` | `app/admin/perfis/page.tsx` |
 | GET | `/api/perfis/{id:guid}` | papéis Admin | `GetById` (90) | — | — |
 | PUT | `/api/perfis/{id:guid}` | papéis Admin | `Update` (134) | `perfisApi.update` | `app/admin/perfis/page.tsx` |
+
+## PokemonFavorito
+
+`CardGameStore/Controllers/PokemonFavoritoController.cs`
+
+| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
+|---|---|---|---|---|---|
+| PUT | `/api/user/me/pokemon` | CustomerOrAdmin | `Definir` (26) | `userApi.definirPokemon` | `components/pokemon/EscolherPokemon.tsx` |
 
 ## Product
 

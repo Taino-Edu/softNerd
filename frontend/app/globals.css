@@ -379,3 +379,17 @@ html.light .painel-novo .btn-primary :is(span, svg) {
   .liga-desmaio { animation-duration: 0.01ms; animation-delay: 0s; }
   .liga-confete { display: none; }
 }
+
+/* ── Pokémon preferido do perfil (chave "pokemon-preferido", v1.65.0) ──
+   Pulinhos ao escolher/tocar e o coração que sobe; cores no componente, sem versão html.light. */
+@keyframes pokemon-coracao {
+  0%   { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(-50%, -110%) scale(1.15); opacity: 0; }
+}
+.pokemon-pula    { animation: liga-pulo 0.6s ease-in-out 2 both; transform-origin: bottom center; }
+.pokemon-coracao { animation: pokemon-coracao 0.9s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .pokemon-pula, .pokemon-coracao { animation: none; }
+  .pokemon-coracao { display: none; }
+}
