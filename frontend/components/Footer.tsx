@@ -16,6 +16,8 @@ import { mixHex } from '@/lib/colors'
 export default function Footer() {
   const pathname = usePathname()
   const novo = useFuncionalidade('visual-produto-e-rodape') !== false
+  // "home-visual-uniforme" (v1.66.0): mesmo tom do menu e do rodapé da home, separado só por uma linha
+  const uniforme = useFuncionalidade('home-visual-uniforme') !== false
   const site = useSiteConfig()
 
   // Não exibe o footer no painel admin
@@ -24,7 +26,7 @@ export default function Footer() {
 
   // Cores sempre no style (nunca text-gray-*): o tema claro do site troca essas classes por cinza-escuro,
   // que some em cima do azul-marinho do rodapé
-  const fundo   = novo ? mixHex(site?.colorHero ?? '#1E4FD6', '#000000', 0.62) : '#10286B'
+  const fundo   = novo ? mixHex(site?.colorHero ?? '#1E4FD6', '#000000', uniforme ? 0.32 : 0.62) : '#10286B'
   const nome    = novo ? (site?.siteName ?? 'Santuário Nerd') : 'Santuário Nerd'
   const link    = 'rgba(255,255,255,0.88)'
   const sep     = 'rgba(255,255,255,0.35)'
@@ -33,7 +35,8 @@ export default function Footer() {
   const barra   = <span aria-hidden className="hidden sm:inline" style={{ color: sep }}>|</span>
 
   return (
-    <footer className="py-6 px-4 text-[13px] sm:text-xs" style={{ backgroundColor: fundo, color: link }}>
+    <footer className="py-6 px-4 text-[13px] sm:text-xs"
+      style={{ backgroundColor: fundo, color: link, borderTop: novo && uniforme ? '1px solid rgba(255,255,255,0.12)' : undefined }}>
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-3">
         {/* Links legais */}
         <nav aria-label="Links legais" className="grid grid-cols-2 gap-x-4 gap-y-1 sm:flex sm:flex-wrap sm:items-center sm:justify-center">

@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.66.0] — 2026-10-22
+
+### Página inicial — um azul só e letras no mesmo tamanho (pedido do Maikon)
+- **Um tom de azul**: a faixa de aviso, o menu e o rodapé (antes eram três tons diferentes) ficam no mesmo azul; títulos, textos e botões da home saem todos do azul da marca ("Cor do topo" em Personalizar Site), sem o azul-céu e o azul-petróleo misturados
+- **Topo mais justo**: sem os círculos atrás do mascote e sem o espaço vazio em cima (o mascote ganhou altura máxima)
+- **Letras**: o título do topo um degrau menor, a chamada "Partidas, amizades…" no tamanho dos outros títulos e nenhum texto da home abaixo de 12px
+- Chave `home-visual-uniforme` em Funcionalidades: desligada, volta a home de antes
+
 ## [v1.65.1] — 2026-10-22
 
 ### Operação

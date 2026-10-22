@@ -61,6 +61,7 @@ public static class Funcionalidades
     public const string PedidoVendaNoPagamento = "pedido-venda-no-pagamento";
     public const string VigiaSistema = "vigia-sistema";
     public const string PokemonPreferido = "pokemon-preferido";
+    public const string HomeVisualUniforme = "home-visual-uniforme";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -316,6 +317,15 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.65.0",
             RevisarEm:  new DateOnly(2027, 4, 1)),
+
+        new(HomeVisualUniforme,
+            Nome:       "Home: um azul só, topo mais justo e letras no mesmo tamanho",
+            OQueMuda:   "Na página inicial, títulos, textos e destaques saem todos do azul da marca (o \"Cor do topo\" de Personalizar Site); " +
+                        "a faixa de aviso, o menu e o rodapé ficam no mesmo tom. O topo perde os círculos e o espaço vazio, e nenhum texto fica abaixo de 12px.",
+            SeDesligar: "Volta a home de antes: azul-céu nos destaques, azul-petróleo nos títulos, faixa mais escura que o menu, círculos no topo e rótulos de 10–11px.",
+            Padrao:     true,
+            Desde:      "v1.66.0",
+            RevisarEm:  new DateOnly(2027, 4, 15)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

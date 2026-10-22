@@ -380,6 +380,13 @@ html.light .painel-novo .btn-primary :is(span, svg) {
   .liga-confete { display: none; }
 }
 
+/* ── Home com visual uniforme (chave "home-visual-uniforme", v1.66.0) ──
+   Piso de 12px: os rótulos de 9–11px da home destoavam do resto (pedido do Maikon). Só muda tamanho,
+   sem cor nova — não precisa de versão html.light. */
+.home-uniforme .text-\[9px\],
+.home-uniforme .text-\[10px\],
+.home-uniforme .text-\[11px\] { font-size: 0.75rem; line-height: 1rem; }
+
 /* ── Pokémon preferido do perfil (chave "pokemon-preferido", v1.65.0) ──
    Pulinhos ao escolher/tocar e o coração que sobe; cores no componente, sem versão html.light. */
 @keyframes pokemon-coracao {
