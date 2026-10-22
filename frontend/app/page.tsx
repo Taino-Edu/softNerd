@@ -555,7 +555,7 @@ export default function LandingPage() {
               <img
                 src={fotoLeve(heroImagem, 960) ?? heroImagem}
                 alt={site.siteName}
-                className={`object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)] ${uniforme ? 'mx-auto w-auto h-auto max-w-full max-h-[min(52vh,24rem)]' : 'w-full h-auto'}`}
+                className={`object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)] ${uniforme ? 'w-full h-auto max-h-[min(52vh,24rem)]' : 'w-full h-auto'}`}
               />
             </div>
           </div>
