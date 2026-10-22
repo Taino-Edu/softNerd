@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **22/10/2026** — produção na **v1.64.2** (v1.64.3, nginx, esperando a aprovação do deploy à noite).
+Atualizado em **22/10/2026** — produção na **v1.65.0** (nginx 1.30.6, Node 24.22.1).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -14,7 +14,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Pokémon preferido** no perfil | v1.65.0 | Prints enviados, esperando o ok do Taino |
+| Script de atualização se reinicia quando muda | v1.65.1 | A troca do nginx precisou de 2 passadas do deploy |
 | Manutenção da VPS: Postgres 16.15, ca-certificates (CA eMudhra/emSign comprometida), Docker/containerd | — | Mexe no servidor: só com autorização e em horário calmo |
 
 ## ⏳ Esperando alguém
@@ -45,6 +45,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.65.1 | 22/10 | O `update.sh` recomeça com a versão nova quando ele mesmo muda no deploy (antes só valia no deploy seguinte) |
 | v1.65.0 | 22/10 | **"Qual o seu Pokémon preferido?"** — escolha depois do cadastro e na Minha Conta (busca, Me surpreenda, brilhante), animado ao lado da foto e no perfil público |
 | v1.64.3 | 22/10 | **nginx 1.27 → 1.30.6** (correções de 14/10); o deploy passa a recriar o nginx quando a versão muda (antes só recarregava a config) |
 | v1.64.2 | 22/10 | **Node.js 20 → 24.22.1** no site e no CI — correção das falhas de 21/10 (Brotli RCE, TLS); o 20 não recebe mais correção |
