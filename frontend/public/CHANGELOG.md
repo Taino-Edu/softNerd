@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.64.2] — 2026-10-22
+
+### Segurança
+- **Node.js 20 → 24.22.1 (LTS)** no site em produção e no CI. Em 21/10 o Node.js corrigiu 10 falhas, entre elas uma que permite rodar código no servidor pelo descompactador Brotli (CVE-2026-111497) e duas que deixam passar certificado TLS de outro site. O Node 20 saiu de suporte em 30/04/2026 e **não recebe essa correção**. A imagem fica presa na versão corrigida (`node:24.22.1-alpine`), não numa "24" qualquer
+- `frontend/.nvmrc` (24.22.1) e `engines` no package.json: mínimo 22.23.4 / 24.22.1 (as versões já corrigidas)
+
 ## [v1.64.1] — 2026-10-21
 
 ### Vigia do sistema — os últimos gatilhos da fila
