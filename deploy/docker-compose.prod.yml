@@ -20,7 +20,10 @@ services:
   # Recebe HTTPS do Cloudflare e roteia para frontend e API
   # ---------------------------------------------------------------------------
   nginx:
-    image: nginx:1.27-alpine
+    # Versão exata (não "1.30" solto): é a porta de entrada da internet. Trocar aqui faz o
+    # update.sh baixar, validar a config e recriar o nginx (~1 s de pedido recusado).
+    # 1.30.6: correções de 14/10/2026 (map/alias/rewrite, TLS) — a 1.27 não recebe mais.
+    image: nginx:1.30.6-alpine
     container_name: santuarionerd_nginx
     # Só é recriado na troca de montagem (uma vez); 3 s pra soltar as portas em vez de 10
     stop_grace_period: 3s
