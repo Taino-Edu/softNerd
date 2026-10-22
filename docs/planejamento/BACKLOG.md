@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **21/10/2026** — produção na **v1.64.0**.
+Atualizado em **22/10/2026** — produção na **v1.64.2** (v1.64.3, nginx, esperando a aprovação do deploy à noite).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -14,8 +14,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Últimos gatilhos da fila** — crediário vencido sem aviso, rodada da liguinha parada, backup atrasado (backup.sh registra no banco) | v1.64.1 | 14 verificações + erro de tela no Vigia |
-| **Pokémon preferido no perfil** — pedido do Maikon pra deixar a conta mais interativa ("qual o seu Pokémon preferido?") | v1.65.0 | Não é o deck do torneio (esse já está na tela do torneio desde a v1.61.1) |
+| **Pokémon preferido** no perfil | v1.65.0 | Prints enviados, esperando o ok do Taino |
+| Manutenção da VPS: Postgres 16.15, ca-certificates (CA eMudhra/emSign comprometida), Docker/containerd | — | Mexe no servidor: só com autorização e em horário calmo |
 
 ## ⏳ Esperando alguém
 
@@ -45,8 +45,10 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.65.0 | 22/10 | **"Qual o seu Pokémon preferido?"** — escolha depois do cadastro e na Minha Conta (busca, Me surpreenda, brilhante), animado ao lado da foto e no perfil público |
 | v1.64.3 | 22/10 | **nginx 1.27 → 1.30.6** (correções de 14/10); o deploy passa a recriar o nginx quando a versão muda (antes só recarregava a config) |
 | v1.64.2 | 22/10 | **Node.js 20 → 24.22.1** no site e no CI — correção das falhas de 21/10 (Brotli RCE, TLS); o 20 não recebe mais correção |
+| v1.64.1 | 22/10 | Últimos gatilhos do Vigia: crediário sem lembrete (pelos marcos configurados), rodada da liguinha parada, backup atrasado (local e Drive com marcas separadas) |
 | v1.64.0 | 21/10 | Gatilhos de comanda esquecida, Pix de comanda sem fechar, NFC-e, torneio sem encerrar e robô parado (os robôs batem o ponto); fontes dentro do projeto (build sem depender do Google); follow-redirects corrigido |
 | v1.63.1 | 21/10 | **Logs não somem no deploy**: o rollout guarda o log antes de apagar o container (`/var/log/santuarionerd`, 30 dias, limpeza também no backup diário); busca com `bash deploy/logs.sh "texto"` |
 | v1.63.0 | 21/10 | **Vigia do sistema** (gatilhos a cada 10 min, Alertas do sistema com busca, erro de tela registrado + tela "algo deu errado") e furo do PDV fechado. Gatilho novo = uma classe em `Services/Vigia` + uma linha em `ServicosDaLoja` |

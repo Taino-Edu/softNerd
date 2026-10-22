@@ -60,6 +60,18 @@ public class User
     [Column("profile_image_url")]
     public string? ProfileImageUrl { get; set; }
 
+    /// <summary>
+    /// Pokémon preferido do perfil (id do sprite do Pokémon Showdown: "pikachu", "raichu-alola").
+    /// Não é o deck do torneio. Validado em PokemonFavoritoService (v1.65.0).
+    /// </summary>
+    [MaxLength(45)]
+    [Column("pokemon_favorito")]
+    public string? PokemonFavorito { get; set; }
+
+    /// <summary>Mostra a versão brilhante (shiny) do Pokémon preferido.</summary>
+    [Column("pokemon_favorito_shiny")]
+    public bool PokemonFavoritoShiny { get; set; }
+
     // -------------------------------------------------------------------------
     // Controle de acesso
     // -------------------------------------------------------------------------

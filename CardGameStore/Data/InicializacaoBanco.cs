@@ -52,6 +52,8 @@ public static class InicializacaoBanco
         "ALTER TABLE site_config ADD COLUMN hero_eyebrow TEXT NOT NULL DEFAULT 'O ponto de encontro da comunidade TCG';",
         "ALTER TABLE site_config ADD COLUMN aviso_topo TEXT NOT NULL DEFAULT 'Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!';",
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_championships_codigo_entrada ON championships (codigo_entrada) WHERE codigo_entrada IS NOT NULL;",
+        "ALTER TABLE users ADD COLUMN pokemon_favorito TEXT NULL;",
+        "ALTER TABLE users ADD COLUMN pokemon_favorito_shiny INTEGER NOT NULL DEFAULT 0;",
     ];
 
     public static async Task ExecutarAsync(IServiceProvider services, bool useSqlite)

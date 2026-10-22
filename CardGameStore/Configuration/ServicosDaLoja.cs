@@ -128,6 +128,7 @@ public static class ServicosDaLoja
         services.AddScoped<ICategoryService,     CategoryService>();
         services.AddScoped<IChampionshipService, ChampionshipService>();
         services.AddScoped<IUserService,         UserService>();
+        services.AddScoped<PokemonFavoritoService>();
         services.AddScoped<IVendaAvulsaService,  VendaAvulsaService>();
         services.AddScoped<IAnnouncementService, AnnouncementService>();
         services.AddScoped<IEmailService,        EmailService>();

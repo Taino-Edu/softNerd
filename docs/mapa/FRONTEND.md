@@ -51,7 +51,7 @@
 | `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/notas/[id]` | `app/cliente/notas/[id]/page.tsx` | — |
 | `/cliente` | `app/cliente/page.tsx` | `cliente/NotificationBell` |
-| `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga` |
+| `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga`, `pokemon/EscolherPokemon`, `pokemon/ParceiroDaConta` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | — |
 | `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
 | `/janela/whatsapp` | `app/janela/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox` |
@@ -63,7 +63,7 @@
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
 | `/` | `app/page.tsx` | `loja/CartaoProduto` |
-| `/perfil/[id]` | `app/perfil/[id]/page.tsx` | — |
+| `/perfil/[id]` | `app/perfil/[id]/page.tsx` | `pokemon/ParceiroDaConta` |
 | `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | `auth/Moldura` |
 | `/privacidade` | `app/privacidade/page.tsx` | `LegalActions`, `ThemeToggle` |
 | `/produtos/[id]` | `app/produtos/[id]/page.tsx` | `loja/CartaoProduto` |
@@ -126,9 +126,12 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/admin/JogadoresTorneio` | `JogadoresTorneio` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/LancarEtapa` | `LancarEtapa` | `app/admin/liguinha/page.tsx` |
 | `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
+| `pokemon/EscolherPokemon` | `EscolherPokemon` | `app/cliente/perfil/page.tsx` |
+| `pokemon/ParceiroDaConta` | `ParceiroDaConta` | `app/cliente/perfil/page.tsx`<br>`app/perfil/[id]/page.tsx` |
+| `pokemon/PokemonParceiro` | `PokemonParceiro` | **nenhum lugar** |
 | `ui/Badge` | `Badge` | `app/admin/alertas/page.tsx`<br>`app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
-| `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx`<br>`components/pokemon/EscolherPokemon.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
 
 ## Bibliotecas (`frontend/lib`)
@@ -165,6 +168,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/hooks.ts` | `useThrottle` |
 | `lib/notificacoes.ts` | `incrementBadge`, `clearBadge`, `tocarSom`, `pedirPermissaoNotificacao`, `notificarBrowser` |
 | `lib/pagamentos.ts` | `FORMAS_PAGAMENTO`, `infoPagamento`, `rotuloPagamento`, `rotuloCurtoPagamento`, `precisaCliente`, `opcoesPagamento` |
+| `lib/pokemonPreferido.ts` | `spriteParado`, `spritesAnimados`, `carregarPokedex`, `buscarPokemon`, `QUERIDINHOS`, `sortear`, `nomeDoId`, `numeroDex` |
 | `lib/prazo.ts` | `fmtRestante` |
 | `lib/precoVitrine.ts` | `resolvePixPercent`, `calcPrecoVitrine` |
 | `lib/printConferencia.ts` | `CONFERENCIA_FORMATOS`, `printConferencia` |

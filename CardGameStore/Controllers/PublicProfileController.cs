@@ -88,6 +88,8 @@ public class PublicProfileController : ControllerBase
             id             = user.Id,
             name           = user.Name,
             profileImageUrl = user.ProfileImageUrl,
+            pokemonFavorito      = user.PokemonFavorito,
+            pokemonFavoritoShiny = user.PokemonFavoritoShiny,
             memberSince    = user.CreatedAt.Date,
             publicDecks    = publicDeckDtos,
             championships,

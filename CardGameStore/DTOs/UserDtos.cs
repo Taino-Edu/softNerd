@@ -119,6 +119,9 @@ public class UserProfileDto
     public bool      ProfileComplete { get; set; }
     /// <summary>Conta ligada ao Google: completar o cadastro pede WhatsApp, não senha.</summary>
     public bool      EntrouComGoogle { get; set; }
+    /// <summary>Pokémon preferido do perfil (id do sprite do Showdown) — v1.65.0.</summary>
+    public string?   PokemonFavorito      { get; set; }
+    public bool      PokemonFavoritoShiny { get; set; }
 }
 
 /// <summary>Request para ajustar saldo monetário de um usuário (Admin).</summary>
