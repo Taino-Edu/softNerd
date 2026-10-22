@@ -139,4 +139,13 @@ rclone delete "$REMOTE" --min-age "${REMOTE_RETAIN_DAYS}d" -v
 echo "[$(date '+%H:%M:%S')] Conteúdo atual da pasta de backups no Drive:"
 rclone lsl "$REMOTE" || true
 
+# Marca no banco que a cópia fora da VPS terminou (o Vigia alerta se passar de 26 h).
+# Só aqui no fim: se o tar ou o rclone falharem, o set -e para antes e a marca fica velha.
+# Falhar no registro nunca derruba o backup (que já está no Drive).
+docker exec santuarionerd_postgres psql -U "${POSTGRES_USER:-cardgame_user}" -d "${POSTGRES_DB:-cardgamestore}" -q -v ON_ERROR_STOP=1 -c \
+  "INSERT INTO marcos_operacao (chave, quando, detalhe) VALUES ('backup-drive', NOW(), 'extras $EXTRAS_SIZE')
+   ON CONFLICT (chave) DO UPDATE SET quando = EXCLUDED.quando, detalhe = EXCLUDED.detalhe;" >/dev/null 2>&1 \
+  && echo "[$(date '+%H:%M:%S')] cópia no Drive registrada no banco (Vigia)" \
+  || echo "[$(date '+%H:%M:%S')] aviso: não deu pra registrar a cópia no Drive no banco — o Vigia vai acusar atraso"
+
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] === Backup para o Google Drive concluído com sucesso ==="

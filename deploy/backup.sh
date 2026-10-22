@@ -69,6 +69,16 @@ docker exec santuarionerd_mongo \
 MONGO_SIZE=$(du -sh "$MONGO_FILE" | cut -f1)
 echo "[$(date '+%H:%M:%S')] MongoDB OK ($MONGO_SIZE)"
 
+# ── Marca no banco que os dumps locais saíram (o Vigia alerta se passar de 26 h) ─
+# A API não enxerga os arquivos daqui; este registro é o que ela consegue ver.
+# É só a parte local: a cópia no Drive tem marca própria no fim do backup-drive.sh.
+# Falhar aqui nunca derruba o backup (que já está feito).
+docker exec santuarionerd_postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -q -v ON_ERROR_STOP=1 -c \
+  "INSERT INTO marcos_operacao (chave, quando, detalhe) VALUES ('backup-diario', NOW(), 'postgres $PG_SIZE, mongo $MONGO_SIZE')
+   ON CONFLICT (chave) DO UPDATE SET quando = EXCLUDED.quando, detalhe = EXCLUDED.detalhe;" >/dev/null 2>&1 \
+  && echo "[$(date '+%H:%M:%S')] backup registrado no banco (Vigia)" \
+  || echo "[$(date '+%H:%M:%S')] aviso: não deu pra registrar o backup no banco — o Vigia vai acusar atraso"
+
 # ── Limpeza de backups antigos ─────────────────────────────────────────────────
 REMOVED=$(find "$BACKUP_DIR" \( -name "*.sql.gz" -o -name "*.archive.gz" \) \
   -mtime +"$MAX_DAYS" -print -delete | wc -l)

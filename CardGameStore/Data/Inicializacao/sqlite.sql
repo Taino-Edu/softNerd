@@ -118,3 +118,9 @@ CREATE TABLE IF NOT EXISTS alertas_sistema (
     resolvido_por TEXT    NULL
 );
 CREATE INDEX IF NOT EXISTS ix_alertas_sistema_abertos ON alertas_sistema (codigo, chave);
+
+CREATE TABLE IF NOT EXISTS marcos_operacao (
+    chave   TEXT NOT NULL PRIMARY KEY,
+    quando  TEXT NOT NULL,
+    detalhe TEXT NULL
+);

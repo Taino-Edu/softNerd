@@ -369,4 +369,95 @@ public class VigiaServiceTests
         }
         finally { BatimentoRobos.Limpar(); }
     }
+
+    // ── Gatilhos de rotina (v1.64.1) ─────────────────────────────────────────
+
+    [Fact]
+    public async Task CrediarioSemAviso_SoMarcoConfiguradoSemEntrega_ComAvisoEntregueOuDesligadoNao()
+    {
+        var a = Criar();
+        a.Db.CrediarioAvisoConfigs.Add(new CrediarioAvisoConfig { Ativo = true, MarcosJson = "[0]" });
+        Crediario Conta() => new() { UserId = a.Cliente.Id, ValorEmCentavos = 5000, DataAbertura = DateTime.UtcNow.AddDays(-20), DataVencimento = DateTime.UtcNow.AddDays(-3) };
+        var sem = Conta(); var entregue = Conta(); var falhou = Conta(); var pulado = Conta();
+        var antiga = new Crediario { UserId = a.Cliente.Id, ValorEmCentavos = 5000, DataAbertura = DateTime.UtcNow.AddDays(-60), DataVencimento = DateTime.UtcNow.AddDays(-20) };
+        a.Db.Crediarios.AddRange(sem, entregue, falhou, pulado, antiga);
+        a.Db.CrediarioAvisos.AddRange(
+            new CrediarioAviso { CrediarioId = entregue.Id, Marco = 0, VencimentoReferencia = entregue.DataVencimento, Canais = "app" },
+            new CrediarioAviso { CrediarioId = falhou.Id, Marco = 0, VencimentoReferencia = falhou.DataVencimento, Canais = "", Falhas = "email: smtp fora" },
+            new CrediarioAviso { CrediarioId = pulado.Id, Marco = 0, VencimentoReferencia = pulado.DataVencimento, Canais = "", Falhas = "pulado: cliente já foi avisado hoje" });
+        a.Db.SaveChanges();
+
+        var achados = await new VerificacaoCrediarioSemAviso(a.Db).VerificarAsync(default);
+        achados.Select(x => x.Referencia.Split(':')[0]).Should().BeEquivalentTo(
+            new[] { sem.Id.ToString(), falhou.Id.ToString() }, "tentativa sem nenhum canal entregue não conta como aviso; fora da janela não conta");
+
+        // Marcos sem o dia do vencimento: 3 dias de atraso ainda não chegou no marco de 7;
+        // a conta de 20 dias perdeu o de 15 (há 5 dias)
+        var cfg = a.Db.CrediarioAvisoConfigs.Single(); cfg.MarcosJson = "[7,15,30]"; a.Db.SaveChanges();
+        (await new VerificacaoCrediarioSemAviso(a.Db).VerificarAsync(default)).Should().ContainSingle("só o marco de 15 da conta antiga já passou")
+            .Which.Referencia.Should().StartWith(antiga.Id + ":").And.EndWith(":15");
+
+        cfg.MarcosJson = "[0]"; cfg.Ativo = false; a.Db.SaveChanges();
+        (await new VerificacaoCrediarioSemAviso(a.Db).VerificarAsync(default)).Should().BeEmpty("avisos desligados não é falha");
+    }
+
+    [Fact]
+    public async Task RodadaParada_SoDepoisDoTempoMaisFolga_ComMesaSemResultado()
+    {
+        var a = Criar();
+        var ch = new Championship { Name = "Liguinha", Game = "Pokemon", StartDate = DateTime.UtcNow, Status = ChampionshipStatus.EmAndamento, RodadaAtual = 2 };
+        a.Db.Championships.Add(ch);
+        var p1 = new ChampionshipParticipant { ChampionshipId = ch.Id, UserId = a.Cliente.Id, PlayerNumber = 1 };
+        var p2 = new ChampionshipParticipant { ChampionshipId = ch.Id, UserId = a.Admin.Id, PlayerNumber = 2 };
+        a.Db.ChampionshipParticipants.AddRange(p1, p2);
+        var rodada = new TorneioRodada { ChampionshipId = ch.Id, Numero = 2, IniciadaEm = DateTime.UtcNow.AddHours(-2) };
+        rodada.Partidas.Add(new TorneioPartida { Mesa = 1, ParticipanteAId = p1.Id, ParticipanteBId = p2.Id });
+        a.Db.TorneioRodadas.Add(rodada);
+        var timer = new TimerEntity { Name = "Liguinha", ChampionshipId = ch.Id, Rodada = 2, State = TimerState.Running,
+            DurationSeconds = 50 * 60, StartedAt = DateTime.UtcNow.AddMinutes(-70) }; // acabou há 20 min: ainda na folga
+        a.Db.Timers.Add(timer);
+        a.Db.SaveChanges();
+
+        (await new VerificacaoRodadaParada(a.Db).VerificarAsync(default)).Should().BeEmpty("20 min depois do tempo ainda é folga");
+
+        timer.StartedAt = DateTime.UtcNow.AddMinutes(-90); a.Db.SaveChanges();   // acabou há 40 min
+        var achados = await new VerificacaoRodadaParada(a.Db).VerificarAsync(default);
+        achados.Should().ContainSingle().Which.Detalhe.Should().Contain("1 mesa(s)");
+
+        rodada.Partidas.Single().Resultado = ResultadoPartida.VitoriaA; a.Db.SaveChanges();
+        (await new VerificacaoRodadaParada(a.Db).VerificarAsync(default)).Should().BeEmpty("com todos os resultados não está parada");
+    }
+
+    [Fact]
+    public async Task BackupAtrasado_CadaAtrasoEUmCasoNovo_ESemRegistroEsperaOPrazo()
+    {
+        var a = Criar();
+        var original = VerificacaoBackupAtrasado.NoArDesde;
+        try
+        {
+            VerificacaoBackupAtrasado.NoArDesde = DateTime.UtcNow.AddHours(-1);
+            (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Should().BeEmpty("API recém-subida ainda não teve backup");
+            VerificacaoBackupAtrasado.NoArDesde = DateTime.UtcNow.AddHours(-30);
+            (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Should().ContainSingle()
+                .Which.Titulo.Should().Contain("Nenhum backup");
+
+            a.Db.MarcosOperacao.Add(new MarcoOperacao { Chave = MarcoOperacao.BackupDiario, Quando = DateTime.UtcNow.AddHours(-2), Detalhe = "postgres 12M" });
+            a.Db.SaveChanges();
+            (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Should().BeEmpty();
+
+            var marco = a.Db.MarcosOperacao.Single(); marco.Quando = DateTime.UtcNow.AddHours(-30); a.Db.SaveChanges();
+            var primeiro = (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Single();
+            marco.Quando = DateTime.UtcNow.AddHours(-28).AddMinutes(-7); a.Db.SaveChanges();
+            var segundo = (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Single();
+            segundo.Referencia.Should().NotBe(primeiro.Referencia, "resolver um atraso não pode silenciar o próximo");
+
+            // Dump local em dia, mas a cópia no Drive parada: alerta separado
+            marco.Quando = DateTime.UtcNow.AddHours(-2);
+            a.Db.MarcosOperacao.Add(new MarcoOperacao { Chave = MarcoOperacao.BackupDrive, Quando = DateTime.UtcNow.AddHours(-50) });
+            a.Db.SaveChanges();
+            (await new VerificacaoBackupAtrasado(a.Db).VerificarAsync(default)).Should().ContainSingle()
+                .Which.Referencia.Should().StartWith("drive-atrasado:");
+        }
+        finally { VerificacaoBackupAtrasado.NoArDesde = original; }
+    }
 }
