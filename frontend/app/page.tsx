@@ -156,8 +156,9 @@ export default function LandingPage() {
     text: mixHex(marcaEscura, '#FFFFFF', 0.38),
     navy: marcaEscura,
   }
-  /** Segunda palavra do título no topo: tom claro do mesmo azul (antes, o azul-céu). */
-  const corTituloHero = uniforme ? mixHex(site.colorHero, '#FFFFFF', 0.55) : C.blue
+  /** Segunda palavra do título no topo ("Nerd"): o azul padrão da loja (Cor principal em Personalizar
+   *  Site, o mesmo do "NERD" da logo) — pedido do Taino, mesmo com o resto da home num azul só. */
+  const corTituloHero = site.colorPrimary
 
   /** Pix do item, com a herança item → categoria → categoria pai → padrão da loja. */
   function pixDoProduto(p: Product): PixVitrine {
