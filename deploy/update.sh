@@ -50,6 +50,9 @@ fi
 # O git pull pode trazer um update.sh novo, mas o bash segue lendo o arquivo que já abriu:
 # sem isto, mudança aqui só valia no deploy SEGUINTE (aconteceu na troca do nginx, v1.64.3).
 # Se o arquivo mudou, roda de novo o novo (uma vez só, sem repetir o backup).
+# Só indo pra frente (main): numa VOLTA (update.sh <commit>) o script daquela versão pode não
+# conhecer a trava nem o argumento (os bem antigos fazem "git pull origin main" e desfariam a
+# volta) — aí segue este, como sempre foi.
 ESTE_SCRIPT="$APP_DIR/deploy/update.sh"
 ASSINATURA_ANTES=$(sha256sum "$ESTE_SCRIPT" | cut -d' ' -f1)
 
@@ -62,9 +65,9 @@ else
     git pull origin main
 fi
 
-if [ "${UPDATE_REEXEC:-0}" != "1" ] && [ "$(sha256sum "$ESTE_SCRIPT" | cut -d' ' -f1)" != "$ASSINATURA_ANTES" ]; then
+if [ -z "${1:-}" ] && [ "${UPDATE_REEXEC:-0}" != "1" ] && [ "$(sha256sum "$ESTE_SCRIPT" | cut -d' ' -f1)" != "$ASSINATURA_ANTES" ]; then
     echo -e "${YELLOW}🔁 O update.sh mudou nesta versão — continuando com o novo${NC}"
-    exec env UPDATE_REEXEC=1 bash "$ESTE_SCRIPT" "$@"
+    exec env UPDATE_REEXEC=1 bash "$ESTE_SCRIPT"
 fi
 
 # Copia .env para pasta deploy

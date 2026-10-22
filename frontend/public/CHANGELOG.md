@@ -3,7 +3,7 @@
 ## [v1.65.1] — 2026-10-22
 
 ### Operação
-- **Mudança no script de atualização vale no mesmo deploy.** O `update.sh` baixa a versão nova de si mesmo no meio do deploy, mas continuava rodando a antiga — por isso a troca do nginx (v1.64.3) só aconteceu numa segunda passada. Agora, se o script mudou, ele recomeça com o novo (uma vez só, sem repetir o backup)
+- **Mudança no script de atualização vale no mesmo deploy.** O `update.sh` baixa a versão nova de si mesmo no meio do deploy, mas continuava rodando a antiga — por isso a troca do nginx (v1.64.3) só aconteceu numa segunda passada. Agora, se o script mudou, ele recomeça com o novo (uma vez só, sem repetir o backup). Na volta pra uma versão antiga (`update.sh <commit>`) continua como antes, pra não cair num script velho que desfaria a volta
 
 ## [v1.65.0] — 2026-10-22
 

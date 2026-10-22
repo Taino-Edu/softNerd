@@ -26,10 +26,11 @@ public class UpdateSeAtualizaTests
         antes.Should().BeGreaterThan(-1).And.BeLessThan(fetch, "a assinatura é tirada antes de o git mexer no arquivo");
         exec.Should().BeGreaterThan(pull, "só depois do pull dá pra saber se o arquivo mudou");
         exec.Should().BeLessThan(docker, "o novo assume antes de qualquer build/troca de container");
-        linhas[exec].Should().EndWith("\"$@\"", "a volta pra uma versão (update.sh <commit>) precisa seguir no novo");
-
         var guarda = linhas[exec - 2];
         guarda.Should().Contain("UPDATE_REEXEC:-0}\" != \"1\"", "sem a trava, um arquivo que muda a cada pull entraria em laço");
+        guarda.Should().StartWith("if [ -z \"${1:-}\" ]",
+            "numa volta (update.sh <commit>) o script antigo não conhece a trava e os bem antigos puxam o main de novo — desfaria a volta");
+        linhas[exec].Should().NotContain("$@", "só recomeça indo pro main, sem argumento");
     }
 
     [Fact]
