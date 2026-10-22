@@ -45,6 +45,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.64.2 | 22/10 | **Node.js 20 → 24.22.1** no site e no CI — correção das falhas de 21/10 (Brotli RCE, TLS); o 20 não recebe mais correção |
 | v1.64.0 | 21/10 | Gatilhos de comanda esquecida, Pix de comanda sem fechar, NFC-e, torneio sem encerrar e robô parado (os robôs batem o ponto); fontes dentro do projeto (build sem depender do Google); follow-redirects corrigido |
 | v1.63.1 | 21/10 | **Logs não somem no deploy**: o rollout guarda o log antes de apagar o container (`/var/log/santuarionerd`, 30 dias, limpeza também no backup diário); busca com `bash deploy/logs.sh "texto"` |
 | v1.63.0 | 21/10 | **Vigia do sistema** (gatilhos a cada 10 min, Alertas do sistema com busca, erro de tela registrado + tela "algo deu errado") e furo do PDV fechado. Gatilho novo = uma classe em `Services/Vigia` + uma linha em `ServicosDaLoja` |

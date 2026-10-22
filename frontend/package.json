@@ -2,6 +2,9 @@
   "name": "cardgamestore-frontend",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "^22.23.4 || >=24.22.1"
+  },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -29,7 +32,7 @@
   "devDependencies": {
     "@playwright/test": "^1.64.0",
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^22.1.0",
+    "@types/node": "^24.19.2",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
