@@ -129,7 +129,7 @@ export default function LandingPage() {
 
   // pix não sai da personalização de propósito: é a cor da forma de pagamento, não da
   // marca — e precisa de contraste garantido nos dois temas.
-  const C = isDark ? {
+  const C0 = isDark ? {
     bg: '#121215', card: '#1A1A1F', cardAlt: '#1E1E24',
     border: 'rgba(255,255,255,0.07)', blue: site.colorPrimary,
     yellow: site.colorAccent, text: 'rgba(255,255,255,0.60)',
@@ -140,6 +140,24 @@ export default function LandingPage() {
     yellow: site.colorAccent, text: '#4D8FAC',
     navy: '#0C3D5A', pix: '#00806D',
   }
+  // Visual uniforme (chave "home-visual-uniforme", v1.66.0 — pedido do Maikon: "3 tons de azul"):
+  // títulos, textos, destaques e fundo saem TODOS do azul da marca (colorHero, em Personalizar Site)
+  // em vez de misturar o azul-céu (colorPrimary) e o azul-petróleo (colorNavy). Desligada = C0.
+  const uniforme = useFuncionalidade('home-visual-uniforme') !== false
+  const marcaEscura = mixHex(site.colorHero, '#000000', 0.55)
+  const C = !uniforme ? C0 : isDark ? {
+    ...C0, blue: mixHex(site.colorHero, '#FFFFFF', 0.38),
+  } : {
+    ...C0,
+    bg: mixHex(site.colorHero, '#FFFFFF', 0.94),
+    cardAlt: mixHex(site.colorCard, site.colorHero, 0.05),
+    border: mixHex(site.colorHero, '#FFFFFF', 0.86),
+    blue: site.colorHero,
+    text: mixHex(marcaEscura, '#FFFFFF', 0.38),
+    navy: marcaEscura,
+  }
+  /** Segunda palavra do título no topo: tom claro do mesmo azul (antes, o azul-céu). */
+  const corTituloHero = uniforme ? mixHex(site.colorHero, '#FFFFFF', 0.55) : C.blue
 
   /** Pix do item, com a herança item → categoria → categoria pai → padrão da loja. */
   function pixDoProduto(p: Product): PixVitrine {
@@ -188,7 +206,7 @@ export default function LandingPage() {
   const faixa     = avisoTopo ? 32 : 0          // altura da faixa (px): empurra menu e topo pra baixo
   // "Jogue, evolua e divirta-se — encontre tudo…": o trecho antes do travessão sai em amarelo
   const [avisoDestaque, ...avisoResto] = avisoTopo.split(' — ')
-  const corRodape = mixHex(site.colorHero, '#000000', 0.45)
+  const corRodape = uniforme ? navBg : mixHex(site.colorHero, '#000000', 0.45)
   const F = detalhes
     ? { navy: '#FFFFFF', text: 'rgba(255,255,255,0.72)', blue: '#FFFFFF', border: 'rgba(255,255,255,0.14)' }
     : { navy: C.navy, text: C.text, blue: C.blue, border: C.border }
@@ -286,7 +304,7 @@ export default function LandingPage() {
   const radius = RADIUS_PRESETS[site.borderRadiusStyle] ?? RADIUS_PRESETS.Padrao
 
   return (
-    <div className="site-shell min-h-screen" style={{ backgroundColor: C.bg, color: C.navy }}>
+    <div className={`site-shell min-h-screen ${uniforme ? 'home-uniforme' : ''}`} style={{ backgroundColor: C.bg, color: C.navy }}>
       {/* Retematiza os cantos (cards/botões/imagens) sem precisar editar cada className —
           [class~=...] só bate o token exato "rounded-xl" etc, então variantes responsivas
           (sm:rounded-2xl) e direcionais (rounded-t-3xl, usadas nos modais de bottom-sheet)
@@ -305,7 +323,7 @@ export default function LandingPage() {
 
       {avisoTopo && (
         <div className="fixed inset-x-0 top-0 z-[52] h-8 flex items-center justify-center gap-1.5 px-4 text-[11px] sm:text-xs font-bold transition-transform duration-300"
-          style={{ backgroundColor: mixHex(site.colorHero, '#000000', 0.5), color: '#FFFFFF', transform: (navVisible || navHover) ? 'translateY(0)' : 'translateY(-100%)' }}
+          style={{ backgroundColor: uniforme ? navBg : mixHex(site.colorHero, '#000000', 0.5), color: '#FFFFFF', transform: (navVisible || navHover) ? 'translateY(0)' : 'translateY(-100%)' }}
           onMouseEnter={() => setNavHover(true)}>
           <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: C.yellow }} />
           <span className="truncate">
@@ -484,7 +502,7 @@ export default function LandingPage() {
           </>
         ) : (
           <div className="absolute inset-0" style={{ background: heroGradient }}>
-            {visualNovo && (
+            {visualNovo && !uniforme && (
               // Anéis de fundo do mockup: só decoração, não pegam clique
               <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
                 <div className="absolute -right-24 top-1/2 -translate-y-1/2 w-[34rem] h-[34rem] rounded-full border border-white/10" />
@@ -496,7 +514,7 @@ export default function LandingPage() {
         )}
 
         {/* Conteúdo do hero — por cima do fundo */}
-        <div className="relative z-10 max-w-6xl mx-auto px-5 py-20 md:py-24">
+        <div className={`relative z-10 max-w-6xl mx-auto px-5 ${uniforme ? 'py-10 md:py-14' : 'py-20 md:py-24'}`}>
           <div className="flex flex-col items-center gap-8 md:gap-12 md:flex-row">
 
             {/* Texto */}
@@ -508,9 +526,9 @@ export default function LandingPage() {
                   {site.heroEyebrow}
                 </span>
               )}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-4 leading-tight">
+              <h1 className={`${uniforme ? 'text-4xl md:text-5xl' : 'text-4xl md:text-5xl lg:text-6xl'} font-black mb-4 leading-tight`}>
                 <span style={{ color: C.yellow }}>{heroFirstWord}</span>
-                {heroRest && <>{' '}<span style={{ color: C.blue }}>{heroRest}</span></>}
+                {heroRest && <>{' '}<span style={{ color: corTituloHero }}>{heroRest}</span></>}
               </h1>
               <p className="text-base md:text-lg max-w-md mb-8 leading-relaxed" style={{ color: '#ffffff' }}>
                 {site.heroSubtitle}
@@ -537,7 +555,7 @@ export default function LandingPage() {
               <img
                 src={fotoLeve(heroImagem, 960) ?? heroImagem}
                 alt={site.siteName}
-                className="w-full h-auto object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
+                className={`object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)] ${uniforme ? 'mx-auto w-auto h-auto max-w-full max-h-[min(52vh,24rem)]' : 'w-full h-auto'}`}
               />
             </div>
           </div>
@@ -974,7 +992,7 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto rounded-2xl border p-6 md:px-8 flex flex-col md:flex-row items-center justify-between gap-5 text-center md:text-left"
             style={{ backgroundColor: mixHex(C.yellow, C.card, isDark ? 0.86 : 0.72), borderColor: `${C.yellow}66` }}>
             <div>
-              <h2 className="text-xl md:text-2xl font-black leading-tight" style={{ color: C.navy }}>
+              <h2 className={`${uniforme ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} font-black leading-tight`} style={{ color: C.navy }}>
                 Partidas, amizades e muita diversão 💛
               </h2>
               <p className="text-sm mt-1.5" style={{ color: isDark ? C.text : mixHex(C.navy, '#FFFFFF', 0.2) }}>
