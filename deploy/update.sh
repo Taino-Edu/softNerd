@@ -23,7 +23,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-APP_DIR="/opt/santuarionerd"
+APP_DIR="${APP_DIR:-/opt/santuarionerd}"
 
 echo -e "${YELLOW}🔄 Atualizando SantuárioNerd...${NC}"
 
@@ -38,12 +38,20 @@ cd "$APP_DIR"
 # podem se perder. Falhou o backup, não tem deploy (set -e). Roda com o site no ar
 # (pg_dump e mongodump não travam ninguém). Fica em backups/, 7 dias.
 # Pular só em emergência:  SEM_BACKUP=1 bash deploy/update.sh
-if [ "${SEM_BACKUP:-0}" = "1" ]; then
+if [ "${UPDATE_REEXEC:-0}" = "1" ]; then
+    echo -e "${YELLOW}💾 Backup já feito antes de o update.sh se atualizar${NC}"
+elif [ "${SEM_BACKUP:-0}" = "1" ]; then
     echo -e "${YELLOW}⚠️  SEM_BACKUP=1 — deploy sem backup antes${NC}"
 else
     echo -e "${YELLOW}💾 Backup antes do deploy...${NC}"
     bash "$APP_DIR/deploy/backup.sh"
 fi
+
+# O git pull pode trazer um update.sh novo, mas o bash segue lendo o arquivo que já abriu:
+# sem isto, mudança aqui só valia no deploy SEGUINTE (aconteceu na troca do nginx, v1.64.3).
+# Se o arquivo mudou, roda de novo o novo (uma vez só, sem repetir o backup).
+ESTE_SCRIPT="$APP_DIR/deploy/update.sh"
+ASSINATURA_ANTES=$(sha256sum "$ESTE_SCRIPT" | cut -d' ' -f1)
 
 git fetch origin
 if [ -n "${1:-}" ]; then
@@ -52,6 +60,11 @@ if [ -n "${1:-}" ]; then
 else
     git checkout main
     git pull origin main
+fi
+
+if [ "${UPDATE_REEXEC:-0}" != "1" ] && [ "$(sha256sum "$ESTE_SCRIPT" | cut -d' ' -f1)" != "$ASSINATURA_ANTES" ]; then
+    echo -e "${YELLOW}🔁 O update.sh mudou nesta versão — continuando com o novo${NC}"
+    exec env UPDATE_REEXEC=1 bash "$ESTE_SCRIPT" "$@"
 fi
 
 # Copia .env para pasta deploy
