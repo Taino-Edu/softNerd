@@ -531,7 +531,8 @@ public class TorneioService
     {
         var participantes = await _db.ChampionshipParticipants
             .Where(p => p.ChampionshipId == championshipId)
-            .Select(p => new { p.Id, p.PlayerNumber, p.User.Name, p.UserId, p.DesistiuNaRodada, p.DeckName })
+            .Select(p => new { p.Id, p.PlayerNumber, p.User.Name, p.UserId, p.DesistiuNaRodada, p.DeckName,
+                               p.User.PokemonFavorito, p.User.PokemonFavoritoShiny })
             .ToListAsync();
         var historico = await HistoricoAsync(championshipId);
 
@@ -543,7 +544,8 @@ public class TorneioService
         return Suico.Classificar(ordem.Select(p => p.Id).ToList(), historico)
             .Select(l => new LinhaTabela(
                 l.Posicao, l.Id, porId[l.Id].UserId, porId[l.Id].Name, porId[l.Id].DeckName,
-                l.Pontos, l.Vitorias, l.Empates, l.Derrotas, l.Owp, l.Oowp, porId[l.Id].DesistiuNaRodada))
+                l.Pontos, l.Vitorias, l.Empates, l.Derrotas, l.Owp, l.Oowp, porId[l.Id].DesistiuNaRodada,
+                porId[l.Id].PokemonFavorito, porId[l.Id].PokemonFavoritoShiny))
             .ToList();
     }
 
@@ -558,9 +560,11 @@ public class TorneioService
             .Select(p => new
             {
                 p.Id, p.Mesa,
-                A = new JogadorMesa(p.ParticipanteAId, p.ParticipanteA.UserId, p.ParticipanteA.User.Name, p.DeckANome),
+                A = new JogadorMesa(p.ParticipanteAId, p.ParticipanteA.UserId, p.ParticipanteA.User.Name, p.DeckANome,
+                    p.ParticipanteA.User.PokemonFavorito, p.ParticipanteA.User.PokemonFavoritoShiny),
                 B = p.ParticipanteB == null ? null
-                    : new JogadorMesa(p.ParticipanteB.Id, p.ParticipanteB.UserId, p.ParticipanteB.User.Name, p.DeckBNome),
+                    : new JogadorMesa(p.ParticipanteB.Id, p.ParticipanteB.UserId, p.ParticipanteB.User.Name, p.DeckBNome,
+                        p.ParticipanteB.User.PokemonFavorito, p.ParticipanteB.User.PokemonFavoritoShiny),
                 p.ReportA, p.ReportB, p.Resultado, p.ProntoAEm, p.ProntoBEm,
             })
             .ToListAsync();
@@ -598,7 +602,7 @@ public class TorneioService
             .OrderBy(p => p.PlayerNumber)
             .Select(p => new ParticipantePainel(
                 p.Id, p.UserId, p.PlayerNumber, p.User.Name, p.DeckName, p.CheckInEm, p.DesistiuNaRodada,
-                ch.EntryFeeInCents == 0 || p.EntryFeePaidAt != null))
+                ch.EntryFeeInCents == 0 || p.EntryFeePaidAt != null, p.User.PokemonFavorito, p.User.PokemonFavoritoShiny))
             .ToListAsync();
         var timer = await _db.Timers.AsNoTracking().FirstOrDefaultAsync(t => t.ChampionshipId == championshipId);
 
@@ -799,11 +803,14 @@ public class TorneioService
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
 
+/// <param name="Pokemon">Pokémon preferido do jogador (foto na liguinha — chave pokemon-preferido); sem ele, a foto sai do deck.</param>
 public sealed record LinhaTabela(
     int Posicao, Guid ParticipanteId, Guid UserId, string Nome, string? Deck,
-    int Pontos, int Vitorias, int Empates, int Derrotas, decimal Owp, decimal Oowp, int? DesistiuNaRodada);
+    int Pontos, int Vitorias, int Empates, int Derrotas, decimal Owp, decimal Oowp, int? DesistiuNaRodada,
+    string? Pokemon = null, bool Shiny = false);
 
-public sealed record JogadorMesa(Guid ParticipanteId, Guid UserId, string Nome, string? Deck);
+/// <param name="Pokemon">Ver LinhaTabela.Pokemon.</param>
+public sealed record JogadorMesa(Guid ParticipanteId, Guid UserId, string Nome, string? Deck, string? Pokemon = null, bool Shiny = false);
 
 /// <param name="AguardandoMesa">Mesa além dos lugares da loja: joga quando uma liberar.</param>
 /// <param name="ProntoA">Jogador A apertou "Estou pronto" (setup montado) — chave liguinha-pronto-na-mesa.</param>
@@ -824,7 +831,8 @@ public sealed record TorneioPublicoDto(
     int Lugares = 24, bool RodadaComecou = false);
 
 public sealed record ParticipantePainel(
-    Guid Id, Guid UserId, int PlayerNumber, string Nome, string? Deck, DateTime? CheckInEm, int? DesistiuNaRodada, bool Pago);
+    Guid Id, Guid UserId, int PlayerNumber, string Nome, string? Deck, DateTime? CheckInEm, int? DesistiuNaRodada, bool Pago,
+    string? Pokemon = null, bool Shiny = false);
 
 public sealed record PainelDto(
     Guid Id, string Nome, string Status, string Formato, string? CodigoEntrada, int MelhorDe, int MinutosRodada,

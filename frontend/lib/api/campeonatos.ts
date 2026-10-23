@@ -118,6 +118,8 @@ export const timerApi = {
 // ── Liga Mensal (ranking agregado dos campeonatos semanais) ───────────────────
 
 export interface LigaMensalRankingDto {
+  /** Pokémon preferido (foto no ranking); sem ele, a foto sai do deck. */
+  pokemon?: string | null; shiny?: boolean
   userId: string
   playerName: string
   totalPoints: number

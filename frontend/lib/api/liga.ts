@@ -11,9 +11,15 @@ export interface LinhaTabela {
   posicao: number; participanteId: string; userId: string; nome: string; deck?: string | null
   pontos: number; vitorias: number; empates: number; derrotas: number
   owp: number; oowp: number; desistiuNaRodada?: number | null
+  /** Pokémon preferido (foto na liguinha); sem ele, a foto sai do deck. */
+  pokemon?: string | null; shiny?: boolean
 }
 
-export interface JogadorMesa { participanteId: string; userId: string; nome: string; deck?: string | null }
+export interface JogadorMesa {
+  participanteId: string; userId: string; nome: string; deck?: string | null
+  /** Pokémon preferido (foto na liguinha); sem ele, a foto sai do deck. */
+  pokemon?: string | null; shiny?: boolean
+}
 
 export interface MesaDto {
   partidaId: string; mesa: number; a: JogadorMesa; b: JogadorMesa | null
@@ -50,6 +56,7 @@ export interface TorneioPublicoDto {
 export interface ParticipantePainel {
   id: string; userId: string; playerNumber: number; nome: string; deck?: string | null
   checkInEm: string | null; desistiuNaRodada: number | null; pago: boolean
+  pokemon?: string | null; shiny?: boolean
 }
 
 export interface PainelTorneioDto {

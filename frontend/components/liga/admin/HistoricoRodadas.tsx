@@ -5,12 +5,12 @@ import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import { Loader2 } from 'lucide-react'
 import { torneioApi, MesaDto, JogadorMesa } from '@/lib/api'
-import SpriteDeck from '@/components/liga/SpriteDeck'
+import AvatarJogador from '@/components/liga/AvatarJogador'
 
 function Lado({ j, venceu, perdeu }: { j: JogadorMesa; venceu: boolean; perdeu: boolean }) {
   return (
     <span className={clsx('flex items-center gap-2 min-w-0 flex-1', perdeu && 'opacity-50')}>
-      <span className="w-8 flex justify-center shrink-0"><SpriteDeck deck={j.deck} tamanho={28} /></span>
+      <span className="w-8 flex justify-center shrink-0"><AvatarJogador pokemon={j.pokemon} shiny={j.shiny} deck={j.deck} tamanho={28} /></span>
       <span className="min-w-0">
         <span className={clsx('block text-sm truncate', venceu ? 'font-bold text-white' : 'text-gray-200')}>{j.nome}</span>
         {j.deck && <span className="block text-[11px] text-gray-500 truncate">{j.deck}</span>}

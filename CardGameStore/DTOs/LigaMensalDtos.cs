@@ -24,6 +24,9 @@ public class LigaMensalRankingDto
     /// <summary>Melhor colocação em campeonato; 0 = só tem lançamento manual.</summary>
     public int BestPlacement { get; init; }
     public List<string> Decks { get; set; } = new();
+    /// <summary>Pokémon preferido do jogador (foto no ranking — chave pokemon-preferido); null = foto do deck.</summary>
+    public string? Pokemon { get; init; }
+    public bool Shiny { get; init; }
 }
 
 public class LigaMensalMesDto

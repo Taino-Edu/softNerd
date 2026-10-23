@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.67.0] — 2026-10-23
+
+### Liguinha — a "fotinha" do jogador é o Pokémon preferido (pedido do Maikon)
+- No telão, na tela do jogador ("Você × oponente" e a comemoração), na Central do organizador e no ranking da Liga, a foto de cada jogador passa a ser o **Pokémon preferido** que ele escolheu na conta (animado no pódio e na comemoração, brilhante se ele escolheu assim)
+- O **nome do deck** continua embaixo do nome — deck com nome livre não vira figura, o Pokémon sempre vira
+- Quem não escolheu Pokémon continua com a figura do deck, como antes; desligar a chave `pokemon-preferido` também volta tudo pro deck
+
 ## [v1.66.2] — 2026-10-23
 
 ### Liguinha — lançar o resultado depois que o tempo acaba (pedido do Maikon)

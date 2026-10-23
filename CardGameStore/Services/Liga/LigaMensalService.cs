@@ -126,6 +126,8 @@ public class LigaMensalService
                 EventsPlayed  = g.Count(),
                 BestPlacement = g.Min(p => p.Placement!.Value),
                 Decks         = DecksOrdenados(g.Select(p => p.DeckName)),
+                Pokemon       = g.First().User?.PokemonFavorito,
+                Shiny         = g.First().User?.PokemonFavoritoShiny ?? false,
             })
             .ToList();
 
