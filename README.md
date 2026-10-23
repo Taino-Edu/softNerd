@@ -88,7 +88,7 @@
 
 | Tecnologia | Finalidade |
 |---|---|
-| ASP.NET Core 8 | API REST |
+| ASP.NET Core 10 | API REST |
 | Entity Framework Core 8 | ORM — PostgreSQL (sem migrations automáticas) |
 | PostgreSQL 16 | Usuários, produtos, comandas, crediários, campeonatos |
 | MongoDB 7 | Vendas avulsas (event store imutável) |
@@ -126,7 +126,7 @@
 
 ```
 softNerd/
-├── CardGameStore/              # ASP.NET Core 8 — API REST
+├── CardGameStore/              # ASP.NET Core 10 — API REST
 │   ├── Controllers/            # Endpoints (Auth, Product, Comanda, Venda, Upload, ...)
 │   ├── Services/               # Lógica de negócio
 │   ├── Models/

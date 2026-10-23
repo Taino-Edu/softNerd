@@ -24,7 +24,7 @@ Este README é escrito à mão — o script não mexe nele. Quando descobrir uma
 
 | Parte | Onde | Observação |
 |---|---|---|
-| API (C#/.NET 8) | `CardGameStore/` | Controllers em `Controllers/`, regra de negócio em `Services/Implementations/` |
+| API (C#/.NET 10) | `CardGameStore/` | Controllers em `Controllers/`, regra de negócio em `Services/Implementations/` |
 | Front (Next.js 15, React 19) | `frontend/` | Telas em `app/`, peças reutilizáveis em `components/`, chamadas à API em `lib/api/` (um arquivo por assunto; as telas importam de `@/lib/api`) |
 | Banco principal | PostgreSQL | Modelos em `CardGameStore/Models/PostgreSQL/`, configuração em `Data/AppDbContext.cs` |
 | Vendas do balcão | MongoDB | `Models/MongoDB/VendaAvulsa.cs` |
