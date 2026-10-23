@@ -45,6 +45,8 @@
 | `/admin/whatsapp` | `app/admin/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox`, `ui/PageHeader` |
 | `/cadastro` | `app/cadastro/page.tsx` | `auth/Moldura` |
 | `/campeonato/[id]` | `app/campeonato/[id]/page.tsx` | — |
+| `/campeonato/jogar` | `app/campeonato/jogar/page.tsx` | — |
+| `/campeonato/torneio/[id]` | `app/campeonato/torneio/[id]/page.tsx` | — |
 | `/cliente/configuracoes` | `app/cliente/configuracoes/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/decks/[id]` | `app/cliente/decks/[id]/page.tsx` | — |
 | `/cliente/decks` | `app/cliente/decks/page.tsx` | `cliente/CabecalhoCliente` |
@@ -159,6 +161,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/vendas.ts` | `vendaAvulsaApi`, `minhasComprasApi` |
 | `lib/api/vigia.ts` | `vigiaApi` |
 | `lib/auth.ts` | `saveAuth`, `clearAuth`, `getRole`, `getUserName`, `getUserId`, `isAdmin`, `isOperator`, `isLoggedIn`, `getPermissions`, `hasPermission` |
+| `lib/caminhosTorneio.ts` | `rotasDoEvento`, `modalidadeDoEndereco` |
 | `lib/colors.ts` | `mixHex`, `isDark`, `getContrastText` |
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |
 | `lib/crediario.ts` | `agruparItens`, `totalUnidades` |

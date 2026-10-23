@@ -13,6 +13,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { rotasDoEvento } from '@/lib/caminhosTorneio'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import clsx from 'clsx'
 import { ArrowLeft, CircleDollarSign, ExternalLink, Loader2, Monitor, Users, Wallet, CheckCircle2 } from 'lucide-react'
@@ -73,6 +74,7 @@ function TorneioCentral() {
   const modalidades = useFuncionalidade('liga-modalidades') !== false
   // Campeonato avulso não soma na Liga (com a chave ligada); sem saber ainda, trata como Liga
   const somaNaLiga = !modalidades || (ch?.modalidade ?? 'Liga') === 'Liga'
+  const separado = useFuncionalidade('campeonato-separado') === true
   // Campeonato avulso que não virou suíço: só inscrição e venda
   const avulso = !somaNaLiga && !suico
   const lancado = !!p && !suico && p.status === 'Finalizado' && !avulso
@@ -126,7 +128,7 @@ function TorneioCentral() {
           )}
           <Badge tone={st.tone}>{st.rotulo}</Badge>
           {suico && (
-            <Link href={`/liga/torneio/${p.id}`} target="_blank" className="btn-secondary text-sm"><Monitor className="w-4 h-4" /> Telão</Link>
+            <Link href={rotasDoEvento(ch?.modalidade, separado).telao(p.id)} target="_blank" className="btn-secondary text-sm"><Monitor className="w-4 h-4" /> Telão</Link>
           )}
           <Link href="/admin/campeonatos" className="btn-secondary text-sm" title="Pagamentos, pré-inscrições e capa ficam na tela de Campeonatos">
             <ExternalLink className="w-4 h-4" /> Campeonatos

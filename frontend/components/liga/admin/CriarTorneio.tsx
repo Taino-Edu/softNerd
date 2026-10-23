@@ -21,10 +21,11 @@ function mensagemDe(e: unknown, padrao: string) {
 }
 
 /** sugestoes: valores de entrada usados por último em cada modalidade (atalhos). */
-export default function CriarTorneio({ onFechar, sugestoes }: { onFechar: () => void; sugestoes?: Record<Modalidade, number[]> }) {
+/** soLiga: a Central com a chave campeonato-separado cria só liguinha (campeonato nasce em Campeonatos). */
+export default function CriarTorneio({ onFechar, sugestoes, soLiga = false }: { onFechar: () => void; sugestoes?: Record<Modalidade, number[]>; soLiga?: boolean }) {
   const router = useRouter()
   const hoje = hojeBrasil()
-  const modalidades = useFuncionalidade('liga-modalidades') !== false
+  const modalidades = useFuncionalidade('liga-modalidades') !== false && !soLiga
   const [modalidade, setModalidade] = useState<Modalidade>('Liga')
   const ehLiga = modalidade === 'Liga' || !modalidades
   const nomePadrao = (m: Modalidade) => `${m === 'Liga' ? 'Liguinha' : 'Campeonato'} ${hoje.slice(8, 10)}/${hoje.slice(5, 7)}`

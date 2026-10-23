@@ -62,6 +62,7 @@ public static class Funcionalidades
     public const string VigiaSistema = "vigia-sistema";
     public const string PokemonPreferido = "pokemon-preferido";
     public const string HomeVisualUniforme = "home-visual-uniforme";
+    public const string CampeonatoSeparado = "campeonato-separado";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -325,6 +326,16 @@ public static class Funcionalidades
             SeDesligar: "Volta a home de antes: azul-céu nos destaques, azul-petróleo nos títulos, faixa mais escura que o menu, círculos no topo e rótulos de 10–11px.",
             Padrao:     true,
             Desde:      "v1.66.0",
+            RevisarEm:  new DateOnly(2027, 4, 15)),
+
+        new(CampeonatoSeparado,
+            Nome:       "Campeonato separado da Liga",
+            OQueMuda:   "Evento de modalidade Campeonato roda fora da Liga: no celular do jogador fica em /campeonato/jogar e o telão em " +
+                        "/campeonato/torneio, com o nome e os links do campeonato. A Liguinha (celular e Central do admin) mostra só Liga; " +
+                        "campeonato se abre pela tela de Campeonatos.",
+            SeDesligar: "Volta como antes: Liga e Campeonato juntos na Liguinha (Central com a aba Tudo/Liga/Campeonatos) e o telão de todos em /liga.",
+            Padrao:     true,
+            Desde:      "v1.68.0",
             RevisarEm:  new DateOnly(2027, 4, 15)),
     ];
 
