@@ -94,6 +94,24 @@ public class LigaMensalServiceTests
     public void PontosPorColocacao_SegueATabelaDaLoja(int colocacao, int pontos) =>
         LigaMensalService.PontosPorColocacao(colocacao).Should().Be(pontos);
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Ranking_LevaOPokemonPreferido_NosDoisCalculos(bool porJogador)
+    {
+        // Foto do jogador no ranking da Liga (chave pokemon-preferido) — também no cálculo antigo
+        var amb = Criar(porJogador);
+        var ana = amb.Jogador("Ana");
+        ana.PokemonFavorito = "eevee"; ana.PokemonFavoritoShiny = true; amb.Db.SaveChanges();
+        var beto = amb.Jogador("Beto");
+        amb.Campeonato(Br(2026, 10, 3), resultado: [(ana, 1, "Charizard"), (beto, 2, "Gardevoir")]);
+
+        var r = await amb.Liga.RankingAsync(2026, 10);
+
+        r.Ranking.Single(l => l.PlayerName == "Ana").Should().Match<LigaMensalRankingDto>(l => l.Pokemon == "eevee" && l.Shiny);
+        r.Ranking.Single(l => l.PlayerName == "Beto").Pokemon.Should().BeNull("sem Pokémon, a foto sai do deck");
+    }
+
     [Fact]
     public async Task Ranking_SomaOsCampeonatosDoMes_EOrdenaPorPontos()
     {
