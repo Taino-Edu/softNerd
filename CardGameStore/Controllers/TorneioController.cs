@@ -128,7 +128,7 @@ public class TorneioController : ControllerBase
     public Task<IActionResult> Entrar([FromBody] EntrarTorneioRequest req) => Rodar(async () =>
     {
         var ch = await _torneio.EntrarAsync(UsuarioId(), req.Codigo, req.DeckId, req.DeckNome);
-        return Ok(new { championshipId = ch.Id, nome = ch.Name });
+        return Ok(new { championshipId = ch.Id, nome = ch.Name, modalidade = ch.Modalidade.ToString() });
     });
 
     /// <summary>"Estou aqui": check-in de quem já está inscrito, pela própria conta, sem código.</summary>

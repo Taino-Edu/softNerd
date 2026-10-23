@@ -9,6 +9,7 @@ import { pixel } from '@/lib/fontePixel'
 import { ArrowLeft, Swords, CheckCircle2, Clock, Crown } from 'lucide-react'
 import { TorneioPublicoDto, MesaDto, LinhaTabela, rodadaComecou, segundosRestantes, mesasDeSetup } from '@/lib/api'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { rotasDoEvento } from '@/lib/caminhosTorneio'
 import { mixHex } from '@/lib/colors'
 import { useSiteConfig } from '@/lib/useSiteConfig'
 import AvatarJogador from '@/components/liga/AvatarJogador'
@@ -183,6 +184,9 @@ function Podio({ linhas }: { linhas: LinhaTabela[] }) {
 export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
   const site = useSiteConfig()
   const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
+  // Campeonato não volta pra Liga nem manda o jogador pra Liguinha (chave campeonato-separado)
+  const rotas = rotasDoEvento(t.modalidade, useFuncionalidade('campeonato-separado') === true)
+  const voltar = rotas.voltar(t.id)
   const cor = site?.colorHero ?? '#1E4FD6'
   const encerrado = t.status === 'Finalizado'
   const emJogo = !encerrado && t.rodadaAtual > 0
@@ -200,10 +204,10 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
         <div className="absolute inset-0 opacity-[0.07] pointer-events-none" aria-hidden
           style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         <div className="relative max-w-7xl 2xl:max-w-[1760px] mx-auto px-4 md:px-6 py-4 flex items-center gap-3">
-          <Link href="/liga" className="flex items-center gap-1.5 text-sm font-semibold hover:opacity-80" style={{ color: SUAVE }}>
-            <ArrowLeft className="w-4 h-4" /> Liga
+          <Link href={voltar.href} className="flex items-center gap-1.5 text-sm font-semibold hover:opacity-80" style={{ color: SUAVE }}>
+            <ArrowLeft className="w-4 h-4" /> {voltar.rotulo}
           </Link>
-          <Link href={`/liga/jogar?t=${t.id}`} className="ml-auto inline-flex items-center gap-2 text-sm font-black px-4 py-2 rounded-xl"
+          <Link href={`${rotas.jogar}?t=${t.id}`} className="ml-auto inline-flex items-center gap-2 text-sm font-black px-4 py-2 rounded-xl"
             style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>
             <Swords className="w-4 h-4" /> Sou jogador
           </Link>
@@ -225,7 +229,7 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
           <section className="rounded-3xl p-8 text-center" style={CARD}>
             <p className={`${pixel.className} text-sm md:text-lg`} style={{ color: AMARELO }}>FAÇA SEU CHECK-IN</p>
             <p className="mt-3 text-base md:text-lg" style={{ color: SUAVE }}>
-              No celular: <strong style={{ color: B }}>santuarionerd.com.br/liga/jogar</strong> — toque em &quot;Estou aqui&quot; ou digite o código que o organizador passar.
+              No celular: <strong style={{ color: B }}>santuarionerd.com.br{rotas.jogar}</strong> — toque em &quot;Estou aqui&quot; ou digite o código que o organizador passar.
             </p>
           </section>
         )}

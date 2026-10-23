@@ -51,6 +51,8 @@ export interface TorneioPublicoDto {
   lugares: number
   /** A rodada atual já está em jogo (marca da rodada no servidor — zerar ou apagar o relógio não desfaz). */
   rodadaComecou?: boolean
+  /** Liga ou Campeonato. */
+  modalidade?: string
 }
 
 export interface ParticipantePainel {
@@ -68,6 +70,7 @@ export interface PainelTorneioDto {
   lugares: number
   /** Ver TorneioPublicoDto.rodadaComecou. */
   rodadaComecou?: boolean
+  modalidade?: string
 }
 
 export interface MinhaMesaDto {
@@ -95,6 +98,8 @@ export interface EtapaExternaDto { championshipId?: string | null; linhas: Etapa
 
 export interface TorneioResumoDto {
   id: string; nome: string; status: string; rodadaAtual: number; numeroRodadas: number | null; checkIn: boolean
+  /** Liga ou Campeonato (chave campeonato-separado: cada um na sua tela). */
+  modalidade?: string
 }
 
 export const torneioApi = {
@@ -124,7 +129,7 @@ export const torneioApi = {
 
   // Jogador
   entrar:      (body: { codigo: string; deckId?: string | null; deckNome?: string | null }) =>
-    api.post<{ championshipId: string; nome: string }>('/api/torneios/entrar', body),
+    api.post<{ championshipId: string; nome: string; modalidade?: string }>('/api/torneios/entrar', body),
   ativos:      () => api.get<TorneioResumoDto[]>('/api/torneios/ativos'),
   /** "Estou aqui": check-in de quem já está inscrito, sem código. */
   checkInProprio: (id: string) => api.post(`/api/torneios/${id}/check-in`),

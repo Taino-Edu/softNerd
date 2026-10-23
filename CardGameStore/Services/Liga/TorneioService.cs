@@ -591,7 +591,8 @@ public class TorneioService
             await ClassificacaoAsync(championshipId),
             TimerDto.De(timer),
             ch.Lugares,
-            await RodadaComecouAsync(ch, timer));
+            await RodadaComecouAsync(ch, timer),
+            ch.Modalidade.ToString());
     }
 
     public async Task<PainelDto> PainelAsync(Guid championshipId)
@@ -614,7 +615,8 @@ public class TorneioService
             await ClassificacaoAsync(championshipId),
             TimerDto.De(timer),
             ch.Lugares,
-            await RodadaComecouAsync(ch, timer));
+            await RodadaComecouAsync(ch, timer),
+            ch.Modalidade.ToString());
     }
 
     /// <summary>Tela do jogador: torneio, minha mesa na rodada atual, o que cada um lançou.</summary>
@@ -651,7 +653,8 @@ public class TorneioService
             .Where(p => p.UserId == userId && p.Championship.Formato == FormatoTorneio.Suico
                      && (p.Championship.Status == ChampionshipStatus.EmAndamento || p.Championship.Status == ChampionshipStatus.Inscricoes))
             .Select(p => new TorneioResumoDto(p.ChampionshipId, p.Championship.Name, p.Championship.Status.ToString(),
-                p.Championship.RodadaAtual, p.Championship.NumeroRodadas, p.CheckInEm != null))
+                p.Championship.RodadaAtual, p.Championship.NumeroRodadas, p.CheckInEm != null,
+                p.Championship.Modalidade.ToString()))
             .ToListAsync();
 
     // =========================================================================
@@ -828,7 +831,7 @@ public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? P
 public sealed record TorneioPublicoDto(
     Guid Id, string Nome, string Jogo, string Status, string Formato, int MelhorDe, int MinutosRodada,
     int? NumeroRodadas, int RodadaAtual, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
-    int Lugares = 24, bool RodadaComecou = false);
+    int Lugares = 24, bool RodadaComecou = false, string Modalidade = "Liga");
 
 public sealed record ParticipantePainel(
     Guid Id, Guid UserId, int PlayerNumber, string Nome, string? Deck, DateTime? CheckInEm, int? DesistiuNaRodada, bool Pago,
@@ -838,10 +841,12 @@ public sealed record PainelDto(
     Guid Id, string Nome, string Status, string Formato, string? CodigoEntrada, int MelhorDe, int MinutosRodada,
     int? NumeroRodadas, int RodadaAtual, int RodadasSugeridas,
     List<ParticipantePainel> Participantes, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
-    int Lugares = 24, bool RodadaComecou = false);
+    int Lugares = 24, bool RodadaComecou = false, string Modalidade = "Liga");
 
 public sealed record MinhaMesaDto(
     TorneioPublicoDto Torneio, Guid? ParticipanteId, bool CheckIn, int? DesistiuNaRodada, string? Deck,
     MesaDto? Mesa, string? MeuReport, string? ReportOponente);
 
-public sealed record TorneioResumoDto(Guid Id, string Nome, string Status, int RodadaAtual, int? NumeroRodadas, bool CheckIn);
+/// <param name="Modalidade">Liga ou Campeonato — com a chave campeonato-separado, cada um tem a sua tela no celular.</param>
+public sealed record TorneioResumoDto(Guid Id, string Nome, string Status, int RodadaAtual, int? NumeroRodadas, bool CheckIn,
+    string Modalidade = "Liga");

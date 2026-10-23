@@ -683,6 +683,20 @@ public class TorneioServiceTests
     }
 
     [Fact]
+    public async Task Modalidade_VaiProCelularEProTelao()
+    {
+        // Chave campeonato-separado: o front escolhe /liga ou /campeonato pela modalidade do evento
+        var amb = Criar(2);
+        amb.Ch.Modalidade = ModalidadeTorneio.Campeonato;
+        await amb.Db.SaveChangesAsync();
+        await InscreverEEntrarTodosAsync(amb);
+
+        (await amb.Torneio.MeusAtivosAsync(amb.Jogadores[0].Id)).Single().Modalidade.Should().Be("Campeonato");
+        (await amb.Torneio.PublicoAsync(amb.Ch.Id)).Modalidade.Should().Be("Campeonato");
+        (await amb.Torneio.PainelAsync(amb.Ch.Id)).Modalidade.Should().Be("Campeonato");
+    }
+
+    [Fact]
     public async Task Pronto_ByeNaoPrecisaENaoTravaOAviso()
     {
         var amb = Criar(3);

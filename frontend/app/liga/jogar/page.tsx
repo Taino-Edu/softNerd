@@ -2,12 +2,13 @@
 
 // =============================================================================
 // /liga/jogar — Jogador no celular: código → deck → minha mesa → lançar resultado
+// /campeonato/jogar é esta mesma tela (chave campeonato-separado): só campeonatos, com os nomes deles
 // Atualiza sozinha pelo /hubs/torneio (lib/useTorneioAoVivo). docs/liguinha.md
 // =============================================================================
 
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers, Hand, PartyPopper, ThumbsUp } from 'lucide-react'
 import {
   torneioApi, deckApi, DeckListDto, MinhaMesaDto, ResultadoJogador, TorneioResumoDto, rodadaComecou,
@@ -20,6 +21,7 @@ import SpriteDeck from '@/components/liga/SpriteDeck'
 import AvatarJogador from '@/components/liga/AvatarJogador'
 import AnimacaoResultado, { CenaResultado } from '@/components/liga/AnimacaoResultado'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { modalidadeDoEndereco, rotasDoEvento } from '@/lib/caminhosTorneio'
 
 function mensagemDe(e: unknown, padrao: string) {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? padrao
@@ -42,6 +44,9 @@ function Jogar() {
   const router = useRouter()
   const torneioId = params.get('t')
   const [logado, setLogado] = useState<boolean | null>(null)
+  const separado = useFuncionalidade('campeonato-separado') === true
+  const modo = modalidadeDoEndereco(usePathname())
+  const rotas = rotasDoEvento(modo, separado)
 
   useEffect(() => { setLogado(isLoggedIn()) }, [])
 
@@ -51,15 +56,15 @@ function Jogar() {
     <div className="min-h-screen bg-surface-900 text-white">
       <nav className="sticky top-0 z-40 h-14 flex items-center px-4 gap-3 bg-surface-900 border-b border-surface-500">
         {torneioId ? (
-          <button onClick={() => router.push('/liga/jogar')} className="flex items-center gap-1.5 text-sm text-gray-300">
+          <button onClick={() => router.push(rotas.jogar)} className="flex items-center gap-1.5 text-sm text-gray-300">
             <ArrowLeft className="w-4 h-4" /> Torneios
           </button>
         ) : (
-          <Link href="/liga" className="flex items-center gap-1.5 text-sm text-gray-300">
-            <ArrowLeft className="w-4 h-4" /> Liga
+          <Link href={rotas.campeonato ? '/#eventos' : '/liga'} className="flex items-center gap-1.5 text-sm text-gray-300">
+            <ArrowLeft className="w-4 h-4" /> {rotas.campeonato ? 'Eventos' : 'Liga'}
           </Link>
         )}
-        <Link href="/liga/jogar" className="ml-auto flex items-center gap-1.5 text-sm font-semibold"><Swords className="w-4 h-4 text-brand-400" /> Liguinha</Link>
+        <Link href={rotas.jogar} className="ml-auto flex items-center gap-1.5 text-sm font-semibold"><Swords className="w-4 h-4 text-brand-400" /> {rotas.nome}</Link>
       </nav>
 
       <main className="max-w-md mx-auto px-4 py-5">
@@ -67,13 +72,15 @@ function Jogar() {
           <div className="bg-surface-800 border border-surface-500 rounded-2xl p-6 text-center space-y-4">
             <Swords className="w-10 h-10 text-brand-400 mx-auto" />
             <p className="text-gray-300 text-sm">Entre na sua conta da loja pra jogar o torneio e lançar seus resultados.</p>
-            <Link href={`/entrar?returnTo=${encodeURIComponent('/liga/jogar' + (torneioId ? `?t=${torneioId}` : ''))}`}
+            <Link href={`/entrar?returnTo=${encodeURIComponent(rotas.jogar + (torneioId ? `?t=${torneioId}` : ''))}`}
               className="btn-primary w-full justify-center">Entrar</Link>
           </div>
         ) : torneioId ? (
-          <MinhaMesa torneioId={torneioId} />
+          <MinhaMesa torneioId={torneioId} modo={modo} separado={separado} />
         ) : (
-          <EntrarNoTorneio onEntrou={id => router.push(`/liga/jogar?t=${id}`)} />
+          // Entrou com o código de um evento da outra modalidade: vai pra tela dele
+          <EntrarNoTorneio modo={modo} separado={separado}
+            onEntrou={(id, modalidade) => router.push(`${rotasDoEvento(modalidade, separado).jogar}?t=${id}`)} />
         )}
       </main>
     </div>
@@ -82,7 +89,11 @@ function Jogar() {
 
 // ── Entrar pelo código ───────────────────────────────────────────────────────
 
-function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
+function EntrarNoTorneio({ onEntrou, modo, separado }: {
+  onEntrou: (id: string, modalidade?: string) => void
+  modo: string
+  separado: boolean
+}) {
   // Chave "liguinha-entrada-simples": código numa tela só; o deck se escolhe na tela do torneio
   const simples = useFuncionalidade('liguinha-entrada-simples') !== false
   const [carregou, setCarregou] = useState(false)
@@ -91,14 +102,17 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
   const [decks, setDecks] = useState<DeckListDto[]>([])
   const [deckId, setDeckId] = useState('')
   const [deckNome, setDeckNome] = useState('')
-  const [ativos, setAtivos] = useState<TorneioResumoDto[]>([])
+  const [todos, setTodos] = useState<TorneioResumoDto[]>([])
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
 
   useEffect(() => {
     deckApi.list().then(r => setDecks(r.data)).catch(() => {})
-    torneioApi.ativos().then(r => setAtivos(r.data)).catch(() => {}).finally(() => setCarregou(true))
+    torneioApi.ativos().then(r => setTodos(r.data)).catch(() => {}).finally(() => setCarregou(true))
   }, [])
+  // Chave campeonato-separado: a Liguinha lista só Liga e /campeonato/jogar só Campeonato. O filtro
+  // fica fora do carregamento: a chave chega um instante depois e a lista precisa seguir ela.
+  const ativos = separado ? todos.filter(t => (t.modalidade ?? 'Liga') === modo) : todos
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault()
@@ -110,7 +124,7 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
         deckId: simples ? null : (deckId || null),
         deckNome: simples || deckId ? null : (deckNome.trim() || null),
       })
-      onEntrou(r.data.championshipId)
+      onEntrou(r.data.championshipId, r.data.modalidade)
     } catch (e) {
       setErro(mensagemDe(e, 'Não deu pra entrar. Confira o código.'))
     } finally {
@@ -128,7 +142,7 @@ function EntrarNoTorneio({ onEntrou }: { onEntrou: (id: string) => void }) {
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Seus torneios</h2>
           {ativos.map(t => (
             <div key={t.id} className="bg-surface-800 border border-surface-500 rounded-xl p-4 flex items-center gap-3">
-              <button onClick={() => onEntrou(t.id)} className="flex-1 min-w-0 text-left flex items-center gap-3">
+              <button onClick={() => onEntrou(t.id, t.modalidade)} className="flex-1 min-w-0 text-left flex items-center gap-3">
                 <Trophy className="w-5 h-5 text-brand-400 shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="block font-semibold text-white truncate">{t.nome}</span>
@@ -331,7 +345,7 @@ function cenaFinal(dados: MinhaMesaDto): CenaResultado | null {
     pontos: eu.pontos, campanha: `${n(eu.vitorias, 'vitória')} · ${n(eu.empates, 'empate')} · ${n(eu.derrotas, 'derrota')}` }
 }
 
-function MinhaMesa({ torneioId }: { torneioId: string }) {
+function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: string; separado: boolean }) {
   const [dados, setDados] = useState<MinhaMesaDto | null>(null)
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState<ResultadoJogador | null>(null)
@@ -344,6 +358,14 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
 
   useEffect(() => { recarregar() }, [recarregar])
   useTorneioAoVivo(torneioId, recarregar)
+
+  // Link antigo (ou digitado) na tela da modalidade errada: leva pra tela certa do evento
+  const router = useRouter()
+  useEffect(() => {
+    if (!separado || !dados) return
+    const certa = (dados.torneio.modalidade ?? 'Liga') === 'Campeonato' ? 'Campeonato' : 'Liga'
+    if (certa !== modo) router.replace(`${rotasDoEvento(certa, true).jogar}?t=${torneioId}`)
+  }, [separado, dados, modo, router, torneioId])
 
   const animar = useFuncionalidade('liga-animacao-resultado') !== false
   const [cena, setCena] = useState<CenaResultado | null>(null)
