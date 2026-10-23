@@ -17,6 +17,7 @@ import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
 import Relogio from '@/components/liga/Relogio'
 import TabelaTorneio from '@/components/liga/TabelaTorneio'
 import SpriteDeck from '@/components/liga/SpriteDeck'
+import AvatarJogador from '@/components/liga/AvatarJogador'
 import AnimacaoResultado, { CenaResultado } from '@/components/liga/AnimacaoResultado'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
@@ -316,7 +317,8 @@ function cenaDaMesa(dados: MinhaMesaDto): CenaResultado | null {
   const eu = souA ? m.a : m.b
   const op = souA ? m.b : m.a
   const tipo = m.resultado === 'Empate' ? 'empate' : (m.resultado === 'VitoriaA') === souA ? 'vitoria' : 'derrota'
-  return { tipo, rodada: dados.torneio.rodadaAtual, meuDeck: eu.deck ?? dados.deck, oponente: { nome: op.nome, deck: op.deck } }
+  return { tipo, rodada: dados.torneio.rodadaAtual, meuDeck: eu.deck ?? dados.deck, meuPokemon: { id: eu.pokemon, shiny: eu.shiny },
+    oponente: { nome: op.nome, deck: op.deck, pokemon: op.pokemon, shiny: op.shiny } }
 }
 
 /** Cena da colocação final (null se o torneio não acabou ou a pessoa não jogou). */
@@ -325,7 +327,7 @@ function cenaFinal(dados: MinhaMesaDto): CenaResultado | null {
   const eu = t.classificacao.find(l => l.participanteId === dados.participanteId)
   if (t.status !== 'Finalizado' || !eu) return null
   const n = (q: number, palavra: string) => `${q} ${palavra}${q === 1 ? '' : 's'}`
-  return { tipo: 'final', meuDeck: eu.deck ?? dados.deck, posicao: eu.posicao, total: t.classificacao.length,
+  return { tipo: 'final', meuDeck: eu.deck ?? dados.deck, meuPokemon: { id: eu.pokemon, shiny: eu.shiny }, posicao: eu.posicao, total: t.classificacao.length,
     pontos: eu.pontos, campanha: `${n(eu.vitorias, 'vitória')} · ${n(eu.empates, 'empate')} · ${n(eu.derrotas, 'derrota')}` }
 }
 
@@ -403,6 +405,7 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
   const mesa = dados.mesa
   const souA = mesa?.a.participanteId === dados.participanteId
   const oponente = mesa ? (souA ? mesa.b : mesa.a) : null
+  const euNaMesa = mesa ? (souA ? mesa.a : mesa.b) : null
 
   const meuDeck = mesa ? ((souA ? mesa.a.deck : mesa.b?.deck) ?? dados.deck) : dados.deck
   const emSetup = !!mesa && !mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual, t.rodadaComecou)
@@ -529,13 +532,13 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
           {animar ? (
             <div className="bg-surface-700 rounded-xl p-3 flex items-end gap-2">
               <div className="flex-1 min-w-0 flex flex-col items-center text-center">
-                <SpriteDeck deck={meuDeck} tamanho={64} />
+                <AvatarJogador pokemon={euNaMesa?.pokemon} shiny={euNaMesa?.shiny} deck={meuDeck} tamanho={64} />
                 <p className="text-sm font-semibold text-white">Você</p>
                 {meuDeck && <p className="text-xs text-gray-400 truncate max-w-full">{meuDeck}</p>}
               </div>
               <span className="text-xs font-black text-gray-500 pb-6">VS</span>
               <div className="flex-1 min-w-0 flex flex-col items-center text-center">
-                <SpriteDeck deck={oponente.deck} tamanho={64} />
+                <AvatarJogador pokemon={oponente.pokemon} shiny={oponente.shiny} deck={oponente.deck} tamanho={64} />
                 <p className="text-sm font-semibold text-white truncate max-w-full">{oponente.nome}</p>
                 {oponente.deck && <p className="text-xs text-gray-400 truncate max-w-full">{oponente.deck}</p>}
               </div>

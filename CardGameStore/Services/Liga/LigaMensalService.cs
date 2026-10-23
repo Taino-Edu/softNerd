@@ -126,6 +126,8 @@ public class LigaMensalService
                 EventsPlayed  = g.Count(),
                 BestPlacement = g.Min(p => p.Placement!.Value),
                 Decks         = DecksOrdenados(g.Select(p => p.DeckName)),
+                Pokemon       = g.First().User?.PokemonFavorito,
+                Shiny         = g.First().User?.PokemonFavoritoShiny ?? false,
             })
             .ToList();
 
@@ -183,6 +185,9 @@ public class LigaMensalService
                     .Distinct()
                     .OrderBy(d => d)
                     .ToList(),
+                // Só a foto (chave pokemon-preferido) — a regra antiga de pontos segue igual
+                Pokemon = g.First().User?.PokemonFavorito,
+                Shiny   = g.First().User?.PokemonFavoritoShiny ?? false,
             };
         }
 

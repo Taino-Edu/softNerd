@@ -11,7 +11,7 @@ import { TorneioPublicoDto, MesaDto, LinhaTabela, rodadaComecou, segundosRestant
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { mixHex } from '@/lib/colors'
 import { useSiteConfig } from '@/lib/useSiteConfig'
-import SpriteDeck from '@/components/liga/SpriteDeck'
+import AvatarJogador from '@/components/liga/AvatarJogador'
 
 const B = '#FFFFFF'
 const SUAVE = 'rgba(255,255,255,0.72)'
@@ -59,10 +59,10 @@ function RelogioTelao({ t, cor, compacto }: { t: TorneioPublicoDto; cor: string;
   )
 }
 
-function Jogador({ nome, deck, venceu, perdeu, compacto, pronto }: { nome: string; deck?: string | null; venceu?: boolean; perdeu?: boolean; compacto?: boolean; pronto?: boolean }) {
+function Jogador({ nome, deck, pokemon, shiny, venceu, perdeu, compacto, pronto }: { nome: string; deck?: string | null; pokemon?: string | null; shiny?: boolean; venceu?: boolean; perdeu?: boolean; compacto?: boolean; pronto?: boolean }) {
   return (
     <div className={`flex items-center ${compacto ? 'gap-2' : 'gap-3'} min-w-0 ${perdeu ? 'opacity-50' : ''}`}>
-      <span className={`${compacto ? 'w-9 h-9' : 'w-12 h-12'} shrink-0 flex items-end justify-center`}><SpriteDeck deck={deck} tamanho={compacto ? 36 : 48} /></span>
+      <span className={`${compacto ? 'w-9 h-9' : 'w-12 h-12'} shrink-0 flex items-end justify-center`}><AvatarJogador pokemon={pokemon} shiny={shiny} deck={deck} tamanho={compacto ? 36 : 48} /></span>
       <div className="min-w-0 flex-1">
         {/* Selo fora do texto cortado: dentro dele empurrava a linha pra fora da tela no celular */}
         <div className="flex items-center gap-2 min-w-0">
@@ -95,11 +95,11 @@ function CartaoMesa({ m, compacto, setup }: { m: MesaDto; compacto?: boolean; se
         )}
       </div>
       <div className={`flex-1 min-w-0 ${compacto ? 'space-y-1' : 'space-y-2'}`}>
-        <Jogador nome={m.a.nome} deck={m.a.deck} venceu={venceuA || !m.b} perdeu={venceuB} compacto={compacto} pronto={setup && !!m.b && m.prontoA} />
+        <Jogador nome={m.a.nome} deck={m.a.deck} pokemon={m.a.pokemon} shiny={m.a.shiny} venceu={venceuA || !m.b} perdeu={venceuB} compacto={compacto} pronto={setup && !!m.b && m.prontoA} />
         {m.b ? (
           <>
             <p className={`${pixel.className} text-[8px] ${recuo}`} style={{ color: FRACO }}>{m.resultado === 'Empate' ? 'EMPATE' : 'VS'}</p>
-            <Jogador nome={m.b.nome} deck={m.b.deck} venceu={venceuB} perdeu={venceuA} compacto={compacto} pronto={setup && m.prontoB} />
+            <Jogador nome={m.b.nome} deck={m.b.deck} pokemon={m.b.pokemon} shiny={m.b.shiny} venceu={venceuB} perdeu={venceuA} compacto={compacto} pronto={setup && m.prontoB} />
           </>
         ) : (
           <p className={`text-xs ${recuo}`} style={{ color: SUAVE }}>Vitória automática nesta rodada</p>
@@ -126,7 +126,7 @@ function Classificacao({ linhas, cheia }: { linhas: LinhaTabela[]; cheia: boolea
                 style={p ? { backgroundColor: p.cor, color: p.texto } : { color: SUAVE }}>
                 {l.posicao}
               </span>
-              <span className={`${compacta ? 'w-9' : 'w-11'} shrink-0 flex justify-center`}><SpriteDeck deck={l.deck} tamanho={compacta ? 32 : 40} /></span>
+              <span className={`${compacta ? 'w-9' : 'w-11'} shrink-0 flex justify-center`}><AvatarJogador pokemon={l.pokemon} shiny={l.shiny} deck={l.deck} tamanho={compacta ? 32 : 40} /></span>
               <div className="flex-1 min-w-0">
                 <p className={`${compacta ? 'text-sm md:text-base' : 'text-base md:text-lg'} font-black leading-tight truncate`} style={{ color: B }}>
                   {l.nome}{l.desistiuNaRodada ? <span className="text-xs font-semibold" style={{ color: FRACO }}> (saiu)</span> : null}
@@ -168,7 +168,7 @@ function Podio({ linhas }: { linhas: LinhaTabela[] }) {
             {/* Celular: sprite de 56px (o tamanho vem inline do SpriteDeck — o !important passa por cima); deck de
                 dois Pokémon cabe no cartão sem invadir o vizinho */}
             <div className="mt-3 flex justify-center h-20 sm:h-24 items-end min-w-0 max-sm:[&_img]:!w-14 max-sm:[&_img]:!h-14">
-              <SpriteDeck deck={l.deck} tamanho={campeao ? 96 : 72} />
+              <AvatarJogador pokemon={l.pokemon} shiny={l.shiny} deck={l.deck} tamanho={campeao ? 96 : 72} animado />
             </div>
             <p className="mt-2 text-sm sm:text-lg md:text-xl font-black truncate" style={{ color: B }}>{l.nome}</p>
             {l.deck && <p className="text-xs truncate" style={{ color: FRACO }}>{l.deck}</p>}

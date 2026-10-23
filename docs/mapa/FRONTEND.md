@@ -56,8 +56,8 @@
 | `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
 | `/janela/whatsapp` | `app/janela/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox` |
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
-| `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/AnimacaoResultado`, `liga/Relogio`, `liga/SpriteDeck`, `liga/TabelaTorneio` |
-| `/liga` | `app/liga/page.tsx` | `liga/SpriteDeck` |
+| `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/AnimacaoResultado`, `liga/AvatarJogador`, `liga/Relogio`, `liga/SpriteDeck`, `liga/TabelaTorneio` |
+| `/liga` | `app/liga/page.tsx` | `liga/AvatarJogador`, `liga/SpriteDeck` |
 | `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio`, `liga/TelaoNovo` |
 | `/login` | `app/login/page.tsx` | `auth/Moldura` |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
@@ -112,9 +112,10 @@ Mudou um componente? Confira as telas da última coluna.
 | `cliente/MinhaLiga` | `MinhaLiga` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
 | `liga/AnimacaoResultado` | `AnimacaoResultado` | `app/liga/jogar/page.tsx` |
+| `liga/AvatarJogador` | `AvatarJogador` | `app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/liga/AnimacaoResultado.tsx`<br>`components/liga/TelaoNovo.tsx`<br>`components/liga/admin/HistoricoRodadas.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | `liga/PainelTorneio` | `PainelTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx` |
 | `liga/Relogio` | `Relogio` | `app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
-| `liga/SpriteDeck` | `SpriteDeck` | `app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/cliente/MinhaLiga.tsx`<br>`components/liga/AnimacaoResultado.tsx`<br>`components/liga/TelaoNovo.tsx`<br>`components/liga/admin/HistoricoRodadas.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| `liga/SpriteDeck` | `SpriteDeck` | `app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/cliente/MinhaLiga.tsx`<br>`components/liga/AvatarJogador.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/liguinha/[id]/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
 | `liga/TelaoNovo` | `TelaoNovo` | `app/liga/torneio/[id]/page.tsx` |
 | `liga/admin/CriarTorneio` | `CriarTorneio` | `app/admin/liguinha/page.tsx` |
@@ -128,7 +129,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
 | `pokemon/EscolherPokemon` | `EscolherPokemon` | `app/cliente/perfil/page.tsx` |
 | `pokemon/ParceiroDaConta` | `ParceiroDaConta` | `app/cliente/perfil/page.tsx`<br>`app/perfil/[id]/page.tsx` |
-| `pokemon/PokemonParceiro` | `PokemonParceiro` | **nenhum lugar** |
+| `pokemon/PokemonParceiro` | `PokemonParceiro` | `components/liga/AvatarJogador.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/alertas/page.tsx`<br>`app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
 | `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx`<br>`components/pokemon/EscolherPokemon.tsx` |

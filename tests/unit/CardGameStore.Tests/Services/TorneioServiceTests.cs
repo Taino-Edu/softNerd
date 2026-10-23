@@ -663,6 +663,26 @@ public class TorneioServiceTests
     }
 
     [Fact]
+    public async Task MesasEClassificacao_LevamOPokemonPreferidoDoJogador()
+    {
+        // Pedido do Maikon: a "fotinha" do jogador na liguinha é o Pokémon preferido da conta
+        var amb = Criar(2);
+        amb.Jogadores[0].PokemonFavorito = "gengar"; amb.Jogadores[0].PokemonFavoritoShiny = true;
+        await amb.Db.SaveChangesAsync();
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        var mesa = (await amb.Torneio.PublicoAsync(amb.Ch.Id)).Mesas.Single();
+        var jogadores = new[] { mesa.A, mesa.B! };
+
+        jogadores.Should().ContainSingle(j => j.Pokemon == "gengar" && j.Shiny);
+        jogadores.Should().ContainSingle(j => j.Pokemon == null && !j.Shiny, "quem não escolheu fica com a foto do deck");
+        (await amb.Torneio.PainelAsync(amb.Ch.Id)).Participantes.Should().ContainSingle(p => p.Pokemon == "gengar");
+
+        await FecharRodadaAsync(amb, 1);
+        (await amb.Torneio.ClassificacaoAsync(amb.Ch.Id)).Should().ContainSingle(l => l.Pokemon == "gengar" && l.Shiny);
+    }
+
+    [Fact]
     public async Task Pronto_ByeNaoPrecisaENaoTravaOAviso()
     {
         var amb = Criar(3);

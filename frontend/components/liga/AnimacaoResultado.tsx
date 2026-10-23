@@ -8,11 +8,15 @@
 import { useEffect, useRef } from 'react'
 import { Crown } from 'lucide-react'
 import { pixel } from '@/lib/fontePixel'
-import SpriteDeck from '@/components/liga/SpriteDeck'
+import AvatarJogador from '@/components/liga/AvatarJogador'
 
 export type CenaResultado =
-  | { tipo: 'vitoria' | 'derrota' | 'empate'; rodada: number; meuDeck: string | null; oponente: { nome: string; deck?: string | null } }
-  | { tipo: 'final'; meuDeck: string | null; posicao: number; total: number; pontos: number; campanha: string }
+  | { tipo: 'vitoria' | 'derrota' | 'empate'; rodada: number; meuDeck: string | null; meuPokemon?: Pokemon
+      oponente: { nome: string; deck?: string | null; pokemon?: string | null; shiny?: boolean } }
+  | { tipo: 'final'; meuDeck: string | null; meuPokemon?: Pokemon; posicao: number; total: number; pontos: number; campanha: string }
+
+/** Pokémon preferido de quem aparece na comemoração (chave pokemon-preferido). */
+type Pokemon = { id?: string | null; shiny?: boolean }
 
 const B = '#FFFFFF'
 const SUAVE = 'rgba(255,255,255,0.78)'
@@ -41,11 +45,11 @@ function Confete() {
   )
 }
 
-function Lutador({ deck, nome, classe }: { deck: string | null | undefined; nome: string; classe: string }) {
+function Lutador({ deck, pokemon, nome, classe }: { deck: string | null | undefined; pokemon?: Pokemon; nome: string; classe: string }) {
   return (
     <div className="flex flex-col items-center gap-2 w-32 min-w-0">
       <div className="h-28 flex items-end justify-center" style={{ color: B }}>
-        <span className={`inline-block ${classe}`}><SpriteDeck deck={deck} tamanho={96} /></span>
+        <span className={`inline-block ${classe}`}><AvatarJogador pokemon={pokemon?.id} shiny={pokemon?.shiny} deck={deck} tamanho={96} animado /></span>
       </div>
       <p className="text-sm font-black truncate max-w-full" style={{ color: B }}>{nome}</p>
     </div>
@@ -110,13 +114,13 @@ export default function AnimacaoResultado({ cena, onFechar }: { cena: CenaResult
 
         <div className="mt-8 flex items-end justify-center gap-4 sm:gap-8">
           {cena.tipo === 'final' ? (
-            <Lutador deck={cena.meuDeck} nome="Você" classe={cena.posicao <= 3 ? 'liga-pulo' : 'liga-balanco'} />
+            <Lutador deck={cena.meuDeck} pokemon={cena.meuPokemon} nome="Você" classe={cena.posicao <= 3 ? 'liga-pulo' : 'liga-balanco'} />
           ) : (
             <>
-              <Lutador deck={cena.meuDeck} nome="Você"
+              <Lutador deck={cena.meuDeck} pokemon={cena.meuPokemon} nome="Você"
                 classe={cena.tipo === 'vitoria' ? 'liga-pulo' : cena.tipo === 'derrota' ? 'liga-desmaio' : 'liga-balanco'} />
               <span className={`${pixel.className} text-xs pb-10`} style={{ color: SUAVE }}>VS</span>
-              <Lutador deck={cena.oponente.deck} nome={cena.oponente.nome}
+              <Lutador deck={cena.oponente.deck} pokemon={{ id: cena.oponente.pokemon, shiny: cena.oponente.shiny }} nome={cena.oponente.nome}
                 classe={cena.tipo === 'vitoria' ? 'liga-desmaio' : cena.tipo === 'derrota' ? 'liga-pulo' : 'liga-balanco'} />
             </>
           )}

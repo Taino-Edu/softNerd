@@ -11,6 +11,7 @@ import { ligaMensalApi, siteConfigApi, LigaMensalDto, LigaMensalMesDto, LigaEsta
 import { mixHex } from '@/lib/colors'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import SpriteDeck from '@/components/liga/SpriteDeck'
+import AvatarJogador from '@/components/liga/AvatarJogador'
 
 const MEDAL_COLOR = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-brand-400']
 
@@ -327,7 +328,7 @@ function PaginaNova() {
                         {p.rotulo}
                       </span>
                       <div className="flex justify-center mt-2 sm:mt-3 h-14 sm:h-24 items-end">
-                        <SpriteDeck deck={r.decks[0]} tamanho={pos === 0 ? 96 : 72} className="scale-75 sm:scale-100 origin-bottom" />
+                        <AvatarJogador pokemon={r.pokemon} shiny={r.shiny} deck={r.decks[0]} tamanho={pos === 0 ? 96 : 72} animado className="scale-75 sm:scale-100 origin-bottom" />
                       </div>
                       <p className="font-black text-white text-sm sm:text-lg leading-tight truncate mt-1" title={r.playerName}>{r.playerName}</p>
                       <p className="text-[11px] sm:text-xs text-gray-500 truncate">{r.decks[0] ?? 'Deck não informado'}</p>
@@ -357,7 +358,7 @@ function PaginaNova() {
                           {i + 1}
                         </span>
                         {/* Largura fixa: deck com dois sprites não empurra o nome */}
-                        <span className="w-14 shrink-0 flex justify-center"><SpriteDeck deck={r.decks[0]} tamanho={40} /></span>
+                        <span className="w-14 shrink-0 flex justify-center"><AvatarJogador pokemon={r.pokemon} shiny={r.shiny} deck={r.decks[0]} tamanho={40} /></span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-white truncate">{r.playerName}</p>

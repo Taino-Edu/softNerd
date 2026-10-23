@@ -11,6 +11,7 @@ import { Layers, ListPlus, Loader2, Trash2, UserPlus, X } from 'lucide-react'
 import { championshipApi, deckApi, torneioApi, userApi, DeckDto, PainelTorneioDto } from '@/lib/api'
 import { Switch } from '@/components/ui/Switch'
 import SpriteDeck from '@/components/liga/SpriteDeck'
+import AvatarJogador from '@/components/liga/AvatarJogador'
 import EscolherCliente from './EscolherCliente'
 import { lerLista, normalizarNome } from './nomes'
 
@@ -230,7 +231,7 @@ export default function JogadoresTorneio({ p, pago, onMudou, inscricao = false, 
             {p.participantes.map(x => (
               <div key={x.id} className="flex items-center gap-3 py-2">
                 <span className="w-7 text-xs text-gray-500">#{x.playerNumber}</span>
-                <span className="w-9 flex justify-center"><SpriteDeck deck={x.deck} tamanho={32} /></span>
+                <span className="w-9 flex justify-center"><AvatarJogador pokemon={x.pokemon} shiny={x.shiny} deck={x.deck} tamanho={32} /></span>
                 <span className="flex-1 min-w-0">
                   <span className={clsx('block text-sm truncate', x.desistiuNaRodada ? 'text-gray-500 line-through' : 'text-white')}>{x.nome}</span>
                   <span className="block text-xs text-gray-400 truncate">
