@@ -65,6 +65,11 @@ public class ReservationController : ControllerBase
         _funcionalidades   = funcionalidades;
     }
 
+    private async Task<bool> LigadaAsync(string codigo) =>
+        _funcionalidades is null
+            ? Funcionalidades.Buscar(codigo)!.Padrao
+            : await _funcionalidades.LigadaAsync(codigo);
+
     private async Task<bool> VendaNoPagamentoAsync() =>
         _funcionalidades is null
             ? Funcionalidades.Buscar(Funcionalidades.PedidoVendaNoPagamento)!.Padrao
@@ -332,6 +337,21 @@ public class ReservationController : ControllerBase
         var userId  = GetUserId();
         var groupId = Guid.NewGuid();
 
+        // Chave "pedido-pix-junto": o cliente que já tem pedido de pré-venda sem pagar soma os
+        // itens novos nele — um Pix só com o total (pedido do Maikon). Antes de juntar, o Pix
+        // antigo desse pedido é derrubado no Inter conferindo se não foi pago; se não der
+        // (pago agora, Inter fora), os itens novos viram pedido separado, como sempre foi.
+        var juntou = false;
+        if (await LigadaAsync(Funcionalidades.PedidoPixJunto))
+        {
+            var aberto = await PedidoAbertoParaJuntarAsync(userId, NormalizarPaymentMethod(req.PaymentMethod));
+            if (aberto is not null && await DerrubarPixParaJuntarAsync(aberto.Value))
+            {
+                groupId = aberto.Value;
+                juntou  = true;
+            }
+        }
+
         // O Npgsql roda com EnableRetryOnFailure (Program.cs), que rejeita transação manual
         // solta ("user-initiated transactions are not supported"): o bloco inteiro precisa
         // rodar dentro da execution strategy — numa falha transitória ela reexecuta tudo.
@@ -406,7 +426,52 @@ public class ReservationController : ControllerBase
 
         if (criadas!.Any(r => r.Kind == "pre_venda")) await AvisarEstoqueMudouAsync();
 
-        return Ok(new { groupId, items = criadas!.Select(r => ToDto(r)) });
+        if (juntou)
+            await _audit.LogAsync("JuntouItensNoPedido", "ProductReservation", groupId.ToString(),
+                details: $"{{\"itens\":{criadas!.Count}}}", httpContext: HttpContext);
+
+        return Ok(new { groupId, juntou, items = criadas!.Select(r => ToDto(r)) });
+    }
+
+    /// <summary>
+    /// Pedido de pré-venda do cliente que ainda aceita itens: tudo ativo, sem pagar (ExpiresAt
+    /// marcado), sem venda registrada e na mesma forma de pagamento. O mais recente.
+    /// </summary>
+    private async Task<Guid?> PedidoAbertoParaJuntarAsync(Guid userId, string? paymentMethod)
+    {
+        // Poucos itens por cliente: agrupa em memória (All dentro de GroupBy não traduz pra SQL)
+        var itens = await _db.ProductReservations.AsNoTracking()
+            .Where(r => r.UserId == userId && r.Status != "cancelled")
+            .Select(r => new { r.ReservationGroupId, r.ReservedAt, r.Kind, r.Status, r.ExpiresAt, r.VendaAvulsaId, r.PaymentMethod })
+            .ToListAsync();
+        return itens
+            .GroupBy(r => r.ReservationGroupId)
+            .Where(g => g.All(r => r.Kind == "pre_venda" && r.Status == "active" && r.ExpiresAt != null
+                                   && r.VendaAvulsaId == null && r.PaymentMethod == paymentMethod))
+            .OrderByDescending(g => g.Max(r => r.ReservedAt))
+            .Select(g => (Guid?)g.Key)
+            .FirstOrDefault();
+    }
+
+    /// <summary>Derruba os Pix ativos do pedido antes de juntar itens (o valor vai mudar). false = não junta.</summary>
+    private async Task<bool> DerrubarPixParaJuntarAsync(Guid groupId)
+    {
+        var ativos = await _db.PixCobrancas
+            .Where(p => p.ReservationGroupId == groupId && p.Status == "ATIVA")
+            .ToListAsync();
+        foreach (var pix in ativos)
+        {
+            var erro = await DerrubarCobrancaAsync(pix,
+                pagaAgora: "O Pix do pedido anterior acabou de ser pago.",
+                interRecusou: "Não deu pra trocar o Pix do pedido anterior agora.",
+                motivo: "itens novos somados ao pedido");
+            if (erro is not null)
+            {
+                _logger.LogInformation("Pedido {Grupo} não recebeu os itens novos: o Pix dele não pôde ser derrubado.", groupId);
+                return false;
+            }
+        }
+        return true;
     }
 
     // POST /api/reservations/admin-create — admin registra pré-venda/fila em nome do

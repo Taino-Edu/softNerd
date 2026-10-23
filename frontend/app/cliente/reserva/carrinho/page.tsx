@@ -97,7 +97,10 @@ export default function ReservationCartPage() {
       setGroupId(data.groupId)
       setTemFila(data.items.some(i => i.kind === 'fila'))
       clear()
-      toast.success('Reserva confirmada!')
+      // Chave pedido-pix-junto: somou no pedido sem pagar que ele já tinha — um Pix só com o total
+      toast.success(data.juntou
+        ? 'Reserva confirmada! Somamos ao seu pedido que ainda não foi pago — é um Pix só com o total.'
+        : 'Reserva confirmada!', { duration: data.juntou ? 6000 : 4000 })
     } catch (e) {
       const resp = (e as { response?: { status?: number; data?: { message?: string; Message?: string; semEstoque?: { productId: string; name: string }[]; SemEstoque?: { productId: string; name: string }[] } } })?.response
       // A API serializa em camelCase; o fallback PascalCase é só proteção.

@@ -62,6 +62,7 @@ public static class Funcionalidades
     public const string VigiaSistema = "vigia-sistema";
     public const string PokemonPreferido = "pokemon-preferido";
     public const string HomeVisualUniforme = "home-visual-uniforme";
+    public const string PedidoPixJunto = "pedido-pix-junto";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -325,6 +326,16 @@ public static class Funcionalidades
             SeDesligar: "Volta a home de antes: azul-céu nos destaques, azul-petróleo nos títulos, faixa mais escura que o menu, círculos no topo e rótulos de 10–11px.",
             Padrao:     true,
             Desde:      "v1.66.0",
+            RevisarEm:  new DateOnly(2027, 4, 15)),
+
+        new(PedidoPixJunto,
+            Nome:       "Pré-venda: itens novos entram no pedido sem pagar (um Pix só)",
+            OQueMuda:   "Quando o cliente fecha o carrinho e já tem um pedido de pré-venda sem pagar (mesma forma de pagamento, ainda sem venda), " +
+                        "os itens novos entram nesse pedido e o Pix sai com o total. Se o pedido já tinha Pix, ele é cancelado no Inter antes — " +
+                        "conferindo se não foi pago; pago ou Inter fora do ar, os itens novos viram um pedido separado, como antes.",
+            SeDesligar: "Cada carrinho fechado vira um pedido com o seu próprio Pix (o cliente paga cada um separado).",
+            Padrao:     true,
+            Desde:      "v1.69.0",
             RevisarEm:  new DateOnly(2027, 4, 15)),
     ];
 

@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.69.0] — 2026-10-23
+
+### Pré-venda — um Pix só pro que ainda não foi pago (pedido do Maikon)
+- Quem já tem um pedido de pré-venda **sem pagar** e fecha o carrinho de novo tem os itens novos **somados nesse pedido**: um Pix só com o total, em vez de um Pix por carrinho
+- Se o pedido antigo já tinha um Pix gerado, ele é cancelado no Inter antes — **conferindo se não acabou de ser pago**. Pago, ou Inter fora do ar, os itens novos viram um pedido separado (nunca cobra duas vezes)
+- Só junta pedido na mesma forma de pagamento (Pix com Pix, retirada com retirada) e que ainda não virou venda; o carrinho avisa quando somou
+- Chave `pedido-pix-junto` em Funcionalidades: desligada, cada carrinho é um pedido com o seu Pix, como antes
+
 ## [v1.67.0] — 2026-10-23
 
 ### Liguinha — a "fotinha" do jogador é o Pokémon preferido (pedido do Maikon)
