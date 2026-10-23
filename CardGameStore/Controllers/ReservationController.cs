@@ -337,20 +337,12 @@ public class ReservationController : ControllerBase
         var userId  = GetUserId();
         var groupId = Guid.NewGuid();
 
-        // Chave "pedido-pix-junto": o cliente que já tem pedido de pré-venda sem pagar soma os
-        // itens novos nele — um Pix só com o total (pedido do Maikon). Antes de juntar, o Pix
-        // antigo desse pedido é derrubado no Inter conferindo se não foi pago; se não der
-        // (pago agora, Inter fora), os itens novos viram pedido separado, como sempre foi.
-        var juntou = false;
-        if (await LigadaAsync(Funcionalidades.PedidoPixJunto))
-        {
-            var aberto = await PedidoAbertoParaJuntarAsync(userId, NormalizarPaymentMethod(req.PaymentMethod));
-            if (aberto is not null && await DerrubarPixParaJuntarAsync(aberto.Value))
-            {
-                groupId = aberto.Value;
-                juntou  = true;
-            }
-        }
+        // Chave "pedido-pix-junto": quem já tem pedido de pré-venda sem pagar soma os itens novos
+        // nele (um Pix só). O pedido ABERTO é escolhido agora, mas nada nele muda antes de o carrinho
+        // novo dar certo — os itens nascem num pedido próprio e só depois são movidos (JuntarAsync).
+        var juntar = await LigadaAsync(Funcionalidades.PedidoPixJunto)
+            ? await PedidoAbertoParaJuntarAsync(userId, NormalizarPaymentMethod(req.PaymentMethod))
+            : null;
 
         // O Npgsql roda com EnableRetryOnFailure (Program.cs), que rejeita transação manual
         // solta ("user-initiated transactions are not supported"): o bloco inteiro precisa
@@ -426,18 +418,46 @@ public class ReservationController : ControllerBase
 
         if (criadas!.Any(r => r.Kind == "pre_venda")) await AvisarEstoqueMudouAsync();
 
-        if (juntou)
+        var juntou = false;
+        if (juntar is not null && await JuntarAsync(juntar.Value, userId, NormalizarPaymentMethod(req.PaymentMethod), criadas!))
+        {
+            groupId = juntar.Value;
+            juntou  = true;
             await _audit.LogAsync("JuntouItensNoPedido", "ProductReservation", groupId.ToString(),
                 details: $"{{\"itens\":{criadas!.Count}}}", httpContext: HttpContext);
+        }
 
         return Ok(new { groupId, juntou, items = criadas!.Select(r => ToDto(r)) });
+    }
+
+    /// <summary>
+    /// Move os itens recém-criados (já num pedido próprio, válido) pro pedido aberto do cliente.
+    /// Tudo sob a trava do pedido que o "Gerar Pix" usa: derruba o Pix ativo dele (conferindo se não
+    /// foi pago) e move os itens antes de alguém gerar um Pix novo — que então sai com o total.
+    /// Não dá (pago agora, Inter fora, deixou de estar aberto)? Os itens ficam no pedido próprio.
+    /// </summary>
+    private async Task<bool> JuntarAsync(Guid alvo, Guid userId, string? paymentMethod, List<ProductReservation> novos)
+    {
+        using var trava = await ReservationPixService.TravarPedidoAsync(alvo);
+
+        // Pode ter sido pago ou cancelado desde a escolha: confere de novo, já com a trava
+        if (await PedidoAbertoParaJuntarAsync(userId, paymentMethod, exceto: novos[0].ReservationGroupId) != alvo)
+            return false;
+        if (!await DerrubarPixParaJuntarAsync(alvo))
+            return false;
+
+        var ids = novos.Select(r => r.Id).ToList();
+        await _db.ProductReservations.Where(r => ids.Contains(r.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.ReservationGroupId, alvo));
+        foreach (var r in novos) r.ReservationGroupId = alvo;
+        return true;
     }
 
     /// <summary>
     /// Pedido de pré-venda do cliente que ainda aceita itens: tudo ativo, sem pagar (ExpiresAt
     /// marcado), sem venda registrada e na mesma forma de pagamento. O mais recente.
     /// </summary>
-    private async Task<Guid?> PedidoAbertoParaJuntarAsync(Guid userId, string? paymentMethod)
+    private async Task<Guid?> PedidoAbertoParaJuntarAsync(Guid userId, string? paymentMethod, Guid? exceto = null)
     {
         // Poucos itens por cliente: agrupa em memória (All dentro de GroupBy não traduz pra SQL)
         var itens = await _db.ProductReservations.AsNoTracking()
@@ -445,6 +465,7 @@ public class ReservationController : ControllerBase
             .Select(r => new { r.ReservationGroupId, r.ReservedAt, r.Kind, r.Status, r.ExpiresAt, r.VendaAvulsaId, r.PaymentMethod })
             .ToListAsync();
         return itens
+            .Where(r => r.ReservationGroupId != exceto)
             .GroupBy(r => r.ReservationGroupId)
             .Where(g => g.All(r => r.Kind == "pre_venda" && r.Status == "active" && r.ExpiresAt != null
                                    && r.VendaAvulsaId == null && r.PaymentMethod == paymentMethod))

@@ -989,6 +989,25 @@ public class ReservationControllerTests
     }
 
     [Fact]
+    public async Task Carrinho_QueFalha_NaoMexeNoPixDoPedidoAntigo()
+    {
+        // O Pix antigo só cai depois que o carrinho novo deu certo (os itens nascem num pedido próprio)
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        antiga.PaymentMethod = "pix"; await db.SaveChangesAsync();
+        var semEstoque = await SeedProductAsync(db, stock: 0);
+        var inter = CreateInterMockConfiguravel();
+        var controller = CreateController(db, loggedUserId: cliente.Id,
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object, funcionalidades: Chaves(db));
+
+        var r = await controller.CreateCart(Carrinho(semEstoque));
+
+        r.Should().NotBeOfType<OkObjectResult>();
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+        (await db.PixCobrancas.AsNoTracking().SingleAsync()).Status.Should().Be("ATIVA", "o QR que o cliente guardou continua valendo");
+    }
+
+    [Fact]
     public async Task Carrinho_PixAntigoAcabouDeSerPago_NaoJunta_PedidoSeparado()
     {
         var db = CreateDb(nameof(ReservationControllerTests));
