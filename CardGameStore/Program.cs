@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using MongoDB.Driver;
 
 // Comando utilitário: dotnet run -- gen-key  →  imprime nova chave AES-256 em Base64
@@ -362,15 +362,9 @@ builder.Services.AddSwaggerGen(c =>
         Description  = "Informe: Bearer {seu_token}"
     });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    c.AddSecurityRequirement(documento => new OpenApiSecurityRequirement
     {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            Array.Empty<string>()
-        }
+        [new OpenApiSecuritySchemeReference("Bearer", documento)] = []
     });
 });
 
@@ -398,8 +392,8 @@ var forwardedOptions = new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
 };
 // Aceita proxy da rede Docker interna (172.16.0.0/12) e loopback
-forwardedOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
-forwardedOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("10.0.0.0"), 8));
+forwardedOptions.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("172.16.0.0/12"));
+forwardedOptions.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("10.0.0.0/8"));
 forwardedOptions.KnownProxies.Add(IPAddress.Loopback);
 forwardedOptions.KnownProxies.Add(IPAddress.IPv6Loopback);
 app.UseForwardedHeaders(forwardedOptions);

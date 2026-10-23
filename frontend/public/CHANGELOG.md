@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.70.0] — 2026-10-23
+
+### Segurança — API no .NET 10 (LTS até nov/2028)
+- A API sai do **.NET 8**, que perde as correções de segurança em **10/11/2026**, e vai pro **.NET 10** (runtime 10.0.13). Entity Framework, Npgsql, JWT, SignalR e Swagger nas versões do .NET 10
+- Duas bibliotecas que vinham junto com o driver do MongoDB tinham falhas conhecidas (`Snappier` 1.0.0 — alta; `SharpCompress` 0.30.1 — média): presas nas versões corrigidas (1.3.1 e 0.48.1)
+- Leitura do certificado A1 (NFC-e/SEFAZ) no carregador novo do .NET, com o caminho de reserva de antes; testes novos com certificado moderno, no formato antigo dos A1 e com senha errada
+- A imagem da API passa a ser Ubuntu 24.04 (padrão do .NET 10); o ajuste do OpenSSL pros A1 antigos continua
+
 ## [v1.69.0] — 2026-10-23
 
 ### Pré-venda — um Pix só pro que ainda não foi pago (pedido do Maikon)

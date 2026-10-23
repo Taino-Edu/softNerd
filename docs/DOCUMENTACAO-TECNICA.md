@@ -20,7 +20,7 @@ O **softNerd** é um sistema de gestão para loja de card games com mesas de jog
 
 | Camada | Tecnologia |
 |---|---|
-| Backend | ASP.NET Core 8, C# |
+| Backend | ASP.NET Core 10, C# |
 | ORM | Entity Framework Core 8 (PostgreSQL) |
 | Banco relacional | PostgreSQL 16 |
 | Banco de documentos | MongoDB 7 |
@@ -43,7 +43,7 @@ O **softNerd** é um sistema de gestão para loja de card games com mesas de jog
         └─────────┬─────────────────┘
                   │ HTTP + SSE/Long Polling (withCredentials)
                   ▼
-        ASP.NET Core 8 — porta 5000
+        ASP.NET Core 10 — porta 5000
          ┌──────────────────────────────┐
          │  Controllers (REST API)      │
          │  SignalR Hub (ComandaHub)    │
@@ -121,7 +121,7 @@ docker-compose down -v       # apaga volumes (reseta banco)
 
 ```
 softNerd/
-├── CardGameStore/                   # API Backend (ASP.NET Core 8)
+├── CardGameStore/                   # API Backend (ASP.NET Core 10)
 │   ├── Controllers/                 # Endpoints REST
 │   │   ├── LgpdController.cs        # Exercício de direitos LGPD
 │   │   ├── AiChatController.cs      # Assistente IA (Gemini)

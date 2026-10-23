@@ -34,7 +34,9 @@ public static class Pkcs12Loader
     {
         try
         {
-            return new X509Certificate2(pfxBytes, senha, X509KeyStorageFlags.Exportable);
+            // .NET 10: o construtor que lê PFX ficou obsoleto; o carregador novo tem limites de
+            // segurança e, se recusar o arquivo, cai no BouncyCastle abaixo como antes
+            return X509CertificateLoader.LoadPkcs12(pfxBytes, senha, X509KeyStorageFlags.Exportable);
         }
         catch (CryptographicException)
         {
@@ -64,7 +66,7 @@ public static class Pkcs12Loader
         var certificadoBc = store.GetCertificate(alias).Certificate;
         var chaveBc       = store.GetKey(alias).Key;
 
-        using var x509SemChave = new X509Certificate2(certificadoBc.GetEncoded());
+        using var x509SemChave = X509CertificateLoader.LoadCertificate(certificadoBc.GetEncoded());
 
         // Certificados A1 ICP-Brasil são sempre RSA (exigência da política de
         // certificação do ITI) — não há necessidade prática de suportar EC aqui.

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>CardGameStore</RootNamespace>
@@ -20,32 +20,36 @@
   <ItemGroup>
     <!-- Entity Framework Core -->
     <PackageReference Include="Google.Apis.Auth" Version="1.77.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.31" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.31">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.31" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
 
     <!-- Authentication / JWT -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.31" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
 
     <!-- Swagger -->
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.1" />
 
     <!-- MongoDB -->
     <PackageReference Include="MongoDB.Driver" Version="2.30.0" />
+    <!-- Dependências do driver do Mongo presas em versões corrigidas (o 2.30 puxava Snappier 1.0.0
+         — GHSA-pggp-6c3x-2xmx, alta — e SharpCompress 0.30.1 — GHSA-6c8g-7p36-r338). São as mesmas
+         versões do MongoDB.Driver 3.13; a compressão na conexão com o Mongo não é usada. -->
+    <PackageReference Include="Snappier" Version="1.3.1" />
+    <PackageReference Include="SharpCompress" Version="0.48.1" />
 
     <!-- BCrypt -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
 
     <!-- SignalR (built into ASP.NET Core, but included for clarity) -->
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.31" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.13" />
 
     <!-- Health Checks -->
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.31" />
-    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="8.0.1" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
 
     <!-- Fotos leves: miniatura WebP das fotos enviadas (Services/Implementations/FotosLeves.cs).
          O pacote Linux.NoDependencies traz a lib nativa sem precisar instalar nada na imagem Docker. -->
