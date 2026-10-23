@@ -82,7 +82,7 @@ O backend emite os tokens como cookies **HttpOnly** (invisíveis ao JavaScript):
 ## 🔬 Como rodar os testes unitários (xUnit)
 
 ### Pré-requisitos
-- .NET 8 SDK instalado (`dotnet --version`)
+- .NET 10 SDK instalado (`dotnet --list-sdks` mostra uma 10.0.x) — ou rode dentro do container `mcr.microsoft.com/dotnet/sdk:10.0`
 
 ### Comandos
 
