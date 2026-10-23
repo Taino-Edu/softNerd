@@ -188,7 +188,7 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
   const emJogo = !encerrado && t.rodadaAtual > 0
   // Muitas mesas (16+ jogadores): relógio menor e mesas em 3 colunas na TV, pra rodada caber em 1080px
   const muitasMesas = t.mesas.length > 6
-  const setup = emJogo && !rodadaComecou(t.timer, t.rodadaAtual) && t.mesas.some(m => !m.resultado)
+  const setup = emJogo && !rodadaComecou(t.timer, t.rodadaAtual, t.rodadaComecou) && t.mesas.some(m => !m.resultado)
   const setupInfo = mesasDeSetup(t.mesas)
   const situacao = encerrado ? 'TORNEIO ENCERRADO'
     : t.rodadaAtual > 0 ? `RODADA ${t.rodadaAtual}${t.numeroRodadas ? ` DE ${t.numeroRodadas}` : ''}`

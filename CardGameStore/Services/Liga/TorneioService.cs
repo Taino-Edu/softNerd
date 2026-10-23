@@ -269,7 +269,7 @@ public class TorneioService
         if (ch.RodadaAtual == 0) throw new TorneioException("Os pareamentos ainda não saíram.");
 
         var timer = await _db.Timers.AsNoTracking().FirstOrDefaultAsync(t => t.ChampionshipId == championshipId);
-        if (timer is not null && timer.Rodada == ch.RodadaAtual && timer.State != TimerState.Stopped)
+        if (await RodadaComecouAsync(ch, timer))
             throw new TorneioException($"A rodada {ch.RodadaAtual} já começou.", 409);
         return (ch, timer);
     }
@@ -586,7 +586,8 @@ public class TorneioService
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: false) : [],
             await ClassificacaoAsync(championshipId),
             TimerDto.De(timer),
-            ch.Lugares);
+            ch.Lugares,
+            await RodadaComecouAsync(ch, timer));
     }
 
     public async Task<PainelDto> PainelAsync(Guid championshipId)
@@ -608,7 +609,8 @@ public class TorneioService
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: true) : [],
             await ClassificacaoAsync(championshipId),
             TimerDto.De(timer),
-            ch.Lugares);
+            ch.Lugares,
+            await RodadaComecouAsync(ch, timer));
     }
 
     /// <summary>Tela do jogador: torneio, minha mesa na rodada atual, o que cada um lançou.</summary>
@@ -737,6 +739,28 @@ public class TorneioService
         timer.PausedRemaining = null;
         timer.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await MarcarRodadaComecadaAsync(_db, ch.Id, rodada);
+    }
+
+    /// <summary>
+    /// A rodada passa a estar EM JOGO (só a primeira vez conta). Chamado ao ligar o relógio da rodada,
+    /// pela Central ou pelo "Iniciar" do próprio relógio (TimerController).
+    /// </summary>
+    public static Task MarcarRodadaComecadaAsync(AppDbContext db, Guid championshipId, int rodada) =>
+        db.TorneioRodadas
+            .Where(r => r.ChampionshipId == championshipId && r.Numero == rodada && r.ComecadaEm == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.ComecadaEm, DateTime.UtcNow));
+
+    /// <summary>
+    /// A rodada atual já está em jogo? Pela marca da rodada; rodada de antes da marca existir
+    /// (sem comecada_em) segue a regra antiga: relógio desta rodada fora de "parado".
+    /// </summary>
+    private async Task<bool> RodadaComecouAsync(Championship ch, TimerEntity? timer)
+    {
+        if (ch.RodadaAtual == 0) return false;
+        var marcada = await _db.TorneioRodadas.AsNoTracking()
+            .AnyAsync(r => r.ChampionshipId == ch.Id && r.Numero == ch.RodadaAtual && r.ComecadaEm != null);
+        return marcada || (timer is not null && timer.Rodada == ch.RodadaAtual && timer.State != TimerState.Stopped);
     }
 
     private async Task<string> NovoCodigoAsync()
@@ -797,7 +821,7 @@ public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? P
 public sealed record TorneioPublicoDto(
     Guid Id, string Nome, string Jogo, string Status, string Formato, int MelhorDe, int MinutosRodada,
     int? NumeroRodadas, int RodadaAtual, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
-    int Lugares = 24);
+    int Lugares = 24, bool RodadaComecou = false);
 
 public sealed record ParticipantePainel(
     Guid Id, Guid UserId, int PlayerNumber, string Nome, string? Deck, DateTime? CheckInEm, int? DesistiuNaRodada, bool Pago);
@@ -806,7 +830,7 @@ public sealed record PainelDto(
     Guid Id, string Nome, string Status, string Formato, string? CodigoEntrada, int MelhorDe, int MinutosRodada,
     int? NumeroRodadas, int RodadaAtual, int RodadasSugeridas,
     List<ParticipantePainel> Participantes, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
-    int Lugares = 24);
+    int Lugares = 24, bool RodadaComecou = false);
 
 public sealed record MinhaMesaDto(
     TorneioPublicoDto Torneio, Guid? ParticipanteId, bool CheckIn, int? DesistiuNaRodada, string? Deck,

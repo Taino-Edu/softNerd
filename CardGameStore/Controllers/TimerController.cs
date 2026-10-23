@@ -77,6 +77,10 @@ public class TimerController : ControllerBase
         if (t == null) return NotFound();
 
         var nowRemaining = CalcRemaining(t);
+        // Relógio de rodada fora de "parado" = a rodada está em jogo: marca ANTES de mexer, pra um
+        // reset ("Parar alarme") nunca tirar a rodada de jogo (inclui rodada de antes da marca existir)
+        if (t.State != TimerState.Stopped && t.ChampionshipId is { } chEmJogo && t.Rodada is { } rodadaEmJogo)
+            await CardGameStore.Services.Liga.TorneioService.MarcarRodadaComecadaAsync(_db, chEmJogo, rodadaEmJogo);
 
         switch (req.Action)
         {
@@ -119,6 +123,9 @@ public class TimerController : ControllerBase
 
         t.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        // Relógio de rodada de torneio ligado à mão: a rodada está em jogo (zerar depois não desfaz)
+        if (req.Action == "start" && t.ChampionshipId is { } chId && t.Rodada is { } rodada)
+            await CardGameStore.Services.Liga.TorneioService.MarcarRodadaComecadaAsync(_db, chId, rodada);
         return Ok(ToDto(t));
     }
 

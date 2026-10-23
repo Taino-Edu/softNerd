@@ -55,6 +55,14 @@ public class TorneioRodada
     [Column("fechada_em")]
     public DateTime? FechadaEm { get; set; }
 
+    /// <summary>
+    /// Quando o relógio da rodada foi ligado pela primeira vez — a partir daí a rodada está EM JOGO,
+    /// mesmo que depois o relógio seja zerado ("Parar alarme" zera). Antes isso era lido do estado do
+    /// relógio e zerar voltava a tela do jogador pro "monte o setup", sem os botões de resultado (v1.66.2).
+    /// </summary>
+    [Column("comecada_em")]
+    public DateTime? ComecadaEm { get; set; }
+
     public ICollection<TorneioPartida> Partidas { get; set; } = new List<TorneioPartida>();
 }
 

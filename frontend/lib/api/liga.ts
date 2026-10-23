@@ -43,6 +43,8 @@ export interface TorneioPublicoDto {
   melhorDe: number; minutosRodada: number; numeroRodadas: number | null; rodadaAtual: number
   mesas: MesaDto[]; classificacao: LinhaTabela[]; timer: TimerTorneioDto | null
   lugares: number
+  /** A rodada atual já está em jogo (marca da rodada no servidor — zerar ou apagar o relógio não desfaz). */
+  rodadaComecou?: boolean
 }
 
 export interface ParticipantePainel {
@@ -57,6 +59,8 @@ export interface PainelTorneioDto {
   participantes: ParticipantePainel[]; mesas: MesaDto[]; classificacao: LinhaTabela[]
   timer: TimerTorneioDto | null
   lugares: number
+  /** Ver TorneioPublicoDto.rodadaComecou. */
+  rodadaComecou?: boolean
 }
 
 export interface MinhaMesaDto {
@@ -132,8 +136,12 @@ export const torneioApi = {
 }
 
 /** O relógio da rodada atual já foi disparado? (false = pareamentos soltos, esperando o "Começar rodada") */
-export function rodadaComecou(t: TimerTorneioDto | null, rodadaAtual: number): boolean {
-  if (!t || rodadaAtual === 0) return false
+export function rodadaComecou(t: TimerTorneioDto | null, rodadaAtual: number, marcadaNoServidor?: boolean): boolean {
+  if (rodadaAtual === 0) return false
+  // O servidor marca a rodada quando o relógio liga: "Parar alarme" zera o relógio e antes isso
+  // voltava a tela do jogador pro "monte o setup", sem os botões de resultado
+  if (marcadaNoServidor) return true
+  if (!t) return false
   return t.rodada === rodadaAtual && t.state !== 'stopped'
 }
 
