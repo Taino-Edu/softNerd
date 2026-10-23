@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { torneioApi, PainelTorneioDto, MesaDto, ResultadoPartida, rodadaComecou, mesasDeSetup } from '@/lib/api'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { rotasDoEvento } from '@/lib/caminhosTorneio'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
 import { Switch } from '@/components/ui/Switch'
 import Relogio from '@/components/liga/Relogio'
@@ -58,6 +59,7 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
   // "Estou pronto" (chave liguinha-pronto-na-mesa): quando a última mesa fica pronta, avisa
   // com som e toast — o organizador pode estar longe do computador, olhando as mesas.
   const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
+  const separado = useFuncionalidade('campeonato-separado') === true
   const setupAgora = p && p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual, p.rodadaComecou) ? mesasDeSetup(p.mesas) : null
   const todasProntas = !!prontoLigado && !!setupAgora?.todas
   const avisouRodada = useRef<number | null>(null)
@@ -115,7 +117,7 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
             <ArrowLeft className="w-4 h-4" /> Campeonatos
           </Link>
           <h1 className="text-xl font-bold text-white flex items-center gap-2"><Swords className="w-5 h-5 text-brand-400" /> {p.nome}</h1>
-          <Link href={`/liga/torneio/${p.id}`} target="_blank" className="ml-auto btn-secondary text-sm">
+          <Link href={rotasDoEvento(p.modalidade, separado).telao(p.id)} target="_blank" className="ml-auto btn-secondary text-sm">
             <Monitor className="w-4 h-4" /> Abrir telão
           </Link>
         </div>
@@ -162,7 +164,7 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
       {preparado && !encerrado && (
         <section className="bg-surface-800 border border-surface-500 rounded-2xl p-5 flex flex-wrap items-center gap-4">
           <div>
-            <p className="text-xs font-semibold text-gray-400">Código pros jogadores (santuarionerd.com/liga/jogar)</p>
+            <p className="text-xs font-semibold text-gray-400">Código pros jogadores (santuarionerd.com.br{rotasDoEvento(p.modalidade, separado).jogar})</p>
             <p className="font-mono text-4xl font-bold tracking-[0.3em] text-white">{p.codigoEntrada}</p>
           </div>
           <div className="flex gap-2 ml-auto">

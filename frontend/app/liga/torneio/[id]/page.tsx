@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2 } from 'lucide-react'
 import { torneioApi, TorneioPublicoDto, rodadaComecou } from '@/lib/api'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
@@ -17,12 +17,16 @@ import Relogio from '@/components/liga/Relogio'
 import TabelaTorneio from '@/components/liga/TabelaTorneio'
 import TelaoNovo from '@/components/liga/TelaoNovo'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { rotasDoEvento } from '@/lib/caminhosTorneio'
 
 export default function TelaoTorneioPage() {
   const { id } = useParams<{ id: string }>()
   const [t, setT] = useState<TorneioPublicoDto | null>(null)
   const [erro, setErro] = useState(false)
   const telaoNovo = useFuncionalidade('telao-novo') !== false
+  const separado = useFuncionalidade('campeonato-separado') === true
+  const pathname = usePathname()
+  const router = useRouter()
 
   const recarregar = useCallback(() => {
     torneioApi.publico(id).then(r => { setT(r.data); setErro(false) }).catch(() => setErro(true))
@@ -30,6 +34,13 @@ export default function TelaoTorneioPage() {
 
   useEffect(() => { recarregar() }, [recarregar])
   useTorneioAoVivo(id, recarregar)
+
+  // Telão no endereço da outra modalidade (link antigo): vai pro endereço certo do evento
+  useEffect(() => {
+    if (!t || !separado) return
+    const certo = rotasDoEvento(t.modalidade, true).telao(t.id)
+    if (pathname && pathname !== certo) router.replace(certo)
+  }, [t, separado, pathname, router])
 
   if (!t) {
     return (
@@ -42,12 +53,13 @@ export default function TelaoTorneioPage() {
   if (telaoNovo) return <TelaoNovo t={t} />
 
   const encerrado = t.status === 'Finalizado'
+  const rotas = rotasDoEvento(t.modalidade, separado)
 
   return (
     <div className="min-h-screen bg-surface-900 text-white">
       <nav className="h-14 flex items-center px-4 gap-3 border-b border-surface-500">
-        <Link href="/liga" className="flex items-center gap-1.5 text-sm text-gray-300"><ArrowLeft className="w-4 h-4" /> Liga</Link>
-        <Link href={`/liga/jogar?t=${t.id}`} className="ml-auto btn-secondary text-sm"><Swords className="w-4 h-4" /> Sou jogador</Link>
+        <Link href={rotas.voltar(t.id).href} className="flex items-center gap-1.5 text-sm text-gray-300"><ArrowLeft className="w-4 h-4" /> {rotas.voltar(t.id).rotulo}</Link>
+        <Link href={`${rotas.jogar}?t=${t.id}`} className="ml-auto btn-secondary text-sm"><Swords className="w-4 h-4" /> Sou jogador</Link>
       </nav>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">

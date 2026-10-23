@@ -67,6 +67,8 @@ export default function CentralLiguinhaPage() {
   const [filtro, setFiltro] = useState<Filtro>('todos')
   const [criando, setCriando] = useState(false)
   const modalidades = useFuncionalidade('liga-modalidades') !== false
+  // Chave campeonato-separado: a Central é da Liguinha; campeonato se abre pela tela de Campeonatos
+  const separado = useFuncionalidade('campeonato-separado') === true
   const [modo, setModo] = useState<'tudo' | Modalidade>('tudo')
   const modalidadeDe = (c: Championship): Modalidade => c.modalidade ?? 'Liga'
   const [lancando, setLancando] = useState(false)
@@ -78,11 +80,11 @@ export default function CentralLiguinhaPage() {
   useEffect(() => { carregar() }, [carregar])
 
   const mesAtual = hojeBrasil().slice(0, 7)
-  const ordenada = useMemo(() => [...(lista ?? [])].sort((a, b) => {
+  const ordenada = useMemo(() => [...(lista ?? [])].filter(c => !separado || (c.modalidade ?? 'Liga') === 'Liga').sort((a, b) => {
     // em jogo primeiro; depois do mais novo pro mais antigo
     if (emJogo(a) !== emJogo(b)) return emJogo(a) ? -1 : 1
     return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-  }), [lista])
+  }), [lista, separado])
   const termo = normalizarNome(busca)
   const doModo = ordenada.filter(c => !modalidades || modo === 'tudo' || modalidadeDe(c) === modo)
   const visiveis = doModo.filter(c => passaNoFiltro(c, filtro) && (!termo || normalizarNome(c.name).includes(termo)))
@@ -125,7 +127,12 @@ export default function CentralLiguinhaPage() {
       <div className="grid gap-6 xl:grid-cols-[1fr_340px] items-start">
         {/* ── Torneios ─────────────────────────────────────────────────── */}
         <section className="space-y-3 min-w-0">
-          {modalidades && (
+          {separado && (
+            <p className="text-xs text-gray-400">
+              Só liguinhas aqui. Campeonatos ficam em <Link href="/admin/campeonatos" className="underline text-brand-400">Campeonatos</Link>.
+            </p>
+          )}
+          {modalidades && !separado && (
             <div className="inline-flex rounded-xl border border-surface-500 p-1 gap-1" role="tablist" aria-label="Modalidade">
               {([['tudo', 'Tudo'], ['Liga', 'Liga'], ['Campeonato', 'Campeonatos']] as const).map(([m, rotulo]) => (
                 <button key={m} role="tab" aria-selected={modo === m} onClick={() => setModo(m)}

@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **22/10/2026** — produção na **v1.66.2** (nginx 1.30.6, Node 24.22.1).
+Atualizado em **22/10/2026** — produção na **v1.67.0** (nginx 1.30.6, Node 24.22.1).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -45,6 +45,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.68.0 | 23/10 | Campeonato separado da Liga: /campeonato/jogar e /campeonato/torneio; Liguinha e Central só com liguinhas |
 | v1.67.0 | 23/10 | Liguinha: foto do jogador = Pokémon preferido (telão, celular, Central, ranking); deck em texto embaixo |
 | v1.66.2 | 23/10 | Liguinha: lançar resultado depois que o tempo acaba ("Parar alarme" zerava o relógio e escondia o Venci/Perdi) |
 | v1.66.1 | 22/10 | "Nerd" do título no azul padrão da loja |

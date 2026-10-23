@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.68.0] — 2026-10-23
+
+### Campeonato separado da Liga (pedido do Maikon)
+- Evento de modalidade **Campeonato** não roda mais junto da liguinha: no celular do jogador fica em **/campeonato/jogar** e o telão em **/campeonato/torneio**, com o nome e os links do campeonato ("← Campeonato", "Sou jogador" do campeonato, endereço certo pro código)
+- A **Liguinha** (celular e Central do admin) mostra só liguinhas; a Central avisa que campeonato se abre pela tela de Campeonatos
+- Código de campeonato digitado na Liguinha leva pra tela do campeonato; link antigo (/liga/...) de um campeonato vai sozinho pro endereço novo
+- A pontuação já era separada: campeonato não soma na Liga Mensal
+- Chave `campeonato-separado` em Funcionalidades: desligada, volta tudo junto como antes
+
 ## [v1.67.0] — 2026-10-23
 
 ### Liguinha — a "fotinha" do jogador é o Pokémon preferido (pedido do Maikon)
