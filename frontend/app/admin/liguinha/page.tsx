@@ -236,7 +236,7 @@ export default function CentralLiguinhaPage() {
         </aside>
       </div>
 
-      {criando && <CriarTorneio onFechar={() => setCriando(false)} sugestoes={{
+      {criando && <CriarTorneio onFechar={() => setCriando(false)} soLiga={separado} sugestoes={{
         Liga: precosRecentes(ordenada.filter(c => modalidadeDe(c) === 'Liga')),
         Campeonato: precosRecentes(ordenada.filter(c => modalidadeDe(c) === 'Campeonato')),
       }} />}
