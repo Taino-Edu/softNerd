@@ -585,8 +585,9 @@ public class TorneioService
             ch.NumeroRodadas, ch.RodadaAtual,
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: false) : [],
             await ClassificacaoAsync(championshipId),
-            TimerDto.De(timer, await RodadaComecouAsync(ch, timer)),
-            ch.Lugares);
+            TimerDto.De(timer),
+            ch.Lugares,
+            await RodadaComecouAsync(ch, timer));
     }
 
     public async Task<PainelDto> PainelAsync(Guid championshipId)
@@ -607,8 +608,9 @@ public class TorneioService
             participantes,
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: true) : [],
             await ClassificacaoAsync(championshipId),
-            TimerDto.De(timer, await RodadaComecouAsync(ch, timer)),
-            ch.Lugares);
+            TimerDto.De(timer),
+            ch.Lugares,
+            await RodadaComecouAsync(ch, timer));
     }
 
     /// <summary>Tela do jogador: torneio, minha mesa na rodada atual, o que cada um lançou.</summary>
@@ -810,18 +812,16 @@ public sealed record MesaDto(
     ResultadoPartida? ReportA, ResultadoPartida? ReportB, ResultadoPartida? Resultado, bool Divergente,
     bool AguardandoMesa = false, bool ProntoA = false, bool ProntoB = false);
 
-/// <param name="RodadaComecou">A rodada atual do torneio já está em jogo (marca da rodada, não o estado do relógio).</param>
-public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada,
-    bool RodadaComecou = false)
+public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada)
 {
-    public static TimerDto? De(TimerEntity? t, bool rodadaComecou = false) => t is null ? null
-        : new TimerDto(t.Id, t.State.ToString().ToLowerInvariant(), t.DurationSeconds, t.PausedRemaining, t.StartedAt, t.Rodada, rodadaComecou);
+    public static TimerDto? De(TimerEntity? t) => t is null ? null
+        : new TimerDto(t.Id, t.State.ToString().ToLowerInvariant(), t.DurationSeconds, t.PausedRemaining, t.StartedAt, t.Rodada);
 }
 
 public sealed record TorneioPublicoDto(
     Guid Id, string Nome, string Jogo, string Status, string Formato, int MelhorDe, int MinutosRodada,
     int? NumeroRodadas, int RodadaAtual, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
-    int Lugares = 24);
+    int Lugares = 24, bool RodadaComecou = false);
 
 public sealed record ParticipantePainel(
     Guid Id, Guid UserId, int PlayerNumber, string Nome, string? Deck, DateTime? CheckInEm, int? DesistiuNaRodada, bool Pago);
@@ -830,7 +830,7 @@ public sealed record PainelDto(
     Guid Id, string Nome, string Status, string Formato, string? CodigoEntrada, int MelhorDe, int MinutosRodada,
     int? NumeroRodadas, int RodadaAtual, int RodadasSugeridas,
     List<ParticipantePainel> Participantes, List<MesaDto> Mesas, List<LinhaTabela> Classificacao, TimerDto? Timer,
-    int Lugares = 24);
+    int Lugares = 24, bool RodadaComecou = false);
 
 public sealed record MinhaMesaDto(
     TorneioPublicoDto Torneio, Guid? ParticipanteId, bool CheckIn, int? DesistiuNaRodada, string? Deck,

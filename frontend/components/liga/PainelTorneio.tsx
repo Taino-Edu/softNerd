@@ -58,7 +58,7 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
   // "Estou pronto" (chave liguinha-pronto-na-mesa): quando a última mesa fica pronta, avisa
   // com som e toast — o organizador pode estar longe do computador, olhando as mesas.
   const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
-  const setupAgora = p && p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual) ? mesasDeSetup(p.mesas) : null
+  const setupAgora = p && p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual, p.rodadaComecou) ? mesasDeSetup(p.mesas) : null
   const todasProntas = !!prontoLigado && !!setupAgora?.todas
   const avisouRodada = useRef<number | null>(null)
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
   const divergentes = p.mesas.filter(m => m.divergente)
   const ultimaRodada = p.numeroRodadas !== null && p.rodadaAtual >= p.numeroRodadas
   // Pareamentos soltos mas o relógio ainda parado: falta o "Começar rodada"
-  const esperandoComecar = p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual) && abertas.length > 0
+  const esperandoComecar = p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual, p.rodadaComecou) && abertas.length > 0
 
   return (
     <div className="space-y-6 max-w-5xl">

@@ -405,7 +405,7 @@ function MinhaMesa({ torneioId }: { torneioId: string }) {
   const oponente = mesa ? (souA ? mesa.b : mesa.a) : null
 
   const meuDeck = mesa ? ((souA ? mesa.a.deck : mesa.b?.deck) ?? dados.deck) : dados.deck
-  const emSetup = !!mesa && !mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual)
+  const emSetup = !!mesa && !mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual, t.rodadaComecou)
   const euPronto = !!mesa && (souA ? mesa.prontoA : mesa.prontoB)
   const oponentePronto = !!mesa && (souA ? mesa.prontoB : mesa.prontoA)
   const rever = animar ? (encerrado ? cenaFinal(dados) : cenaDaMesa(dados)) : null

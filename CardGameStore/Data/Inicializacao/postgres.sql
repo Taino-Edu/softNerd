@@ -769,6 +769,11 @@ CREATE TABLE IF NOT EXISTS torneio_rodadas (
 CREATE UNIQUE INDEX IF NOT EXISTS ux_torneio_rodadas_numero ON torneio_rodadas (championship_id, numero);
 -- Quando o relógio da rodada foi ligado (a rodada está em jogo mesmo se o relógio for zerado) — v1.66.2
 ALTER TABLE torneio_rodadas ADD COLUMN IF NOT EXISTS comecada_em TIMESTAMPTZ NULL;
+-- Rodada que já estava em jogo quando a marca nasceu (relógio dela fora de "parado" = state 0):
+-- marca agora, senão o primeiro "Parar alarme" depois do deploy voltava a esconder o Venci/Perdi
+UPDATE torneio_rodadas r SET comecada_em = COALESCE(t.started_at, NOW())
+  FROM timers t
+ WHERE r.comecada_em IS NULL AND t.championship_id = r.championship_id AND t.rodada = r.numero AND t.state <> 0;
 
 CREATE TABLE IF NOT EXISTS torneio_partidas (
     id                     UUID         PRIMARY KEY,

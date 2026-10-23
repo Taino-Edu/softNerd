@@ -639,7 +639,7 @@ public class TorneioServiceTests
         var amb = Criar(2);
         await InscreverEEntrarTodosAsync(amb);
         await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
-        (await amb.Torneio.PublicoAsync(amb.Ch.Id)).Timer!.RodadaComecou.Should().BeFalse("pareamento solto, relógio parado: ainda é setup");
+        (await amb.Torneio.PublicoAsync(amb.Ch.Id)).RodadaComecou.Should().BeFalse("pareamento solto, relógio parado: ainda é setup");
 
         await amb.Torneio.ComecarRodadaAsync(amb.Ch.Id);
         var timer = await amb.Db.Timers.SingleAsync(t => t.ChampionshipId == amb.Ch.Id);
@@ -647,12 +647,19 @@ public class TorneioServiceTests
         await amb.Db.SaveChangesAsync();
         amb.Db.ChangeTracker.Clear();
 
-        (await amb.Torneio.PublicoAsync(amb.Ch.Id)).Timer!.RodadaComecou.Should().BeTrue();
-        (await amb.Torneio.PainelAsync(amb.Ch.Id)).Timer!.RodadaComecou.Should().BeTrue();
+        (await amb.Torneio.PublicoAsync(amb.Ch.Id)).RodadaComecou.Should().BeTrue();
+        (await amb.Torneio.PainelAsync(amb.Ch.Id)).RodadaComecou.Should().BeTrue();
         var mesa = (await MesasDaRodadaAsync(amb)).Single();
         (await FluentActions.Awaiting(() => amb.Torneio.MarcarProntoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, true))
             .Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409, "zerar o relógio não reabre o \"Estou pronto\"");
         await amb.Torneio.LancarResultadoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, mesa.Id, ResultadoJogador.Venci);
+
+        // Relógio apagado na lixeira: a rodada continua em jogo (a resposta não depende do relógio)
+        amb.Db.Timers.Remove(await amb.Db.Timers.SingleAsync(t => t.ChampionshipId == amb.Ch.Id));
+        await amb.Db.SaveChangesAsync();
+        var semRelogio = await amb.Torneio.PublicoAsync(amb.Ch.Id);
+        semRelogio.Timer.Should().BeNull();
+        semRelogio.RodadaComecou.Should().BeTrue();
     }
 
     [Fact]

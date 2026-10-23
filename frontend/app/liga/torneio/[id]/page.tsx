@@ -64,7 +64,7 @@ export default function TelaoTorneioPage() {
         </header>
 
         {!encerrado && t.rodadaAtual > 0 && <Relogio timer={t.timer} grande />}
-        {!encerrado && t.rodadaAtual > 0 && !rodadaComecou(t.timer, t.rodadaAtual) && t.mesas.some(m => !m.resultado) && (
+        {!encerrado && t.rodadaAtual > 0 && !rodadaComecou(t.timer, t.rodadaAtual, t.rodadaComecou) && t.mesas.some(m => !m.resultado) && (
           <p className="text-center text-lg md:text-xl font-semibold text-white bg-surface-800 border border-surface-500 rounded-2xl py-3">
             Pareamentos da rodada {t.rodadaAtual} saíram — vá pra sua mesa e monte o setup
           </p>
