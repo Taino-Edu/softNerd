@@ -269,7 +269,7 @@ public class TorneioService
         if (ch.RodadaAtual == 0) throw new TorneioException("Os pareamentos ainda não saíram.");
 
         var timer = await _db.Timers.AsNoTracking().FirstOrDefaultAsync(t => t.ChampionshipId == championshipId);
-        if (timer is not null && timer.Rodada == ch.RodadaAtual && timer.State != TimerState.Stopped)
+        if (await RodadaComecouAsync(ch, timer))
             throw new TorneioException($"A rodada {ch.RodadaAtual} já começou.", 409);
         return (ch, timer);
     }
@@ -585,7 +585,7 @@ public class TorneioService
             ch.NumeroRodadas, ch.RodadaAtual,
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: false) : [],
             await ClassificacaoAsync(championshipId),
-            TimerDto.De(timer),
+            TimerDto.De(timer, await RodadaComecouAsync(ch, timer)),
             ch.Lugares);
     }
 
@@ -607,7 +607,7 @@ public class TorneioService
             participantes,
             ch.RodadaAtual > 0 ? await MesasAsync(championshipId, ch.RodadaAtual, comReports: true) : [],
             await ClassificacaoAsync(championshipId),
-            TimerDto.De(timer),
+            TimerDto.De(timer, await RodadaComecouAsync(ch, timer)),
             ch.Lugares);
     }
 
@@ -737,6 +737,28 @@ public class TorneioService
         timer.PausedRemaining = null;
         timer.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await MarcarRodadaComecadaAsync(_db, ch.Id, rodada);
+    }
+
+    /// <summary>
+    /// A rodada passa a estar EM JOGO (só a primeira vez conta). Chamado ao ligar o relógio da rodada,
+    /// pela Central ou pelo "Iniciar" do próprio relógio (TimerController).
+    /// </summary>
+    public static Task MarcarRodadaComecadaAsync(AppDbContext db, Guid championshipId, int rodada) =>
+        db.TorneioRodadas
+            .Where(r => r.ChampionshipId == championshipId && r.Numero == rodada && r.ComecadaEm == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.ComecadaEm, DateTime.UtcNow));
+
+    /// <summary>
+    /// A rodada atual já está em jogo? Pela marca da rodada; rodada de antes da marca existir
+    /// (sem comecada_em) segue a regra antiga: relógio desta rodada fora de "parado".
+    /// </summary>
+    private async Task<bool> RodadaComecouAsync(Championship ch, TimerEntity? timer)
+    {
+        if (ch.RodadaAtual == 0) return false;
+        var marcada = await _db.TorneioRodadas.AsNoTracking()
+            .AnyAsync(r => r.ChampionshipId == ch.Id && r.Numero == ch.RodadaAtual && r.ComecadaEm != null);
+        return marcada || (timer is not null && timer.Rodada == ch.RodadaAtual && timer.State != TimerState.Stopped);
     }
 
     private async Task<string> NovoCodigoAsync()
@@ -788,10 +810,12 @@ public sealed record MesaDto(
     ResultadoPartida? ReportA, ResultadoPartida? ReportB, ResultadoPartida? Resultado, bool Divergente,
     bool AguardandoMesa = false, bool ProntoA = false, bool ProntoB = false);
 
-public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada)
+/// <param name="RodadaComecou">A rodada atual do torneio já está em jogo (marca da rodada, não o estado do relógio).</param>
+public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada,
+    bool RodadaComecou = false)
 {
-    public static TimerDto? De(TimerEntity? t) => t is null ? null
-        : new TimerDto(t.Id, t.State.ToString().ToLowerInvariant(), t.DurationSeconds, t.PausedRemaining, t.StartedAt, t.Rodada);
+    public static TimerDto? De(TimerEntity? t, bool rodadaComecou = false) => t is null ? null
+        : new TimerDto(t.Id, t.State.ToString().ToLowerInvariant(), t.DurationSeconds, t.PausedRemaining, t.StartedAt, t.Rodada, rodadaComecou);
 }
 
 public sealed record TorneioPublicoDto(

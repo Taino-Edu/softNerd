@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.66.2] — 2026-10-23
+
+### Liguinha — lançar o resultado depois que o tempo acaba (pedido do Maikon)
+- Quando o tempo da rodada acabava e alguém apertava **"Parar alarme"**, o relógio era zerado e a tela do jogador voltava pro "monte o setup": **sumiam os botões Venci/Perdi** e o organizador precisava dar "Iniciar" de novo. Agora a rodada guarda quando começou — parar o alarme ou zerar o relógio não tira mais a rodada de jogo (tela do jogador, Central, telão e "Estou pronto")
+
 ## [v1.66.1] — 2026-10-22
 
 ### Página inicial

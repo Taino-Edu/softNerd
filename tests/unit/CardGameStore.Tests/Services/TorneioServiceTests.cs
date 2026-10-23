@@ -632,6 +632,30 @@ public class TorneioServiceTests
     }
 
     [Fact]
+    public async Task PararAlarme_ZeraORelogio_MasARodadaContinuaEmJogo()
+    {
+        // Pedido do Maikon (22/10): o tempo acabou, ele parou o alarme e os jogadores não
+        // conseguiam lançar — "Parar alarme" zera o relógio e a tela voltava pro "monte o setup".
+        var amb = Criar(2);
+        await InscreverEEntrarTodosAsync(amb);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        (await amb.Torneio.PublicoAsync(amb.Ch.Id)).Timer!.RodadaComecou.Should().BeFalse("pareamento solto, relógio parado: ainda é setup");
+
+        await amb.Torneio.ComecarRodadaAsync(amb.Ch.Id);
+        var timer = await amb.Db.Timers.SingleAsync(t => t.ChampionshipId == amb.Ch.Id);
+        timer.State = TimerState.Stopped; timer.StartedAt = null;   // o "reset" do Parar alarme
+        await amb.Db.SaveChangesAsync();
+        amb.Db.ChangeTracker.Clear();
+
+        (await amb.Torneio.PublicoAsync(amb.Ch.Id)).Timer!.RodadaComecou.Should().BeTrue();
+        (await amb.Torneio.PainelAsync(amb.Ch.Id)).Timer!.RodadaComecou.Should().BeTrue();
+        var mesa = (await MesasDaRodadaAsync(amb)).Single();
+        (await FluentActions.Awaiting(() => amb.Torneio.MarcarProntoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, true))
+            .Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409, "zerar o relógio não reabre o \"Estou pronto\"");
+        await amb.Torneio.LancarResultadoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, mesa.Id, ResultadoJogador.Venci);
+    }
+
+    [Fact]
     public async Task Pronto_ByeNaoPrecisaENaoTravaOAviso()
     {
         var amb = Criar(3);

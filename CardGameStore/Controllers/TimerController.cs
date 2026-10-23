@@ -119,6 +119,9 @@ public class TimerController : ControllerBase
 
         t.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        // Relógio de rodada de torneio ligado à mão: a rodada está em jogo (zerar depois não desfaz)
+        if (req.Action == "start" && t.ChampionshipId is { } chId && t.Rodada is { } rodada)
+            await CardGameStore.Services.Liga.TorneioService.MarcarRodadaComecadaAsync(_db, chId, rodada);
         return Ok(ToDto(t));
     }
 

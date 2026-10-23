@@ -53,6 +53,7 @@ public static class InicializacaoBanco
         "ALTER TABLE site_config ADD COLUMN aviso_topo TEXT NOT NULL DEFAULT 'Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!';",
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_championships_codigo_entrada ON championships (codigo_entrada) WHERE codigo_entrada IS NOT NULL;",
         "ALTER TABLE users ADD COLUMN pokemon_favorito TEXT NULL;",
+        "ALTER TABLE torneio_rodadas ADD COLUMN comecada_em TEXT NULL;",
         "ALTER TABLE users ADD COLUMN pokemon_favorito_shiny INTEGER NOT NULL DEFAULT 0;",
     ];
 

@@ -767,6 +767,8 @@ CREATE TABLE IF NOT EXISTS torneio_rodadas (
     fechada_em      TIMESTAMPTZ NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_torneio_rodadas_numero ON torneio_rodadas (championship_id, numero);
+-- Quando o relógio da rodada foi ligado (a rodada está em jogo mesmo se o relógio for zerado) — v1.66.2
+ALTER TABLE torneio_rodadas ADD COLUMN IF NOT EXISTS comecada_em TIMESTAMPTZ NULL;
 
 CREATE TABLE IF NOT EXISTS torneio_partidas (
     id                     UUID         PRIMARY KEY,

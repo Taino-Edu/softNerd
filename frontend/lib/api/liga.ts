@@ -36,6 +36,8 @@ export function mesasDeSetup(mesas: MesaDto[]) {
 export interface TimerTorneioDto {
   id: string; state: 'stopped' | 'running' | 'paused' | 'finished'
   durationSeconds: number; pausedRemaining: number | null; startedAt: string | null; rodada: number | null
+  /** A rodada atual já está em jogo (marca da rodada no servidor — zerar o relógio não desfaz). */
+  rodadaComecou?: boolean
 }
 
 export interface TorneioPublicoDto {
@@ -134,6 +136,9 @@ export const torneioApi = {
 /** O relógio da rodada atual já foi disparado? (false = pareamentos soltos, esperando o "Começar rodada") */
 export function rodadaComecou(t: TimerTorneioDto | null, rodadaAtual: number): boolean {
   if (!t || rodadaAtual === 0) return false
+  // O servidor marca a rodada quando o relógio liga: "Parar alarme" zera o relógio e antes isso
+  // voltava a tela do jogador pro "monte o setup", sem os botões de resultado
+  if (t.rodadaComecou) return true
   return t.rodada === rodadaAtual && t.state !== 'stopped'
 }
 
