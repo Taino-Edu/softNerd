@@ -16,6 +16,24 @@ public sealed class ReservationPixService : IReservationPixService
 {
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> GroupLocks = new();
 
+    /// <summary>
+    /// A mesma trava por pedido que o GerarAsync usa. Quem soma itens num pedido (carrinho com a
+    /// chave pedido-pix-junto) segura ela enquanto derruba o Pix antigo e move os itens: um "Gerar
+    /// Pix" no meio espera e já sai com o total. Uma instância só da API em produção.
+    /// </summary>
+    public static async Task<IDisposable> TravarPedidoAsync(Guid groupId, CancellationToken ct = default)
+    {
+        var gate = GroupLocks.GetOrAdd(groupId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        return new Liberar(gate);
+    }
+
+    private sealed class Liberar(SemaphoreSlim gate) : IDisposable
+    {
+        private int _feito;
+        public void Dispose() { if (Interlocked.Exchange(ref _feito, 1) == 0) gate.Release(); }
+    }
+
     private readonly AppDbContext _db;
     private readonly InterSyncService _inter;
     private readonly FuncionalidadesService? _funcionalidades;

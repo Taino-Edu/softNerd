@@ -953,4 +953,106 @@ public class ReservationControllerTests
             .GetType("CardGameStore.Services.Implementations.PreVendaExpiryBackgroundService");
         tipo.Should().BeNull();
     }
+
+    // ── Itens novos entram no pedido sem pagar: um Pix só (chave "pedido-pix-junto") ──
+    // Pedido do Maikon (22/10): a pré-venda adicionada em momentos diferentes virava um Pix por pedido.
+
+    private static object Corpo(IActionResult r) => r.Should().BeOfType<OkObjectResult>().Subject.Value!;
+    private static T Campo<T>(object corpo, string nome) => (T)corpo.GetType().GetProperty(nome)!.GetValue(corpo)!;
+
+    private static CreateReservationCartRequest Carrinho(Product p, string? pagamento = "pix") =>
+        new() { Items = [new CreateReservationCartItem { ProductId = p.Id, Quantity = 1 }], PaymentMethod = pagamento };
+
+    private static FuncionalidadesService Chaves(AppDbContext db) => new(db, new MemoryCache(new MemoryCacheOptions()));
+
+    [Fact]
+    public async Task Carrinho_ComPedidoSemPagar_JuntaOsItens_EDerrubaOPixAntigo()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        antiga.PaymentMethod = "pix"; await db.SaveChangesAsync();
+        var outro = await SeedProductAsync(db, stock: 3);
+        var inter = CreateInterMockConfiguravel();
+        inter.Setup(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()))
+             .ReturnsAsync(new PixCobrancaResult { Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR" });
+        var controller = CreateController(db, loggedUserId: cliente.Id,
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object, funcionalidades: Chaves(db));
+
+        var corpo = Corpo(await controller.CreateCart(Carrinho(outro)));
+
+        Campo<bool>(corpo, "juntou").Should().BeTrue();
+        Campo<Guid>(corpo, "groupId").Should().Be(antiga.ReservationGroupId);
+        (await db.ProductReservations.CountAsync(r => r.ReservationGroupId == antiga.ReservationGroupId)).Should().Be(2);
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Once);
+        (await db.PixCobrancas.AsNoTracking().SingleAsync()).Status.Should().Be("REMOVIDA_PELO_USUARIO_RECEBEDOR",
+            "o Pix antigo cobrava só o primeiro item — o próximo sai com o total");
+    }
+
+    [Fact]
+    public async Task Carrinho_QueFalha_NaoMexeNoPixDoPedidoAntigo()
+    {
+        // O Pix antigo só cai depois que o carrinho novo deu certo (os itens nascem num pedido próprio)
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        antiga.PaymentMethod = "pix"; await db.SaveChangesAsync();
+        var semEstoque = await SeedProductAsync(db, stock: 0);
+        var inter = CreateInterMockConfiguravel();
+        var controller = CreateController(db, loggedUserId: cliente.Id,
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object, funcionalidades: Chaves(db));
+
+        var r = await controller.CreateCart(Carrinho(semEstoque));
+
+        r.Should().NotBeOfType<OkObjectResult>();
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+        (await db.PixCobrancas.AsNoTracking().SingleAsync()).Status.Should().Be("ATIVA", "o QR que o cliente guardou continua valendo");
+    }
+
+    [Fact]
+    public async Task Carrinho_PixAntigoAcabouDeSerPago_NaoJunta_PedidoSeparado()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        antiga.PaymentMethod = "pix"; await db.SaveChangesAsync();
+        var outro = await SeedProductAsync(db, stock: 3);
+        var pago = new Mock<IPixReconciliationService>();
+        pago.Setup(r => r.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()))
+            .ReturnsAsync(new PixReconciliationResult { Status = "CONCLUIDA", PagoEm = DateTime.UtcNow });
+        var inter = CreateInterMockConfiguravel();
+        var controller = CreateController(db, loggedUserId: cliente.Id,
+            pixReconciliation: pago.Object, inter: inter.Object, funcionalidades: Chaves(db));
+
+        var corpo = Corpo(await controller.CreateCart(Carrinho(outro)));
+
+        Campo<bool>(corpo, "juntou").Should().BeFalse("o pedido antigo foi pago — não dá pra mudar o valor dele");
+        Campo<Guid>(corpo, "groupId").Should().NotBe(antiga.ReservationGroupId);
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Carrinho_SemPedidoAberto_OuOutraFormaDePagamento_OuChaveDesligada_PedidoSeparado()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 9);
+        var chaves = Chaves(db);
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: chaves);
+
+        var pago = Corpo(await controller.CreateCart(Carrinho(produto)));
+        var grupoPago = Campo<Guid>(pago, "groupId");
+        foreach (var r in db.ProductReservations.Where(r => r.ReservationGroupId == grupoPago)) r.ExpiresAt = null; // pago
+        await db.SaveChangesAsync();
+
+        var depoisDoPago = Corpo(await controller.CreateCart(Carrinho(produto)));
+        Campo<bool>(depoisDoPago, "juntou").Should().BeFalse("pedido pago não recebe itens");
+
+        var naRetirada = Corpo(await controller.CreateCart(Carrinho(produto, "retirada")));
+        Campo<bool>(naRetirada, "juntou").Should().BeFalse("forma de pagamento diferente não mistura");
+
+        var juntou = Corpo(await controller.CreateCart(Carrinho(produto)));
+        Campo<Guid>(juntou, "groupId").Should().Be(Campo<Guid>(depoisDoPago, "groupId"), "mesmo Pix, sem cobrança ativa: junta");
+
+        await chaves.DefinirAsync(Funcionalidades.PedidoPixJunto, false, Guid.NewGuid());
+        var desligada = Corpo(await controller.CreateCart(Carrinho(produto)));
+        Campo<bool>(desligada, "juntou").Should().BeFalse("chave desligada: cada carrinho é um pedido, como antes");
+    }
 }

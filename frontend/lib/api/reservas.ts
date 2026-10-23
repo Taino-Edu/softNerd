@@ -64,7 +64,8 @@ export const reservationApi = {
   create:    (body: { productId: string; variantId?: string; quantity?: number; notes?: string; paymentMethod?: string }) =>
                api.post('/api/reservations', body),
   createCart: (items: { productId: string; variantId?: string; quantity: number }[], allowFilaFallback = false, paymentMethod?: string) =>
-               api.post<{ groupId: string; items: MyReservation[] }>('/api/reservations/cart', { items, allowFilaFallback, paymentMethod }),
+               // juntou: os itens entraram no pedido sem pagar que o cliente já tinha (chave pedido-pix-junto)
+               api.post<{ groupId: string; juntou?: boolean; items: MyReservation[] }>('/api/reservations/cart', { items, allowFilaFallback, paymentMethod }),
   /** Registra pré-venda/fila em nome do cliente. Vários itens viram UM pedido (mesmo grupo). */
   adminCreate: (body: { userId: string; items: { productId: string; variantId?: string; quantity: number }[]; notes?: string }) =>
                api.post<{ groupId: string; items: AdminReservation[] }>('/api/reservations/admin-create', body),
