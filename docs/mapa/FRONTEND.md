@@ -40,7 +40,6 @@
 | `/admin/timer` | `app/admin/timer/page.tsx` | `ui/Switch` |
 | `/admin/usuarios` | `app/admin/usuarios/page.tsx` | `admin/DeckViewerModal`, `ui/Badge` |
 | `/admin/venda-avulsa` | `app/admin/venda-avulsa/page.tsx` | `admin/ConferenciaButton`, `admin/EscolherContaCrediarioModal`, `admin/PercentPicker`, `admin/VariantPicker`, `ui/PageHeader` |
-| `/admin/whatsapp` | `app/admin/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox`, `ui/PageHeader` |
 | `/cadastro` | `app/cadastro/page.tsx` | `auth/Moldura` |
 | `/campeonato/[id]` | `app/campeonato/[id]/page.tsx` | — |
 | `/campeonato/jogar` | `app/campeonato/jogar/page.tsx` | — |
@@ -53,7 +52,6 @@
 | `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga`, `pokemon/EscolherPokemon`, `pokemon/ParceiroDaConta` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | — |
 | `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
-| `/janela/whatsapp` | `app/janela/whatsapp/page.tsx` | `admin/whatsapp/WhatsAppInbox` |
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
 | `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/AnimacaoResultado`, `liga/AvatarJogador`, `liga/Relogio`, `liga/SpriteDeck`, `liga/TabelaTorneio` |
 | `/liga` | `app/liga/page.tsx` | `liga/AvatarJogador`, `liga/SpriteDeck` |
@@ -103,8 +101,6 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/Sidebar` | `Sidebar` | `app/admin/layout.tsx` |
 | `admin/TopClientes` | `toDateInput`, `getRangeClientes`, `useTopClientes`, `TopClientesFilterBar`, `TopClientesList` | `app/admin/clientes/analises/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/VariantPicker` | `VariantPicker` | `app/admin/venda-avulsa/page.tsx` |
-| `admin/whatsapp/WhatsAppFloatingPanel` | `WhatsAppFloatingPanel` | `app/admin/layout.tsx` |
-| `admin/whatsapp/WhatsAppInbox` | `WhatsAppInbox` | `app/admin/whatsapp/page.tsx`<br>`app/janela/whatsapp/page.tsx` |
 | `auth/Moldura` | `useMarca`, `MolduraEntrada`, `TituloEntrada`, `AbasEntrada`, `CampoEntrada`, `BotaoEntrada`, `LinhaEntrada`, `LinkEntrada` | `app/cadastro/page.tsx`<br>`app/entrar/page.tsx`<br>`app/login/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/reset-password/page.tsx` |
 | `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
@@ -130,7 +126,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `pokemon/ParceiroDaConta` | `ParceiroDaConta` | `app/cliente/perfil/page.tsx`<br>`app/perfil/[id]/page.tsx` |
 | `pokemon/PokemonParceiro` | `PokemonParceiro` | `components/liga/AvatarJogador.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/alertas/page.tsx`<br>`app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
-| `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/admin/whatsapp/page.tsx` |
+| `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
 | `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx`<br>`components/pokemon/EscolherPokemon.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
 
@@ -143,7 +139,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/cartas.ts` | `tcgApi`, `deckApi`, `marketplaceApi` |
 | `lib/api/client.ts` | `api` |
 | `lib/api/comandas.ts` | `PAYMENT_METHODS`, `PAYMENT_NEEDS_USER`, `SECOND_PAYMENT_METHODS`, `comandaApi`, `COMANDA_PAYMENT_METHODS` |
-| `lib/api/comunicacao.ts` | `aiApi`, `notificationsApi`, `mensageriaApi`, `whatsappAdminApi`, `pushApi` |
+| `lib/api/comunicacao.ts` | `aiApi`, `notificationsApi`, `mensageriaApi`, `pushApi` |
 | `lib/api/crediario.ts` | `FORMAS_PAGAMENTO_CREDIARIO`, `crediarioApi`, `pagarCrediarioApi` |
 | `lib/api/funcionalidades.ts` | `funcionalidadesApi` |
 | `lib/api/index.ts` | — |

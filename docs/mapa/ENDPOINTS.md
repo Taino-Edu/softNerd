@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-261 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+250 endpoints em 35 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -15,7 +15,7 @@
 - [Category](#category) (4)
 - [Championship](#championship) (22)
 - [Comanda](#comanda) (20)
-- [ContasReceber](#contasreceber) (12)
+- [ContasReceber](#contasreceber) (11)
 - [Crediarios](#crediarios) (14)
 - [Deck](#deck) (6)
 - [Funcionalidades](#funcionalidades) (3)
@@ -42,8 +42,6 @@
 - [User](#user) (15)
 - [VendaAvulsa](#vendaavulsa) (6)
 - [Vigia](#vigia) (5)
-- [WhatsAppAdmin](#whatsappadmin) (8)
-- [WhatsAppAutomation](#whatsappautomation) (2)
 
 ## AiChat
 
@@ -179,18 +177,17 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/contas-receber` | AdminOnly | `List` (35) | — | `app/admin/contas-receber/page.tsx` |
-| POST | `/api/contas-receber` | AdminOnly | `Create` (114) | — | `app/admin/contas-receber/page.tsx` |
-| POST | `/api/contas-receber/import-ofx` | AdminOnly | `ImportOfx` (178) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
-| GET | `/api/contas-receber/integracoes` | AdminOnly | `GetIntegracoes` (219) | — | `app/admin/integracoes/page.tsx` |
-| POST | `/api/contas-receber/integracoes/inter/certificado` | AdminOnly | `UploadCertificado` (341) | — | `app/admin/integracoes/page.tsx` |
-| GET | `/api/contas-receber/integracoes/inter/status` | AdminOnly | `InterStatus` (323) | — | `app/admin/integracoes/page.tsx` |
-| POST | `/api/contas-receber/integracoes/inter/sync` | AdminOnly | `InterSync` (290) | — | `app/admin/integracoes/page.tsx` |
-| PUT | `/api/contas-receber/integracoes/{source}` | AdminOnly | `SaveIntegracao` (243) | — | `app/admin/integracoes/page.tsx` |
-| POST | `/api/contas-receber/integracoes/{source}/token` | AdminOnly | `SaveToken` (273) | — | — |
-| GET | `/api/contas-receber/summary` | AdminOnly | `Summary` (73) | — | `app/admin/contas-receber/page.tsx` |
-| DELETE | `/api/contas-receber/{id:guid}` | AdminOnly | `Delete` (166) | — | `app/admin/contas-receber/page.tsx` |
-| PUT | `/api/contas-receber/{id:guid}` | AdminOnly | `Update` (138) | — | `app/admin/contas-receber/page.tsx` |
+| GET | `/api/contas-receber` | AdminOnly | `List` (33) | — | `app/admin/contas-receber/page.tsx` |
+| POST | `/api/contas-receber` | AdminOnly | `Create` (112) | — | `app/admin/contas-receber/page.tsx` |
+| GET | `/api/contas-receber/integracoes` | AdminOnly | `GetIntegracoes` (175) | — | `app/admin/integracoes/page.tsx` |
+| POST | `/api/contas-receber/integracoes/inter/certificado` | AdminOnly | `UploadCertificado` (297) | — | `app/admin/integracoes/page.tsx` |
+| GET | `/api/contas-receber/integracoes/inter/status` | AdminOnly | `InterStatus` (279) | — | `app/admin/integracoes/page.tsx` |
+| POST | `/api/contas-receber/integracoes/inter/sync` | AdminOnly | `InterSync` (246) | — | `app/admin/integracoes/page.tsx` |
+| PUT | `/api/contas-receber/integracoes/{source}` | AdminOnly | `SaveIntegracao` (199) | — | `app/admin/integracoes/page.tsx` |
+| POST | `/api/contas-receber/integracoes/{source}/token` | AdminOnly | `SaveToken` (229) | — | — |
+| GET | `/api/contas-receber/summary` | AdminOnly | `Summary` (71) | — | `app/admin/contas-receber/page.tsx` |
+| DELETE | `/api/contas-receber/{id:guid}` | AdminOnly | `Delete` (164) | — | `app/admin/contas-receber/page.tsx` |
+| PUT | `/api/contas-receber/{id:guid}` | AdminOnly | `Update` (136) | — | `app/admin/contas-receber/page.tsx` |
 
 ## Crediarios
 
@@ -198,20 +195,20 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/crediarios` | AdminOnly | `GetAll` (170) | `crediarioApi.list` | `app/admin/crediario/page.tsx`<br>`app/admin/usuarios/page.tsx` |
-| POST | `/api/crediarios` | AdminOnly | `CriarManual` (63) | `crediarioApi.criarManual` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (511) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
-| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (520) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
-| GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (213) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/crediarios/por-cliente` | AdminOnly | `GetPorCliente` (127) | `crediarioApi.porCliente` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (195) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
-| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (609) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
-| PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (236) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (576) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
-| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (554) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
-| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (324) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (468) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (493) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios` | AdminOnly | `GetAll` (168) | `crediarioApi.list` | `app/admin/crediario/page.tsx`<br>`app/admin/usuarios/page.tsx` |
+| POST | `/api/crediarios` | AdminOnly | `CriarManual` (61) | `crediarioApi.criarManual` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (509) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (517) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (211) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
+| GET | `/api/crediarios/por-cliente` | AdminOnly | `GetPorCliente` (125) | `crediarioApi.porCliente` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (193) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
+| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (602) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
+| PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (234) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (571) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (549) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
+| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (322) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (466) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (491) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
 
 ## Deck
 
@@ -306,7 +303,7 @@
 |---|---|---|---|---|---|
 | GET | `/api/notifications` | logado | `List` (36) | `notificationsApi.list` | `components/cliente/NotificationBell.tsx` |
 | PATCH | `/api/notifications/read-all` | logado | `MarkAllRead` (82) | `notificationsApi.markAllRead` | `components/cliente/NotificationBell.tsx` |
-| GET | `/api/notifications/unread-count` | logado | `UnreadCount` (56) | `notificationsApi.unreadCount` | `app/admin/dashboard/page.tsx`<br>`components/admin/Sidebar.tsx`<br>`components/cliente/NotificationBell.tsx`<br>`tests/whatsapp.spec.ts` |
+| GET | `/api/notifications/unread-count` | logado | `UnreadCount` (56) | `notificationsApi.unreadCount` | `app/admin/dashboard/page.tsx`<br>`components/admin/Sidebar.tsx`<br>`components/cliente/NotificationBell.tsx` |
 | DELETE | `/api/notifications/{id:guid}` | logado | `Delete` (95) | `notificationsApi.remove` | `components/cliente/NotificationBell.tsx` |
 | PATCH | `/api/notifications/{id:guid}/read` | logado | `MarkRead` (68) | `notificationsApi.markRead` | `components/cliente/NotificationBell.tsx` |
 
@@ -540,27 +537,3 @@
 | GET | `/api/admin/vigia/resumo` | AdminOnly | `Resumo` (28) | `vigiaApi.resumo` | `app/admin/alertas/page.tsx` |
 | POST | `/api/admin/vigia/rodar` | AdminOnly | `Rodar` (48) | `vigiaApi.rodar` | `app/admin/alertas/page.tsx` |
 | POST | `/api/vigia/erro-tela` | público | `ErroTela` (60) | — | `lib/reportarErro.ts` |
-
-## WhatsAppAdmin
-
-`CardGameStore/Controllers/WhatsAppAdminController.cs`
-
-| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
-|---|---|---|---|---|---|
-| GET | `/api/admin/whatsapp/conversations` | AdminOnly | `Conversations` (52) | `whatsappAdminApi.conversations` | `components/admin/Sidebar.tsx`<br>`components/admin/whatsapp/WhatsAppFloatingPanel.tsx`<br>`components/admin/whatsapp/WhatsAppInbox.tsx`<br>`tests/whatsapp.spec.ts` |
-| POST | `/api/admin/whatsapp/conversations/{phone}/bot-disabled` | AdminOnly | `SetBotDisabled` (184) | `whatsappAdminApi.setBotDisabled` | `components/admin/whatsapp/WhatsAppInbox.tsx` |
-| GET | `/api/admin/whatsapp/conversations/{phone}/messages` | AdminOnly | `Messages` (111) | `whatsappAdminApi.messages` | `components/admin/whatsapp/WhatsAppInbox.tsx`<br>`tests/whatsapp.spec.ts` |
-| POST | `/api/admin/whatsapp/conversations/{phone}/mode` | AdminOnly | `SetMode` (168) | `whatsappAdminApi.setMode` | `components/admin/whatsapp/WhatsAppInbox.tsx` |
-| POST | `/api/admin/whatsapp/conversations/{phone}/read` | AdminOnly | `MarkRead` (155) | `whatsappAdminApi.markRead` | `components/admin/whatsapp/WhatsAppInbox.tsx`<br>`tests/whatsapp.spec.ts` |
-| POST | `/api/admin/whatsapp/conversations/{phone}/send` | AdminOnly | `Send` (198) | `whatsappAdminApi.send` | `components/admin/whatsapp/WhatsAppInbox.tsx` |
-| GET | `/api/admin/whatsapp/qr-code` | AdminOnly | `QrCode` (45) | `whatsappAdminApi.qrCode` | `app/admin/whatsapp/page.tsx` |
-| GET | `/api/admin/whatsapp/status` | AdminOnly | `Status` (32) | `whatsappAdminApi.status` | `components/admin/whatsapp/WhatsAppFloatingPanel.tsx`<br>`components/admin/whatsapp/WhatsAppInbox.tsx`<br>`tests/whatsapp.spec.ts` |
-
-## WhatsAppAutomation
-
-`CardGameStore/Controllers/WhatsAppAutomationController.cs`
-
-| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
-|---|---|---|---|---|---|
-| GET | `/api/automation/whatsapp/health` | público | `Health` (41) | — | — |
-| POST | `/api/automation/whatsapp/message` | público | `Message` (28) | — | — |

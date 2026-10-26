@@ -126,13 +126,6 @@ VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:contato@santuarionerd.com.br
 
-# --- WhatsApp comunitário (só usado com --profile whatsapp) ---
-EVOLUTION_API_KEY=
-EVOLUTION_INSTANCE_NAME=santuarionerd
-EVOLUTION_DATABASE_URI=
-WHATSAPP_AUTOMATION_API_KEY=
-N8N_ENCRYPTION_KEY=
-
 # --- TCG APIs ---
 POKEMON_API_KEY=
 

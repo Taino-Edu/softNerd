@@ -7,7 +7,7 @@ import { Badge, BadgeTone } from '@/components/ui/Badge'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
-  Plus, Upload, RefreshCw, Loader2,
+  Plus, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, CheckCircle, Clock,
   AlertTriangle, TrendingDown, TrendingUp, DollarSign,
   X, Pencil, Trash2, FileText, QrCode,
@@ -64,7 +64,7 @@ const statusLabel: Record<string, string> = {
 }
 
 const sourceIcon: Record<string, string> = {
-  manual: '✍️', inter: '🏦', mercadopago: '💳', ofx: '📂',
+  manual: '✍️', inter: '🏦',
 }
 
 function fmtMoney(v: number) {
@@ -239,7 +239,6 @@ export default function ContasReceberPage() {
 
   const [createModal, setCreateModal] = useState(false)
   const [editModal,   setEditModal]   = useState<Transaction | null>(null)
-  const [ofxLoading,  setOfxLoading]  = useState(false)
 
   const loadSummary = useCallback(async () => {
     try {
@@ -303,26 +302,6 @@ export default function ContasReceberPage() {
     toast.success('Salvo!')
   }
 
-  async function handleOfxUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setOfxLoading(true)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      const { data } = await api.post('/api/contas-receber/import-ofx', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      toast.success(`${data.imported} transações importadas (${data.skipped} duplicadas ignoradas)`)
-      load(); loadSummary()
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Erro ao importar OFX')
-    } finally {
-      setOfxLoading(false)
-      e.target.value = ''
-    }
-  }
-
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       <Toaster />
@@ -332,15 +311,6 @@ export default function ContasReceberPage() {
         subtitle={`${totalCount} lançamentos`}
         actions={(
           <>
-            {/* Upload OFX */}
-            <label className={clsx(
-              'flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-700 hover:bg-surface-500',
-              'border border-surface-500 text-sm text-gray-300 cursor-pointer transition-colors',
-              ofxLoading && 'opacity-60 pointer-events-none')}>
-              {ofxLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {ofxLoading ? 'Importando…' : 'Importar OFX'}
-              <input type="file" accept=".ofx,.OFX" className="hidden" onChange={handleOfxUpload} />
-            </label>
             <button onClick={() => setCreateModal(true)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-500 hover:bg-brand-400
                          text-white text-sm font-semibold transition-colors">
@@ -406,7 +376,7 @@ export default function ContasReceberPage() {
         <div className="text-center py-16 text-gray-500">
           <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p>Nenhum lançamento encontrado</p>
-          <p className="text-xs mt-1">Adicione manualmente ou importe um arquivo OFX</p>
+          <p className="text-xs mt-1">Adicione manualmente — os do Inter entram sozinhos</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">

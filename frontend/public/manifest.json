@@ -49,17 +49,6 @@
           "sizes": "any"
         }
       ]
-    },
-    {
-      "name": "Atendimento WhatsApp",
-      "short_name": "WhatsApp",
-      "url": "/admin/whatsapp",
-      "icons": [
-        {
-          "src": "/icon.svg",
-          "sizes": "any"
-        }
-      ]
     }
   ],
   "categories": [

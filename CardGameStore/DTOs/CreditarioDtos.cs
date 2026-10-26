@@ -202,11 +202,7 @@ public class CrediarioAvisoConfigDto
     public List<int> Marcos        { get; set; } = new();
     public bool      CanalApp      { get; set; }
     public bool      CanalEmail    { get; set; }
-    public bool      CanalWhatsApp { get; set; }
     public bool      ResumoAdmin   { get; set; }
     [MaxLength(300)]
     public string?   MensagemExtra { get; set; }
-
-    /// <summary>Somente leitura: o WhatsApp da loja está pareado agora?</summary>
-    public bool      WhatsAppConectado { get; set; }
 }

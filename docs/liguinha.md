@@ -211,6 +211,6 @@ O cliente SignalR (`lib/signalr.ts`) ganha uma segunda conexão para `/hubs/torn
 2. **Estatísticas:** `LigaEstatisticasService`, abas de semana/mês/ano, campeões, decks, perfil com V/E/D,
    arquétipos e Pokémon favorito.
 3. **Enfeites:** animação de vitória, imagem da classificação para postar, aviso de rodada no WhatsApp
-   (`IWhatsAppGateway`).
+   (era pelo WhatsApp automático, que saiu em 26/10/2026).
 
 Torneios antigos só têm colocação: entram nos rankings por período, mas não em V/E/D nem em % de vitória.

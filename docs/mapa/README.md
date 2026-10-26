@@ -219,7 +219,7 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
 ### Notificações pro cliente/admin
 - Sininho: tabela `notifications` (`Models/PostgreSQL/Notification.cs`).
 - Push no celular: `IPushService`. E-mail: `IEmailService` (`EmailService.cs`).
-- WhatsApp da loja: `IWhatsAppGateway` (Evolution API) — só sai se o celular estiver pareado.
+- WhatsApp: não há envio automático (o WhatsApp automático saiu em 26/10/2026, tag `arquivo/whatsapp-v1.72.0`); o admin manda pelo próprio celular com o texto pronto (`wa.me`).
 
 ### Faturamento e relatórios
 - Faturamento soma **comanda `Fechada`** + venda do balcão não estornada. Estorno marca, não apaga.

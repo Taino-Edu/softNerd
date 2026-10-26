@@ -5,7 +5,7 @@ namespace CardGameStore.Models.PostgreSQL;
 
 /// <summary>
 /// Transação financeira de fonte externa ou manual.
-/// Source:  "inter" | "mercadopago" | "ofx" | "manual" ("sefaz" só em lançamento antigo, do módulo fiscal que saiu)
+/// Source:  "inter" | "manual" ("sefaz"/"ofx" só em lançamento antigo, de módulos que saíram)
 /// Type:    "income" | "expense"
 /// Status:  "pending" | "paid" | "overdue" | "cancelled"
 /// </summary>

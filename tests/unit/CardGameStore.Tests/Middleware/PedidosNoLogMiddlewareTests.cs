@@ -83,13 +83,6 @@ public class PedidosNoLogMiddlewareTests
         log.Linhas[0].Texto.Should().NotContain("\n").And.NotContain("\r");
     }
 
-    [Theory]
-    [InlineData("17991122890", "…2890")]
-    [InlineData("(17) 99112-2890\ninfo: falso", "…2890")]
-    [InlineData("12", "…")]
-    public void TelefoneNoLog_SoOsUltimosDigitos(string telefone, string esperado) =>
-        EvolutionWhatsAppGateway.Final(telefone).Should().Be(esperado);
-
     [Fact]
     public async Task ExcecaoNaoTratada_RegistraComo500_EDeixaAExcecaoSeguir()
     {
@@ -104,57 +97,4 @@ public class PedidosNoLogMiddlewareTests
         await act.Should().ThrowAsync<InvalidOperationException>();
         log.Linhas.Should().ContainSingle(l => l.Nivel == LogLevel.Error && l.Texto.Contains("500"));
     }
-}
-
-public class EvolutionForaDoArNoLogTests
-{
-    private sealed class Recusa : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            throw new HttpRequestException("Connection refused (evolution-api:8080)");
-    }
-
-    private static (EvolutionWhatsAppGateway Gateway, LogGuardado<EvolutionWhatsAppGateway> Log) Criar()
-    {
-        var fabrica = new Mock<IHttpClientFactory>();
-        fabrica.Setup(f => f.CreateClient("evolution"))
-            .Returns(() => new HttpClient(new Recusa()) { BaseAddress = new Uri("http://evolution-api:8080/") });
-        var cfg = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Evolution:InstanceName"] = "santuarionerd",
-            ["Evolution:ApiKey"] = "chave-de-teste",
-        }).Build();
-        var log = new LogGuardado<EvolutionWhatsAppGateway>();
-        return (new EvolutionWhatsAppGateway(fabrica.Object, cfg, log), log);
-    }
-
-    [Fact]
-    public async Task ConsultaDeEstado_EvolutionDesligada_UmaLinhaSemPilha()
-    {
-        var (gateway, log) = Criar();
-
-        var status = await gateway.GetStatusAsync();
-
-        status.Connected.Should().BeFalse();
-        log.Linhas.Should().ContainSingle();
-        log.Linhas[0].Erro.Should().BeNull("conexão recusada é esperada: sem a pilha de 30 linhas");
-        log.Linhas[0].Texto.Should().Contain("fora do ar");
-    }
-
-    [Fact]
-    public async Task EnvioDeMensagem_EvolutionDesligada_NaoGravaOTelefoneInteiro()
-    {
-        var (gateway, log) = Criar();
-
-        var r = await gateway.SendTextAsync("17991122890", "Seu crediário vence amanhã");
-
-        r.Success.Should().BeFalse();
-        log.Linhas.Should().ContainSingle();
-        log.Linhas[0].Texto.Should().Contain("…2890").And.NotContain("17991122890");
-        log.Linhas[0].Erro.Should().BeNull();
-    }
-
-    [Fact]
-    public void ErroQueNaoEConexao_ContinuaComAPilha() =>
-        EvolutionWhatsAppGateway.ForaDoAr(new InvalidOperationException("json inesperado")).Should().BeFalse();
 }

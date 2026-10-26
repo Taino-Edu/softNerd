@@ -5,7 +5,7 @@
 // hora. A partir da hora configurada (Brasília), cada conta aberta que estiver
 // num "marco" hoje (3 dias antes, no dia, 7 dias de atraso...) gera UM aviso:
 // uma mensagem por cliente juntando as contas dele, pelos canais ligados
-// (sininho + push, e-mail, WhatsApp). Cada marco sai uma vez só por vencimento —
+// (sininho + push e e-mail). Cada marco sai uma vez só por vencimento —
 // o índice único em crediario_avisos garante isso mesmo com duas rodadas.
 //
 // Marco perdido não é recuperado: se o servidor ficou fora no dia do marco, o
@@ -38,19 +38,17 @@ public class CrediarioAvisoService
     private readonly AppDbContext     _db;
     private readonly IEmailService    _email;
     private readonly IPushService     _push;
-    private readonly IWhatsAppGateway _whatsApp;
     private readonly IConfiguration   _config;
     private readonly ILogger<CrediarioAvisoService> _logger;
 
     public CrediarioAvisoService(
-        AppDbContext db, IEmailService email, IPushService push, IWhatsAppGateway whatsApp,
+        AppDbContext db, IEmailService email, IPushService push,
         IConfiguration config, ILogger<CrediarioAvisoService> logger)
     {
         _config   = config;
         _db       = db;
         _email    = email;
         _push     = push;
-        _whatsApp = whatsApp;
         _logger   = logger;
     }
 
@@ -230,7 +228,6 @@ public class CrediarioAvisoService
         var canais = new List<string>();
         if (cfg.CanalApp) canais.Add("app");
         if (cfg.CanalEmail && !string.IsNullOrWhiteSpace(conta.User.Email)) canais.Add("email");
-        if (cfg.CanalWhatsApp && Identificadores.NormalizarWhatsApp(conta.User.WhatsApp) is not null) canais.Add("whatsapp");
 
         return new CrediarioAvisoPrevia(
             titulo, texto, Identificadores.NormalizarWhatsApp(conta.User.WhatsApp), conta.User.Email, canais);
@@ -282,34 +279,6 @@ public class CrediarioAvisoService
                 {
                     _logger.LogWarning(ex, "E-mail do lembrete de crediário falhou (cliente {UserId}).", user.Id);
                     falhas.Add("email: falha no envio");
-                }
-            }
-        }
-
-        if (cfg.CanalWhatsApp)
-        {
-            var phone = Identificadores.NormalizarWhatsApp(user.WhatsApp);
-            if (phone is null)
-                falhas.Add("whatsapp: cliente sem número");
-            else
-            {
-                var res = await _whatsApp.SendTextAsync(phone, texto, ct);
-                if (res.Success)
-                {
-                    ok.Add("whatsapp");
-                    // Aparece na caixa de atendimento junto com a conversa do cliente
-                    _db.WhatsAppOutboundMessages.Add(new WhatsAppOutboundMessage
-                    {
-                        Phone             = phone,
-                        MessageText       = texto.Length > 2000 ? texto[..2000] : texto,
-                        Author            = "crediario",
-                        ExternalMessageId = res.MessageId,
-                    });
-                    await _db.SaveChangesAsync(ct);
-                }
-                else
-                {
-                    falhas.Add($"whatsapp: {res.Error ?? "falha no envio"}");
                 }
             }
         }

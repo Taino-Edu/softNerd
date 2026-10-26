@@ -9,7 +9,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { clearAuth, getUserName, getRole, hasPermission } from '@/lib/auth'
 import { useMontado } from '@/lib/useMontado'
-import { authApi, notificationsApi, whatsappAdminApi } from '@/lib/api'
+import { authApi, notificationsApi } from '@/lib/api'
 import {
   LayoutDashboard, Package, Trophy, Search, QrCode, Swords,
   LogOut, User, ShoppingBag, Users, Megaphone,
@@ -38,7 +38,6 @@ const sections = [
       { href: '/admin/dashboard',    label: 'Painel Geral',     icon: LayoutDashboard, badge: 'LIVE', perm: 'dashboard' },
       { href: '/admin/venda-avulsa', label: 'Frente de Caixa',  icon: ShoppingBag,                    perm: 'pdv' },
       { href: '/admin/reservas',     label: 'Pré-vendas',       icon: ClipboardList,                  perm: 'estoque' },
-      { href: '/admin/whatsapp',     label: 'WhatsApp',         icon: MessageSquare,                  perm: null },
       { href: '/admin/qrcodes',      label: 'Gatilhos QR Code', icon: QrCode,                         perm: 'qrcodes' },
     ],
   },
@@ -112,7 +111,7 @@ const SUAVE  = 'rgba(255,255,255,0.78)'
 const FRACO  = 'rgba(255,255,255,0.5)'
 const AMARELO = '#FFE45E'
 
-function NavItems({ pathname, onClose, unreadCount, whatsappUnread, collapsed = false, novo = false, cor = '#1E4FD6' }: { pathname: string; onClose?: () => void; unreadCount: number; whatsappUnread: number; collapsed?: boolean; novo?: boolean; cor?: string }) {
+function NavItems({ pathname, onClose, unreadCount, collapsed = false, novo = false, cor = '#1E4FD6' }: { pathname: string; onClose?: () => void; unreadCount: number; collapsed?: boolean; novo?: boolean; cor?: string }) {
   // Perfil e permissões vêm de cookie: só depois de montar (senão o menu do servidor
   // sai diferente do navegador e a hidratação falha)
   const montado = useMontado()
@@ -147,7 +146,6 @@ function NavItems({ pathname, onClose, unreadCount, whatsappUnread, collapsed = 
               const active   = pathname.startsWith(href)
               const shortcut = SIDEBAR_SHORTCUT_KEYS[href]
               const hasDot   = (href === '/admin/mensageria' && unreadCount > 0)
-                             || (href === '/admin/whatsapp' && whatsappUnread > 0)
               return (
                 <Link
                   key={href}
@@ -209,7 +207,6 @@ export default function Sidebar() {
   const [loggingOut,   setLoggingOut]   = useState(false)
   const [mobileOpen,   setMobileOpen]   = useState(false)
   const [unreadCount,  setUnreadCount]  = useState(0)
-  const [whatsappUnread, setWhatsappUnread] = useState(0)
   // Sempre começa expandida (igual no server e no primeiro render do client) — ler localStorage
   // direto no initializer causaria mismatch de hidratação sempre que o valor salvo fosse
   // "recolhida". O valor real só é aplicado depois, via useEffect (client-only).
@@ -227,20 +224,6 @@ export default function Sidebar() {
     try {
       if (localStorage.getItem('admin-sidebar-collapsed') === 'true') setCollapsed(true)
     } catch {}
-  }, [])
-
-  useEffect(() => {
-    if (getRole() !== 'Admin') return
-    let mounted = true
-    const poll = async () => {
-      try {
-        const { data } = await whatsappAdminApi.conversations('', true)
-        if (mounted) setWhatsappUnread(data.reduce((sum, item) => sum + item.unreadCount, 0))
-      } catch { }
-    }
-    poll()
-    const id = setInterval(poll, 15_000)
-    return () => { mounted = false; clearInterval(id) }
   }, [])
 
   function toggleCollapsed() {
@@ -432,7 +415,7 @@ export default function Sidebar() {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <NavItems pathname={pathname} onClose={() => setMobileOpen(false)} unreadCount={unreadCount} whatsappUnread={whatsappUnread} novo={novo} cor={cor} />
+        <NavItems pathname={pathname} onClose={() => setMobileOpen(false)} unreadCount={unreadCount} novo={novo} cor={cor} />
         {renderFooter(false)}
       </aside>
 
@@ -452,7 +435,7 @@ export default function Sidebar() {
             </div>
           )}
         </div>
-        <NavItems pathname={pathname} unreadCount={unreadCount} whatsappUnread={whatsappUnread} collapsed={collapsed} novo={novo} cor={cor} />
+        <NavItems pathname={pathname} unreadCount={unreadCount} collapsed={collapsed} novo={novo} cor={cor} />
         {renderFooter(collapsed)}
 
         {/* Botão de recolher/expandir — preso na borda direita, sempre visível independente

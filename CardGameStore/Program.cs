@@ -250,16 +250,6 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit  = 0,
             }));
 
-    // Evolution/n8n fala com um único IP da rede Docker; bucket separado evita
-    // que um pico de mensagens consuma o limite dos clientes do site.
-    options.AddFixedWindowLimiter("automation", opt =>
-    {
-        opt.PermitLimit = 180;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 20;
-    });
-
     options.OnRejected = async (context, token) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;

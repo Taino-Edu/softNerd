@@ -41,13 +41,6 @@ const INTEGRACAO_INFO: Record<string, {
     fields: ['clientId', 'clientSecret', 'pixKey'],
     docs: 'https://developers.bancointer.com.br',
   },
-  mercadopago: {
-    label: 'Mercado Pago',
-    icon:  '💳',
-    desc:  'Integra vendas no cartão e Pix via API do Mercado Pago. Não exige taxa extra além da maquininha.',
-    fields: ['clientId', 'clientSecret'],
-    docs: 'https://www.mercadopago.com.br/developers',
-  },
 }
 
 const fmtMoeda = (v: number) =>
@@ -63,7 +56,6 @@ export default function IntegracoesPage() {
   const [loading,     setLoading]     = useState(true)
   const [configModal, setConfigModal] = useState<ConfigModal | null>(null)
   const [saving,      setSaving]      = useState(false)
-  const [ofxLoading,  setOfxLoading]  = useState(false)
   const [syncingInter, setSyncingInter] = useState(false)
   /** Saldo e última sincronização lidos do Inter — a tela mostra sem ninguém conferir. */
   const [interInfo, setInterInfo] = useState<{ saldo: number | null; lastSyncAt: string | null }>(
@@ -179,25 +171,6 @@ export default function IntegracoesPage() {
     }
   }
 
-  async function handleOfxUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setOfxLoading(true)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      const { data } = await api.post('/api/contas-receber/import-ofx', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      toast.success(`${data.imported} transações importadas (${data.skipped} duplicadas ignoradas)`)
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Erro ao importar OFX')
-    } finally {
-      setOfxLoading(false)
-      e.target.value = ''
-    }
-  }
-
   const cfgInfo = configModal ? INTEGRACAO_INFO[configModal.source] : null
 
   return (
@@ -296,39 +269,11 @@ export default function IntegracoesPage() {
             )
           })}
 
-          {/* Card OFX — sempre disponível */}
-          <div className="card p-5 flex gap-4">
-            <div className="text-3xl flex-shrink-0 mt-0.5">📂</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-white">Extrato OFX (Manual)</h3>
-                <span className="text-xs text-green-500 font-semibold ml-auto">Grátis · Sempre disponível</span>
-              </div>
-              <p className="text-sm text-gray-400 mt-1">
-                Importe arquivos .OFX exportados pelo seu banco. Funciona com qualquer banco: Sicredi, Nubank, Inter, Bradesco, Itaú e outros.
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                No banco: <span className="text-gray-400">Extratos → Exportar → OFX</span>
-              </p>
-              <label className={clsx(
-                'inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-lg',
-                'bg-brand-500/20 hover:bg-brand-500/30 border border-brand-500/30',
-                'text-brand-300 text-sm font-semibold cursor-pointer transition-colors',
-                ofxLoading && 'opacity-60 pointer-events-none')}>
-                {ofxLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                {ofxLoading ? 'Importando…' : 'Importar arquivo OFX'}
-                <input type="file" accept=".ofx,.OFX" className="hidden" onChange={handleOfxUpload} />
-              </label>
-            </div>
-          </div>
-
           {/* Info */}
           <div className="flex items-start gap-3 p-4 bg-surface-800/50 rounded-2xl border border-surface-700/50 text-sm text-gray-400">
             <Info className="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" />
             <p>
-              Todas as integrações são gratuitas e não exigem contrato com terceiros.
-              Pluggy, Belvo e similares são pagos e não são necessários aqui.
-              Inter e Mercado Pago exigem apenas que o estabelecimento tenha conta nessas plataformas.
+              A integração com o Inter é gratuita: só exige a conta PJ da loja e o certificado gerado no portal do Inter.
             </p>
           </div>
         </div>

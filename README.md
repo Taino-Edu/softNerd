@@ -188,7 +188,6 @@ Tudo em [`docs/`](docs/README.md):
 
 - [Documentação técnica](docs/DOCUMENTACAO-TECNICA.md) — arquitetura, endpoints, regras de negócio, variáveis de ambiente
 - [Backup e restauração](docs/operacao/BACKUP.md)
-- [Automação do WhatsApp](docs/WHATSAPP-AUTOMACAO.md)
 - [Backlog de pendências](docs/planejamento/BACKLOG.md)
 
 O histórico de versões fica em [`frontend/public/CHANGELOG.md`](frontend/public/CHANGELOG.md) (também exibido em Admin → Sobre).
