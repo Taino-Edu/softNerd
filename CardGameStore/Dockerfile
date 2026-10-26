@@ -23,7 +23,15 @@ WORKDIR /app
 
 # curl é necessário para o healthcheck do docker-compose; openssl para verificar
 # o provider legacy no build (abaixo)
-RUN apt-get update && apt-get install -y --no-install-recommends curl openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Autoridade certificadora eMudhra (raízes "emSign") teve as chaves privadas vazadas em 21/10/2026:
+# alguém poderia emitir certificado falso pro Inter/SEFAZ. Sai da lista de confiança da API (a
+# mesma coisa foi feita no servidor). O build falha se sobrar algum — não volta escondido numa
+# imagem nova. Quando o pacote ca-certificates do Ubuntu já vier sem elas, isto vira nada.
+RUN sed -i -E 's#^(mozilla/emSign[^[:space:]]*\.crt)$#!\1#' /etc/ca-certificates.conf \
+ && update-ca-certificates --fresh > /dev/null \
+ && if ls /etc/ssl/certs | grep -qi emsign; then echo "ERRO: raiz emSign ainda confiável na imagem" >&2; exit 1; fi
 
 # Habilita o provider "legacy" do OpenSSL 3 — certificados A1 ICP-Brasil (.pfx)
 # costumam ser empacotados com PBE antigo (RC2/3DES), que o OpenSSL 3 desativa
