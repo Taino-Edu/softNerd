@@ -2,7 +2,6 @@
 import Sidebar from '@/components/admin/Sidebar'
 import AiChatWidget from '@/components/admin/AiChatWidget'
 import KeyboardShortcutsOverlay from '@/components/admin/KeyboardShortcutsOverlay'
-import WhatsAppFloatingPanel from '@/components/admin/whatsapp/WhatsAppFloatingPanel'
 import TimerWidget from '@/components/TimerWidget'
 import { TimerProvider } from '@/contexts/TimerContext'
 import { useEffect } from 'react'
@@ -42,7 +41,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
         <AiChatWidget />
-        <WhatsAppFloatingPanel />
         <TimerWidget />
         <KeyboardShortcutsOverlay />
       </div>

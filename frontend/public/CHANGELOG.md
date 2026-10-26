@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.73.0] — 2026-10-26
+
+### Limpeza — sai o WhatsApp automático e o que o financeiro não usava
+- Sai o **WhatsApp automático**: a ponte Evolution API, o n8n, a resposta por IA, a tela WhatsApp (caixa de conversas e QR Code) e a janela flutuante. Em 60 dias ele não mandou nem recebeu nenhuma mensagem pelo sistema
+- Os **lembretes do crediário** continuam por app/push e e-mail; o botão "Pelo meu WhatsApp" (abre o seu celular com o texto pronto) continua igual
+- Saem **Importar OFX** e o card do **Mercado Pago** (nunca usados): Contas a pagar/receber segue com o Inter sincronizando sozinho e o lançamento manual
+- No servidor, os containers da Evolution, do n8n e o Redis deixam de fazer parte do deploy. Nada é apagado do banco: as tabelas do WhatsApp continuam lá, sem uso. Tudo guardado na tag `arquivo/whatsapp-v1.72.0`
+- Ficam: Mensageria (é ela que o "Avisar fila" usa), fila de espera, Assistente IA do painel e Cartas TCG
+
 ## [v1.72.0] — 2026-10-26
 
 ### Pedidos — pagamento por fora sem dar como retirado (pedido do Maikon)

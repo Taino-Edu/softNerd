@@ -7,11 +7,6 @@
 -- Mudou aqui? Mude também o sqlite.sql (dev) e suba a API local antes de commitar.
 -- =============================================================================
 
--- Schemas isolados para os serviços de automação que compartilham
--- o mesmo PostgreSQL sem misturar tabelas com o domínio do ERP.
-CREATE SCHEMA IF NOT EXISTS n8n;
-CREATE SCHEMA IF NOT EXISTS evolution_api;
-
 CREATE TABLE IF NOT EXISTS perfis (
     id                  UUID         NOT NULL DEFAULT gen_random_uuid(),
     nome                VARCHAR(100) NOT NULL,
@@ -366,47 +361,8 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS ix_notifications_user ON notifications (user_id);
 
--- WhatsApp/Evolution: idempotência dos webhooks e auditoria mínima.
-CREATE TABLE IF NOT EXISTS whatsapp_inbound_events (
-    id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    external_message_id VARCHAR(200)  NOT NULL,
-    phone               VARCHAR(20)   NOT NULL,
-    message_text        VARCHAR(1000) NULL,
-    response_json       TEXT          NULL,
-    status              VARCHAR(20)   NOT NULL DEFAULT 'processing',
-    received_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    processed_at        TIMESTAMPTZ   NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS ux_whatsapp_inbound_external_message_id
-    ON whatsapp_inbound_events (external_message_id);
-CREATE INDEX IF NOT EXISTS ix_whatsapp_inbound_phone
-    ON whatsapp_inbound_events (phone);
-
-CREATE TABLE IF NOT EXISTS whatsapp_conversations (
-    phone            VARCHAR(20) PRIMARY KEY,
-    user_id          UUID         NULL REFERENCES users(id) ON DELETE SET NULL,
-    bot_paused_until TIMESTAMPTZ  NULL,
-    last_inbound_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-ALTER TABLE whatsapp_conversations
-    ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMPTZ NULL;
-ALTER TABLE whatsapp_conversations
-    ADD COLUMN IF NOT EXISTS bot_disabled BOOLEAN NOT NULL DEFAULT FALSE;
-CREATE INDEX IF NOT EXISTS ix_whatsapp_conversations_user
-    ON whatsapp_conversations (user_id);
-
-CREATE TABLE IF NOT EXISTS whatsapp_outbound_messages (
-    id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    phone               VARCHAR(20)   NOT NULL,
-    message_text        VARCHAR(2000) NOT NULL,
-    author              VARCHAR(20)   NOT NULL DEFAULT 'admin',
-    external_message_id VARCHAR(200)  NULL,
-    status              VARCHAR(20)   NOT NULL DEFAULT 'sent',
-    sent_at             TIMESTAMPTZ   NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS ix_whatsapp_outbound_phone_sent_at
-    ON whatsapp_outbound_messages (phone, sent_at);
+-- WhatsApp automático (Evolution/n8n) saiu em 26/10/2026 (tag arquivo/whatsapp-v1.72.0): as tabelas
+-- whatsapp_* e os schemas n8n/evolution_api continuam nos bancos que já tinham, só não são mais criados.
 
 -- Mensageria: imagem opcional na notificação (banner de campanha)
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS image_url VARCHAR(500) NULL;

@@ -16,15 +16,13 @@ namespace CardGameStore.Controllers;
 public class ContasReceberController : ControllerBase
 {
     private readonly AppDbContext       _db;
-    private readonly OfxParserService   _ofx;
     private readonly EncryptionService  _enc;
     private readonly InterSyncService   _inter;
     private readonly IConfiguration     _config;
 
-    public ContasReceberController(AppDbContext db, OfxParserService ofx, EncryptionService enc, InterSyncService inter, IConfiguration config)
+    public ContasReceberController(AppDbContext db, EncryptionService enc, InterSyncService inter, IConfiguration config)
     {
         _db     = db;
-        _ofx    = ofx;
         _enc    = enc;
         _inter  = inter;
         _config = config;
@@ -172,54 +170,12 @@ public class ContasReceberController : ControllerBase
         return NoContent();
     }
 
-    // ── POST /api/contas-receber/import-ofx — upload arquivo OFX ─────────────
-    [HttpPost("import-ofx")]
-    [RequestSizeLimit(5 * 1024 * 1024)] // 5 MB
-    public async Task<IActionResult> ImportOfx(IFormFile file)
-    {
-        if (file is null || file.Length == 0)
-            return BadRequest(new { Message = "Arquivo OFX inválido ou vazio." });
-
-        using var stream = file.OpenReadStream();
-        var parsed = _ofx.Parse(stream);
-
-        int imported = 0, skipped = 0;
-        foreach (var p in parsed)
-        {
-            // Deduplicação por external_id
-            if (p.ExternalId is not null)
-            {
-                var exists = await _db.ExternalTransactions
-                    .AnyAsync(t => t.Source == "ofx" && t.ExternalId == p.ExternalId);
-                if (exists) { skipped++; continue; }
-            }
-
-            var isIncome = p.TrnType.Equals("CREDIT", StringComparison.OrdinalIgnoreCase);
-            var tx = new ExternalTransaction
-            {
-                Source      = "ofx",
-                ExternalId  = p.ExternalId,
-                Type        = isIncome ? "income" : "expense",
-                Amount      = p.Amount,
-                Description = p.Description ?? p.Memo ?? "Transação OFX",
-                DueDate     = p.Date,
-                PaidAt      = p.Date,       // OFX = já executada
-                Status      = "paid",
-            };
-            _db.ExternalTransactions.Add(tx);
-            imported++;
-        }
-
-        await _db.SaveChangesAsync();
-        return Ok(new { imported, skipped, total = parsed.Count });
-    }
-
     // ── GET /api/contas-receber/integracoes ───────────────────────────────────
     [HttpGet("integracoes")]
     public async Task<IActionResult> GetIntegracoes()
     {
         var configs = await _db.IntegrationConfigs.ToListAsync();
-        var sources = new[] { "inter", "mercadopago" };
+        var sources = new[] { "inter" };
 
         return Ok(sources.Select(src =>
         {
@@ -242,7 +198,7 @@ public class ContasReceberController : ControllerBase
     [HttpPut("integracoes/{source}")]
     public async Task<IActionResult> SaveIntegracao(string source, [FromBody] SaveIntegracaoRequest req)
     {
-        var allowed = new[] { "inter", "mercadopago" };
+        var allowed = new[] { "inter" };
         if (!allowed.Contains(source)) return BadRequest(new { Message = "Source inválido." });
 
         var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == source);

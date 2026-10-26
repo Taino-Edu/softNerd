@@ -67,11 +67,8 @@ export interface CrediarioAvisoConfigDto {
   marcos: number[]
   canalApp: boolean
   canalEmail: boolean
-  canalWhatsApp: boolean
   resumoAdmin: boolean
   mensagemExtra: string | null
-  /** Somente leitura. */
-  whatsAppConectado: boolean
 }
 
 export interface PreviaAvisoCrediarioDto {

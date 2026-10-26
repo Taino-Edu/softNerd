@@ -38,14 +38,12 @@ public class CrediariosController : ControllerBase
     private readonly CrediarioPixService _pix;
     private readonly IAuditService   _audit;
     private readonly CrediarioAvisoService _avisos;
-    private readonly IWhatsAppGateway _whatsApp;
     private readonly ILogger<CrediariosController> _logger;
 
     public CrediariosController(AppDbContext db, IEmailService email, CrediarioPixService pix, IAuditService audit,
-        CrediarioAvisoService avisos, IWhatsAppGateway whatsApp, ILogger<CrediariosController> logger)
+        CrediarioAvisoService avisos, ILogger<CrediariosController> logger)
     {
         _avisos            = avisos;
-        _whatsApp          = whatsApp;
         _db                = db;
         _email             = email;
         _pix               = pix;
@@ -510,9 +508,8 @@ public class CrediariosController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<CrediarioAvisoConfigDto>> GetAvisoConfig(CancellationToken ct)
     {
-        var cfg    = await _avisos.ObterConfigAsync();
-        var status = await _whatsApp.GetStatusAsync(ct);
-        return Ok(ToConfigDto(cfg, status.Connected));
+        var cfg = await _avisos.ObterConfigAsync();
+        return Ok(ToConfigDto(cfg));
     }
 
     [HttpPut("avisos/config")]
@@ -526,7 +523,7 @@ public class CrediariosController : ControllerBase
         var marcos = request.Marcos.Where(m => m is >= -30 and <= 90).Distinct().OrderBy(m => m).ToList();
         if (request.Ativo && marcos.Count == 0)
             return BadRequest(new { Message = "Escolha pelo menos um dia de aviso." });
-        if (request.Ativo && !request.CanalApp && !request.CanalEmail && !request.CanalWhatsApp)
+        if (request.Ativo && !request.CanalApp && !request.CanalEmail)
             return BadRequest(new { Message = "Ligue pelo menos um canal de aviso." });
 
         var cfg = await _avisos.ObterConfigAsync();
@@ -535,18 +532,16 @@ public class CrediariosController : ControllerBase
         cfg.MarcosJson    = JsonSerializer.Serialize(marcos);
         cfg.CanalApp      = request.CanalApp;
         cfg.CanalEmail    = request.CanalEmail;
-        cfg.CanalWhatsApp = request.CanalWhatsApp;
         cfg.ResumoAdmin   = request.ResumoAdmin;
         cfg.MensagemExtra = string.IsNullOrWhiteSpace(request.MensagemExtra) ? null : request.MensagemExtra.Trim();
         cfg.UpdatedAt     = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync("ConfigurouAvisosCrediario", "CrediarioAvisoConfig", cfg.Id.ToString(),
-            details: JsonSerializer.Serialize(new { cfg.Ativo, cfg.HoraEnvio, marcos, cfg.CanalApp, cfg.CanalEmail, cfg.CanalWhatsApp }),
+            details: JsonSerializer.Serialize(new { cfg.Ativo, cfg.HoraEnvio, marcos, cfg.CanalApp, cfg.CanalEmail }),
             httpContext: HttpContext);
 
-        var status = await _whatsApp.GetStatusAsync(ct);
-        return Ok(ToConfigDto(cfg, status.Connected));
+        return Ok(ToConfigDto(cfg));
     }
 
     [HttpGet("{id:guid}/aviso/previa")]
@@ -586,17 +581,15 @@ public class CrediariosController : ControllerBase
         }
     }
 
-    private static CrediarioAvisoConfigDto ToConfigDto(CrediarioAvisoConfig cfg, bool whatsAppConectado) => new()
+    private static CrediarioAvisoConfigDto ToConfigDto(CrediarioAvisoConfig cfg) => new()
     {
         Ativo             = cfg.Ativo,
         HoraEnvio         = cfg.HoraEnvio,
         Marcos            = CrediarioAvisoService.LerMarcos(cfg.MarcosJson),
         CanalApp          = cfg.CanalApp,
         CanalEmail        = cfg.CanalEmail,
-        CanalWhatsApp     = cfg.CanalWhatsApp,
         ResumoAdmin       = cfg.ResumoAdmin,
         MensagemExtra     = cfg.MensagemExtra,
-        WhatsAppConectado = whatsAppConectado,
     };
 
     // -------------------------------------------------------------------------

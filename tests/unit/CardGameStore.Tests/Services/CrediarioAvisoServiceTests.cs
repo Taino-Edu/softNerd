@@ -30,26 +30,23 @@ public class CrediarioAvisoServiceTests
 
     private sealed record Ambiente(
         AppDbContext Db, CrediarioAvisoService Service,
-        Mock<IEmailService> Email, Mock<IPushService> Push, Mock<IWhatsAppGateway> WhatsApp);
+        Mock<IEmailService> Email, Mock<IPushService> Push);
 
     private static Ambiente Criar(Action<CrediarioAvisoConfig>? config = null)
     {
         var db = CreateDb();
-        var cfg = new CrediarioAvisoConfig { CanalWhatsApp = true };
+        var cfg = new CrediarioAvisoConfig();
         config?.Invoke(cfg);
         db.CrediarioAvisoConfigs.Add(cfg);
         db.SaveChanges();
 
         var email = new Mock<IEmailService>();
         var push  = new Mock<IPushService>();
-        var wpp   = new Mock<IWhatsAppGateway>();
-        wpp.Setup(w => w.SendTextAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-           .ReturnsAsync(new WhatsAppGatewaySendResult(true, "msg-1"));
 
-        var service = new CrediarioAvisoService(db, email.Object, push.Object, wpp.Object,
+        var service = new CrediarioAvisoService(db, email.Object, push.Object,
             new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build(),
             NullLogger<CrediarioAvisoService>.Instance);
-        return new(db, service, email, push, wpp);
+        return new(db, service, email, push);
     }
 
     private static User NovoCliente(AppDbContext db, string nome = "Pietro Souza")
@@ -92,11 +89,10 @@ public class CrediarioAvisoServiceTests
 
         var aviso = await a.Db.CrediarioAvisos.SingleAsync(x => x.CrediarioId == conta.Id);
         aviso.Marco.Should().Be(-3);
-        aviso.Canais.Should().Be("app,email,whatsapp");
+        aviso.Canais.Should().Be("app,email");
 
         a.Email.Verify(e => e.SendCrediarioLembreteAsync(user.Email!, user.Name, It.IsAny<string>(),
             It.Is<string>(t => t.Contains("vence em 3 dias"))), Times.Once);
-        a.WhatsApp.Verify(w => w.SendTextAsync("17999990000", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         (await a.Db.Notifications.CountAsync(n => n.UserId == user.Id)).Should().Be(1);
     }
 
@@ -153,9 +149,8 @@ public class CrediarioAvisoServiceTests
 
         r.ClientesAvisados.Should().Be(1);
         r.ContasAvisadas.Should().Be(2);
-        a.WhatsApp.Verify(w => w.SendTextAsync(It.IsAny<string>(),
-            It.Is<string>(t => t.Contains("vence hoje") && t.Contains("7 dias de atraso") && t.Contains("Total em aberto: R$ 80,00")),
-            It.IsAny<CancellationToken>()), Times.Once);
+        a.Email.Verify(e => e.SendCrediarioLembreteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.Is<string>(t => t.Contains("vence hoje") && t.Contains("7 dias de atraso") && t.Contains("Total em aberto: R$ 80,00"))), Times.Once);
     }
 
     [Fact]
@@ -174,23 +169,6 @@ public class CrediarioAvisoServiceTests
 
         r.ClientesAvisados.Should().Be(1);
         (await a.Db.CrediarioAvisos.CountAsync(x => x.CrediarioId == conta.Id && x.Marco == 0)).Should().Be(2);
-    }
-
-    [Fact]
-    public async Task Rodada_WhatsAppFalha_RegistraFalhaEMantemOsOutrosCanais()
-    {
-        var a = Criar();
-        a.WhatsApp.Setup(w => w.SendTextAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(new WhatsAppGatewaySendResult(false, Error: "desconectado"));
-        var user = NovoCliente(a.Db);
-        var conta = NovaConta(a.Db, user, Hoje);
-        await a.Db.SaveChangesAsync();
-
-        await a.Service.ExecutarRodadaAsync(Agora);
-
-        var aviso = await a.Db.CrediarioAvisos.SingleAsync(x => x.CrediarioId == conta.Id);
-        aviso.Canais.Should().Be("app,email");
-        aviso.Falhas.Should().Contain("whatsapp: desconectado");
     }
 
     [Fact]
@@ -223,7 +201,7 @@ public class CrediarioAvisoServiceTests
 
         var envio = await a.Service.AvisarAgoraAsync(conta.Id, adminId);
 
-        envio.Canais.Should().Contain("whatsapp");
+        envio.Canais.Should().Be("app,email");
         var aviso = await a.Db.CrediarioAvisos.SingleAsync(x => x.CrediarioId == conta.Id);
         aviso.Marco.Should().BeNull();
         aviso.EnviadoPorAdminId.Should().Be(adminId);
@@ -248,7 +226,7 @@ public class CrediarioAvisoServiceTests
         var r = await a.Service.ExecutarRodadaAsync(Agora);
 
         r.ClientesAvisados.Should().Be(0);
-        a.WhatsApp.Verify(w => w.SendTextAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        a.Email.Verify(e => e.SendCrediarioLembreteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         var marco = await a.Db.CrediarioAvisos.SingleAsync(x => x.CrediarioId == conta.Id && x.Marco == 0);
         marco.Falhas.Should().Contain("já foi avisado hoje", "o marco fica cumprido pra não sair mais tarde");
     }

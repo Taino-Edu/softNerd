@@ -101,13 +101,6 @@ public static class ServicosDaLoja
             client.DefaultRequestHeaders.Add("Accept", "application/json");
         });
 
-        services.AddHttpClient("evolution", (services, client) =>
-        {
-            var configuration = services.GetRequiredService<IConfiguration>();
-            client.BaseAddress = new Uri(configuration["Evolution:BaseUrl"] ?? "http://evolution-api:8080/");
-            client.Timeout = TimeSpan.FromSeconds(20);
-        });
-
         return services;
     }
 
@@ -126,9 +119,6 @@ public static class ServicosDaLoja
         services.AddScoped<IEmailService,        EmailService>();
         services.AddScoped<IPushService,         PushService>();
         services.AddScoped<IReservationPixService, ReservationPixService>();
-        services.AddScoped<IWhatsAppAutomationService, WhatsAppAutomationService>();
-        services.AddScoped<IWhatsAppGateway, EvolutionWhatsAppGateway>();
-        services.AddScoped<IWhatsAppPublicAiService, WhatsAppPublicAiService>();
         services.AddScoped<IAiChatService,       GeminiChatService>();
         services.AddSingleton<ITcgApiClient,     TcgApiClient>();
         services.AddSingleton<ITcgService,       TcgService>();
@@ -138,7 +128,6 @@ public static class ServicosDaLoja
         // LGPD — Auditoria e privacidade
         services.AddHttpContextAccessor();
         services.AddScoped<IAuditService, AuditService>();
-        services.AddSingleton<OfxParserService>();
         services.AddSingleton<EncryptionService>();
         services.AddScoped<InterSyncService>();
         services.AddHostedService<InterSyncBackgroundService>();

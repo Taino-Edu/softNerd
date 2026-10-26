@@ -45,9 +45,6 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | `torneio_rodadas` | `TorneioRodada` | `TorneioRodadas` | criada, colunas | `CardGameStore/Models/PostgreSQL/Torneio.cs` |
 | `user_sessions` | `UserSession` | `UserSessions` | criada | `CardGameStore/Models/PostgreSQL/UserSession.cs` |
 | `users` | `User` | `Users` | colunas | `CardGameStore/Models/PostgreSQL/User.cs` |
-| `whatsapp_conversations` | `WhatsAppConversation` | `WhatsAppConversations` | criada, colunas | `CardGameStore/Models/PostgreSQL/WhatsAppConversation.cs` |
-| `whatsapp_inbound_events` | `WhatsAppInboundEvent` | `WhatsAppInboundEvents` | criada | `CardGameStore/Models/PostgreSQL/WhatsAppInboundEvent.cs` |
-| `whatsapp_outbound_messages` | `WhatsAppOutboundMessage` | `WhatsAppOutboundMessages` | criada | `CardGameStore/Models/PostgreSQL/WhatsAppOutboundMessage.cs` |
 
 ## MongoDB
 
@@ -87,15 +84,11 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `IEmailService → EmailService` | `CardGameStore/Services/Implementations/EmailService.cs` |
 | Scoped | `IPushService → PushService` | `CardGameStore/Services/Implementations/PushService.cs` |
 | Scoped | `IReservationPixService → ReservationPixService` | `CardGameStore/Services/Implementations/ReservationPixService.cs` |
-| Scoped | `IWhatsAppAutomationService → WhatsAppAutomationService` | `CardGameStore/Services/Implementations/WhatsAppAutomationService.cs` |
-| Scoped | `IWhatsAppGateway → EvolutionWhatsAppGateway` | `CardGameStore/Services/Implementations/EvolutionWhatsAppGateway.cs` |
-| Scoped | `IWhatsAppPublicAiService → WhatsAppPublicAiService` | `CardGameStore/Services/Implementations/WhatsAppPublicAiService.cs` |
 | Scoped | `IAiChatService → GeminiChatService` | `CardGameStore/Services/Implementations/GeminiChatService.cs` |
 | Singleton | `ITcgApiClient → TcgApiClient` | `CardGameStore/Services/Implementations/TcgApiClient.cs` |
 | Singleton | `ITcgService → TcgService` | `CardGameStore/Services/Implementations/TcgService.cs` |
 | Singleton | `CurrencyService` | `CardGameStore/Services/Implementations/CurrencyService.cs` |
 | Scoped | `IAuditService → AuditService` | `CardGameStore/Services/Implementations/AuditService.cs` |
-| Singleton | `OfxParserService` | `CardGameStore/Services/Implementations/OfxParserService.cs` |
 | Singleton | `EncryptionService` | `CardGameStore/Services/Implementations/EncryptionService.cs` |
 | Scoped | `InterSyncService` | `CardGameStore/Services/Implementations/InterSyncService.cs` |
 | Scoped | `PedidoVendaService` | `CardGameStore/Services/Implementations/PedidoVendaService.cs` |

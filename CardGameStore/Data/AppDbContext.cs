@@ -64,9 +64,6 @@ public class AppDbContext : DbContext
 
     // ── Mensageria: notificações in-app por usuário ───────────────────────────
     public DbSet<Notification>     Notifications     { get; set; }
-    public DbSet<WhatsAppInboundEvent> WhatsAppInboundEvents { get; set; }
-    public DbSet<WhatsAppConversation> WhatsAppConversations { get; set; }
-    public DbSet<WhatsAppOutboundMessage> WhatsAppOutboundMessages { get; set; }
 
     // ── Push: subscrições de browser push (WebPush/VAPID) ────────────────────
     public DbSet<PushSubscription> PushSubscriptions { get; set; }
@@ -435,28 +432,6 @@ public class AppDbContext : DbContext
                   .HasForeignKey(p => p.ComandaId)
                   .OnDelete(DeleteBehavior.Cascade)
                   .IsRequired(false);
-        });
-
-        modelBuilder.Entity<WhatsAppInboundEvent>(entity =>
-        {
-            entity.HasIndex(e => e.ExternalMessageId)
-                  .IsUnique()
-                  .HasDatabaseName("ux_whatsapp_inbound_external_message_id");
-
-            entity.HasIndex(e => e.Phone)
-                  .HasDatabaseName("ix_whatsapp_inbound_phone");
-        });
-
-        modelBuilder.Entity<WhatsAppConversation>(entity =>
-        {
-            entity.HasIndex(e => e.UserId)
-                  .HasDatabaseName("ix_whatsapp_conversations_user");
-        });
-
-        modelBuilder.Entity<WhatsAppOutboundMessage>(entity =>
-        {
-            entity.HasIndex(e => new { e.Phone, e.SentAt })
-                  .HasDatabaseName("ix_whatsapp_outbound_phone_sent_at");
         });
 
         // =====================================================================

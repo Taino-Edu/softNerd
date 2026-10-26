@@ -172,20 +172,6 @@ function AvisosConfigModal({
                 <span className="text-sm text-gray-200">E-mail</span>
                 <Switch ligado={cfg.canalEmail} onChange={v => set('canalEmail', v)} label="E-mail" />
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-gray-200">
-                  WhatsApp da loja
-                  <span className={clsx('ml-2 text-[11px]', cfg.whatsAppConectado ? 'txt-ok' : 'txt-alerta')}>
-                    {cfg.whatsAppConectado ? '● conectado' : '● não conectado'}
-                  </span>
-                </span>
-                <Switch ligado={cfg.canalWhatsApp} onChange={v => set('canalWhatsApp', v)} label="WhatsApp" />
-              </div>
-              {cfg.canalWhatsApp && !cfg.whatsAppConectado && (
-                <p className="text-[11px] txt-alerta">
-                  O WhatsApp da loja não está pareado agora — os avisos por ele vão falhar até ler o QR Code em Atendimento → WhatsApp.
-                </p>
-              )}
             </div>
 
             <div className="flex items-center justify-between gap-4 bg-surface-700 rounded-xl px-4 py-3">

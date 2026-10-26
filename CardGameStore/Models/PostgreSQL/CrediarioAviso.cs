@@ -40,10 +40,6 @@ public class CrediarioAvisoConfig
     [Column("canal_email")]
     public bool CanalEmail { get; set; } = true;
 
-    /// <summary>Desligado por padrão: mensagem automática no WhatsApp da loja é escolha do dono.</summary>
-    [Column("canal_whatsapp")]
-    public bool CanalWhatsApp { get; set; } = false;
-
     /// <summary>Resumo diário pros admins: quem vence hoje, quem está atrasado e quanto.</summary>
     [Column("resumo_admin")]
     public bool ResumoAdmin { get; set; } = true;
