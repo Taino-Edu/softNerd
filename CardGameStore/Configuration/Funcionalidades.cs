@@ -64,6 +64,7 @@ public static class Funcionalidades
     public const string HomeVisualUniforme = "home-visual-uniforme";
     public const string PedidoPixJunto = "pedido-pix-junto";
     public const string CampeonatoSeparado = "campeonato-separado";
+    public const string PagamentoSemRetirada = "pagamento-sem-retirada";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -348,6 +349,16 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.68.0",
             RevisarEm:  new DateOnly(2027, 4, 15)),
+
+        new(PagamentoSemRetirada,
+            Nome:       "Pedidos: registrar pagamento sem dar como retirado",
+            OQueMuda:   "Em Pedidos, \"Registrar pagamento\" lança a venda no Financeiro e o pedido vai pra \"Pago · aguardando retirada\", " +
+                        "igual ao Pix pago pelo site — serve pra quem paga adiantado por fora (dinheiro, cartão, chave da loja). " +
+                        "A entrega fica pro botão Entregar. \"Pagou e retirou\" faz as duas coisas de uma vez, como o Homologar.",
+            SeDesligar: "Volta só o Homologar: lançar o pagamento já marca o pedido como retirado e ele sai da tela.",
+            Padrao:     true,
+            Desde:      "v1.72.0",
+            RevisarEm:  new DateOnly(2027, 5, 1)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

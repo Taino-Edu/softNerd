@@ -726,6 +726,102 @@ public class ReservationControllerTests
         (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("cancelled");
     }
 
+    // ── Pagamento lançado à mão sem retirada (chave "pagamento-sem-retirada") ──
+    // Pedido do Maikon: quem paga adiantado por fora tem que ficar igual a quem pagou o Pix
+    // do site — pago, aguardando retirada — em vez de sumir da tela como "retirado".
+
+    private static (IVendaAvulsaService Service, List<VendaAvulsaRequest> Capturadas) CreateVendaSpyComId(string id)
+    {
+        var capturadas = new List<VendaAvulsaRequest>();
+        var mock = new Mock<IVendaAvulsaService>();
+        mock.Setup(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()))
+            .Callback<VendaAvulsaRequest, Guid, string>((req, _, _) => capturadas.Add(req))
+            .ReturnsAsync(new VendaAvulsaDto { Id = id });
+        return (mock.Object, capturadas);
+    }
+
+    [Fact]
+    public async Task RegistrarPagamento_FicaPagoAguardandoRetirada_EEntregarNaoVendeDeNovo()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 2));
+        var (venda, capturadas) = CreateVendaSpyComId("venda-dinheiro");
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        var result = await controller.RegistrarPagamentoGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        capturadas.Should().ContainSingle().Which.PaymentMethod.Should().Be("Dinheiro");
+        capturadas[0].SkipStockDecrement.Should().BeTrue("o estoque já saiu quando o pedido foi feito");
+        db.ChangeTracker.Clear();
+        var pedido = await db.ProductReservations.SingleAsync();
+        pedido.Status.Should().Be("active", "pagou mas não retirou — o pedido continua na tela");
+        pedido.ExpiresAt.Should().BeNull("pago, igual ao Pix do site: sai do \"A pagar\"");
+        pedido.VendaAvulsaId.Should().Be("venda-dinheiro");
+
+        var entrega = await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Pix" });
+
+        entrega.Should().BeOfType<OkObjectResult>();
+        capturadas.Should().HaveCount(1, "a venda entrou no pagamento — entregar não lança outra");
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("fulfilled");
+    }
+
+    [Fact]
+    public async Task RegistrarPagamento_ComPixAberto_RecusaSemLancarVenda()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var reserva = await SeedPreVendaComPixAsync(db, pixExpiraEm: DateTime.UtcNow.AddMinutes(30));
+        var (venda, capturadas) = CreateVendaSpyComId("venda-x");
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        var result = await controller.RegistrarPagamentoGrupo(reserva.ReservationGroupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<ConflictObjectResult>("com o Pix aberto o cliente ainda pode pagar por ele — seria cobrado duas vezes");
+        capturadas.Should().BeEmpty();
+        (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RegistrarPagamento_PedidoJaPago_Recusa()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 1));
+        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
+        await db.SaveChangesAsync();
+        var (venda, capturadas) = CreateVendaSpyComId("venda-x");
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda);
+
+        var result = await controller.RegistrarPagamentoGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        capturadas.Should().BeEmpty("já pago no Pix — lançar de novo duplicaria a venda");
+    }
+
+    [Fact]
+    public async Task RegistrarPagamento_ChaveDesligada_NaoExiste()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 1));
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        await chaves.DefinirAsync(Funcionalidades.PagamentoSemRetirada, false, cliente.Id);
+        var (venda, capturadas) = CreateVendaSpyComId("venda-x");
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda, funcionalidades: chaves);
+
+        var result = await controller.RegistrarPagamentoGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
+
+        result.Should().BeOfType<NotFoundObjectResult>("desligada, o jeito é o Homologar de antes");
+        capturadas.Should().BeEmpty();
+    }
+
     // ── Venda no pagamento (chave "pedido-venda-no-pagamento") ─────────────────
 
     [Fact]

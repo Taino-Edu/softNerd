@@ -14,9 +14,10 @@ import {
   LayoutList, RefreshCw, Loader2,
   TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
   QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil, Tag, Trash2,
-  AlertTriangle,
+  AlertTriangle, Banknote,
 } from 'lucide-react'
 import { brl } from '@/lib/format'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 // Códigos do catálogo (lib/pagamentos). Antes eram textos ("Débito", "Crédito") que o
 // back gravava assim e nenhum relatório reconhecia.
@@ -465,7 +466,7 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
 export default function ReservasPage() {
   const router = useRouter()
 
-  // ── Pedidos (kanban Vendas × Pré-vendas) ──
+  // ── Pedidos (kanban Reservas × Pré-vendas) ──
   const [items,       setItems]       = useState<AdminReservation[]>([])
   const [loading,     setLoading]     = useState(true)
   const [pixByGroup,  setPixByGroup]  = useState<Record<string, ReservationPixStatus>>({})
@@ -473,6 +474,11 @@ export default function ReservasPage() {
   // Modal de homologação — sempre PDV (homologar por comanda misturava o valor
   // com outros itens do cliente e não dava pra separar "Pré-venda" no Financeiro).
   const [homModal,    setHomModal]    = useState<AdminReservation | null>(null)
+  // 'pagamento' = só lança o pagamento (pedido fica aguardando retirada); 'homologar' = pagou e retirou
+  const [homModo,     setHomModo]     = useState<'homologar' | 'pagamento'>('homologar')
+  const [homPixAberto, setHomPixAberto] = useState(false)
+  const [cancelandoPixHom, setCancelandoPixHom] = useState(false)
+  const pagamentoSemRetirada = useFuncionalidade('pagamento-sem-retirada') === true
   const [homPayment,  setHomPayment]  = useState('Dinheiro')
   const [homSplit,    setHomSplit]    = useState(false)
   const [homSecondPayment, setHomSecondPayment] = useState('')
@@ -587,7 +593,7 @@ export default function ReservasPage() {
   }, [items, pixByGroup])
 
   // Um reservationGroupId é um carrinho. A classificação é feita no carrinho inteiro;
-  // pedido misto fica em Vendas, igual à regra usada ao lançar a venda no financeiro.
+  // pedido misto fica em Reservas, igual à regra usada ao lançar a venda no financeiro.
   const grouped = items.reduce<Record<string, AdminReservation[]>>((acc, item) => {
     const cartItems = acc[item.reservationGroupId] ?? []
     cartItems.push(item)
@@ -626,8 +632,10 @@ export default function ReservasPage() {
   const totalEmAberto  = vendasLanes.aPagar.length + vendasLanes.pago.length
                         + preVendasLanes.aPagar.length + preVendasLanes.pago.length
 
-  function openHomModal(r: AdminReservation) {
+  function openHomModal(r: AdminReservation, modo: 'homologar' | 'pagamento' = 'homologar') {
     setHomModal(r)
+    setHomModo(modo)
+    setHomPixAberto(false)
     // Pago no Pix pelo site (pedido de antes da venda no pagamento): a forma certa é Pix
     setHomPayment(r.kind === 'pre_venda' && r.expiresAt === null ? 'Pix' : 'Dinheiro')
     setHomSplit(false)
@@ -661,6 +669,26 @@ export default function ReservasPage() {
       if (!secondAmountInCents || secondAmountInCents <= 0) { toast.error('Informe o valor pago na segunda forma'); return }
     }
     setSubmitting(true)
+    if (homModo === 'pagamento') {
+      try {
+        const { data } = await reservationApi.registrarPagamento(homModal.reservationGroupId, {
+          paymentMethod: homPayment,
+          secondPaymentMethod:        homSplit ? homSecondPayment : undefined,
+          secondPaymentAmountInCents: homSplit ? secondAmountInCents : undefined,
+          discountPercent: homDiscountMode === 'percent' ? homDiscountPct : 0,
+          discountInCents: homDiscountMode === 'cents' ? homDiscountCents : undefined,
+        })
+        toast.success(data.discountInReais > 0
+          ? `Pagamento registrado com desconto de ${brl(data.discountInReais)} — aguardando retirada`
+          : 'Pagamento registrado — o pedido fica aguardando a retirada')
+        setHomModal(null)
+        load()
+      } catch (e: any) {
+        if (e?.response?.status === 409 && e?.response?.data?.pixAberto) setHomPixAberto(true)
+        else toast.error(e?.response?.data?.message ?? 'Erro ao registrar o pagamento')
+      } finally { setSubmitting(false) }
+      return
+    }
     try {
       // Sempre pelo grupo: reserva avulsa tem reservationGroupId = o próprio id, então
       // um clique resolve tanto o item solto quanto o carrinho de N itens.
@@ -682,9 +710,22 @@ export default function ReservasPage() {
     } finally { setSubmitting(false) }
   }
 
+  /** Pagamento por fora com Pix aberto: encerra a cobrança (conferindo no Inter) e libera o lançamento. */
+  async function cancelarPixDoPagamento() {
+    if (!homModal) return
+    setCancelandoPixHom(true)
+    try {
+      await reservationApi.cancelarPix(homModal.reservationGroupId)
+      toast.success('Cobrança Pix cancelada — pode confirmar o pagamento')
+      setHomPixAberto(false)
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Não deu pra cancelar a cobrança')
+    } finally { setCancelandoPixHom(false) }
+  }
+
   // Pedido pago que já virou venda: entregar não pede pagamento nem desconto (o valor já entrou)
   async function entregar(r: AdminReservation) {
-    if (!confirm(`Entregar o pedido de ${r.userName}? A venda já está no Financeiro (paga no Pix).`)) return
+    if (!confirm(`Entregar o pedido de ${r.userName}? A venda já está no Financeiro.`)) return
     try {
       const { data } = await reservationApi.homologarGrupo(r.reservationGroupId, { paymentMethod: 'Pix' })
       toast.success(data.itemCount > 1 ? `${data.itemCount} itens entregues!` : 'Pedido entregue!')
@@ -832,10 +873,18 @@ export default function ReservasPage() {
           {r.notes && <p className="text-[11px] text-gray-500 mt-1 italic truncate">"{r.notes}"</p>}
 
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {pagamentoSemRetirada && !jaVendido && (
+                <button onClick={() => openHomModal(r, 'pagamento')}
+                  title="Cliente pagou e ainda vai retirar: lança a venda e o pedido fica aguardando a retirada"
+                  className="px-2 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30
+                             hover:bg-blue-500/30 text-[11px] font-semibold transition-colors flex items-center gap-1">
+                  <Banknote className="w-3 h-3" /> Registrar pagamento
+                </button>
+              )}
               <button onClick={() => jaVendido ? entregar(r) : openHomModal(r)}
                 className="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30
                            hover:bg-green-500/30 text-[11px] font-semibold transition-colors flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" /> {jaVendido ? 'Entregar' : 'Homologar'}
+                <CheckCircle className="w-3 h-3" /> {jaVendido ? 'Entregar' : pagamentoSemRetirada ? 'Pagou e retirou' : 'Homologar'}
               </button>
               {cart.expiresAt && (
                 <button onClick={() => setPixGroup(r)}
@@ -857,7 +906,7 @@ export default function ReservasPage() {
 
       <PageHeader
         title="Pedidos"
-        subtitle="Vendas e pré-vendas do site · mesma lógica, colunas separadas pela tag do produto"
+        subtitle="Reservas e pré-vendas do site · mesma lógica, colunas separadas pela tag do produto"
         actions={
           <>
             <button
@@ -898,13 +947,13 @@ export default function ReservasPage() {
         </div>
       </div>
 
-      {/* ── Kanban de pedidos: Vendas × Pré-vendas ── */}
+      {/* ── Kanban de pedidos: Reservas × Pré-vendas ── */}
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <KanbanColumn
-            title="Vendas" subtitle="produto sem tag de pré-venda"
+            title="Reservas" subtitle="produto sem tag de pré-venda"
             icon={<ShoppingCart className="w-4 h-4 text-blue-400" />} tint="border-blue-500/20"
             lanesData={vendasLanes} renderCard={renderCard}
           />
@@ -1041,7 +1090,9 @@ export default function ReservasPage() {
           <div className="bg-surface-800 rounded-2xl w-full max-w-md p-6 flex flex-col gap-5">
             <div>
               <h2 className="text-lg font-black text-white">
-                {homGroupItems.length > 1 ? `Homologar carrinho de ${homGroupItems.length} itens` : 'Homologar pré-venda'}
+                {homModo === 'pagamento'
+                  ? (homGroupItems.length > 1 ? `Registrar pagamento de ${homGroupItems.length} itens` : 'Registrar pagamento')
+                  : homGroupItems.length > 1 ? `Homologar carrinho de ${homGroupItems.length} itens` : 'Homologar pré-venda'}
               </h2>
               <p className="text-sm text-gray-400 mt-0.5">{homModal.userName}</p>
 
@@ -1062,8 +1113,13 @@ export default function ReservasPage() {
                   </div>
                   <p className="text-xs text-amber-300/90 mt-2 flex items-start gap-1.5">
                     <Layers className="w-3.5 h-3.5 shrink-0 mt-px" />
-                    O cliente reservou tudo junto: confirmar aqui marca os {homGroupItems.length} itens como
-                    retirados e lança <strong>uma venda só</strong>, com todos eles.
+                    {homModo === 'pagamento' ? (
+                      <>O cliente reservou tudo junto: o pagamento dos {homGroupItems.length} itens entra como
+                      <strong> uma venda só</strong> e o pedido fica aguardando a retirada.</>
+                    ) : (
+                      <>O cliente reservou tudo junto: confirmar aqui marca os {homGroupItems.length} itens como
+                      retirados e lança <strong>uma venda só</strong>, com todos eles.</>
+                    )}
                   </p>
                 </>
               ) : (
@@ -1175,6 +1231,21 @@ export default function ReservasPage() {
               )}
             </div>
 
+            {homModo === 'pagamento' && (
+              <p className="text-xs text-blue-300/90 -mt-2">
+                O pedido <strong>não</strong> sai da tela: vai pra "Pago · aguardando retirada". Quando o cliente buscar, use Entregar.
+              </p>
+            )}
+            {homPixAberto && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 flex flex-col gap-2">
+                Este pedido tem um Pix aberto — se o cliente pagar por ele também, cobra duas vezes. Cancele o Pix e confirme de novo.
+                <button onClick={cancelarPixDoPagamento} disabled={cancelandoPixHom}
+                  className="self-start px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-100 font-semibold flex items-center gap-1.5 disabled:opacity-50">
+                  {cancelandoPixHom ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <QrCode className="w-3.5 h-3.5" />}
+                  Cancelar o Pix aberto
+                </button>
+              </div>
+            )}
             <div className="flex gap-3 pt-1">
               <button onClick={() => setHomModal(null)} disabled={submitting}
                 className="flex-1 py-3 rounded-xl bg-surface-700 text-gray-300 text-sm font-semibold">

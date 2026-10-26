@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.72.0] — 2026-10-26
+
+### Pedidos — pagamento por fora sem dar como retirado (pedido do Maikon)
+- Botão novo **Registrar pagamento** no card do pedido: pra quem paga adiantado por fora (dinheiro, cartão, chave da loja). A venda entra no Financeiro na hora e o pedido vai pra **"Pago · aguardando retirada"**, igual a quem paga o Pix pelo site — não some mais da tela
+- Quando o cliente buscar, **Entregar** só registra a retirada (não lança a venda de novo). **Pagou e retirou** (o Homologar de antes) continua pra quem paga e leva na hora
+- Se o pedido tem um Pix aberto, o sistema avisa e oferece cancelar o Pix antes — sem isso o cliente poderia pagar duas vezes
+- A coluna **Vendas** da tela de Pedidos passa a se chamar **Reservas**
+- Chave `pagamento-sem-retirada` em Funcionalidades: desligada, volta só o Homologar de antes
+
 ## [v1.71.0] — 2026-10-26
 
 ### Nota fiscal (NFC-e) sai do sistema
