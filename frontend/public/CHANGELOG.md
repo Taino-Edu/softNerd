@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.70.1] — 2026-10-26
+
+### Segurança — fora a autoridade certificadora eMudhra (emSign)
+- A eMudhra teve as chaves privadas vazadas em 21/10/2026: com elas dá pra emitir certificado falso em nome do Inter, da SEFAZ ou de qualquer site. As raízes **emSign** saem da lista de confiança da **imagem da API** (o mesmo foi feito no servidor em 26/10). O build da imagem falha se sobrar alguma
+- Conferido: Inter e demais sites com certificado comum seguem conectando igual
+
 ## [v1.70.0] — 2026-10-23
 
 ### Segurança — API no .NET 10 (LTS até nov/2028)
