@@ -35,7 +35,7 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.1" />
 
     <!-- MongoDB -->
-    <PackageReference Include="MongoDB.Driver" Version="2.30.0" />
+    <PackageReference Include="MongoDB.Driver" Version="3.13.0" />
     <!-- Dependências do driver do Mongo presas em versões corrigidas (o 2.30 puxava Snappier 1.0.0
          — GHSA-pggp-6c3x-2xmx, alta — e SharpCompress 0.30.1 — GHSA-6c8g-7p36-r338). São as mesmas
          versões do MongoDB.Driver 3.13; a compressão na conexão com o Mongo não é usada. -->
