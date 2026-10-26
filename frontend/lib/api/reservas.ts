@@ -84,6 +84,12 @@ export const reservationApi = {
     paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
     discountPercent?: number; discountInCents?: number
   }) => api.post<HomologarResult>(`/api/reservations/group/${groupId}/homologar`, body),
+  /** Lança o pagamento feito por fora SEM dar como retirado: o pedido vai pra "Pago · aguardando
+   *  retirada", igual ao Pix do site (chave pagamento-sem-retirada). 409 com pixAberto = cancelar o Pix antes. */
+  registrarPagamento: (groupId: string, body: {
+    paymentMethod?: string; secondPaymentMethod?: string; secondPaymentAmountInCents?: number
+    discountPercent?: number; discountInCents?: number
+  }) => api.post<{ message: string; itemCount: number; discountInReais: number }>(`/api/reservations/group/${groupId}/pagamento`, body),
   updateStatus: (id: string, status: string)       => api.put(`/api/reservations/${id}/status`, { status }),
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),
   /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */

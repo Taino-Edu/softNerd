@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-260 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+261 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -33,7 +33,7 @@
 - [PublicProfile](#publicprofile) (1)
 - [Push](#push) (3)
 - [Relatorios](#relatorios) (2)
-- [Reservation](#reservation) (15)
+- [Reservation](#reservation) (16)
 - [SiteConfig](#siteconfig) (2)
 - [Tcg](#tcg) (8)
 - [Timer](#timer) (4)
@@ -409,10 +409,11 @@
 | POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (505) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
 | POST | `/api/reservations/cart` | logado | `CreateCart` (332) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
 | POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (1070) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
-| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (1277) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (1323) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (1221) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (1247) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pagamento` | AdminOnly | `RegistrarPagamentoGrupo` (1220) | `reservationApi.registrarPagamento` | `app/admin/reservas/page.tsx` |
+| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (1386) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (1432) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (1330) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (1356) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
 | GET | `/api/reservations/mine` | logado | `GetMine` (227) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
 | DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (712) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
 | POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (1046) | — | — |

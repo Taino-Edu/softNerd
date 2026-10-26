@@ -1209,6 +1209,115 @@ public class ReservationController : ControllerBase
         });
     }
 
+    // POST /api/reservations/group/{groupId}/pagamento — pagamento lançado à mão SEM retirada.
+    //
+    // Cliente que paga adiantado por fora (dinheiro, cartão, chave da loja) fica igual a quem
+    // pagou o Pix do site: a venda entra no Financeiro agora e o pedido continua ativo em
+    // "Pago · aguardando retirada" — o Entregar (Homologar de pedido já vendido) só registra a
+    // retirada. Antes o único jeito de lançar o pagamento era o Homologar, que já dava como retirado.
+    [HttpPost("group/{groupId:guid}/pagamento")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> RegistrarPagamentoGrupo(Guid groupId, [FromBody] HomologarRequest req)
+    {
+        if (!await LigadaAsync(Funcionalidades.PagamentoSemRetirada))
+            return NotFound(new { Message = "Use o Homologar pra lançar o pagamento." });
+
+        var itens = await _db.ProductReservations
+            .Include(r => r.User)
+            .Include(r => r.Product)
+            .Include(r => r.Variant)
+            .Where(r => r.ReservationGroupId == groupId && r.Status == "active" && r.Kind == "pre_venda")
+            .OrderBy(r => r.ReservedAt)
+            .ToListAsync();
+        if (itens.Count == 0)
+            return NotFound(new { Message = "Nenhuma pré-venda ativa neste pedido." });
+        if (itens.Any(r => r.VendaAvulsaId is not null && !PedidoVendaService.TemVenda(r)))
+            return Conflict(new { Message = "A venda deste pedido está sendo registrada agora — tente de novo em instantes." });
+
+        var aVender = itens.Where(r => r.VendaAvulsaId is null).ToList();
+        if (aVender.Count == 0)
+            return BadRequest(new { Message = "Este pedido já está pago — falta só entregar." });
+
+        // Pix aberto + pagamento por fora = o cliente poderia pagar duas vezes. Mesmo bloqueio da
+        // edição de quantidade; a tela oferece o botão que cancela a cobrança (conferindo no Inter).
+        var temPixAberto = await _db.PixCobrancas.AnyAsync(p =>
+            p.ReservationGroupId == groupId && p.Origem == PixCobrancaOrigem.Reserva && p.Status == "ATIVA");
+        if (temPixAberto)
+            return Conflict(new { Message = "Este pedido tem um Pix aberto — cancele o Pix antes de lançar o pagamento por fora.", pixAberto = true });
+
+        var novo       = await VendaNoPagamentoAsync();
+        var ids        = aVender.Select(r => r.Id).ToList();
+        var primeiro   = itens[0];
+        var adminId    = GetUserId();
+        var adminName  = User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst("name")?.Value ?? "Admin";
+        var marca      = PedidoVendaService.Registrando + "manual-" + Guid.NewGuid().ToString("N");
+        VendaAvulsaDto? venda = null;
+
+        // Claim + venda na mesma transação, como no Homologar: o claim (VendaAvulsaId marcado e
+        // ExpiresAt nulo = pago) tira os itens do alcance do Pix e de outro Homologar no meio do caminho.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        IActionResult? falha = null;
+        await strategy.ExecuteAsync(async () =>
+        {
+            falha = null;
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            var claimed = await _db.ProductReservations
+                .Where(r => ids.Contains(r.Id) && r.Status == "active" && r.VendaAvulsaId == null)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.VendaAvulsaId, marca)
+                    .SetProperty(r => r.ExpiresAt, (DateTime?)null));
+            if (claimed != ids.Count)
+            {
+                falha = BadRequest(new { Message = "Algum item deste pedido mudou enquanto você preenchia — abra de novo pra ver como ficou." });
+                return;
+            }
+
+            try
+            {
+                venda = await _vendaService.RegisterAsync(new VendaAvulsaRequest
+                {
+                    ClientName                 = primeiro.User?.Name,
+                    UserId                     = primeiro.UserId,
+                    PaymentMethod              = req.PaymentMethod ?? Models.MongoDB.PaymentMethod.Dinheiro,
+                    SecondPaymentMethod        = req.SecondPaymentMethod,
+                    SecondPaymentAmountInCents = req.SecondPaymentAmountInCents ?? 0,
+                    DiscountPercent            = req.DiscountPercent,
+                    DiscountInCents            = req.DiscountInCents,
+                    SkipStockDecrement         = true, // estoque já saiu no pedido
+                    Origem                     = "Reserva",
+                    ReservationId              = primeiro.Id,
+                    ReservationGroupId         = primeiro.ReservationGroupId,
+                    ProductIsPreVenda          = aVender.All(r => r.Product?.IsPreVenda ?? false),
+                    Items = aVender.Select(r => new VendaAvulsaItemRequest
+                    {
+                        ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity,
+                        UnitPriceInCents = novo ? PedidoVendaService.PrecoDoPedido(r) : null,
+                    }).ToList(),
+                }, adminId, adminName);
+                await _db.ProductReservations.Where(r => ids.Contains(r.Id) && r.VendaAvulsaId == marca)
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.VendaAvulsaId, venda.Id));
+            }
+            catch (InvalidOperationException ex)
+            {
+                falha = BadRequest(new { Message = ex.Message });
+                return; // sem Commit: o claim volta
+            }
+
+            await tx.CommitAsync();
+        });
+
+        if (falha is not null) return falha;
+
+        return Ok(new
+        {
+            message         = "Pagamento registrado — o pedido fica aguardando a retirada.",
+            itemCount       = aVender.Count,
+            discountPercent = venda?.DiscountPercent ?? 0,
+            discountInReais = venda?.DiscountInReais ?? 0,
+        });
+    }
+
     // -------------------------------------------------------------------------
     // PAGAMENTO — Pix do carrinho de pré-venda (mesmo padrão da inscrição de
     // campeonato: gerar cobrança + verificar sob demanda, sem webhook).
