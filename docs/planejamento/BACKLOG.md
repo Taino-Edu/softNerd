@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **22/10/2026** — produção na **v1.70.0** (nginx 1.30.6, Node 24.22.1).
+Atualizado em **26/10/2026** — produção na **v1.70.1** (nginx 1.30.6, Node 24.22.1, .NET 10).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -15,7 +15,6 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 | Item | Versão | Observação |
 |---|---|---|
 | Ajustes visuais da home (cores, linhas, responsividade) | v1.66.0 | Esperando o print do Maikon pra comparar com o que ele pediu |
-| Manutenção da VPS: Postgres 16.15, ca-certificates (CA eMudhra/emSign comprometida), Docker/containerd | — | Mexe no servidor: só com autorização e em horário calmo |
 
 ## ⏳ Esperando alguém
 
@@ -45,6 +44,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.71.0 | 26/10 | **Nota fiscal (NFC-e) e Tenant-ERP fora do sistema** — o módulo fica guardado na tag `arquivo/nfce-v1.70.1`; banco intacto |
+| — | 26/10 | Manutenção da VPS: backup, Postgres 16.15, Docker 29.9.2, emSign fora do servidor, SSH só com chave |
 | v1.70.1 | 26/10 | Imagem da API sem as raízes emSign (CA eMudhra comprometida); servidor também |
 | v1.70.0 | 23/10 | **API no .NET 10** (o 8 perde suporte em 10/11/2026); Snappier/SharpCompress corrigidos; certificado A1 no carregador novo |
 | v1.69.0 | 23/10 | Pré-venda: carrinho novo soma no pedido sem pagar (um Pix só); Pix antigo derrubado conferindo pagamento |

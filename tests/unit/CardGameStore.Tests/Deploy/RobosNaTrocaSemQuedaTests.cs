@@ -2,7 +2,7 @@
 // RobosNaTrocaSemQuedaTests.cs — garantia que a troca sem queda depende
 //
 // Na troca sem queda (deploy/rollout.sh) a API nova sobe AO LADO da antiga e as
-// duas ficam no ar por até ~1 minuto. Os robôs (Pix, NFC-e, avisos do crediário…)
+// duas ficam no ar por até ~1 minuto. Os robôs (Pix, Vigia, avisos do crediário…)
 // só não rodam em dobro porque todos esperam pelo menos 1 minuto antes da primeira
 // volta — e o rollout desiste se a nova não responder em 45 s (45 + 7 de DNS = 52 s < 60).
 // Robô novo que começa antes disso quebra a garantia: este teste falha.

@@ -189,8 +189,6 @@ Tudo em [`docs/`](docs/README.md):
 - [Documentação técnica](docs/DOCUMENTACAO-TECNICA.md) — arquitetura, endpoints, regras de negócio, variáveis de ambiente
 - [Backup e restauração](docs/operacao/BACKUP.md)
 - [Automação do WhatsApp](docs/WHATSAPP-AUTOMACAO.md)
-- [Integração Tenant-ERP](docs/integracoes/TENANT-ERP.md) e [motor fiscal](docs/integracoes/MOTOR-FISCAL-TENANT-ERP.md)
-- [Correções do motor fiscal NFC-e](docs/fiscal/CORRECOES-NFCE-2026-07.md)
 - [Backlog de pendências](docs/planejamento/BACKLOG.md)
 
 O histórico de versões fica em [`frontend/public/CHANGELOG.md`](frontend/public/CHANGELOG.md) (também exibido em Admin → Sobre).

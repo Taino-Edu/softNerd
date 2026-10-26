@@ -70,30 +70,6 @@ public class Product
     public int MinimumStock { get; set; } = 5;
 
     // -------------------------------------------------------------------------
-    // Fiscal (NFC-e)
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// NCM (Nomenclatura Comum do Mercosul) — obrigatório na NFC-e.
-    /// Sem [MaxLength] aqui de propósito: o ApiController valida DataAnnotations
-    /// no model binding, ANTES do ProductService sanitizar pontuação — um NCM
-    /// colado como "1905.90.90" (10 caracteres) seria rejeitado com a mensagem
-    /// genérica do .NET em vez da mensagem em português do service. A largura
-    /// da coluna (8) é fixada via Fluent API em AppDbContext.OnModelCreating.
-    /// </summary>
-    [Column("ncm")]
-    public string? Ncm { get; set; }
-
-    /// <summary>CEST do produto, com 7 dígitos. Obrigatório nas operações sujeitas a
-    /// ICMS-ST (CSOSN 201/202/203/500). Mesmo motivo do Ncm acima pra não ter [MaxLength].</summary>
-    [Column("cest")]
-    public string? Cest { get; set; }
-
-    /// <summary>Natureza de operação (CFOP/CSOSN) aplicada na emissão da NFC-e deste produto.</summary>
-    [Column("natureza_operacao_id")]
-    public Guid? NaturezaOperacaoId { get; set; }
-
-    // -------------------------------------------------------------------------
     // Metadados
     // -------------------------------------------------------------------------
 
@@ -215,5 +191,4 @@ public class Product
     public ICollection<ComandaItem>        ComandaItems { get; set; } = new List<ComandaItem>();
     public ICollection<ProductVariant>     Variants     { get; set; } = new List<ProductVariant>();
     public ICollection<ProductReservation> Reservations { get; set; } = new List<ProductReservation>();
-    public NaturezaOperacao?               NaturezaOperacao { get; set; }
 }

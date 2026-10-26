@@ -311,25 +311,6 @@ public class VigiaServiceTests
     }
 
     [Fact]
-    public async Task NfceRejeitada_EPendenteParada_Alertam_AutorizadaNao()
-    {
-        var a = Criar();
-        a.Db.NotasFiscaisEmitidas.AddRange(
-            new NotaFiscalEmitida { Status = NotaFiscalStatus.Rejeitada, MotivoRejeicao = "539 - Duplicidade", ValorTotalEmCentavos = 1000 },
-            // Criada há 3 h, mas o reenvio acabou de mexer nela (UpdatedAt agora): continua parada
-            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 2000,
-                CreatedAt = DateTime.UtcNow.AddHours(-3), UpdatedAt = DateTime.UtcNow },
-            new NotaFiscalEmitida { Status = NotaFiscalStatus.PendenteEmissao, ValorTotalEmCentavos = 3000, CreatedAt = DateTime.UtcNow.AddMinutes(-10) },
-            new NotaFiscalEmitida { Status = NotaFiscalStatus.Autorizada, ValorTotalEmCentavos = 4000 });
-        a.Db.SaveChanges();
-
-        var achados = await new VerificacaoNfceComProblema(a.Db).VerificarAsync(default);
-
-        achados.Should().HaveCount(2);
-        achados.Should().Contain(x => x.Detalhe.Contains("539 - Duplicidade"));
-    }
-
-    [Fact]
     public async Task TorneioEmAndamentoHaMaisDe12Horas_Alerta()
     {
         var a = Criar();

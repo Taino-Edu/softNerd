@@ -14,7 +14,6 @@
 //   vendas.ts        Vendas avulsas (PDV), extrato e compras do cliente
 //   crediario.ts     Crediário (admin, cliente e link público /pagar/{token})
 //   reservas.ts      Reservas (pré-venda)
-//   fiscal.ts        NFC-e, certificado, naturezas de operação, notas do cliente
 //   relatorios.ts    Analytics, financeiro e relatórios
 //   lgpd.ts          Pedidos LGPD (público e admin)
 //   comunicacao.ts   Assistente IA, notificações, push, mensageria, WhatsApp
@@ -33,7 +32,6 @@ export * from './campeonatos'
 export * from './vendas'
 export * from './crediario'
 export * from './reservas'
-export * from './fiscal'
 export * from './relatorios'
 export * from './lgpd'
 export * from './comunicacao'

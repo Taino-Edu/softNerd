@@ -89,7 +89,6 @@ public class ProductService : IProductService
     public async Task<Product> CreateAsync(Product product)
     {
         ValidarDadosComerciais(product);
-        NormalizarDadosFiscais(product);
 
         _db.Products.Add(product);
         await _db.SaveChangesAsync();
@@ -99,7 +98,6 @@ public class ProductService : IProductService
     public async Task<Product> UpdateAsync(Product updated)
     {
         ValidarDadosComerciais(updated);
-        NormalizarDadosFiscais(updated);
 
         var existing = await _db.Products.FindAsync(updated.Id)
             ?? throw new KeyNotFoundException($"Produto {updated.Id} não encontrado.");
@@ -129,9 +127,6 @@ public class ProductService : IProductService
         // desconto da categoria"), não campo omitido.
         existing.MaxInstallments      = updated.MaxInstallments;
         existing.PixDiscountPercent   = updated.PixDiscountPercent;
-        existing.Ncm                  = updated.Ncm;
-        existing.Cest                 = updated.Cest;
-        existing.NaturezaOperacaoId   = updated.NaturezaOperacaoId;
         existing.UpdatedAt            = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -340,7 +335,7 @@ public class ProductService : IProductService
     }
 
     // -------------------------------------------------------------------------
-    // Validação e normalização (portadas do Tenant-ERP_Model — ver docs/fiscal/CORRECOES-NFCE-2026-07.md)
+    // Validação
     // -------------------------------------------------------------------------
 
     /// <summary>
@@ -368,32 +363,5 @@ public class ProductService : IProductService
             throw new ArgumentException("Parcelamento deve ficar entre 1x e 24x (ou vazio, pra não parcelar).");
         if (product.PixDiscountPercent is < 0 or > 100)
             throw new ArgumentException("Desconto do Pix deve ficar entre 0 e 100% (ou vazio, pra herdar da categoria).");
-    }
-
-    /// <summary>
-    /// Tira a pontuação de NCM/CEST antes de persistir ("1905.90.90" → "19059090") e
-    /// valida o tamanho aqui, no service — não via [MaxLength] no modelo, que dispararia
-    /// a validação do ApiController no model binding e devolveria a mensagem genérica
-    /// do .NET em vez desta, em português.
-    /// </summary>
-    private static void NormalizarDadosFiscais(Product product)
-    {
-        product.Ncm  = SomenteDigitosOuNull(product.Ncm);
-        product.Cest = SomenteDigitosOuNull(product.Cest);
-
-        if (product.Ncm is not null && product.Ncm.Length != 8)
-            throw new ArgumentException(
-                $"NCM deve conter exatamente 8 dígitos — foram informados {product.Ncm.Length}. " +
-                "Digite só os números, sem pontos.");
-        if (product.Cest is not null && product.Cest.Length != 7)
-            throw new ArgumentException(
-                $"CEST deve conter exatamente 7 dígitos — foram informados {product.Cest.Length}. " +
-                "Digite só os números, sem pontos.");
-    }
-
-    private static string? SomenteDigitosOuNull(string? valor)
-    {
-        if (string.IsNullOrWhiteSpace(valor)) return null;
-        return new string(valor.Where(char.IsDigit).ToArray());
     }
 }

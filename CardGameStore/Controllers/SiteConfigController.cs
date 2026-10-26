@@ -113,7 +113,6 @@ public class SiteConfigController : ControllerBase
 
     /// <summary>
     /// Busca a linha única de configuração pelo ID fixo, criando-a se necessário.
-    /// Mesmo padrão de FiscalController.GetOrCreateConfigAsync.
     /// </summary>
     private async Task<SiteConfig> GetOrCreateConfigAsync()
     {

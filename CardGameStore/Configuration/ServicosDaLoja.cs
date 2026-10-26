@@ -108,14 +108,6 @@ public static class ServicosDaLoja
             client.Timeout = TimeSpan.FromSeconds(20);
         });
 
-        services.AddHttpClient(TenantErpApiClient.HttpClientName, (services, client) =>
-        {
-            var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<TenantErpIntegrationOptions>>().Value;
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-            client.DefaultRequestHeaders.Add("User-Agent", "SoftNerd/TenantErpIntegration");
-        });
-
         return services;
     }
 
@@ -141,35 +133,15 @@ public static class ServicosDaLoja
         services.AddSingleton<ITcgApiClient,     TcgApiClient>();
         services.AddSingleton<ITcgService,       TcgService>();
         services.AddSingleton<CurrencyService>();
-        services.AddSingleton<ITenantErpApiClient, TenantErpApiClient>();
         services.AddMemoryCache();
 
         // LGPD — Auditoria e privacidade
         services.AddHttpContextAccessor();
         services.AddScoped<IAuditService, AuditService>();
         services.AddSingleton<OfxParserService>();
-        services.AddScoped<SefazNfeService>();
         services.AddSingleton<EncryptionService>();
         services.AddScoped<InterSyncService>();
         services.AddHostedService<InterSyncBackgroundService>();
-
-        // Fiscal — emissão de NFC-e, certificado A1, exportação de XMLs
-        services.AddScoped<FiscalCertificadoService>();
-        services.AddScoped<FiscalXmlExportService>();
-        var useCentralFiscalEngine =
-            configuration.GetValue<bool>("TenantErp:UseCentralFiscalEngine") &&
-            configuration.GetValue<bool>("TenantErp:Enabled");
-        if (useCentralFiscalEngine)
-            services.AddScoped<INfceEmissionService, TenantErpNfceEmissionService>();
-        else
-            services.AddScoped<INfceEmissionService, NfceEmissionService>();
-        services.AddHostedService<FiscalRetryBackgroundService>();
-        if (!useCentralFiscalEngine)
-        {
-            services.AddHostedService<FiscalAlertBackgroundService>();
-            services.AddHostedService<FiscalXmlExportBackgroundService>();
-            services.AddHostedService<SefazDistBackgroundService>();
-        }
 
         // Pix — sem webhook do Inter: o robô reconcilia cobranças ATIVA a cada 5 min e
         // dá a baixa por origem (mesmo caminho dos controllers, com claim atômico no
@@ -186,7 +158,6 @@ public static class ServicosDaLoja
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoPedidoParado>();
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoComandaEsquecida>();
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoPixComandaSemFechar>();
-        services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoNfceComProblema>();
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoTorneioNaoEncerrado>();
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoRobosParados>();
         services.AddScoped<CardGameStore.Services.Vigia.IVerificacaoVigia, CardGameStore.Services.Vigia.VerificacaoCrediarioSemAviso>();

@@ -126,10 +126,8 @@ public class OperatorPermissionMiddlewareTests
     /// </summary>
     private static readonly string[] SoODonoDeProposito =
     [
-        "/api/fiscal",                      // certificado A1, emissão fiscal
         "/api/site-config",                 // personalização do site (menu "Configuração", só dono)
         "/api/admin/whatsapp",              // pareamento do WhatsApp da loja
-        "/api/integrations/tenant-erp",     // integração com o ERP
         "/api/ai",                          // assistente IA do painel
         "/api/admin/vigia",                 // alertas do sistema (Configuração → Alertas, só dono)
         "/api/auth",                        // ignorada pelo middleware

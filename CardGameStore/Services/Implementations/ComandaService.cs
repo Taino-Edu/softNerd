@@ -448,7 +448,7 @@ public class ComandaService : IComandaService
         return dto;
     }
 
-    public async Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = Models.MongoDB.PaymentMethod.Dinheiro, string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0, bool emitirNotaFiscal = false,
+    public async Task<ComandaDto> CloseComandaAsync(Guid comandaId, Guid adminId, string paymentMethod = Models.MongoDB.PaymentMethod.Dinheiro, string? observacao = null, string? secondPaymentMethod = null, int secondPaymentAmountInCents = 0, Guid? crediarioExistenteId = null, int discountInCents = 0,
         DateTime? crediarioVencimento = null)
     {
         // Mesma validação que a venda avulsa já fazia: sem isto a comanda gravava
@@ -664,34 +664,7 @@ public class ComandaService : IComandaService
 
         await _db.SaveChangesAsync();
 
-        // Emite a NFC-e referente a esta comanda — só quando o admin escolheu explicitamente
-        // emitir no fechamento (Maikon não quer nota emitida sem antes perguntar). Aguarda o
-        // resultado (em vez de fire-and-forget) pra poder devolver o status pro caixa na hora
-        // e permitir abrir o cupom automaticamente quando autorizar. Falhas fiscais comuns não
-        // derrubam o fechamento; a exceção da trava geral é tratada logo abaixo.
-        // Se não marcou, nenhuma NotaFiscalEmitida é criada; a emissão pode ser feita depois
-        // manualmente pelo histórico.
-        NotaFiscalEmitida? nota = null;
-        string? bloqueioFiscal = null;
-        if (emitirNotaFiscal)
-        {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var emissao = scope.ServiceProvider.GetRequiredService<INfceEmissionService>();
-                nota = await emissao.EmitirParaComandaAsync(comandaId);
-            }
-            catch (FiscalModuloBloqueadoException ex)
-            {
-                // A venda já foi fechada com sucesso; a trava impede somente a NFC-e.
-                bloqueioFiscal = ex.Message;
-            }
-        }
-
         var dto = MapToDto(comanda);
-        dto.NotaFiscalId              = nota?.Id;
-        dto.NotaFiscalStatus          = bloqueioFiscal is null ? nota?.Status.ToString() : "Bloqueada";
-        dto.NotaFiscalMotivoRejeicao  = bloqueioFiscal ?? nota?.MotivoRejeicao;
         // Notifica o cliente que a comanda foi fechada
         await _hub.Clients.Group(ComandaHub.GetComandaGroup(comandaId))
             .SendAsync("ComandaClosed", new { ComandaId = comandaId, PaymentMethod = paymentMethod });
@@ -721,7 +694,7 @@ public class ComandaService : IComandaService
          || comanda.Status == ComandaStatus.Estornada)
             throw new InvalidOperationException(
                 "Esta comanda já foi fechada (cobrada) ou cancelada — cancelamento sem cobrança só se aplica a comandas ainda abertas. " +
-                "Para estornar uma venda já fechada, use o cancelamento da nota fiscal (Admin > Fiscal).");
+                "Para desfazer uma venda já fechada, use Estornar no histórico da comanda.");
 
         foreach (var item in comanda.Items.Where(i => i.ProductId.HasValue))
         {
@@ -778,15 +751,6 @@ public class ComandaService : IComandaService
         if (comanda.Status != ComandaStatus.Fechada)
             throw new InvalidOperationException(
                 "Só dá pra estornar comanda fechada. Comanda ainda aberta se cancela pelo botão de cancelar.");
-
-        // Nota autorizada não se desfaz por dentro do sistema — tem prazo legal na SEFAZ.
-        var notaAtiva = await _db.NotasFiscaisEmitidas
-            .AnyAsync(n => n.ComandaId == comandaId
-                        && (n.Status == NotaFiscalStatus.Autorizada
-                         || n.Status == NotaFiscalStatus.AutorizadaContingencia));
-        if (notaAtiva)
-            throw new InvalidOperationException(
-                "Esta comanda tem NFC-e autorizada. Cancele a nota em Admin > Fiscal primeiro.");
 
         // Crediário onde esta comanda entrou. O lançamento acha a conta mesmo quando a
         // comanda foi acumulada numa conta aberta por outra compra — antes só a comanda

@@ -5,7 +5,7 @@
 // a cultura invariante e "{valor:N2}" vira "1,234.56" — o cliente recebia "R$ 30.00"
 // no WhatsApp do crediário. Achado pelo CI (testes rodando no Linux).
 //
-// NÃO mudamos a cultura global de propósito: Pix (Inter) e XML da NFC-e exigem
+// NÃO mudamos a cultura global de propósito: Pix (Inter) exige
 // ponto decimal. Use isto só em texto que uma pessoa vai ler. Logs podem ficar como estão.
 // Espelho no front: frontend/lib/format.ts (brl).
 // =============================================================================

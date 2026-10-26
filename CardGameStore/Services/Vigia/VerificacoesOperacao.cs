@@ -1,6 +1,6 @@
 // =============================================================================
 // VerificacoesOperacao.cs — gatilhos do dia a dia da loja (Vigia)
-// Comanda esquecida, Pix de comanda pago sem fechar, NFC-e com problema, torneio sem
+// Comanda esquecida, Pix de comanda pago sem fechar, torneio sem
 // encerrar e robô parado. Cada classe responde UMA pergunta; a regra mora no serviço dela.
 // =============================================================================
 
@@ -60,37 +60,6 @@ public class VerificacaoPixComandaSemFechar(AppDbContext db) : IVerificacaoVigia
                 $"(mesa {c.TableIdentifier ?? "—"}) continua aberta. Feche a comanda com Pix. Pix {p.TxId}.",
                 "/admin/dashboard");
         }).ToList();
-    }
-}
-
-/// <summary>NFC-e rejeitada (30 dias) ou pendente/em contingência há mais de 2 h.</summary>
-public class VerificacaoNfceComProblema(AppDbContext db) : IVerificacaoVigia
-{
-    public string Codigo => "nfce-com-problema";
-    public string Nome => "NFC-e rejeitada ou pendente";
-
-    public async Task<IReadOnlyList<Achado>> VerificarAsync(CancellationToken ct)
-    {
-        var desde = DateTime.UtcNow.AddDays(-30);
-        var paradaDesde = DateTime.UtcNow.AddHours(-2);
-        var notas = await db.NotasFiscaisEmitidas.AsNoTracking()
-            .Where(n => n.CreatedAt >= desde &&
-                        (n.Status == NotaFiscalStatus.Rejeitada
-                         || ((n.Status == NotaFiscalStatus.PendenteEmissao || n.Status == NotaFiscalStatus.AutorizadaContingencia)
-                             // CreatedAt, não UpdatedAt: cada reenvio que falha atualiza o UpdatedAt e a nota
-                             // nunca pareceria parada durante uma queda da SEFAZ
-                             && n.CreatedAt < paradaDesde)))
-            .Select(n => new { n.Id, n.Status, n.Numero, n.ValorTotalEmCentavos, n.MotivoRejeicao, n.CreatedAt })
-            .ToListAsync(ct);
-        return notas.Select(n => n.Status == NotaFiscalStatus.Rejeitada
-            ? new Achado(n.Id.ToString(), VigiaGravidade.Aviso,
-                $"NFC-e rejeitada{(n.Numero is null ? "" : $" nº {n.Numero}")}",
-                $"Nota de {VigiaPedidos.Reais(n.ValorTotalEmCentavos)} de {Brasilia.Formatar(n.CreatedAt)} rejeitada pela SEFAZ: " +
-                $"{n.MotivoRejeicao ?? "sem motivo informado"}. Corrija e emita de novo em Fiscal.", "/admin/fiscal")
-            : new Achado(n.Id.ToString(), VigiaGravidade.Aviso,
-                n.Status == NotaFiscalStatus.AutorizadaContingencia ? "NFC-e em contingência sem retransmitir" : "NFC-e pendente de emissão",
-                $"Nota de {VigiaPedidos.Reais(n.ValorTotalEmCentavos)} de {Brasilia.Formatar(n.CreatedAt)} parada há mais de 2 h " +
-                $"({n.Status}). O robô de reenvio deveria ter resolvido — confira em Fiscal.", "/admin/fiscal")).ToList();
     }
 }
 

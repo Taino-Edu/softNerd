@@ -24,16 +24,12 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | `crediarios` | `Crediario` | `Crediarios` | colunas | `CardGameStore/Models/PostgreSQL/Crediario.cs` |
 | `decks` | `Deck` | `Decks` | criada | `CardGameStore/Models/PostgreSQL/Deck.cs` |
 | `external_transactions` | `ExternalTransaction` | `ExternalTransactions` | criada | `CardGameStore/Models/PostgreSQL/ExternalTransaction.cs` |
-| `fiscal_config` | `FiscalConfig` | `FiscalConfigs` | criada, colunas | `CardGameStore/Models/PostgreSQL/FiscalConfig.cs` |
 | `funcionalidades` | `FuncionalidadeEstado` | `FuncionalidadesEstado` | criada | `CardGameStore/Models/PostgreSQL/FuncionalidadeEstado.cs` |
 | `integration_configs` | `IntegrationConfig` | `IntegrationConfigs` | criada, colunas | `CardGameStore/Models/PostgreSQL/IntegrationConfig.cs` |
 | `lgpd_requests` | `LgpdRequest` | `LgpdRequests` | colunas | `CardGameStore/Models/PostgreSQL/LgpdRequest.cs` |
 | `liga_mensal_manual_entries` | `LigaMensalManualEntry` | `LigaMensalManualEntries` | criada | `CardGameStore/Models/PostgreSQL/LigaMensalManualEntry.cs` |
 | `listing_interests` | `ListingInterest` | `ListingInterests` | criada, colunas | `CardGameStore/Models/PostgreSQL/CardListing.cs` |
 | `marcos_operacao` | `MarcoOperacao` | `MarcosOperacao` | criada | `CardGameStore/Models/PostgreSQL/MarcoOperacao.cs` |
-| `naturezas_operacao` | `NaturezaOperacao` | `NaturezasOperacao` | criada, colunas | `CardGameStore/Models/PostgreSQL/NaturezaOperacao.cs` |
-| `notas_destinadas` | `NotaDestinada` | `NotasDestinadas` | criada | `CardGameStore/Models/PostgreSQL/NotaDestinada.cs` |
-| `notas_fiscais_emitidas` | `NotaFiscalEmitida` | `NotasFiscaisEmitidas` | criada, colunas | `CardGameStore/Models/PostgreSQL/NotaFiscalEmitida.cs` |
 | `notifications` | `Notification` | `Notifications` | criada, colunas | `CardGameStore/Models/PostgreSQL/Notification.cs` |
 | `pagamentos_crediario` | `PagamentoCrediario` | `PagamentosCrediario` | — | `CardGameStore/Models/PostgreSQL/PagamentoCrediario.cs` |
 | `perfis` | `Perfil` | `Perfis` | criada | `CardGameStore/Models/PostgreSQL/Perfil.cs` |
@@ -71,10 +67,6 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Classe | O que faz | Arquivo |
 |---|---|---|
 | `InterSyncBackgroundService` | — | `CardGameStore/Services/Implementations/InterSyncService.cs` |
-| `FiscalRetryBackgroundService` | Contingência: reprocessa periodicamente | `CardGameStore/Services/Implementations/FiscalRetryBackgroundService.cs` |
-| `FiscalAlertBackgroundService` | Verifica diariamente o vencimento do | `CardGameStore/Services/Implementations/FiscalAlertBackgroundService.cs` |
-| `FiscalXmlExportBackgroundService` | Todo dia 1 (fuso de Brasília), gera e | `CardGameStore/Services/Implementations/FiscalXmlExportBackgroundService.cs` |
-| `SefazDistBackgroundService` | "DDA" fiscal: roda a Manifestação do | `CardGameStore/Services/Implementations/SefazDistBackgroundService.cs` |
 | `CardGameStore.Services.Vigia.VigiaBackgroundService` | roda o Vigia a cada 10 minutos (chave "vigia-sistema") | `CardGameStore/Services/Vigia/VigiaBackgroundService.cs` |
 | `PixReconciliationBackgroundService` | Robô de confirmação de Pix. | `CardGameStore/Services/Implementations/PixReconciliationBackgroundService.cs` |
 | `CrediarioAvisoBackgroundService` | Roda os lembretes de vencimento do | `CardGameStore/Services/Implementations/CrediarioAvisoBackgroundService.cs` |
@@ -102,16 +94,10 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Singleton | `ITcgApiClient → TcgApiClient` | `CardGameStore/Services/Implementations/TcgApiClient.cs` |
 | Singleton | `ITcgService → TcgService` | `CardGameStore/Services/Implementations/TcgService.cs` |
 | Singleton | `CurrencyService` | `CardGameStore/Services/Implementations/CurrencyService.cs` |
-| Singleton | `ITenantErpApiClient → TenantErpApiClient` | `CardGameStore/Services/Implementations/TenantErpApiClient.cs` |
 | Scoped | `IAuditService → AuditService` | `CardGameStore/Services/Implementations/AuditService.cs` |
 | Singleton | `OfxParserService` | `CardGameStore/Services/Implementations/OfxParserService.cs` |
-| Scoped | `SefazNfeService` | `CardGameStore/Services/Implementations/SefazNfeService.cs` |
 | Singleton | `EncryptionService` | `CardGameStore/Services/Implementations/EncryptionService.cs` |
 | Scoped | `InterSyncService` | `CardGameStore/Services/Implementations/InterSyncService.cs` |
-| Scoped | `FiscalCertificadoService` | `CardGameStore/Services/Implementations/FiscalCertificadoService.cs` |
-| Scoped | `FiscalXmlExportService` | `CardGameStore/Services/Implementations/FiscalXmlExportService.cs` |
-| Scoped | `INfceEmissionService → TenantErpNfceEmissionService` | `CardGameStore/Services/Implementations/TenantErpNfceEmissionService.cs` |
-| Scoped | `INfceEmissionService → NfceEmissionService` | `CardGameStore/Services/Implementations/NfceEmissionService.cs` |
 | Scoped | `PedidoVendaService` | `CardGameStore/Services/Implementations/PedidoVendaService.cs` |
 | Scoped | `CardGameStore.Services.Vigia.VigiaService` | `CardGameStore/Services/Vigia/VigiaService.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPixPagoPedidoCancelado` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
@@ -122,7 +108,6 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPedidoParado` | `CardGameStore/Services/Vigia/VerificacoesPedidos.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoComandaEsquecida` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoPixComandaSemFechar` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
-| Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoNfceComProblema` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoTorneioNaoEncerrado` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoRobosParados` | `CardGameStore/Services/Vigia/VerificacoesOperacao.cs` |
 | Scoped | `CardGameStore.Services.Vigia.IVerificacaoVigia → CardGameStore.Services.Vigia.VerificacaoCrediarioSemAviso` | `CardGameStore/Services/Vigia/VerificacoesRotina.cs` |

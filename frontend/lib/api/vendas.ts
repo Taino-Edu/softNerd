@@ -20,10 +20,6 @@ export interface VendaAvulsaDto {
     unitPriceInReais: number
     subtotalInReais: number
   }[]
-  /** Preenchidos só quando o registro pediu emissão de NFC-e (emitirNotaFiscal=true). */
-  notaFiscalId?: string | null
-  notaFiscalStatus?: string | null
-  notaFiscalMotivoRejeicao?: string | null
   /** Crediário que esta venda gerou, quando o pagamento foi no crediário. */
   crediarioId?: string | null
   /** Estorno: a venda continua existindo, mas não conta mais no faturamento. */
@@ -81,7 +77,6 @@ export const vendaAvulsaApi = {
     secondPaymentMethod?: string | null,
     secondPaymentAmountInCents = 0,
     discountInCents?: number,
-    emitirNotaFiscal = false,
     /** Conta de crediário onde lançar, quando o cliente já tem mais de uma aberta. */
     crediarioExistenteId?: string,
     /** Força abrir conta nova de crediário mesmo já existindo outra aberta. */
@@ -94,7 +89,6 @@ export const vendaAvulsaApi = {
       crediarioExistenteId, abrirNovoCrediario, crediarioVencimento,
       secondPaymentMethod: secondPaymentMethod || null,
       secondPaymentAmountInCents,
-      emitirNotaFiscal,
     }),
   byDate: (date: string) =>
     api.get<VendaAvulsaDto[]>('/api/venda-avulsa/by-date', { params: { date } }),

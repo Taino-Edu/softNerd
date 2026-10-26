@@ -150,7 +150,7 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
   → `POST /api/vigia/erro-tela` (anônimo: sem link, sininho no máx. 1×/hora, teto de 200 abertos).
 - Tela: `/admin/alertas` (só dono). Chave `vigia-sistema`.
 - Gatilhos: `VerificacoesPedidos.cs` (Pix/pedidos/estoque), `VerificacoesOperacao.cs` (comanda esquecida, Pix de
-  comanda sem fechar, NFC-e, torneio sem encerrar, robô parado) e `VerificacoesRotina.cs` (crediário sem aviso,
+  comanda sem fechar, torneio sem encerrar, robô parado) e `VerificacoesRotina.cs` (crediário sem aviso,
   rodada parada, backup atrasado).
 - Coisa que roda **fora da API** (script na VPS) e precisa ser vigiada: grava em `marcos_operacao` (chave + quando)
   no fim — é o que o `backup.sh` faz com `backup-diario`.

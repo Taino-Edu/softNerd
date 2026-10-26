@@ -18,10 +18,6 @@ export interface ComandaDto {
   /** Saldo de cashback/crédito do cliente em centavos. */
   userBalanceInCents: number
   profileImageUrl?: string | null
-  /** Preenchidos só quando o fechamento pediu emissão de NFC-e (emitirNotaFiscal=true). */
-  notaFiscalId?: string | null
-  notaFiscalStatus?: string | null
-  notaFiscalMotivoRejeicao?: string | null
   /** Preenchidos quando a comanda fechada foi estornada (status = "Estornada"). */
   estornadaEm?: string | null
   motivoEstorno?: string | null
@@ -79,8 +75,8 @@ export const comandaApi = {
   updateItem:   (id: string, itemId: string, quantity: number) =>
     api.patch<ComandaDto>(`/api/comanda/${id}/items/${itemId}`, { quantity }),
   /** crediarioVencimento (YYYY-MM-DD) só vale pra conta NOVA — acumular não mexe no prazo da conta existente. */
-  close:        (id: string, paymentMethod = 'Dinheiro', observacao?: string, secondPaymentMethod?: string, secondPaymentAmountInCents = 0, crediarioExistenteId?: string, discountInCents = 0, emitirNotaFiscal = false, crediarioVencimento?: string) =>
-    api.put<ComandaDto>(`/api/comanda/${id}/close`, { paymentMethod, observacao, secondPaymentMethod, secondPaymentAmountInCents, crediarioExistenteId, discountInCents, emitirNotaFiscal, crediarioVencimento }),
+  close:        (id: string, paymentMethod = 'Dinheiro', observacao?: string, secondPaymentMethod?: string, secondPaymentAmountInCents = 0, crediarioExistenteId?: string, discountInCents = 0, crediarioVencimento?: string) =>
+    api.put<ComandaDto>(`/api/comanda/${id}/close`, { paymentMethod, observacao, secondPaymentMethod, secondPaymentAmountInCents, crediarioExistenteId, discountInCents, crediarioVencimento }),
   cancel:       (id: string) => api.put<ComandaDto>(`/api/comanda/${id}/cancel`),
   /** Comanda JÁ FECHADA cobrada errada: devolve estoque e pontos, baixa crediário e sai do faturamento. */
   estornar:     (id: string, motivo: string) => api.post<ComandaDto>(`/api/comanda/${id}/estornar`, { motivo }),

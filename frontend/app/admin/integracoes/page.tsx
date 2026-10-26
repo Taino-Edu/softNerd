@@ -8,8 +8,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   CheckCircle, XCircle, Settings, Loader2, RefreshCw,
-  Upload, Info, AlertTriangle, ExternalLink, X, Save, Link2,
-  Search, Wallet,
+  Upload, Info, ExternalLink, X, Save, Wallet,
 } from 'lucide-react'
 
 type IntegracaoStatus = {
@@ -32,25 +31,6 @@ type ConfigModal = {
   certUploading?: boolean
 }
 
-type TenantErpStatus = {
-  enabled: boolean
-  endpoint?: string
-}
-
-type TenantErpProbe = {
-  configured: boolean
-  authenticated: boolean
-  financeiro: { success: boolean; statusCode?: number; message: string }
-  fiscal: { success: boolean; statusCode?: number; message: string }
-  durationMs: number
-}
-
-type IbptResult = {
-  ncm: string; uf: string; importado: boolean
-  percentualFederal: number; percentualEstadual: number; percentualMunicipal: number; percentualTotal: number
-  fonte?: string; versao?: string; vigenciaInicio?: string; vigenciaFim?: string; vencida: boolean
-}
-
 const INTEGRACAO_INFO: Record<string, {
   label: string; icon: string; desc: string; fields: string[]; docs?: string
 }> = {
@@ -68,12 +48,6 @@ const INTEGRACAO_INFO: Record<string, {
     fields: ['clientId', 'clientSecret'],
     docs: 'https://www.mercadopago.com.br/developers',
   },
-  sefaz: {
-    label: 'SEFAZ NF-e',
-    icon:  '📋',
-    desc:  'Consulta NF-e emitidas contra o CNPJ via SEFAZ DFe Distribuição. Requer certificado A1 (DFe.NET).',
-    fields: ['cnpj'],
-  },
 }
 
 const fmtMoeda = (v: number) =>
@@ -84,20 +58,9 @@ function fmtDate(d?: string) {
   return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-function fmtTempoRestante(ms: number) {
-  const totalSegundos = Math.max(0, Math.ceil(ms / 1000))
-  const horas = Math.floor(totalSegundos / 3600)
-  const minutos = Math.floor((totalSegundos % 3600) / 60)
-  const segundos = totalSegundos % 60
-  return horas > 0
-    ? `${horas}h ${String(minutos).padStart(2, '0')}min`
-    : `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`
-}
-
 export default function IntegracoesPage() {
   const [integracoes, setIntegracoes] = useState<IntegracaoStatus[]>([])
   const [loading,     setLoading]     = useState(true)
-  const [sefazOk,     setSefazOk]     = useState(false)
   const [configModal, setConfigModal] = useState<ConfigModal | null>(null)
   const [saving,      setSaving]      = useState(false)
   const [ofxLoading,  setOfxLoading]  = useState(false)
@@ -106,35 +69,12 @@ export default function IntegracoesPage() {
   const [interInfo, setInterInfo] = useState<{ saldo: number | null; lastSyncAt: string | null }>(
     { saldo: null, lastSyncAt: null },
   )
-  const [syncingSefaz, setSyncingSefaz] = useState(false)
-  const [tenantErp, setTenantErp] = useState<TenantErpStatus>({ enabled: false })
-  const [tenantErpProbe, setTenantErpProbe] = useState<TenantErpProbe | null>(null)
-  const [testingTenantErp, setTestingTenantErp] = useState(false)
-  const [ibptNcm, setIbptNcm] = useState('')
-  const [ibptUf, setIbptUf] = useState('SP')
-  const [ibptImportado, setIbptImportado] = useState(false)
-  const [ibptLoading, setIbptLoading] = useState(false)
-  const [ibptResult, setIbptResult] = useState<IbptResult | null>(null)
-  const [sefazProximaConsultaEm, setSefazProximaConsultaEm] = useState<string | null>(null)
-  const [agora, setAgora] = useState(() => Date.now())
-
-  const sefazTempoRestante = sefazProximaConsultaEm
-    ? new Date(sefazProximaConsultaEm).getTime() - agora
-    : 0
-  const sefazCooldownAtivo = sefazTempoRestante > 0
 
   async function load() {
     setLoading(true)
     try {
-      const [{ data: ints }, { data: sefaz }, tenantErpResponse] = await Promise.all([
-        api.get('/api/contas-receber/integracoes'),
-        api.get('/api/contas-receber/sefaz-status'),
-        api.get<TenantErpStatus>('/api/integrations/tenant-erp/status').catch(() => null),
-      ])
+      const { data: ints } = await api.get('/api/contas-receber/integracoes')
       setIntegracoes(ints)
-      setSefazOk(sefaz.configured)
-      setSefazProximaConsultaEm(sefaz.proximaConsultaEm ?? null)
-      if (tenantErpResponse) setTenantErp(tenantErpResponse.data)
     } catch { toast.error('Erro ao carregar integrações') }
     finally  { setLoading(false) }
   }
@@ -156,10 +96,6 @@ export default function IntegracoesPage() {
   useEffect(() => {
     const id = window.setInterval(() => { load(); carregarInfoInter() }, 5 * 60 * 1000)
     return () => window.clearInterval(id)
-  }, [])
-  useEffect(() => {
-    const timer = window.setInterval(() => setAgora(Date.now()), 1000)
-    return () => window.clearInterval(timer)
   }, [])
 
   async function openConfig(src: string, current?: IntegracaoStatus) {
@@ -243,64 +179,6 @@ export default function IntegracoesPage() {
     }
   }
 
-  async function syncSefazAgora() {
-    setSyncingSefaz(true)
-    try {
-      const { data } = await api.post('/api/contas-receber/sefaz/sync')
-      toast.success(
-        `${data.novasNotas} nota(s) nova(s), ${data.manifestadas} ciência(s), ${data.contasCriadas} conta(s) a pagar.`,
-        { duration: 6000 },
-      )
-      if (data.mensagem) toast(data.mensagem, { duration: 8000 })
-      load()
-    } catch (err: any) {
-      const proxima = err?.response?.data?.proximaTentativaEm
-      if (proxima) setSefazProximaConsultaEm(proxima)
-      toast.error(err?.response?.data?.message ?? 'Erro ao sincronizar com a SEFAZ.')
-      load()
-    } finally {
-      setSyncingSefaz(false)
-    }
-  }
-
-  async function testTenantErp() {
-    setTestingTenantErp(true)
-    try {
-      const { data } = await api.post<TenantErpProbe>('/api/integrations/tenant-erp/test')
-      setTenantErpProbe(data)
-      if (data.authenticated && data.financeiro.success && data.fiscal.success)
-        toast.success('Tenant-ERP conectado ao Financeiro e Fiscal.')
-      else if (data.authenticated)
-        toast.error('Autenticação aceita, mas há escopo ou módulo pendente.')
-      else
-        toast.error(data.financeiro.message || 'Credencial recusada pelo Tenant-ERP.')
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Não foi possível testar o Tenant-ERP.')
-    } finally {
-      setTestingTenantErp(false)
-    }
-  }
-
-  async function lookupIbpt() {
-    const ncm = ibptNcm.replace(/\D/g, '')
-    if (ncm.length !== 8) {
-      toast.error('Informe os 8 dígitos do NCM.')
-      return
-    }
-    setIbptLoading(true)
-    setIbptResult(null)
-    try {
-      const { data } = await api.get<IbptResult>(`/api/integrations/tenant-erp/fiscal/ibpt/${ncm}`, {
-        params: { uf: ibptUf, importado: ibptImportado },
-      })
-      setIbptResult(data)
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'NCM não encontrado na tabela IBPT publicada.')
-    } finally {
-      setIbptLoading(false)
-    }
-  }
-
   async function handleOfxUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -340,77 +218,11 @@ export default function IntegracoesPage() {
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className={clsx('card p-5 flex gap-4', tenantErpProbe?.authenticated && 'border-green-500/20')}>
-            <Link2 className="w-7 h-7 text-brand-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-bold text-white">Tenant-ERP</h3>
-                <Badge tone={tenantErpProbe?.authenticated ? 'success' : 'neutral'} className="uppercase">
-                  {tenantErpProbe?.authenticated ? 'Conectado' : tenantErp.enabled ? 'Configurado' : 'Não configurado'}
-                </Badge>
-                {tenantErp.endpoint && <span className="text-xs text-gray-500 ml-auto">{tenantErp.endpoint}</span>}
-              </div>
-              <p className="text-sm text-gray-400 mt-1">
-                Canal técnico com a 3ESysten. Os dados da loja continuam no banco do Soft Nerd.
-              </p>
-              {tenantErpProbe && (
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
-                  <span className={tenantErpProbe.financeiro.success ? 'text-green-400' : 'text-amber-400'}>
-                    Financeiro: {tenantErpProbe.financeiro.success ? 'escopo confirmado' : tenantErpProbe.financeiro.message}
-                  </span>
-                  <span className={tenantErpProbe.fiscal.success ? 'text-green-400' : 'text-amber-400'}>
-                    Fiscal: {tenantErpProbe.fiscal.success ? 'escopo confirmado' : tenantErpProbe.fiscal.message}
-                  </span>
-                  <span className="text-gray-500">{tenantErpProbe.durationMs} ms</span>
-                </div>
-              )}
-              <button
-                onClick={testTenantErp}
-                disabled={!tenantErp.enabled || testingTenantErp}
-                className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30
-                           border border-brand-500/30 text-sm text-brand-300 transition-colors disabled:opacity-50">
-                {testingTenantErp
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <RefreshCw className="w-3.5 h-3.5" />}
-                {testingTenantErp ? 'Testando conexão…' : 'Testar conexão'}
-              </button>
-
-              <div className="mt-4 border-t border-surface-600 pt-4">
-                <p className="text-xs font-semibold uppercase text-gray-500">Consulta fiscal IBPT</p>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_90px_auto_auto]">
-                  <input value={ibptNcm} onChange={event => setIbptNcm(event.target.value)} inputMode="numeric" maxLength={10} placeholder="NCM, ex.: 95044000" className="input w-full" />
-                  <select value={ibptUf} onChange={event => setIbptUf(event.target.value)} className="input w-full">
-                    {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => <option key={uf}>{uf}</option>)}
-                  </select>
-                  <label className="flex items-center gap-2 rounded-lg border border-surface-500 bg-surface-700 px-3 text-xs text-gray-300">
-                    <input type="checkbox" checked={ibptImportado} onChange={event => setIbptImportado(event.target.checked)} /> Importado
-                  </label>
-                  <button onClick={lookupIbpt} disabled={!tenantErp.enabled || ibptLoading} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/20 px-3 py-2 text-sm text-brand-300 disabled:opacity-50">
-                    {ibptLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Consultar
-                  </button>
-                </div>
-                {ibptResult && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-                    {[
-                      ['Federal', ibptResult.percentualFederal], ['Estadual', ibptResult.percentualEstadual],
-                      ['Municipal', ibptResult.percentualMunicipal], ['Total', ibptResult.percentualTotal],
-                    ].map(([label, value]) => (
-                      <div key={label as string} className="rounded-lg bg-surface-700 p-2">
-                        <p className="text-gray-500">{label as string}</p><p className="text-base font-bold text-white">{Number(value).toFixed(2)}%</p>
-                      </div>
-                    ))}
-                    <p className="col-span-full text-gray-500">Versão {ibptResult.versao ?? 'não informada'} · {ibptResult.fonte ?? 'IBPT'}{ibptResult.vencida ? ' · tabela vencida' : ''}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* Cards de integrações */}
           {integracoes.map(int => {
             const info = INTEGRACAO_INFO[int.source]
             if (!info) return null
-            const isReady = int.source === 'sefaz' ? sefazOk && !!int.cnpj : int.isConnected
+            const isReady = int.isConnected
             return (
               <div key={int.source} className={clsx(
                 'card p-5 flex gap-4',
@@ -454,26 +266,6 @@ export default function IntegracoesPage() {
                     <p className="text-xs text-gray-500 mt-0.5">Chave Pix: {int.pixKey}</p>
                   )}
 
-                  {int.source === 'sefaz' && !sefazOk && (
-                    <div className="flex items-center gap-2 mt-2 text-amber-400 text-xs bg-amber-500/10 rounded-lg p-2">
-                      <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                      Requer certificado A1 e CNPJ/UF configurados em Admin → Fiscal.
-                    </div>
-                  )}
-                  {int.source === 'sefaz' && sefazOk && !int.isActive && (
-                    <div className="flex items-center gap-2 mt-2 text-amber-400 text-xs bg-amber-500/10 rounded-lg p-2">
-                      <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                      Certificado ok. Clique em Configurar e salve para ativar a consulta automática (a cada 2h).
-                    </div>
-                  )}
-                  {int.source === 'sefaz' && sefazCooldownAtivo && (
-                    <div className="flex items-center gap-2 mt-2 text-amber-400 text-xs bg-amber-500/10 rounded-lg p-2">
-                      <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                      Intervalo de segurança do SEFAZ. Nova consulta disponível em {fmtTempoRestante(sefazTempoRestante)}
-                      {sefazProximaConsultaEm ? ` (${fmtDate(sefazProximaConsultaEm)})` : ''}.
-                    </div>
-                  )}
-
                   <div className="flex items-center gap-2 mt-3">
                     <button
                       onClick={() => openConfig(int.source, int)}
@@ -490,20 +282,6 @@ export default function IntegracoesPage() {
                                    border border-brand-500/30 text-sm text-brand-300 transition-colors disabled:opacity-50">
                         {syncingInter ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                         {syncingInter ? 'Sincronizando…' : 'Atualizar do banco agora'}
-                      </button>
-                    )}
-                    {int.source === 'sefaz' && sefazOk && (
-                      <button
-                        onClick={syncSefazAgora}
-                        disabled={syncingSefaz || sefazCooldownAtivo}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30
-                                   border border-brand-500/30 text-sm text-brand-300 transition-colors disabled:opacity-50">
-                        {syncingSefaz ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                        {syncingSefaz
-                          ? 'Consultando SEFAZ…'
-                          : sefazCooldownAtivo
-                            ? `Aguarde ${fmtTempoRestante(sefazTempoRestante)}`
-                            : 'Sincronizar agora'}
                       </button>
                     )}
                     {info.docs && (

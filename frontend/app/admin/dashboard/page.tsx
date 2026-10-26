@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { SECOND_PAYMENT_METHODS, comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, fiscalApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
+import { SECOND_PAYMENT_METHODS, comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
 import { usePreferences } from '@/hooks/usePreferences'
 import { startHub, stopHub, ComandaUpdatedEvent } from '@/lib/signalr'
 import { playGoalSound } from '@/lib/sounds'
@@ -20,27 +20,12 @@ import {
   Clock, CheckCircle, XCircle, Plus, ChevronDown, ChevronUp,
   History, Search, Loader2, TableProperties, Trash2, CreditCard, ScanBarcode, Camera,
   AlertTriangle, DollarSign, BarChart2, Trophy, Star, FolderOpen, Package, Shield, MessageCircle,
-  Pencil, X, UserSearch, QrCode, Receipt, RotateCcw,
+  Pencil, X, UserSearch, QrCode, RotateCcw,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { rotuloCurtoPagamento } from '@/lib/pagamentos'
 import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
 
-
-/** Após um fechamento com "Emitir cupom fiscal" marcado: abre o cupom sozinho se autorizou,
- * ou avisa o motivo se rejeitou/ficou pendente (SEFAZ fora do ar — o retry automático tenta de novo). */
-function handleNotaFiscalResult(notaId?: string | null, status?: string | null, motivo?: string | null) {
-  if (!status) return
-  if (status === 'Bloqueada') {
-    toast.error(motivo ?? 'Módulo bloqueado por hora')
-    return
-  }
-  if (status === 'Autorizada' && notaId) {
-    window.open(`/admin/fiscal/cupom/${notaId}`, '_blank')
-  } else {
-    toast.error(`Nota fiscal não autorizou ainda (${status})${motivo ? ' — ' + motivo : ''}. O sistema tenta de novo automaticamente.`)
-  }
-}
 
 /** Data de hoje no fuso de Brasília como YYYY-MM-DD (nunca usa UTC). */
 const brToday = () => hojeBrasil()
@@ -483,14 +468,12 @@ function AdminOpenModal({
 // ── Modal: selecionar pagamento ao fechar comanda ────────────────────────────
 
 function CloseComandaModal({
-  comanda, onConfirm, onCancel, onGerarPix, autoEmitMethods, fiscalModuloAtivo,
+  comanda, onConfirm, onCancel, onGerarPix,
 }: {
   comanda:   ComandaDto
-  onConfirm: (paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number, emitirNotaFiscal?: boolean) => void
+  onConfirm: (paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number) => void
   onCancel:  () => void
   onGerarPix: () => void
-  autoEmitMethods: string[]
-  fiscalModuloAtivo: boolean
 }) {
   const [method,        setMethod]        = useState('Dinheiro')
   const [splitEnabled,  setSplitEnabled]  = useState(false)
@@ -501,13 +484,6 @@ function CloseComandaModal({
   const [discountMode,  setDiscountMode]  = useState<'percent' | 'cents'>('percent')
   const [discountPct,   setDiscountPct]   = useState(0)
   const [descontoStr,   setDescontoStr]   = useState('')
-  const [emitirNota,    setEmitirNota]    = useState(() => fiscalModuloAtivo && autoEmitMethods.includes('Dinheiro'))
-  const [notaTouched,   setNotaTouched]   = useState(false)
-
-  useEffect(() => {
-    if (!fiscalModuloAtivo) setEmitirNota(false)
-    else if (!notaTouched) setEmitirNota(autoEmitMethods.includes(method))
-  }, [method, autoEmitMethods, notaTouched, fiscalModuloAtivo])
 
   const totalAntesDesconto = comanda.totalInReais - comanda.pointsApplied / 100
   const totalAntesDescontoCents = Math.round(totalAntesDesconto * 100)
@@ -535,9 +511,9 @@ function CloseComandaModal({
 
   function handleConfirm() {
     if (splitEnabled && secondAmtCents > 0)
-      onConfirm(method, secondMethod, secondAmtCents, descontoCents, emitirNota)
+      onConfirm(method, secondMethod, secondAmtCents, descontoCents)
     else
-      onConfirm(method, undefined, undefined, descontoCents, emitirNota)
+      onConfirm(method, undefined, undefined, descontoCents)
   }
 
   return (
@@ -770,32 +746,6 @@ function CloseComandaModal({
           </p>
         )}
 
-        <button
-          type="button"
-          disabled={!fiscalModuloAtivo}
-          onClick={() => { setEmitirNota(v => !v); setNotaTouched(true) }}
-          className={clsx(
-            'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all disabled:cursor-not-allowed disabled:opacity-60',
-            emitirNota
-              ? 'bg-brand-600/10 border-brand-500/40 text-brand-300'
-              : 'border-surface-500 text-gray-500 hover:border-surface-400 hover:text-gray-300'
-          )}
-        >
-          <span>Emitir cupom fiscal (NFC-e) agora</span>
-          <span className={clsx('w-4 h-4 rounded border flex items-center justify-center text-xs shrink-0',
-            emitirNota ? 'bg-brand-500 border-brand-500 text-white' : 'border-surface-400'
-          )}>
-            {emitirNota && '✓'}
-          </span>
-        </button>
-        {!fiscalModuloAtivo ? (
-          <p className="text-xs text-red-400 -mt-1">Módulo bloqueado por hora</p>
-        ) : !emitirNota && (
-          <p className="text-xs text-gray-500 -mt-1">
-            Sem nota agora. Depois é possível emitir pelo histórico da comanda.
-          </p>
-        )}
-
         <div className="flex gap-3 pt-1">
           <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Voltar</button>
           {method === 'Pix' && !splitEnabled ? (
@@ -858,17 +808,15 @@ function ConfirmModal({
 // ── Card de Comanda ───────────────────────────────────────────────────────────
 
 function ComandaCard({
-  comanda, onClose, onCancel, onUpdate, onClosedExternally, isNew, recentChange, autoEmitMethods, fiscalModuloAtivo,
+  comanda, onClose, onCancel, onUpdate, onClosedExternally, isNew, recentChange,
 }: {
   comanda: ComandaDto
-  onClose:  (id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number, emitirNotaFiscal?: boolean) => void
+  onClose:  (id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number) => void
   onCancel: (id: string) => void
   onUpdate: (updated: ComandaDto, changeType?: 'add' | 'remove') => void
   onClosedExternally: () => void
   isNew:    boolean
   recentChange: 'add' | 'remove' | null
-  autoEmitMethods: string[]
-  fiscalModuloAtivo: boolean
 }) {
   const [expanded, setExpanded]   = useState(false)
   const [loading, setLoading]     = useState(false)
@@ -898,10 +846,10 @@ function ComandaCard({
     Aberta: '● Aberta', EmAndamento: '● Em Andamento',
   }
 
-  async function handleClose(paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number, emitirNotaFiscal?: boolean) {
+  async function handleClose(paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number) {
     setCloseOpen(false)
     setLoading(true)
-    try { await onClose(comanda.id, paymentMethod, secondMethod, secondAmountInCents, discountInCents, emitirNotaFiscal) } finally { setLoading(false) }
+    try { await onClose(comanda.id, paymentMethod, secondMethod, secondAmountInCents, discountInCents) } finally { setLoading(false) }
   }
   async function handleCancel() {
     setConfirm(null)
@@ -964,8 +912,6 @@ function ComandaCard({
           onConfirm={handleClose}
           onCancel={() => setCloseOpen(false)}
           onGerarPix={() => { setCloseOpen(false); setPixOpen(true) }}
-          autoEmitMethods={autoEmitMethods}
-          fiscalModuloAtivo={fiscalModuloAtivo}
         />
       )}
       {pixOpen && (
@@ -1508,12 +1454,9 @@ export default function DashboardPage() {
   const [estornando,     setEstornando]     = useState(false)
   // Crediário — escolha de conta ao fechar comanda
   const [pendingClose, setPendingClose] = useState<{
-    id: string; pm: string; pm2?: string; amt2?: number; discount?: number; emitirNota?: boolean
+    id: string; pm: string; pm2?: string; amt2?: number; discount?: number
     userId: string; userName: string; valorPrincipal: number
   } | null>(null)
-  const [autoEmitMethods, setAutoEmitMethods] = useState<string[]>([])
-  const [fiscalModuloAtivo, setFiscalModuloAtivo] = useState(false)
-  const [emitindoNotaId, setEmitindoNotaId]   = useState<string | null>(null)
   const [contasAbertas, setContasAbertas] = useState<CrediariosDto[]>([])
   const [histSearch,   setHistSearch]   = useState('')
   const [histHoraDe,   setHistHoraDe]   = useState('')
@@ -1589,10 +1532,6 @@ export default function DashboardPage() {
     lgpdAdminApi.listRequests('Pendente').then(r => setPendingLgpd(r.data)).catch(() => {})
     notificationsApi.unreadCount().then(r => setUnreadNotif(r.data.count)).catch(() => {})
     reservationApi.filaPendentesCount().then(r => setPendingPreVenda(r.data.count)).catch(() => {})
-    fiscalApi.getConfig().then(r => {
-      setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])
-      setFiscalModuloAtivo(r.data.moduloFiscalAtivo ?? false)
-    }).catch(() => {})
   }, [])
 
   async function fetchProdutos(de: string, ate: string) {
@@ -1693,7 +1632,7 @@ export default function DashboardPage() {
     if (changeType) markChange(updated.id, changeType)
   }
 
-  async function handleClose(id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number, emitirNotaFiscal?: boolean) {
+  async function handleClose(id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number) {
     if (paymentMethod === 'Crediario') {
       // Descobre o cliente da comanda
       const comanda = comandas.find(c => c.id === id)
@@ -1705,22 +1644,21 @@ export default function DashboardPage() {
             // Calcula valor principal (total - desconto - segundo pagamento)
             const totalCents = comanda.items.reduce((s, i) => s + i.unitPriceInCents * i.quantity, 0)
             const valorPrincipal = totalCents - (discountInCents ?? 0) - (secondAmountInCents ?? 0)
-            setPendingClose({ id, pm: paymentMethod, pm2: secondMethod, amt2: secondAmountInCents, discount: discountInCents, emitirNota: emitirNotaFiscal, userId: comanda.userId, userName: comanda.userName, valorPrincipal })
+            setPendingClose({ id, pm: paymentMethod, pm2: secondMethod, amt2: secondAmountInCents, discount: discountInCents, userId: comanda.userId, userName: comanda.userName, valorPrincipal })
             setContasAbertas(abertas)
             return
           }
         } catch { /* se falhar na busca, fecha normalmente */ }
       }
     }
-    await executarClose(id, paymentMethod, secondMethod, secondAmountInCents, undefined, discountInCents, emitirNotaFiscal)
+    await executarClose(id, paymentMethod, secondMethod, secondAmountInCents, undefined, discountInCents)
   }
 
-  async function executarClose(id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, crediarioExistenteId?: string, discountInCents?: number, emitirNotaFiscal?: boolean, crediarioVencimento?: string) {
+  async function executarClose(id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, crediarioExistenteId?: string, discountInCents?: number, crediarioVencimento?: string) {
     try {
-      const { data } = await comandaApi.close(id, paymentMethod, undefined, secondMethod, secondAmountInCents, crediarioExistenteId, discountInCents, emitirNotaFiscal, crediarioVencimento)
+      await comandaApi.close(id, paymentMethod, undefined, secondMethod, secondAmountInCents, crediarioExistenteId, discountInCents, crediarioVencimento)
       const label = paymentMethod === 'Crediario' ? 'Comanda fechada no crediário!' : 'Comanda fechada!'
       toast.success(label)
-      handleNotaFiscalResult(data.notaFiscalId, data.notaFiscalStatus, data.notaFiscalMotivoRejeicao)
       fetchComandas()
       fetchHistory(histData)
     } catch (err: unknown) {
@@ -1758,24 +1696,6 @@ export default function DashboardPage() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(msg ?? 'Erro ao cancelar comanda.')
-    }
-  }
-
-  async function emitirNotaComanda(id: string) {
-    setEmitindoNotaId(id)
-    try {
-      const { data } = await fiscalApi.emitirNotaComanda(id)
-      if (data.status === 'Autorizada') {
-        toast.success('Nota fiscal autorizada!')
-        window.open(`/admin/fiscal/cupom/${data.id}`, '_blank')
-      } else {
-        toast.error(`Nota registrada, aguardando: ${data.status}${data.motivoRejeicao ? ' — ' + data.motivoRejeicao : ''}`)
-      }
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(msg ?? 'Erro ao emitir nota fiscal.')
-    } finally {
-      setEmitindoNotaId(null)
     }
   }
 
@@ -2005,8 +1925,6 @@ export default function DashboardPage() {
                 onClosedExternally={() => { fetchComandas(); fetchHistory(histData) }}
                 isNew={newIds.has(c.id)}
                 recentChange={recentChanges.get(c.id)?.type ?? null}
-                autoEmitMethods={autoEmitMethods}
-                fiscalModuloAtivo={fiscalModuloAtivo}
               />
             ))}
           </div>
@@ -2183,17 +2101,6 @@ export default function DashboardPage() {
                             <span className="font-bold">Estornada</span>
                             {c.motivoEstorno ? ` — ${c.motivoEstorno}` : ''}. Fora do faturamento, estoque devolvido.
                           </p>
-                        )}
-                        {c.status === 'Fechada' && (
-                          <button
-                            disabled={emitindoNotaId === c.id}
-                            onClick={e => { e.stopPropagation(); emitirNotaComanda(c.id) }}
-                            className="mt-1.5 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-600/10 border border-amber-600/30 hover:border-amber-500/50 rounded-xl py-1.5 transition-colors disabled:opacity-50">
-                            {emitindoNotaId === c.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <Receipt className="w-3.5 h-3.5" />}
-                            Emitir nota fiscal
-                          </button>
                         )}
                         {c.status === 'Fechada' && c.paymentMethod && (() => {
                           const net        = c.totalInReais // já líquido de pontos/desconto (CloseComandaAsync)
@@ -2597,7 +2504,7 @@ export default function DashboardPage() {
             <p className="text-xs text-red-200 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2.5">
               Os itens voltam pro estoque, os pontos do cliente são desfeitos, o crediário
               gerado é baixado e o valor sai do faturamento. A comanda continua no histórico
-              marcada como estornada. Se tiver NFC-e autorizada, cancele a nota antes.
+              marcada como estornada.
             </p>
 
             <input
@@ -2656,11 +2563,11 @@ export default function DashboardPage() {
           valorNovo={pendingClose.valorPrincipal}
           onEscolher={async (credId) => {
             setPendingClose(null)
-            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, credId, pendingClose.discount, pendingClose.emitirNota)
+            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, credId, pendingClose.discount)
           }}
           onNova={async venc => {
             setPendingClose(null)
-            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, undefined, pendingClose.discount, pendingClose.emitirNota, venc)
+            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, undefined, pendingClose.discount, venc)
           }}
           onCancel={() => setPendingClose(null)}
         />

@@ -21,7 +21,6 @@ test('caixa do WhatsApp renderiza conversas e mensagens', async ({ context, page
   ] }))
   await page.route('**/api/admin/whatsapp/conversations/*/read', route => route.fulfill({ status: 204 }))
   await page.route('**/api/notifications/unread-count', route => route.fulfill({ json: { count: 0 } }))
-  await page.route('**/api/integrations/fiscal/config', route => route.fulfill({ json: { certificadoConfigurado: false } }))
 
   await page.goto('http://localhost:3011/admin/whatsapp')
 

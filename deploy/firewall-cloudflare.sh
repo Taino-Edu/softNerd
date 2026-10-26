@@ -50,8 +50,7 @@ V6_URL="https://www.cloudflare.com/ips-v6"
 # SYN de uma conexão nova é NEW.
 #
 # Sintomas de quando faltava: `apt-get update` no build do Docker dando
-# "connection timed out" pra deb.debian.org, emissão de NFC-e sem resposta da
-# SEFAZ, e integração do Inter/Pix falhando — tudo saída HTTPS de container.
+# "connection timed out" pra deb.debian.org e integração do Inter/Pix falhando — tudo saída HTTPS de container.
 # -----------------------------------------------------------------------------
 EXT_IF="${EXT_IF:-$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}')}"
 [ -n "$EXT_IF" ] || {
