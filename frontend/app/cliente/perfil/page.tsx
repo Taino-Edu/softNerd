@@ -5,7 +5,7 @@ import Link from 'next/link'
 import ContaCrediarioCliente from '@/components/cliente/ContaCrediarioCliente'
 import {
   userApi, UserProfile, crediarioApi, CrediariosDto, comandaApi, ComandaDto, championshipApi, MyParticipation,
-  reservationApi, MyReservation, minhasNotasApi, MinhaNotaDto, COMANDA_PAYMENT_METHODS,
+  reservationApi, MyReservation, COMANDA_PAYMENT_METHODS,
   minhasComprasApi, MinhaCompraDto,
 } from '@/lib/api'
 import { getUserName, clearAuth } from '@/lib/auth'
@@ -14,7 +14,7 @@ import {
   Star, User, Phone, CreditCard, Clock, AlertCircle, ArrowLeft, LogOut,
   CheckCircle, Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
   ShoppingBag, XCircle, Trophy, Coins, ShieldCheck, Mail, Settings, BookOpen,
-  Bell, Package, X, Hourglass, FileText, Pencil, Check, Loader2 as Loader2Icon,
+  Bell, Package, X, Hourglass, Pencil, Check, Loader2 as Loader2Icon,
   QrCode, ShoppingCart, ChevronRight,
 } from 'lucide-react'
 import PixReservaModal from '@/components/PixReservaModal'
@@ -262,11 +262,9 @@ export default function PerfilPage() {
   const [participations, setParticipations] = useState<MyParticipation[]>([])
   const [fila,           setFila]           = useState<MyReservation[]>([])
   const [reservations,   setReservations]   = useState<MyReservation[]>([])
-  const [notas,          setNotas]          = useState<MinhaNotaDto[]>([])
-  const [notasBloqueadas, setNotasBloqueadas] = useState(false)
   const [loading,        setLoading]        = useState(true)
   const [expanded,       setExpanded]       = useState<string | null>(null)
-  const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas' | 'notas'>('pontos')
+  const [tab,            setTab]            = useState<'pontos' | 'historico' | 'torneios' | 'crediario' | 'filas'>('pontos')
 
   // "Qual o seu Pokémon preferido?" (chave pokemon-preferido): 'boas-vindas' = acabou de criar a conta
   const [escolhendoPokemon, setEscolhendoPokemon] = useState<false | 'boas-vindas' | 'trocar'>(false)
@@ -324,10 +322,6 @@ export default function PerfilPage() {
         setReservations(r.data.filter(x => x.kind === 'pre_venda' && x.status === 'active'))
         setFila(r.data.filter(x => x.kind === 'fila' && x.status === 'waiting'))
       }).catch(() => {}),
-      minhasNotasApi.list().then(r => setNotas(r.data)).catch((err: unknown) => {
-        const status = (err as { response?: { status?: number } })?.response?.status
-        if (status === 423) setNotasBloqueadas(true)
-      }),
     ]).finally(() => setLoading(false))
   }, [])
 
@@ -452,14 +446,12 @@ export default function PerfilPage() {
     { id: 'filas',     icon: Bell,    label: 'Reservas', badge: fila.length + reservations.length },
     { id: 'torneios',  icon: Trophy,  label: 'Campeonatos' },
     { id: 'crediario', icon: Wallet,  label: 'Crediário'   },
-    { id: 'notas',     icon: FileText, label: 'Notas'      },
   ] as const : [
     { id: 'pontos',    icon: Star,    label: 'Pontos'   },
     { id: 'historico', icon: Receipt, label: 'Histórico' },
     { id: 'torneios',  icon: Trophy,  label: 'Torneios' },
     { id: 'filas',     icon: Bell,    label: 'Pré-vendas', badge: fila.length + reservations.length },
     { id: 'crediario', icon: Wallet,  label: 'Dívida'   },
-    { id: 'notas',     icon: FileText, label: 'Notas Fiscais' },
   ] as const
 
   return (
@@ -1144,46 +1136,6 @@ export default function PerfilPage() {
               </div>
             )}
 
-            {/* ── TAB: NOTAS FISCAIS ── */}
-            {tab === 'notas' && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {notasBloqueadas ? (
-                  <div className="bg-red-50 border border-red-100 rounded-2xl py-14 text-center shadow-sm">
-                    <FileText className="w-10 h-10 mx-auto mb-3 text-red-300" />
-                    <p className="text-sm font-bold text-red-500">Módulo bloqueado por hora</p>
-                  </div>
-                ) : notas.length === 0 ? (
-                  <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
-                    <FileText className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-                    <p className="text-sm text-gray-400 italic">Nenhuma nota fiscal emitida ainda.</p>
-                  </div>
-                ) : (
-                  notas.map(n => (
-                    <div key={n.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900">
-                          {brl((n.valorTotalEmCentavos / 100))}
-                        </p>
-                        <p className="text-[11px] text-gray-400">
-                          {new Date(n.emitidoEm ?? n.createdAt).toLocaleDateString('pt-BR')} · {n.status}
-                        </p>
-                      </div>
-                      {n.status === 'Autorizada' ? (
-                        <Link href={`/cliente/notas/${n.id}`} target="_blank"
-                          className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors shrink-0 px-3 py-1.5 rounded-lg bg-blue-50">
-                          Ver cupom
-                        </Link>
-                      ) : (
-                        <span className="text-[11px] text-gray-400 italic shrink-0">aguardando</span>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
             {contaNova && <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-8 mb-1 px-1">Mais</p>}
             {/* ── MEUS DECKS ── */}
             <Link

@@ -20,7 +20,7 @@ interface BadgeProps {
 
 /** Pílula de status padrão — mesma classe `.badge` (globals.css) usada por
  * `.badge-aberta` etc., só que com o tom escolhido pela página em vez de um
- * nome fixo. Cada domínio (fiscal, contas a receber, pré-venda...) mapeia seu
+ * nome fixo. Cada domínio (contas a receber, pré-venda...) mapeia seu
  * próprio status pro tone mais próximo. */
 export function Badge({ tone, children, icon, className }: BadgeProps) {
   return (

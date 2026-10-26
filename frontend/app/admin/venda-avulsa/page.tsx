@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { productApi, categoryApi, vendaAvulsaApi, userApi, fiscalApi, crediarioApi, CrediariosDto, PAYMENT_METHODS, PAYMENT_NEEDS_USER, SECOND_PAYMENT_METHODS, Product, ProductCategory, ProductVariant, VendaAvulsaDto, UserSummary, EditarPagamentoVendaAvulsaRequest } from '@/lib/api'
+import { productApi, categoryApi, vendaAvulsaApi, userApi, crediarioApi, CrediariosDto, PAYMENT_METHODS, PAYMENT_NEEDS_USER, SECOND_PAYMENT_METHODS, Product, ProductCategory, ProductVariant, VendaAvulsaDto, UserSummary, EditarPagamentoVendaAvulsaRequest } from '@/lib/api'
 import { useThrottle } from '@/lib/hooks'
 import { usePreferences } from '@/hooks/usePreferences'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -210,7 +210,6 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
   const [newClient,  setNewClient]  = useState(venda.clientName ?? '')
   const [newDisc,    setNewDisc]    = useState(venda.discountInReais > 0 ? String(venda.discountInReais.toFixed(2).replace('.', ',')) : '')
   const [saving,     setSaving]     = useState(false)
-  const [emitindoNota, setEmitindoNota] = useState(false)
 
   // Estorno: venda lançada errada não se apaga — desfaz estoque/pontos/crediário e
   // sai do faturamento, mas continua no extrato com o motivo.
@@ -229,24 +228,6 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? 'Erro ao estornar a venda')
     } finally { setEstornando(false) }
-  }
-
-  async function handleEmitirNota() {
-    setEmitindoNota(true)
-    try {
-      const { data } = await fiscalApi.emitirNotaVendaAvulsa(venda.id)
-      if (data.status === 'Autorizada') {
-        toast.success('Nota fiscal autorizada!')
-        window.open(`/admin/fiscal/cupom/${data.id}`, '_blank')
-      } else {
-        toast.error(`Nota registrada, aguardando: ${data.status}${data.motivoRejeicao ? ' — ' + data.motivoRejeicao : ''}`)
-      }
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(msg ?? 'Erro ao emitir nota fiscal.')
-    } finally {
-      setEmitindoNota(false)
-    }
   }
 
   async function handleSavePay() {
@@ -459,14 +440,6 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
             </button>
           )}
 
-          <button
-            onClick={handleEmitirNota}
-            disabled={emitindoNota}
-            className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-600/10 border border-amber-600/30 hover:border-amber-500/50 rounded-xl py-2 transition-colors disabled:opacity-50"
-          >
-            {emitindoNota ? <Loader2 className="w-4 h-4 animate-spin" /> : <Receipt className="w-4 h-4" />}
-            Emitir nota fiscal
-          </button>
           <div className="flex gap-2">
             <button
               onClick={() => printReceiptPDF(venda, payLabel)}
@@ -500,21 +473,6 @@ const PAYMENT_ICONS_INNER: Record<string, React.ReactNode> = {
 
 const PAYMENT_ICONS = PAYMENT_ICONS_INNER
 
-
-/** Após um registro com "Emitir cupom fiscal" marcado: abre o cupom sozinho se autorizou,
- * ou avisa o motivo se rejeitou/ficou pendente (SEFAZ fora do ar — o retry automático tenta de novo). */
-function handleNotaFiscalResult(notaId?: string | null, status?: string | null, motivo?: string | null) {
-  if (!status) return
-  if (status === 'Bloqueada') {
-    toast.error(motivo ?? 'Módulo bloqueado por hora')
-    return
-  }
-  if (status === 'Autorizada' && notaId) {
-    window.open(`/admin/fiscal/cupom/${notaId}`, '_blank')
-  } else {
-    toast.error(`Nota fiscal não autorizou ainda (${status})${motivo ? ' — ' + motivo : ''}. O sistema tenta de novo automaticamente.`)
-  }
-}
 
 // ── Wizard de nova venda (3 etapas) ──────────────────────────────────────────
 
@@ -562,29 +520,9 @@ function VendaWizard({
   const [secondPayment, setSecondPayment] = useState<string>(PAYMENT_METHODS[1].value)
   const [secondAmountStr, setSecondAmountStr] = useState('')
 
-  // Emissão de nota fiscal — o admin decide explicitamente no fechamento (Maikon não quer
-  // nota emitida sem antes perguntar); só vem pré-marcado pras formas de pagamento que ele
-  // configurou como auto-emissão em Admin > Fiscal.
-  const [autoEmitMethods, setAutoEmitMethods] = useState<string[]>([])
-  const [fiscalModuloAtivo, setFiscalModuloAtivo] = useState(false)
-  const [emitirNota, setEmitirNota] = useState(false)
-  const [notaTouched, setNotaTouched] = useState(false)
-
-  useEffect(() => {
-    fiscalApi.getConfig().then(r => {
-      setAutoEmitMethods(r.data.formasPagamentoAutoEmissao ?? [])
-      setFiscalModuloAtivo(r.data.moduloFiscalAtivo ?? false)
-    }).catch(() => {})
-  }, [])
-
   useEffect(() => {
     categoryApi.list().then(r => setAllCategories(r.data)).catch(() => {})
   }, [])
-
-  useEffect(() => {
-    if (!fiscalModuloAtivo) setEmitirNota(false)
-    else if (!notaTouched) setEmitirNota(autoEmitMethods.includes(payment))
-  }, [payment, autoEmitMethods, notaTouched, fiscalModuloAtivo])
 
   useEffect(() => {
     if (step === 2) setTimeout(() => searchRef.current?.focus(), 80)
@@ -748,19 +686,17 @@ function VendaWizard({
         splitEnabled ? secondPayment : null,
         splitEnabled ? secondAmountCents : 0,
         discountMode === 'cents' ? discountCents : undefined,
-        emitirNota,
         crediario?.existenteId,
         crediario?.novaConta,
         crediario?.vencimento,
       )
       onComplete(data)
       toast.success('Venda registrada!')
-      handleNotaFiscalResult(data.notaFiscalId, data.notaFiscalStatus, data.notaFiscalMotivoRejeicao)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(msg || 'Erro ao registrar venda.')
     } finally { setSubmitting(false) }
-  }, [cart, clientName, payment, discountMode, discountPct, discountCents, selectedUserId, onComplete, splitEnabled, secondPayment, secondAmountCents, emitirNota])
+  }, [cart, clientName, payment, discountMode, discountPct, discountCents, selectedUserId, onComplete, splitEnabled, secondPayment, secondAmountCents])
 
   const submitRaw = useCallback(async () => {
     if (cart.length === 0) { toast.error('Adicione pelo menos um produto.'); return }
@@ -1346,31 +1282,6 @@ function VendaWizard({
                 </div>
               )}
 
-              <button
-                type="button"
-                disabled={!fiscalModuloAtivo}
-                onClick={() => { setEmitirNota(v => !v); setNotaTouched(true) }}
-                className={clsx(
-                  'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all disabled:cursor-not-allowed disabled:opacity-60',
-                  emitirNota
-                    ? 'bg-brand-600/10 border-brand-500/40 text-brand-300'
-                    : 'border-surface-500 text-gray-500 hover:border-surface-400 hover:text-gray-300'
-                )}
-              >
-                <span>Emitir cupom fiscal (NFC-e) agora</span>
-                <span className={clsx('w-4 h-4 rounded border flex items-center justify-center text-xs shrink-0',
-                  emitirNota ? 'bg-brand-500 border-brand-500 text-white' : 'border-surface-400'
-                )}>
-                  {emitirNota && '✓'}
-                </span>
-              </button>
-              {!fiscalModuloAtivo ? (
-                <p className="text-xs text-red-400 -mt-1">Módulo bloqueado por hora</p>
-              ) : !emitirNota && (
-                <p className="text-xs text-gray-500 -mt-1">
-                  Sem nota agora. Depois é possível emitir pelo histórico de vendas.
-                </p>
-              )}
             </div>
           )}
         </div>

@@ -67,12 +67,6 @@ public class ComandaDto
     public int  UserBalanceInCents { get; set; }
     public string? ProfileImageUrl { get; set; }
 
-  /// <summary>Preenchidos só quando o fechamento pediu emissão de NFC-e (EmitirNotaFiscal=true) —
-  /// permite o front abrir o cupom automaticamente quando autoriza, ou avisar o motivo se não.</summary>
-  public Guid?   NotaFiscalId             { get; set; }
-  public string? NotaFiscalStatus         { get; set; }
-  public string? NotaFiscalMotivoRejeicao { get; set; }
-
     /// <summary>Preenchidos quando a comanda fechada foi estornada (Status = Estornada).</summary>
     public DateTime? EstornadaEm   { get; set; }
     public string?   MotivoEstorno { get; set; }
@@ -137,14 +131,6 @@ public class CloseComandaRequest
     /// <summary>Desconto administrativo em centavos aplicado no fechamento (opcional).</summary>
     [Range(0, int.MaxValue)]
     public int DiscountInCents { get; set; } = 0;
-
-    /// <summary>
-    /// Se true, emite a NFC-e desta venda automaticamente. O admin decide isso explicitamente
-    /// no momento do fechamento (Maikon não quer nota emitida sem antes perguntar) — o valor
-    /// vem pré-marcado no front conforme a forma de pagamento estar em FiscalConfig.FormasPagamentoAutoEmissao,
-    /// mas é sempre sobrescrevível.
-    /// </summary>
-    public bool EmitirNotaFiscal { get; set; } = false;
 }
 
 public class ComandaItemDto

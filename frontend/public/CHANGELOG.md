@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.71.0] — 2026-10-26
+
+### Nota fiscal (NFC-e) sai do sistema
+- A loja não vai emitir nota pelo sistema: sai o módulo fiscal inteiro — tela **Fiscal**, certificado A1, emissão de NFC-e no fechamento da comanda e no PDV (o checkbox "Emitir cupom fiscal" e o botão "Emitir nota fiscal" do histórico), cupom, **Notas Fiscais** no perfil do cliente, notas de fornecedor (SEFAZ) em Contas a receber, NCM/CEST/natureza de operação no cadastro de produto, os robôs de reenvio/alerta/XML e o alerta de NFC-e do Vigia
+- Sai também a integração **Tenant-ERP** (estava desligada): o card em Integrações, a consulta IBPT e a "Análise inteligente" do Financeiro, que dependia dela
+- Nada foi apagado do banco: as tabelas e colunas fiscais continuam onde estavam, só não são mais usadas. O módulo inteiro está guardado na tag `arquivo/nfce-v1.70.1` do repositório
+- A imagem da API fica mais enxuta: sem a biblioteca de nota (Zeus/DFe), sem o BouncyCastle e sem o modo legado do OpenSSL, que só servia pra abrir o certificado A1. O certificado do Inter (Pix) é outro formato e segue igual
+- Estorno de comanda e de venda avulsa não depende mais de cancelar nota antes
+
 ## [v1.70.1] — 2026-10-26
 
 ### Segurança — fora a autoridade certificadora eMudhra (emSign)

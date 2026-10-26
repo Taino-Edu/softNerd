@@ -2,7 +2,7 @@
 // ImagemApiSemEmsignTests.cs — a imagem da API não confia na CA eMudhra (emSign)
 //
 // A eMudhra teve as chaves privadas vazadas em 21/10/2026: com elas dá pra emitir certificado
-// falso pro Inter ou pra SEFAZ. O Dockerfile tira as raízes emSign da lista de confiança e o
+// falso pro Inter. O Dockerfile tira as raízes emSign da lista de confiança e o
 // próprio build falha se sobrar alguma. Este teste trava que esse passo continue lá.
 // =============================================================================
 

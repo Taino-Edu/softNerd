@@ -14,7 +14,7 @@
 #   4. desliga a antiga com SIGTERM: ela termina o que está fazendo (até 30 s,
 #      stop_grace_period) e o nginx manda o resto pra nova (proxy_next_upstream)
 #
-# Por que o limite de saúde é curto (45 s): os robôs da API (Pix, NFC-e, avisos do
+# Por que o limite de saúde é curto (45 s): os robôs da API (Pix, Vigia, avisos do
 # crediário…) esperam no mínimo 1 minuto depois de subir antes da primeira volta.
 # Trocando em menos de 1 minuto, as duas cópias nunca rodam robô ao mesmo tempo.
 # Robô novo com espera menor que 1 minuto quebra essa garantia — o teste

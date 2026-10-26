@@ -31,9 +31,6 @@ public class VendaAvulsaRequest
     [Range(0, int.MaxValue)]
     public int SecondPaymentAmountInCents { get; set; } = 0;
 
-    /// <summary>Se true, emite a NFC-e desta venda automaticamente. Ver CloseComandaRequest.EmitirNotaFiscal.</summary>
-    public bool EmitirNotaFiscal { get; set; } = false;
-
     /// <summary>
     /// Conta de crediário onde lançar a venda, quando o cliente tem mais de uma aberta.
     /// Null + AbrirNovoCrediario=false mantém o comportamento antigo (acumula na conta
@@ -122,12 +119,6 @@ public class VendaAvulsaDto
     public List<VendaAvulsaItemDto> Items                 { get; set; } = new();
     public string?              Origem                    { get; set; }
     public bool                 ProductIsPreVenda         { get; set; }
-
-    /// <summary>Preenchidos só quando o registro pediu emissão de NFC-e (EmitirNotaFiscal=true) —
-    /// permite o front abrir o cupom automaticamente quando autoriza, ou avisar o motivo se não.</summary>
-    public Guid?   NotaFiscalId             { get; set; }
-    public string? NotaFiscalStatus         { get; set; }
-    public string? NotaFiscalMotivoRejeicao { get; set; }
 
     // ── Estorno ───────────────────────────────────────────────────────────────
     /// <summary>Crediário que esta venda gerou (quando o pagamento foi no crediário).</summary>

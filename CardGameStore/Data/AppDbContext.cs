@@ -71,13 +71,6 @@ public class AppDbContext : DbContext
     // ── Push: subscrições de browser push (WebPush/VAPID) ────────────────────
     public DbSet<PushSubscription> PushSubscriptions { get; set; }
 
-    // ── Fiscal: emissão de NFC-e ───────────────────────────────────────────────
-    public DbSet<FiscalConfig>       FiscalConfigs        { get; set; }
-    public DbSet<NaturezaOperacao>   NaturezasOperacao    { get; set; }
-    public DbSet<NotaFiscalEmitida>  NotasFiscaisEmitidas { get; set; }
-
-    // ── Fiscal: NF-e destinadas (Manifestação do Destinatário) ────────────────
-    public DbSet<NotaDestinada>      NotasDestinadas      { get; set; }
 
     // ── Personalização da landing page ─────────────────────────────────────────
     public DbSet<SiteConfig>         SiteConfigs          { get; set; }
@@ -147,12 +140,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
-            // Largura de coluna fixada aqui (Fluent API) em vez de [MaxLength] no
-            // Product.cs — ver comentário lá: a DataAnnotation dispara a validação
-            // automática do ApiController antes do ProductService sanitizar a
-            // pontuação colada no NCM/CEST.
-            entity.Property(p => p.Ncm).HasMaxLength(8);
-            entity.Property(p => p.Cest).HasMaxLength(7);
 
             entity.HasIndex(p => p.Category)
                   .HasDatabaseName("ix_products_category");
@@ -164,70 +151,6 @@ public class AppDbContext : DbContext
                   .IsUnique()
                   .HasFilter("barcode IS NOT NULL")
                   .HasDatabaseName("ix_products_barcode");
-
-            entity.HasIndex(p => p.NaturezaOperacaoId)
-                  .HasDatabaseName("ix_products_natureza_operacao");
-
-            entity.HasOne(p => p.NaturezaOperacao)
-                  .WithMany(n => n.Products)
-                  .HasForeignKey(p => p.NaturezaOperacaoId)
-                  .OnDelete(DeleteBehavior.SetNull)
-                  .IsRequired(false);
-        });
-
-        // =====================================================================
-        // FISCAL CONFIG
-        // =====================================================================
-        modelBuilder.Entity<FiscalConfig>(entity =>
-        {
-            entity.Property(f => f.RegimeTributario).HasConversion<string>();
-            entity.Property(f => f.Ambiente).HasConversion<string>();
-
-            entity.HasIndex(f => f.Cnpj)
-                  .HasDatabaseName("ix_fiscal_config_cnpj");
-        });
-
-        // =====================================================================
-        // NATUREZA DE OPERAÇÃO
-        // =====================================================================
-        modelBuilder.Entity<NaturezaOperacao>(entity =>
-        {
-            entity.HasIndex(n => n.Descricao)
-                  .HasDatabaseName("ix_naturezas_operacao_descricao");
-
-            // No máximo uma natureza pode ser padrão por vez.
-            entity.HasIndex(n => n.IsPadrao)
-                  .IsUnique()
-                  .HasFilter("is_padrao = true")
-                  .HasDatabaseName("ix_naturezas_operacao_unica_padrao");
-        });
-
-        // =====================================================================
-        // NOTA FISCAL EMITIDA
-        // =====================================================================
-        modelBuilder.Entity<NotaFiscalEmitida>(entity =>
-        {
-            entity.Property(n => n.Origem).HasConversion<string>();
-            entity.Property(n => n.Status).HasConversion<string>();
-
-            entity.HasIndex(n => n.Status)
-                  .HasDatabaseName("ix_notas_fiscais_status");
-
-            entity.HasIndex(n => n.ComandaId)
-                  .HasDatabaseName("ix_notas_fiscais_comanda");
-
-            entity.HasIndex(n => n.EmitidoEm)
-                  .HasDatabaseName("ix_notas_fiscais_emitido_em");
-
-            entity.HasIndex(n => n.ChaveAcesso)
-                  .IsUnique()
-                  .HasFilter("chave_acesso IS NOT NULL")
-                  .HasDatabaseName("ix_notas_fiscais_chave_acesso");
-
-            entity.HasIndex(n => n.CentralFiscalNoteId)
-                  .IsUnique()
-                  .HasFilter("central_fiscal_note_id IS NOT NULL")
-                  .HasDatabaseName("ix_notas_fiscais_central_note");
         });
 
         // =====================================================================

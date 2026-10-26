@@ -234,30 +234,6 @@ public class VendaAvulsaService : IVendaAvulsaService
 
         await _collection.InsertOneAsync(venda);
 
-        // Emite a NFC-e referente a esta venda avulsa — só quando o admin escolheu
-        // explicitamente emitir no fechamento (Maikon não quer nota emitida sem antes
-        // perguntar). Aguarda o resultado (em vez de fire-and-forget) pra devolver o status
-        // pro caixa na hora e permitir abrir o cupom automaticamente quando autorizar — a
-        // falhas fiscais comuns não derrubam a venda; a trava geral é tratada logo abaixo. Se não marcou,
-        // nenhuma NotaFiscalEmitida é criada; a emissão pode ser feita depois manualmente
-        // pelo histórico.
-        NotaFiscalEmitida? nota = null;
-        string? bloqueioFiscal = null;
-        if (request.EmitirNotaFiscal)
-        {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var emissao = scope.ServiceProvider.GetRequiredService<INfceEmissionService>();
-                nota = await emissao.EmitirParaVendaAvulsaAsync(venda.Id);
-            }
-            catch (FiscalModuloBloqueadoException ex)
-            {
-                // A venda continua válida; apenas a operação fiscal foi bloqueada.
-                bloqueioFiscal = ex.Message;
-            }
-        }
-
         var paymentSummary = secondPm != null
             ? $"{request.PaymentMethod} + {secondPm} ({Common.Dinheiro.Brl(secondAmt / 100m)})"
             : request.PaymentMethod;
@@ -491,9 +467,6 @@ public class VendaAvulsaService : IVendaAvulsaService
         }
 
         var dto = MapToDto(venda);
-        dto.NotaFiscalId             = nota?.Id;
-        dto.NotaFiscalStatus         = bloqueioFiscal is null ? nota?.Status.ToString() : "Bloqueada";
-        dto.NotaFiscalMotivoRejeicao = bloqueioFiscal ?? nota?.MotivoRejeicao;
         return dto;
     }
 
@@ -534,17 +507,6 @@ public class VendaAvulsaService : IVendaAvulsaService
 
         if (venda.Cancelada)
             throw new InvalidOperationException("Esta venda já foi estornada.");
-
-        // ── Trava fiscal: nota autorizada não se desfaz por dentro ────────────────
-        var notaAtiva = await _db.NotasFiscaisEmitidas
-            .Where(n => n.VendaAvulsaId == id
-                     && (n.Status == NotaFiscalStatus.Autorizada
-                      || n.Status == NotaFiscalStatus.AutorizadaContingencia))
-            .FirstOrDefaultAsync();
-        if (notaAtiva is not null)
-            throw new InvalidOperationException(
-                "Esta venda tem NFC-e autorizada. Cancele a nota em Admin > Fiscal primeiro — " +
-                "o cancelamento tem prazo legal e precisa ir à SEFAZ.");
 
         // ── Crediário gerado pela venda ───────────────────────────────────────────
         Crediario? crediario = null;

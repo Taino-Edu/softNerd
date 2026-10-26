@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-286 endpoints em 40 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+260 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -15,17 +15,15 @@
 - [Category](#category) (4)
 - [Championship](#championship) (22)
 - [Comanda](#comanda) (20)
-- [ContasReceber](#contasreceber) (15)
+- [ContasReceber](#contasreceber) (12)
 - [Crediarios](#crediarios) (14)
 - [Deck](#deck) (6)
-- [Fiscal](#fiscal) (15)
 - [Funcionalidades](#funcionalidades) (3)
 - [Lgpd](#lgpd) (8)
 - [LigaMensal](#ligamensal) (8)
 - [Marketplace](#marketplace) (7)
 - [Mensageria](#mensageria) (3)
 - [MinhasCompras](#minhascompras) (1)
-- [MinhasNotas](#minhasnotas) (2)
 - [Notifications](#notifications) (5)
 - [PagamentoCrediario](#pagamentocrediario) (3)
 - [Perfis](#perfis) (6)
@@ -38,7 +36,6 @@
 - [Reservation](#reservation) (15)
 - [SiteConfig](#siteconfig) (2)
 - [Tcg](#tcg) (8)
-- [TenantErpIntegration](#tenanterpintegration) (6)
 - [Timer](#timer) (4)
 - [Torneio](#torneio) (22)
 - [Upload](#upload) (3)
@@ -161,20 +158,20 @@
 | GET | `/api/comanda/history` | AdminOnly | `GetHistory` (111) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
 | GET | `/api/comanda/my` | logado | `GetMyComanda` (142) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
 | GET | `/api/comanda/my-history` | logado | `GetMyHistory` (131) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (415) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
-| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (428) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
+| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (414) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
+| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (427) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
 | GET | `/api/comanda/{id:guid}` | AdminOnly | `GetById` (122) | — | — |
-| DELETE | `/api/comanda/{id:guid}/apply-points` | logado | `RemovePoints` (308) | `comandaApi.removePoints` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
-| POST | `/api/comanda/{id:guid}/apply-points` | logado | `ApplyPoints` (286) | `comandaApi.applyPoints` | `app/cliente/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/cancel` | AdminOnly | `Cancel` (228) | `comandaApi.cancel` | `app/admin/dashboard/page.tsx` |
+| DELETE | `/api/comanda/{id:guid}/apply-points` | logado | `RemovePoints` (307) | `comandaApi.removePoints` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
+| POST | `/api/comanda/{id:guid}/apply-points` | logado | `ApplyPoints` (285) | `comandaApi.applyPoints` | `app/cliente/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/cancel` | AdminOnly | `Cancel` (227) | `comandaApi.cancel` | `app/admin/dashboard/page.tsx` |
 | PUT | `/api/comanda/{id:guid}/close` | AdminOnly | `Close` (202) | `comandaApi.close` | `app/admin/dashboard/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/editar` | AdminOnly | `EditarComanda` (270) | `comandaApi.editar` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/estornar` | AdminOnly | `Estornar` (243) | `comandaApi.estornar` | `app/admin/dashboard/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/editar` | AdminOnly | `EditarComanda` (269) | `comandaApi.editar` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/estornar` | AdminOnly | `Estornar` (242) | `comandaApi.estornar` | `app/admin/dashboard/page.tsx` |
 | POST | `/api/comanda/{id:guid}/items` | logado | `AddItem` (153) | `comandaApi.addItem` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
 | DELETE | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `RemoveItem` (172) | `comandaApi.removeItem` | `app/admin/dashboard/page.tsx` |
 | PATCH | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `UpdateItem` (184) | `comandaApi.updateItem` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (329) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (404) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (328) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (403) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
 
 ## ContasReceber
 
@@ -182,21 +179,18 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/contas-receber` | AdminOnly | `List` (37) | — | `app/admin/contas-receber/page.tsx` |
-| POST | `/api/contas-receber` | AdminOnly | `Create` (116) | — | `app/admin/contas-receber/page.tsx` |
-| POST | `/api/contas-receber/import-ofx` | AdminOnly | `ImportOfx` (180) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
-| GET | `/api/contas-receber/integracoes` | AdminOnly | `GetIntegracoes` (221) | — | `app/admin/integracoes/page.tsx` |
-| POST | `/api/contas-receber/integracoes/inter/certificado` | AdminOnly | `UploadCertificado` (429) | — | `app/admin/integracoes/page.tsx` |
-| GET | `/api/contas-receber/integracoes/inter/status` | AdminOnly | `InterStatus` (411) | — | `app/admin/integracoes/page.tsx` |
-| POST | `/api/contas-receber/integracoes/inter/sync` | AdminOnly | `InterSync` (378) | — | `app/admin/integracoes/page.tsx` |
-| PUT | `/api/contas-receber/integracoes/{source}` | AdminOnly | `SaveIntegracao` (245) | — | `app/admin/integracoes/page.tsx` |
-| POST | `/api/contas-receber/integracoes/{source}/token` | AdminOnly | `SaveToken` (275) | — | — |
-| GET | `/api/contas-receber/notas-destinadas` | AdminOnly | `NotasDestinadas` (357) | — | `app/admin/contas-receber/page.tsx` |
-| GET | `/api/contas-receber/sefaz-status` | AdminOnly | `SefazStatus` (292) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
-| POST | `/api/contas-receber/sefaz/sync` | AdminOnly | `SefazSync` (323) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
-| GET | `/api/contas-receber/summary` | AdminOnly | `Summary` (75) | — | `app/admin/contas-receber/page.tsx` |
-| DELETE | `/api/contas-receber/{id:guid}` | AdminOnly | `Delete` (168) | — | `app/admin/contas-receber/page.tsx` |
-| PUT | `/api/contas-receber/{id:guid}` | AdminOnly | `Update` (140) | — | `app/admin/contas-receber/page.tsx` |
+| GET | `/api/contas-receber` | AdminOnly | `List` (35) | — | `app/admin/contas-receber/page.tsx` |
+| POST | `/api/contas-receber` | AdminOnly | `Create` (114) | — | `app/admin/contas-receber/page.tsx` |
+| POST | `/api/contas-receber/import-ofx` | AdminOnly | `ImportOfx` (178) | — | `app/admin/contas-receber/page.tsx`<br>`app/admin/integracoes/page.tsx` |
+| GET | `/api/contas-receber/integracoes` | AdminOnly | `GetIntegracoes` (219) | — | `app/admin/integracoes/page.tsx` |
+| POST | `/api/contas-receber/integracoes/inter/certificado` | AdminOnly | `UploadCertificado` (341) | — | `app/admin/integracoes/page.tsx` |
+| GET | `/api/contas-receber/integracoes/inter/status` | AdminOnly | `InterStatus` (323) | — | `app/admin/integracoes/page.tsx` |
+| POST | `/api/contas-receber/integracoes/inter/sync` | AdminOnly | `InterSync` (290) | — | `app/admin/integracoes/page.tsx` |
+| PUT | `/api/contas-receber/integracoes/{source}` | AdminOnly | `SaveIntegracao` (243) | — | `app/admin/integracoes/page.tsx` |
+| POST | `/api/contas-receber/integracoes/{source}/token` | AdminOnly | `SaveToken` (273) | — | — |
+| GET | `/api/contas-receber/summary` | AdminOnly | `Summary` (73) | — | `app/admin/contas-receber/page.tsx` |
+| DELETE | `/api/contas-receber/{id:guid}` | AdminOnly | `Delete` (166) | — | `app/admin/contas-receber/page.tsx` |
+| PUT | `/api/contas-receber/{id:guid}` | AdminOnly | `Update` (138) | — | `app/admin/contas-receber/page.tsx` |
 
 ## Crediarios
 
@@ -231,28 +225,6 @@
 | DELETE | `/api/deck/{id:guid}` | logado | `Delete` (139) | `deckApi.delete` | `app/cliente/decks/page.tsx` |
 | GET | `/api/deck/{id:guid}` | logado | `GetById` (75) | `deckApi.get` | `app/cliente/decks/[id]/page.tsx`<br>`components/admin/ConferenciaDecksModal.tsx`<br>`components/admin/DeckViewerModal.tsx` |
 | PUT | `/api/deck/{id:guid}` | logado | `Update` (115) | `deckApi.update` | `app/cliente/decks/[id]/page.tsx` |
-
-## Fiscal
-
-`CardGameStore/Controllers/FiscalController.cs`
-
-| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
-|---|---|---|---|---|---|
-| POST | `/api/fiscal/certificado` | AdminOnly | `UploadCertificado` (192) | `fiscalApi.uploadCertificado` | `app/admin/fiscal/page.tsx` |
-| GET | `/api/fiscal/config` | AdminOnly | `GetConfig` (51) | `fiscalApi.getConfig` | `app/admin/dashboard/page.tsx`<br>`app/admin/fiscal/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/Sidebar.tsx` |
-| PUT | `/api/fiscal/config` | AdminOnly | `SaveConfig` (64) | `fiscalApi.saveConfig` | `app/admin/fiscal/page.tsx` |
-| POST | `/api/fiscal/emitir/comanda/{id:guid}` | AdminOnly | `EmitirNotaComanda` (438) | `fiscalApi.emitirNotaComanda` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/fiscal/emitir/venda-avulsa/{id}` | AdminOnly | `EmitirNotaVendaAvulsa` (452) | `fiscalApi.emitirNotaVendaAvulsa` | `app/admin/venda-avulsa/page.tsx` |
-| GET | `/api/fiscal/exportar-xmls` | AdminOnly | `ExportarXmls` (519) | `fiscalApi.exportarXmls` | `app/admin/fiscal/page.tsx` |
-| GET | `/api/fiscal/naturezas-operacao` | AdminOnly | `ListNaturezas` (253) | `fiscalApi.listNaturezas` | `app/admin/estoque/page.tsx`<br>`app/admin/fiscal/page.tsx` |
-| POST | `/api/fiscal/naturezas-operacao` | AdminOnly | `CreateNatureza` (283) | `fiscalApi.createNatureza` | `app/admin/fiscal/page.tsx` |
-| DELETE | `/api/fiscal/naturezas-operacao/{id:guid}` | AdminOnly | `DeleteNatureza` (371) | `fiscalApi.removeNatureza` | `app/admin/fiscal/page.tsx` |
-| PUT | `/api/fiscal/naturezas-operacao/{id:guid}` | AdminOnly | `UpdateNatureza` (330) | — | — |
-| GET | `/api/fiscal/notas` | AdminOnly | `ListNotas` (383) | `fiscalApi.listNotas` | `app/admin/fiscal/page.tsx` |
-| POST | `/api/fiscal/notas/{id:guid}/cancelar` | AdminOnly | `CancelarNota` (476) | `fiscalApi.cancelarNota` | `app/admin/fiscal/page.tsx` |
-| GET | `/api/fiscal/notas/{id:guid}/cupom` | AdminOnly | `ObterCupom` (500) | `fiscalApi.obterCupom` | `app/admin/fiscal/cupom/[id]/page.tsx` |
-| POST | `/api/fiscal/notas/{id:guid}/reprocessar` | AdminOnly | `ReprocessarNota` (466) | `fiscalApi.reprocessarNota` | `app/admin/fiscal/page.tsx` |
-| POST | `/api/fiscal/test-emissao-sefaz` | AdminOnly | `TestEmissaoSefaz` (541) | — | — |
 
 ## Funcionalidades
 
@@ -325,15 +297,6 @@
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
 | GET | `/api/minhas-compras` | CustomerOrAdmin | `ListMinhasCompras` (35) | `minhasComprasApi.list` | `app/cliente/perfil/page.tsx` |
-
-## MinhasNotas
-
-`CardGameStore/Controllers/MinhasNotasController.cs`
-
-| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
-|---|---|---|---|---|---|
-| GET | `/api/minhas-notas` | CustomerOrAdmin | `ListMinhasNotas` (41) | `minhasNotasApi.list` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/minhas-notas/{id:guid}/cupom` | CustomerOrAdmin | `ObterMeuCupom` (76) | `minhasNotasApi.obterCupom` | `app/cliente/notas/[id]/page.tsx` |
 
 ## Notifications
 
@@ -479,19 +442,6 @@
 | GET | `/api/tcg/search` | logado | `Search` (45) | `tcgApi.searchAdvanced`<br>`tcgApi.searchByCode` | `app/admin/cartas/page.tsx`<br>`app/cliente/decks/[id]/page.tsx` |
 | GET | `/api/tcg/sets` | logado | `GetSets` (148) | `tcgApi.sets` | `app/admin/cartas/page.tsx`<br>`app/cliente/decks/[id]/page.tsx` |
 | POST | `/api/tcg/sync` | AdminOnly | `SyncSet` (188) | — | — |
-
-## TenantErpIntegration
-
-`CardGameStore/Controllers/TenantErpIntegrationController.cs`
-
-| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
-|---|---|---|---|---|---|
-| GET | `/api/integrations/tenant-erp/financeiro` | AdminOnly | `Financeiro` (39) | — | — |
-| POST | `/api/integrations/tenant-erp/financeiro/analisar` | AdminOnly | `AnalisarFinanceiro` (54) | — | `app/admin/financeiro/page.tsx` |
-| GET | `/api/integrations/tenant-erp/fiscal/ibpt/{ncm}` | AdminOnly | `Ibpt` (62) | — | `app/admin/integracoes/page.tsx` |
-| GET | `/api/integrations/tenant-erp/fiscal/saude` | AdminOnly | `FiscalSaude` (47) | — | — |
-| GET | `/api/integrations/tenant-erp/status` | AdminOnly | `Status` (27) | — | `app/admin/fiscal/page.tsx`<br>`app/admin/integracoes/page.tsx` |
-| POST | `/api/integrations/tenant-erp/test` | AdminOnly | `Test` (35) | — | `app/admin/integracoes/page.tsx` |
 
 ## Timer
 

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { productApi, variantApi, categoryApi, reservationApi, fiscalApi, siteConfigApi, Product, ProductCategory, ProductVariant, AdminReservation, NaturezaOperacaoDto, SiteConfigDto } from '@/lib/api'
+import { productApi, variantApi, categoryApi, reservationApi, siteConfigApi, Product, ProductCategory, ProductVariant, AdminReservation, SiteConfigDto } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Badge } from '@/components/ui/Badge'
 import { Switch } from '@/components/ui/Switch'
@@ -420,11 +420,10 @@ function VariantsPanel({ productId }: { productId: string }) {
 }
 
 function ProductModal({
-  product, categories, naturezas, parcelamentoPadrao, onClose, onSave,
+  product, categories, parcelamentoPadrao, onClose, onSave,
 }: {
   product:    Partial<Product> | null
   categories: ProductCategory[]
-  naturezas:  NaturezaOperacaoDto[]
   /** Parcelamento padrão da loja (Personalizar Site) — só pré-preenche produto NOVO. */
   parcelamentoPadrao: number | null
   onClose:    () => void
@@ -492,31 +491,8 @@ function ProductModal({
     }
   }
 
-  // A natureza escolhida (ou a padrão) decide se o CEST é obrigatório: nos CSOSNs de
-  // substituição tributária a SEFAZ rejeita a NFC-e sem ele.
-  const naturezaSelecionada = form.naturezaOperacaoId
-    ? naturezas.find(n => n.id === form.naturezaOperacaoId)
-    : naturezas.find(n => n.isPadrao)
-  const cestObrigatorio = ['201', '202', '203', '500'].includes(naturezaSelecionada?.csosn ?? '')
-  const ncmIncompleto   = (form.ncm?.length  ?? 0) > 0 && form.ncm!.length  < 8
-  const cestIncompleto  = (form.cest?.length ?? 0) > 0 && form.cest!.length < 7
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // Validação em JS em vez de `required` no input: barra aqui com uma mensagem
-    // clara em vez de mandar pro backend e voltar com 400.
-    if (ncmIncompleto) {
-      toast.error(`NCM precisa de 8 dígitos — você digitou ${form.ncm!.length}. Ex.: 1905.90.90 é 19059090.`)
-      return
-    }
-    if (cestObrigatorio && !form.cest) {
-      toast.error(`CEST é obrigatório para o CSOSN ${naturezaSelecionada?.csosn} (substituição tributária).`)
-      return
-    }
-    if (cestIncompleto) {
-      toast.error(`CEST precisa de 7 dígitos — você digitou ${form.cest!.length}.`)
-      return
-    }
     setSaving(true)
     try { await onSave(form) } finally { setSaving(false) }
   }
@@ -584,55 +560,6 @@ function ProductModal({
                 <option value="">{childCategories.length === 0 ? '— Sem subcategorias —' : 'Nenhuma (categoria geral)'}</option>
                 {childCategories.map(c => (
                   <option key={c.id} value={c.name}>{c.emoji ? `${c.emoji} ` : ''}{c.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">NCM</label>
-              {/* Sem maxLength de propósito: o browser corta o texto colado ANTES do
-                  onChange, então colar "1905.90.90" (10 caracteres) virava "1905.90." e
-                  sobravam 6 dígitos — o campo parecia travado. Quem limita a 8 é o slice
-                  sobre os dígitos, que roda depois de tirar a pontuação. */}
-              <input className={`input ${ncmIncompleto ? 'border-amber-500' : ''}`}
-                     value={form.ncm ?? ''}
-                     onChange={e => set('ncm', e.target.value.replace(/\D/g, '').slice(0, 8) || null)}
-                     placeholder="84743100 (8 dígitos, sem ponto)" inputMode="numeric" />
-              <p className={`text-xs mt-1 ${ncmIncompleto ? 'text-amber-400' : 'text-gray-400'}`}>
-                {ncmIncompleto
-                  ? `Faltam ${8 - form.ncm!.length} dígito(s) — o NCM tem 8.`
-                  : 'Obrigatório pra emitir NFC-e deste produto — só números, sem ponto.'}
-              </p>
-            </div>
-            <div>
-              <label className="label">
-                CEST {cestObrigatorio && <span className="text-amber-400">*</span>}
-              </label>
-              {/* Mesmo motivo do NCM pra não ter maxLength. */}
-              <input className={`input ${cestIncompleto ? 'border-amber-500' : ''}`}
-                     value={form.cest ?? ''}
-                     onChange={e => set('cest', e.target.value.replace(/\D/g, '').slice(0, 7) || null)}
-                     placeholder="2806400 (7 dígitos, sem ponto)" inputMode="numeric" />
-              <p className={`text-xs mt-1 ${cestIncompleto ? 'text-amber-400' : 'text-gray-400'}`}>
-                {cestIncompleto
-                  ? `Faltam ${7 - form.cest!.length} dígito(s) — o CEST tem 7.`
-                  : cestObrigatorio
-                    ? `Obrigatório: o CSOSN ${naturezaSelecionada?.csosn} é de substituição tributária.`
-                    : 'Só é exigido em produto sujeito a ICMS-ST. Vem da nota de compra.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Natureza de Operação</label>
-              <select className="input" value={form.naturezaOperacaoId ?? ''}
-                      onChange={e => set('naturezaOperacaoId', e.target.value || null)}>
-                <option value="">Usar a padrão</option>
-                {naturezas.map(n => (
-                  <option key={n.id} value={n.id}>{n.descricao} (CFOP {n.cfop})</option>
                 ))}
               </select>
             </div>
@@ -850,7 +777,6 @@ function ProductModal({
 export default function EstoquePage() {
   const [products, setProducts]       = useState<Product[]>([])
   const [categories, setCategories]   = useState<ProductCategory[]>([])
-  const [naturezas, setNaturezas]     = useState<NaturezaOperacaoDto[]>([])
   const [siteCfg, setSiteCfg]         = useState<SiteConfigDto | null>(null)
   const [loading, setLoading]         = useState(true)
   const [search, setSearch]           = useState('')
@@ -862,10 +788,9 @@ export default function EstoquePage() {
   const fetch = async (quiet = false) => {
     if (!quiet) setLoading(true)
     try {
-      const [prodRes, catRes, natRes] = await Promise.all([productApi.listAdmin(), categoryApi.list(), fiscalApi.listNaturezas()])
+      const [prodRes, catRes] = await Promise.all([productApi.listAdmin(), categoryApi.list()])
       setProducts(prodRes.data)
       setCategories(catRes.data)
-      setNaturezas(natRes.data)
       // Só serve pra pré-preencher o parcelamento de produto novo — falhou, o campo vem vazio.
       siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
     } catch { if (!quiet) toast.error('Erro ao carregar produtos') }
@@ -962,7 +887,7 @@ export default function EstoquePage() {
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {modal !== undefined && (
-        <ProductModal product={modal} categories={categories} naturezas={naturezas}
+        <ProductModal product={modal} categories={categories}
           parcelamentoPadrao={siteCfg?.maxInstallments ?? null}
           onClose={() => setModal(undefined)} onSave={handleSave} />
       )}

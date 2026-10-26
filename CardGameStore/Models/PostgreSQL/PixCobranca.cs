@@ -1,7 +1,7 @@
 // =============================================================================
 // PixCobranca.cs — Cobrança Pix imediata emitida via API do Inter (PostgreSQL)
 // Pode se originar de um Crediário, uma Comanda ou uma Venda Avulsa (Origem +
-// FKs opcionais, mesmo padrão de multi-origem usado em NotaFiscalEmitida).
+// FKs opcionais).
 // Consultada sob demanda pelo Admin para saber se o cliente já pagou
 // (sem webhook — polling manual).
 // =============================================================================

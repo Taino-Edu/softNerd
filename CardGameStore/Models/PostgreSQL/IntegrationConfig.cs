@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace CardGameStore.Models.PostgreSQL;
 
 /// <summary>
-/// Configuração de integração financeira (Inter PJ, Mercado Pago, SEFAZ NF-e, etc.).
-/// Source: "inter" | "mercadopago" | "sefaz"
+/// Configuração de integração financeira (Inter PJ, Mercado Pago).
+/// Source: "inter" | "mercadopago"
 /// </summary>
 [Table("integration_configs")]
 public class IntegrationConfig

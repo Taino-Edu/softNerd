@@ -38,7 +38,6 @@ const SECOES: Secao[] = [
     titulo: 'Painel Geral (Dashboard)',
     cor: '#00F0A8',
     itens: [
-      { t: 'Motor fiscal central', d: 'Quando a faixa "Motor fiscal central ativo" aparece, o Soft Nerd envia o snapshot da venda para o Tenant ERP. Certificado, numeração, XML, contingência e SEFAZ ficam no motor central; venda, estoque e caixa continuam somente no Soft Nerd.' },
       { t: 'Comandas em destaque', d: 'Ao abrir o dashboard, as comandas ativas aparecem imediatamente, sem scroll. Os 4 KPIs no topo (comandas ativas, receita do dia, valor em aberto, estoque baixo) ficam sempre visíveis.' },
       { t: 'Tab Ativas', d: 'Lista em tempo real de todas as comandas abertas, com busca por cliente e botão para abrir nova comanda.' },
       { t: 'Tab Histórico', d: 'Comandas fechadas e canceladas do dia selecionado. Inclui breakdown por forma de pagamento no topo.' },
@@ -46,7 +45,6 @@ const SECOES: Secao[] = [
       { t: 'Atualização automática', d: 'Intervalo configurável: 15s, 30s, 1 minuto ou manual. Também recebe eventos em tempo real via SignalR.' },
     ],
     dicas: [
-      'Se a API central ficar indisponível, a venda continua fechando e a nota fica Pendente. A outbox local reenvia depois com a mesma chave, sem criar nota duplicada.',
       'Quais painéis aparecem na tab Análises é controlado em Configurações → Dashboard.',
       'O esquema de cores do gráfico (Padrão, Azul, Neon) é configurável por usuário.',
     ],
@@ -60,7 +58,6 @@ const SECOES: Secao[] = [
       { t: 'Adicionar itens', d: 'No painel admin, clique na comanda aberta e pesquise o produto. Você também pode adicionar itens manualmente com nome e preço.' },
       { t: 'Fechar a comanda', d: 'Clique em "Fechar Comanda", escolha a forma de pagamento (Dinheiro, Pix, Cartão, Crediário, Pontos ou Cashback) e confirme. O sistema desconta o estoque automaticamente.' },
       { t: 'Desconto em R$', d: 'No fechamento, informe um valor de desconto direto em reais (além do desconto em pontos que o cliente já tenha aplicado). Aparece separado no histórico e nos relatórios.' },
-      { t: 'Emitir cupom fiscal', d: 'No fechamento aparece o checkbox "Emitir cupom fiscal (NFC-e) agora" — a nota só é emitida se você marcar. Vem pré-marcado conforme a forma de pagamento estar configurada em Fiscal → Emissão automática, mas você sempre pode mudar na hora.' },
       { t: 'Split de pagamento', d: 'É possível usar duas formas de pagamento ao mesmo tempo. Selecione a segunda forma e informe o valor dela.' },
       { t: 'Cancelar comanda', d: 'Se o cliente desistir, use "Cancelar". O estoque não é alterado e a comanda some do painel.' },
       { t: 'Agrupar itens', d: 'Itens iguais são somados automaticamente na visualização para facilitar a conferência.' },
@@ -68,7 +65,6 @@ const SECOES: Secao[] = [
     dicas: [
       'Comandas com status "Aberta" ainda não têm itens. "Em Andamento" já tem pelo menos um item adicionado.',
       'O admin pode abrir uma comanda manualmente em nome de um cliente pelo botão "Nova Comanda".',
-      'Se fechar sem marcar "Emitir cupom fiscal", dá pra emitir depois pelo botão "Emitir nota fiscal" no histórico da comanda.',
     ],
   },
   {
@@ -81,14 +77,12 @@ const SECOES: Secao[] = [
       { t: 'Layout 2 colunas no step de produtos', d: 'Ao chegar na etapa de produtos, o modal expande mostrando o catálogo à esquerda e o carrinho à direita. Cada item adicionado aparece imediatamente no painel do carrinho com controles de quantidade — sem precisar avançar de etapa para ver o que foi adicionado.' },
       { t: 'Adicionar produtos', d: 'Pesquise pelo nome, categoria ou código de barras. Clique em + para adicionar; o produto vai direto para o carrinho ao lado.' },
       { t: 'Desconto — % ou R$', d: 'Na etapa de pagamento, escolha entre desconto percentual ou valor fixo em reais com o toggle % / R$. O desconto padrão (percentual) é pré-configurável nas Preferências.' },
-      { t: 'Emitir cupom fiscal', d: 'Igual na comanda: aparece o checkbox "Emitir cupom fiscal (NFC-e) agora" antes de confirmar a venda. Vem pré-marcado conforme a forma de pagamento estar configurada em Fiscal → Emissão automática.' },
       { t: 'Split de pagamento', d: 'Selecione uma segunda forma de pagamento e informe o valor. O saldo restante é calculado automaticamente.' },
       { t: 'Analytics do PDV', d: 'Histórico com gráfico de pico de horário, top produtos vendidos no período e breakdown por forma de pagamento.' },
     ],
     dicas: [
       'O desconto padrão (0 a 20%) pode ser pré-configurado em Configurações → Frente de Caixa.',
       'Sem cliente selecionado, a venda é anônima — aparece apenas nos relatórios gerais.',
-      'Se a venda foi registrada sem nota, dá pra emitir depois no detalhe da venda (histórico do PDV).',
     ],
   },
   {
@@ -260,7 +254,6 @@ const SECOES: Secao[] = [
     itens: [
       { t: 'Pra que serve', d: 'Controle do que a loja tem pra pagar (fornecedor, aluguel, energia) e pra receber fora do caixa do dia.' },
       { t: 'Lançar conta', d: 'Informe descrição, valor, vencimento e se é a pagar ou a receber. Dá pra marcar como paga/recebida quando quitar.' },
-      { t: 'Nota de fornecedor vira conta', d: 'As NF-e emitidas contra o CNPJ da loja são baixadas automaticamente e viram conta a pagar, sem digitação.' },
       { t: 'Vencidas em destaque', d: 'O que passou do vencimento aparece em vermelho, pra cobrança e pagamento não escaparem.' },
     ],
   },
@@ -408,41 +401,11 @@ const SECOES: Secao[] = [
       { t: 'Curva ABC', d: 'Classifica automaticamente os produtos pela contribuição na receita: A = top 80% (produtos mais importantes), B = 80–95%, C = restante. Use para decidir o que priorizar no estoque.' },
       { t: 'Gráfico de Pareto', d: 'Visualização da Curva ABC com barras coloridas por classe e linha de acumulado. Linhas de referência nos 80% e 95% facilitam a leitura.' },
       { t: 'Filtros na Curva ABC', d: 'Clique em qualquer badge de classe (A, B ou C) ou em uma categoria para filtrar a tabela. Clique novamente para limpar o filtro.' },
-      { t: 'Análise inteligente', d: 'No topo do Financeiro, clique em Análise inteligente. Informe despesas fixas, despesas variáveis e o total vencido. A 3ESysten calcula margem bruta, markup, resultado operacional, ponto de equilíbrio e ações recomendadas sem copiar clientes ou vendas para outro banco.' },
       { t: 'Margem e markup', d: 'Margem é o ganho em relação ao preço de venda. Markup é o ganho em relação ao custo. Eles usam bases diferentes e por isso os percentuais não são iguais.' },
-      { t: 'Ajuda contextual', d: 'Dentro da Análise inteligente, clique no ícone ? para rever o significado dos indicadores e das despesas usadas no cálculo.' },
     ],
     dicas: [
       'Classe A = poucos produtos que respondem por 80% da receita — são os que nunca podem faltar no estoque.',
       'O mini filtro de período abaixo do gráfico atualiza os dados sem disparar uma nova requisição separada — usa o mesmo estado do filtro do topo.',
-      'Quanto mais completas forem as despesas informadas, mais fiel será o resultado operacional e o ponto de equilíbrio.',
-    ],
-  },
-  {
-    grupo: 'Configuração',
-    ordem: 20,
-    titulo: 'Fiscal — Emissão de NFC-e',
-    cor: '#EAB308',
-    itens: [
-      { t: 'Configurar a empresa', d: 'Em Admin → Fiscal, preencha CNPJ, razão social, inscrição estadual, endereço completo e regime tributário (Simples Nacional). Todos os campos são obrigatórios pra emitir NFC-e.' },
-      { t: 'Certificado digital A1', d: 'Envie o arquivo .pfx do certificado A1 e a senha. O sistema valida e guarda criptografado — nunca aparece de novo em texto puro depois de salvo.' },
-      { t: 'Natureza de Operação', d: 'Cadastre CFOP/CSOSN uma vez (ex: "Venda dentro do estado") e marque uma como padrão. Produtos sem natureza específica usam a padrão automaticamente.' },
-      { t: 'NCM é obrigatório', d: 'Todo produto vendido por NFC-e precisa ter o NCM cadastrado (Admin → Estoque), copiado da nota fiscal de compra do produto — o sistema nunca inventa ou sugere um NCM sozinho.' },
-      { t: 'Consulta IBPT integrada', d: 'Em Admin → Integrações, informe NCM, UF e se o item é importado para consultar os percentuais federal, estadual, municipal e total da tabela IBPT publicada pela 3ESysten.' },
-      { t: 'Emissão não é mais automática', d: 'Ao fechar uma comanda ou registrar uma venda avulsa, a nota só é emitida se você marcar o checkbox "Emitir cupom fiscal" no momento do fechamento — o sistema não emite nota sozinho sem perguntar.' },
-      { t: 'Formas de pagamento com auto-emissão', d: 'Em Fiscal → Emissão automática, marque quais formas de pagamento (Pix, Dinheiro, Cartão...) vêm com o checkbox já pré-marcado no fechamento. Por padrão nenhuma vem marcada — é sempre uma escolha explícita até você configurar isso.' },
-      { t: 'Emitir nota depois (manual)', d: 'Se a venda foi fechada sem nota, use o botão "Emitir nota fiscal" no histórico da comanda ou no detalhe da venda avulsa a qualquer momento depois.' },
-      { t: 'Acompanhar notas emitidas', d: 'A lista de notas em Admin → Fiscal mostra status (Pendente, Autorizada, Rejeitada, Cancelada, Contingência) e o motivo quando não autoriza — ex: certificado não configurado, produto sem NCM.' },
-      { t: 'Reprocessar e cancelar', d: 'Notas pendentes ou rejeitadas podem ser reprocessadas manualmente. Notas autorizadas podem ser canceladas dentro de 30 minutos da emissão, com justificativa de pelo menos 15 caracteres.' },
-      { t: 'Cupom e QR Code', d: 'Cada nota autorizada tem uma página de cupom pra imprimir ou mostrar pro cliente, com QR Code oficial da SEFAZ. Quando marca "Emitir cupom fiscal" no fechamento, o cupom abre sozinho numa aba nova assim que a SEFAZ autoriza — sem precisar ir procurar em Admin > Fiscal.' },
-      { t: 'Impressão térmica', d: 'O botão "Imprimir" da página do cupom usa o diálogo de impressão do navegador, formatado pra 80mm — funciona com qualquer impressora térmica instalada como impressora normal do Windows/sistema. Não é automático: alguém precisa clicar em Imprimir e escolher a térmica.' },
-      { t: 'Cliente vê a própria nota', d: 'Em Meu Perfil > Notas Fiscais, o cliente vê as próprias notas emitidas e pode abrir/imprimir o cupom de qualquer uma que já autorizou — sem precisar pedir pro admin.' },
-      { t: 'Exportar XMLs pro contador', d: 'Exporte um ZIP com os XMLs autorizados e cancelados de qualquer período — manual, ou automático todo dia 1 do mês por e-mail pro contador cadastrado.' },
-    ],
-    dicas: [
-      'Retry automático: notas pendentes ou em contingência são retransmitidas à SEFAZ periodicamente sem precisar fazer nada.',
-      'O NCM tem que vir da nota de compra real do fornecedor — nunca é adivinhado, pra evitar risco de classificação fiscal errada.',
-      'Configure "Emissão automática" só depois de confirmar que a emissão manual está funcionando direito pra aquela forma de pagamento.',
     ],
   },
   {

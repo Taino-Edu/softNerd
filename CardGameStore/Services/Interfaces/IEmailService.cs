@@ -63,12 +63,4 @@ public interface IEmailService
 
     /// <summary>Envia um email de diagnóstico para testar as configurações de SMTP.</summary>
     Task<bool> SendDiagnosticEmailAsync(string toEmail);
-
-    // ── Fiscal ────────────────────────────────────────────────────────────────
-
-    /// <summary>Alerta o admin que o certificado digital A1 está próximo do vencimento.</summary>
-    Task SendCertificadoVencendoAsync(string toEmail, string toName, int diasRestantes, DateTime validade);
-
-    /// <summary>Envia ao contador o ZIP mensal com os XMLs de NFC-e autorizadas/canceladas.</summary>
-    Task SendXmlsMensalContadorAsync(string toEmail, string mesReferencia, byte[] zipBytes, string zipFileName);
 }
