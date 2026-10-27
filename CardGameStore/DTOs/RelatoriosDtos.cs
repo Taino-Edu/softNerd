@@ -13,6 +13,18 @@ public class RelatorioVendasDto
     public decimal TotalGeralEmReais  { get; set; }
     public int     TotalItensVendidos { get; set; }
     public List<RelatorioCategoria> PorCategoria { get; set; } = new();
+    /// <summary>As mesmas categorias de PorCategoria, agrupadas debaixo da categoria-pai
+    /// (chave relatorio-por-subcategoria). O total do grupo é a soma das subcategorias.</summary>
+    public List<RelatorioGrupoCategoria> Grupos { get; set; } = new();
+}
+
+public class RelatorioGrupoCategoria
+{
+    public string  Categoria         { get; set; } = string.Empty;
+    public string  Emoji             { get; set; } = "📦";
+    public int     QuantidadeVendida { get; set; }
+    public decimal TotalEmReais      { get; set; }
+    public List<RelatorioCategoria> Subcategorias { get; set; } = new();
 }
 
 public class RelatorioCategoria

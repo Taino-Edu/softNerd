@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.74.0] — 2026-10-26
+
+### Relatórios — vendas por subcategoria (pedido do Maikon)
+- Em **Relatórios → Vendas**, cada categoria-pai (ex.: Cartas) mostra o total do mês e, aberta, as subcategorias (Pokémon, One Piece, Riftbound…) com os produtos de cada uma. O total do pai é sempre a soma das filhas; o que foi vendido direto no pai aparece como "(sem subcategoria)"
+- Subcategoria com o mesmo nome em duas famílias fica no próprio grupo, pra não somar no pai errado
+- Correção: venda avulsa **estornada** não entra mais no relatório de vendas (o resto do financeiro já tirava)
+- Chave `relatorio-por-subcategoria` em Funcionalidades: desligada, volta a lista de antes
+
 ## [v1.73.0] — 2026-10-26
 
 ### Limpeza — sai o WhatsApp automático e o que o financeiro não usava

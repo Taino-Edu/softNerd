@@ -391,7 +391,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/relatorios/crediario` | AdminOnly | `Crediario` (156) | `relatorioApi.crediario` | `app/admin/relatorios/page.tsx` |
+| GET | `/api/relatorios/crediario` | AdminOnly | `Crediario` (205) | `relatorioApi.crediario` | `app/admin/relatorios/page.tsx` |
 | GET | `/api/relatorios/vendas` | AdminOnly | `Vendas` (44) | `relatorioApi.vendas` | `app/admin/relatorios/page.tsx` |
 
 ## Reservation

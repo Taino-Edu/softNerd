@@ -162,6 +162,16 @@ export interface RelatorioVendasDto {
   totalGeralEmReais: number
   totalItensVendidos: number
   porCategoria: RelatorioCategoria[]
+  /** As mesmas categorias, debaixo da categoria-pai (o total do pai é a soma das filhas). */
+  grupos: RelatorioGrupoCategoria[]
+}
+
+export interface RelatorioGrupoCategoria {
+  categoria: string
+  emoji: string
+  quantidadeVendida: number
+  totalEmReais: number
+  subcategorias: RelatorioCategoria[]
 }
 
 export interface DevedorDto {
