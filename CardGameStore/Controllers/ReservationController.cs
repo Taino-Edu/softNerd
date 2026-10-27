@@ -1,3 +1,4 @@
+using CardGameStore.Common;
 using CardGameStore.DTOs;
 using CardGameStore.Services.Pedidos;
 using Microsoft.AspNetCore.Authorization;
@@ -9,7 +10,7 @@ namespace CardGameStore.Controllers;
 // =============================================================================
 // ReservationController.cs — Pedidos do site (pré-venda e fila legada).
 // Só HTTP: monta quem está pedindo a partir do login, chama o serviço e traduz
-// a recusa de regra (PedidoException) na resposta. As regras ficam em
+// a recusa de regra (PedidoException) na resposta (RespostaDeRegra.cs). As regras ficam em
 // Services/Pedidos: criação, andamento (cancelar, retirar, homologar, pagar),
 // cobrança Pix e consulta.
 // =============================================================================
@@ -39,24 +40,24 @@ public class ReservationController(
     [HttpPost]
     [Authorize]
     public Task<IActionResult> Create([FromBody] CreateReservationRequest req) =>
-        Responder(() => criacao.CriarAsync(Ator().Id, req));
+        this.Responder(() => criacao.CriarAsync(Ator().Id, req));
 
     // POST /api/reservations/cart — o carrinho inteiro num pedido só (ou nenhum item)
     [HttpPost("cart")]
     [Authorize]
     public Task<IActionResult> CreateCart([FromBody] CreateReservationCartRequest req) =>
-        Responder(() => criacao.CriarCarrinhoAsync(Ator().Id, req));
+        this.Responder(() => criacao.CriarCarrinhoAsync(Ator().Id, req));
 
     // POST /api/reservations/admin-create — admin registra o pedido em nome do cliente
     [HttpPost("admin-create")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> AdminCreate([FromBody] AdminCreateReservationRequest req) =>
-        Responder(() => criacao.CriarPeloAdminAsync(req));
+        this.Responder(() => criacao.CriarPeloAdminAsync(req));
 
     // DELETE /api/reservations/{id} — cancela pré-venda (estoque volta) ou sai da fila
     [HttpDelete("{id:guid}")]
     [Authorize]
-    public Task<IActionResult> Cancel(Guid id) => Responder(() => andamento.CancelarAsync(id, Ator()));
+    public Task<IActionResult> Cancel(Guid id) => this.Responder(() => andamento.CancelarAsync(id, Ator()));
 
     // GET /api/reservations — lista do admin
     [HttpGet]
@@ -74,46 +75,46 @@ public class ReservationController(
     [HttpPut("{id:guid}/status")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateReservationStatusRequest req) =>
-        Responder(() => andamento.AtualizarStatusAsync(id, req.Status, Ator()));
+        this.Responder(() => andamento.AtualizarStatusAsync(id, req.Status, Ator()));
 
     // PUT /api/reservations/{id}/quantity — admin corrige a quantidade de um pedido em aberto
     [HttpPut("{id:guid}/quantity")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> UpdateQuantity(Guid id, [FromBody] UpdateReservationQuantityRequest req) =>
-        Responder(() => andamento.AtualizarQuantidadeAsync(id, req.Quantity));
+        this.Responder(() => andamento.AtualizarQuantidadeAsync(id, req.Quantity));
 
     // POST /api/reservations/{id}/homologar — homologa UM item (a tela usa o do pedido inteiro)
     [HttpPost("{id:guid}/homologar")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> Homologar(Guid id, [FromBody] HomologarRequest req) =>
-        Responder(() => andamento.HomologarAsync(id, req, Ator()));
+        this.Responder(() => andamento.HomologarAsync(id, req, Ator()));
 
     // POST /api/reservations/group/{groupId}/homologar — homologa o pedido inteiro de uma vez
     [HttpPost("group/{groupId:guid}/homologar")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> HomologarGrupo(Guid groupId, [FromBody] HomologarRequest req) =>
-        Responder(() => andamento.HomologarPedidoAsync(groupId, req, Ator()));
+        this.Responder(() => andamento.HomologarPedidoAsync(groupId, req, Ator()));
 
     // POST /api/reservations/group/{groupId}/pagamento — pagamento lançado à mão SEM retirada
     [HttpPost("group/{groupId:guid}/pagamento")]
     [Authorize(Policy = "AdminOnly")]
     public Task<IActionResult> RegistrarPagamentoGrupo(Guid groupId, [FromBody] HomologarRequest req) =>
-        Responder(() => andamento.RegistrarPagamentoAsync(groupId, req, Ator()));
+        this.Responder(() => andamento.RegistrarPagamentoAsync(groupId, req, Ator()));
 
     // POST /api/reservations/group/{groupId}/pix — Pix do total das pré-vendas do pedido
     [HttpPost("group/{groupId:guid}/pix")]
     [Authorize]
-    public Task<IActionResult> GerarPixReserva(Guid groupId) => Responder(() => cobranca.GerarAsync(groupId, Ator()));
+    public Task<IActionResult> GerarPixReserva(Guid groupId) => this.Responder(() => cobranca.GerarAsync(groupId, Ator()));
 
     // POST /api/reservations/group/{groupId}/pix/verificar — confere no Inter se o Pix caiu
     [HttpPost("group/{groupId:guid}/pix/verificar")]
     [Authorize]
-    public Task<IActionResult> VerificarPixReserva(Guid groupId) => Responder(() => cobranca.VerificarAsync(groupId, Ator()));
+    public Task<IActionResult> VerificarPixReserva(Guid groupId) => this.Responder(() => cobranca.VerificarAsync(groupId, Ator()));
 
     // DELETE /api/reservations/group/{groupId}/pix — cancela o Pix aberto do pedido
     [HttpDelete("group/{groupId:guid}/pix")]
     [Authorize(Policy = "AdminOnly")]
-    public Task<IActionResult> CancelarPixReserva(Guid groupId) => Responder(async () =>
+    public Task<IActionResult> CancelarPixReserva(Guid groupId) => this.Responder(async () =>
     {
         await cobranca.CancelarAsync(groupId);
         return new { Message = "Cobrança Pix cancelada. Agora dá pra alterar a quantidade." };
@@ -122,7 +123,7 @@ public class ReservationController(
     // GET /api/reservations/group/{groupId}/pix — status atual do pagamento
     [HttpGet("group/{groupId:guid}/pix")]
     [Authorize]
-    public Task<IActionResult> GetPixReserva(Guid groupId) => Responder(() => cobranca.StatusAsync(groupId, Ator()));
+    public Task<IActionResult> GetPixReserva(Guid groupId) => this.Responder(() => cobranca.StatusAsync(groupId, Ator()));
 
     /// <summary>Quem está pedindo, a partir dos claims do login.</summary>
     private Ator Ator()
@@ -131,29 +132,5 @@ public class ReservationController(
         if (claim is null || !Guid.TryParse(claim.Value, out var id)) throw new UnauthorizedAccessException();
         var nome = User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst("name")?.Value ?? "Admin";
         return new Ator(id, nome, User.IsInRole("Admin"));
-    }
-
-    /// <summary>Roda a ação: deu certo = 200 com o resultado; recusa de regra = o status dela.</summary>
-    private async Task<IActionResult> Responder<T>(Func<Task<T>> acao)
-    {
-        try
-        {
-            return Ok(await acao());
-        }
-        catch (PedidoException ex)
-        {
-            if (ex.Mensagem is null)
-                return ex.Status switch { 403 => Forbid(), 404 => NotFound(), _ => StatusCode(ex.Status) };
-
-            var corpo = new Dictionary<string, object?> { ["message"] = ex.Mensagem };
-            foreach (var (chave, valor) in ex.Extras ?? new Dictionary<string, object?>()) corpo[chave] = valor;
-            return ex.Status switch
-            {
-                400 => BadRequest(corpo),
-                404 => NotFound(corpo),
-                409 => Conflict(corpo),
-                _   => StatusCode(ex.Status, corpo),
-            };
-        }
     }
 }

@@ -9,6 +9,7 @@
 // =============================================================================
 
 using CardGameStore.Configuration;
+using CardGameStore.Common;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Hubs;

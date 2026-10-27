@@ -14,6 +14,7 @@
 
 using System.Reflection;
 using System.Security.Claims;
+using CardGameStore.Common;
 using CardGameStore.Configuration;
 using CardGameStore.Controllers;
 using CardGameStore.Data;

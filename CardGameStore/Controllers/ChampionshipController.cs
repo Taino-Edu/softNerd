@@ -1,86 +1,109 @@
 // =============================================================================
-// ChampionshipController.cs — Endpoints REST de Campeonatos/Torneios
-// GET  /api/championship              → lista campeonatos (Planejado/Inscrições)
-// GET  /api/championship/{id}         → detalhes de um campeonato
-// GET  /api/championship/{id}/participants → lista participantes
-// POST /api/championship              → cria campeonato (Admin)
-// POST /api/championship/{id}/register → usuário se inscreve e recebe o Pix imediatamente
-// PUT  /api/championship/{id}         → edita campeonato (Admin)
-// PUT  /api/championship/{id}/status  → muda status (Admin)
-// PUT  /api/championship/{id}/participants/{pid}/placement → define colocação (Admin)
+// ChampionshipController.cs — Campeonatos: cadastro, inscrição e Pix da entrada.
+// Só HTTP: lê quem está logado, chama o serviço e devolve a resposta. Cadastro em
+// IChampionshipService; inscrição e Pix em Services/Campeonatos/CampeonatoInscricaoService.
 // =============================================================================
 
-using CardGameStore.Data;
+using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
-using CardGameStore.Services.Implementations;
+using CardGameStore.Services.Campeonatos;
 using CardGameStore.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CardGameStore.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class ChampionshipController : ControllerBase
+public class ChampionshipController(
+    IChampionshipService campeonatos, ICampeonatoInscricaoService inscricoes,
+    ILogger<ChampionshipController> logger) : ControllerBase
 {
-    private readonly IChampionshipService _service;
-    private readonly AppDbContext         _db;
-    private readonly InterSyncService     _inter;
-    private readonly IPixReconciliationService _pixReconciliation;
-    private readonly IPushService         _push;
-    private readonly ILogger<ChampionshipController> _logger;
+    private const string NaoEncontrado = "Campeonato não encontrado.";
 
-    public ChampionshipController(
-        IChampionshipService service, AppDbContext db, InterSyncService inter,
-        IPixReconciliationService pixReconciliation, IPushService push,
-        ILogger<ChampionshipController> logger)
-    {
-        _service           = service;
-        _db                = db;
-        _inter             = inter;
-        _pixReconciliation = pixReconciliation;
-        _push              = push;
-        _logger            = logger;
-    }
+    // ── Leitura ──────────────────────────────────────────────────────────────
 
-    // -------------------------------------------------------------------------
-    // LEITURA — acessível por qualquer pessoa autenticada (ou anônima para listagem)
-    // -------------------------------------------------------------------------
-
-    /// <summary>Lista campeonatos planejados e com inscrições abertas (público).</summary>
+    /// <summary>Campeonatos planejados e com inscrições abertas (público).</summary>
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IEnumerable<ChampionshipDto>), 200)]
-    public async Task<IActionResult> GetAll()
-    {
-        var list = await _service.GetUpcomingAsync();
-        return Ok(list.Select(ToDto));
-    }
+    public async Task<IActionResult> GetAll() =>
+        Ok((await campeonatos.GetUpcomingAsync()).Select(c => c.ParaDto()));
 
-    /// <summary>Lista TODOS os campeonatos incluindo finalizados (Admin).</summary>
+    /// <summary>Todos os campeonatos, inclusive finalizados (Admin).</summary>
     [HttpGet("admin/all")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(IEnumerable<ChampionshipDto>), 200)]
-    public async Task<IActionResult> GetAllAdmin([FromQuery] string? search = null)
+    public async Task<IActionResult> GetAllAdmin([FromQuery] string? search = null) =>
+        Ok((await campeonatos.GetAllAsync(search)).Select(c => c.ParaDto()));
+
+    /// <summary>Um campeonato.</summary>
+    [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ChampionshipDto), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetById(Guid id) =>
+        await campeonatos.GetByIdAsync(id) is { } ch ? Ok(ch.ParaDto()) : NotFound(new { Message = NaoEncontrado });
+
+    /// <summary>Campeonatos em que o cliente logado está inscrito.</summary>
+    [HttpGet("my-participations")]
+    [Authorize]
+    [ProducesResponseType(typeof(IEnumerable<MyParticipationDto>), 200)]
+    public async Task<IActionResult> GetMyParticipations() =>
+        Ok((await campeonatos.GetUserParticipationsAsync(UsuarioId())).Select(p => p.ParaMinhaParticipacao()));
+
+    /// <summary>Participantes de um campeonato, com o valor da cobrança de cada um.</summary>
+    [HttpGet("{id:guid}/participants")]
+    [Authorize]
+    [ProducesResponseType(typeof(IEnumerable<ParticipantDto>), 200)]
+    public async Task<IActionResult> GetParticipants(Guid id) => Ok(await inscricoes.ParticipantesAsync(id));
+
+    // ── Cadastro (Admin) ─────────────────────────────────────────────────────
+
+    [HttpPost]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(ChampionshipDto), 201)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> Create([FromBody] CreateChampionshipRequest request)
     {
-        var list = await _service.GetAllAsync(search);
-        return Ok(list.Select(ToDto));
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var adminId = UsuarioId();
+        var criado = await campeonatos.CreateAsync(request.ParaCampeonato(adminId));
+        logger.LogInformation("Campeonato {Id} criado pelo admin {AdminId}", criado.Id, adminId);
+        return CreatedAtAction(nameof(GetById), new { id = criado.Id }, criado.ParaDto());
     }
 
-    /// <summary>Exclui um campeonato (Admin). Só permite excluir Finalizados ou Cancelados.</summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(ChampionshipDto), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateChampionshipRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var ch = await campeonatos.GetByIdAsync(id);
+        if (ch is null) return NotFound(new { Message = NaoEncontrado });
+
+        request.AplicarEm(ch);
+        var atualizado = await campeonatos.UpdateAsync(ch);
+        logger.LogInformation("Campeonato {Id} editado pelo admin", id);
+        return Ok(atualizado.ParaDto());
+    }
+
+    /// <summary>Exclui um campeonato (só Finalizados ou Cancelados).</summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(200)]
     [ProducesResponseType(400)]
-    [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(Guid id)
     {
         try
         {
-            await _service.DeleteAsync(id);
-            _logger.LogInformation("Campeonato {Id} excluído pelo admin", id);
+            await campeonatos.DeleteAsync(id);
+            logger.LogInformation("Campeonato {Id} excluído pelo admin", id);
             return Ok(new { Message = "Campeonato excluído." });
         }
         catch (InvalidOperationException ex)
@@ -89,535 +112,121 @@ public class ChampionshipController : ControllerBase
         }
     }
 
-    /// <summary>Busca um campeonato pelo ID com lista de participantes.</summary>
-    [HttpGet("{id:guid}")]
-    [AllowAnonymous]
-    [ProducesResponseType(typeof(ChampionshipDto), 200)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> GetById(Guid id)
-    {
-        var ch = await _service.GetByIdAsync(id);
-        return ch == null ? NotFound(new { Message = "Campeonato não encontrado." }) : Ok(ToDto(ch));
-    }
-
-    /// <summary>Lista todos os campeonatos em que o usuário autenticado está inscrito.</summary>
-    [HttpGet("my-participations")]
-    [Authorize]
-    [ProducesResponseType(typeof(IEnumerable<MyParticipationDto>), 200)]
-    public async Task<IActionResult> GetMyParticipations()
-    {
-        var userId       = GetUserId();
-        var participations = await _service.GetUserParticipationsAsync(userId);
-        return Ok(participations.Select(p => new MyParticipationDto
-        {
-            ParticipationId  = p.Id,
-            ChampionshipId   = p.ChampionshipId,
-            ChampionshipName = p.Championship?.Name ?? string.Empty,
-            Game             = p.Championship?.Game ?? string.Empty,
-            StartDate        = p.Championship?.StartDate ?? default,
-            Status           = p.Championship?.Status.ToString() ?? string.Empty,
-            EntryFeeInReais  = (p.Championship?.EntryFeeInCents ?? 0) / 100m,
-            PlayerNumber     = p.PlayerNumber,
-            DeckName         = p.DeckName,
-            Placement        = p.Placement,
-            RegisteredAt     = p.RegisteredAt,
-            EntryFeePaidAt        = p.EntryFeePaidAt,
-            EntryFeePaymentMethod = p.EntryFeePaymentMethod,
-            InscricaoExpiraEm     = p.InscricaoExpiraEm,
-        }));
-    }
-
-    /// <summary>Lista os participantes inscritos em um campeonato.</summary>
-    [HttpGet("{id:guid}/participants")]
-    [Authorize]
-    [ProducesResponseType(typeof(IEnumerable<ParticipantDto>), 200)]
-    public async Task<IActionResult> GetParticipants(Guid id)
-    {
-        var participants = await _service.GetParticipantsAsync(id);
-        // Valor da cobrança de cada um (a mais recente): o preço da entrada pode mudar depois das
-        // primeiras inscrições, e quem já tinha cobrança fica com o valor dela.
-        var ids = participants.Select(p => p.Id).ToList();
-        var cobrancas = await _db.PixCobrancas.AsNoTracking()
-            .Where(c => c.ChampionshipParticipantId != null && ids.Contains(c.ChampionshipParticipantId.Value))
-            .Select(c => new { Id = c.ChampionshipParticipantId!.Value, c.ValorEmCentavos, c.CriadoEm, c.Status })
-            .ToListAsync();
-        var ultimaPor = cobrancas.GroupBy(c => c.Id)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CriadoEm).First());
-        return Ok(participants.Select(p => new ParticipantDto
-        {
-            ValorInscricaoEmCentavos = ultimaPor.TryGetValue(p.Id, out var ultima) ? ultima.ValorEmCentavos : null,
-            // Cobrança em aberto conta como "a receber" mesmo com vaga firme (cobrada depois de a entrada virar paga)
-            CobrancaEmAberto = ultimaPor.TryGetValue(p.Id, out var aberta) && aberta.Status == "ATIVA" && p.EntryFeePaidAt == null,
-            Id             = p.Id,
-            UserId         = p.UserId,
-            UserName       = p.User?.Name ?? string.Empty,
-            PlayerNumber   = p.PlayerNumber,
-            DeckName       = p.DeckName,
-            DeckId         = p.DeckId,
-            Placement      = p.Placement,
-            RegisteredAt   = p.RegisteredAt,
-            EntryFeePaidAt        = p.EntryFeePaidAt,
-            EntryFeePaymentMethod = p.EntryFeePaymentMethod,
-            InscricaoExpiraEm     = p.InscricaoExpiraEm,
-        }));
-    }
-
-    // -------------------------------------------------------------------------
-    // CRIAÇÃO — apenas Admin
-    // -------------------------------------------------------------------------
-
-    /// <summary>Cria um novo campeonato. Apenas Admin.</summary>
-    [HttpPost]
-    [Authorize(Policy = "AdminOnly")]
-    [ProducesResponseType(typeof(ChampionshipDto), 201)]
-    [ProducesResponseType(400)]
-    public async Task<IActionResult> Create([FromBody] CreateChampionshipRequest request)
-    {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        var adminId = GetUserId();
-
-        var championship = new Championship
-        {
-            Name                 = request.Name,
-            Description          = request.Description,
-            Game                 = request.Game,
-            StartDate            = request.StartDate,
-            EndDate              = request.EndDate,
-            RegistrationDeadline = request.RegistrationDeadline,
-            MaxParticipants      = request.MaxParticipants,
-            EntryFeeInCents      = request.EntryFeeInCents,
-            MinutosParaPagar     = Math.Clamp(request.MinutosParaPagar ?? 30, 1, 1440),
-            ImageUrl             = request.ImageUrl,
-            Modalidade           = request.Modalidade ?? ModalidadeTorneio.Liga,
-            Status               = ChampionshipStatus.Planejado,
-            CreatedByAdminId     = adminId
-        };
-
-        var created = await _service.CreateAsync(championship);
-        _logger.LogInformation("Campeonato {Id} criado pelo admin {AdminId}", created.Id, adminId);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToDto(created));
-    }
-
-    // -------------------------------------------------------------------------
-    // EDIÇÃO — apenas Admin
-    // -------------------------------------------------------------------------
-
-    /// <summary>Atualiza os campos editáveis de um campeonato. Apenas Admin.</summary>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id:guid}/status")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(ChampionshipDto), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateChampionshipRequest request)
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusRequest request)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+        if (!Enum.TryParse<ChampionshipStatus>(request.Status, ignoreCase: true, out var novo))
+            return BadRequest(new { Message = $"Status inválido: '{request.Status}'. Valores válidos: Planejado, Inscricoes, EmAndamento, Finalizado, Cancelado" });
 
-        var ch = await _service.GetByIdAsync(id);
-        if (ch == null)
-            return NotFound(new { Message = "Campeonato não encontrado." });
-
-        ch.Name                 = request.Name;
-        ch.Description          = request.Description;
-        ch.Game                 = request.Game;
-        ch.StartDate            = request.StartDate;
-        ch.EndDate              = request.EndDate;
-        ch.RegistrationDeadline = request.RegistrationDeadline;
-        ch.MaxParticipants      = request.MaxParticipants;
-        ch.EntryFeeInCents      = request.EntryFeeInCents;
-        ch.ImageUrl             = request.ImageUrl;
-        // Só sobrescreve se veio no corpo — assim uma tela antiga não zera o prazo.
-        if (request.MinutosParaPagar is int minutos)
-            ch.MinutosParaPagar = Math.Clamp(minutos, 1, 1440);
-        if (request.Modalidade is { } modalidade)
-            ch.Modalidade = modalidade;
-
-        var updated = await _service.UpdateAsync(ch);
-        _logger.LogInformation("Campeonato {Id} editado pelo admin", id);
-        return Ok(ToDto(updated));
+        try
+        {
+            var atualizado = await campeonatos.UpdateStatusAsync(id, novo);
+            logger.LogInformation("Status do campeonato {Id} alterado para {Status}", id, novo);
+            return Ok(atualizado.ParaDto());
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
     }
 
-    // -------------------------------------------------------------------------
-    // INSCRIÇÃO DO CLIENTE — Pix imediato, sem opção de pagar depois
-    // -------------------------------------------------------------------------
+    /// <summary>Colocação final de um participante.</summary>
+    [HttpPut("{id:guid}/participants/{participantId:guid}/placement")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> SetPlacement(Guid id, Guid participantId, [FromBody] SetPlacementRequest request)
+    {
+        if (request.Placement <= 0) return BadRequest(new { Message = "A colocação deve ser maior que zero." });
 
-    /// <summary>Inscreve o usuário autenticado e, quando há taxa, já cria o Pix obrigatório.</summary>
+        await campeonatos.SetPlacementAsync(participantId, request.Placement);
+        return Ok(new { Message = $"Colocação {request.Placement}º definida com sucesso." });
+    }
+
+    /// <summary>Imagem de capa.</summary>
+    [HttpPut("{id:guid}/image")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(ChampionshipDto), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> SetImage(Guid id, [FromBody] SetImageRequest request)
+    {
+        var ch = await campeonatos.GetByIdAsync(id);
+        if (ch is null) return NotFound(new { Message = NaoEncontrado });
+
+        ch.ImageUrl = request.ImageUrl;
+        await campeonatos.UpdateAsync(ch);
+        return Ok(ch.ParaDto());
+    }
+
+    /// <summary>Pódio do campeonato (JSON).</summary>
+    [HttpPatch("{id:guid}/podio")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> SetPodio(Guid id, [FromBody] SetPodioRequest request)
+    {
+        try
+        {
+            await campeonatos.SetPodioAsync(id, request.PodioJson);
+            return Ok(new { Message = "Pódio salvo com sucesso." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
+
+    // ── Inscrição e Pix da entrada ───────────────────────────────────────────
+
+    /// <summary>Cliente se inscreve; em campeonato pago o Pix já vem junto (201 nova, 200 retomada).</summary>
     [HttpPost("{id:guid}/register")]
     [Authorize]
-    [ProducesResponseType(typeof(ParticipantDto), 201)]
+    [ProducesResponseType(typeof(InscricaoDto), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> Register(Guid id, [FromBody] RegisterChampionshipRequest? request)
-    {
-        var userId = GetUserId();
-        var ch = await _service.GetByIdAsync(id);
-        if (ch is null)
-            return NotFound(new { Message = "Campeonato não encontrado." });
-        if (ch.Status != ChampionshipStatus.Inscricoes)
-            return BadRequest(new { Message = "As inscrições para este campeonato não estão abertas." });
-        if (ch.RegistrationDeadline.HasValue && ch.RegistrationDeadline.Value < DateTime.UtcNow)
-            return BadRequest(new { Message = "O prazo de inscrição para este campeonato já encerrou." });
-        IntegrationConfig? cfg = null;
-        if (ch.EntryFeeInCents > 0)
+    public Task<IActionResult> Register(Guid id, [FromBody] RegisterChampionshipRequest? request) =>
+        this.ResponderCom(async () =>
         {
-            cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-            if (cfg is null)
-                return BadRequest(new { Message = "O Pix está indisponível. A inscrição não foi criada; fale com o Maikon." });
-        }
-
-        var participant = await _db.ChampionshipParticipants
-            .Include(p => p.Championship)
-            .Include(p => p.User)
-            .FirstOrDefaultAsync(p => p.ChampionshipId == id && p.UserId == userId);
-        var criouAgora = participant is null;
-
-        if (participant?.EntryFeePaidAt is not null)
-            return BadRequest(new { Message = "Sua inscrição neste campeonato já está confirmada." });
-
-        // Quem já estava segurando uma vaga pode retomar o Pix mesmo se as demais vagas
-        // encheram. Inscrição nova (ou vencida) precisa disputar a capacidade atual.
-        if ((participant is null || !participant.VagaVale)
-            && ch.MaxParticipants.HasValue
-            && ch.Participants.Count(p => p.VagaVale) >= ch.MaxParticipants.Value)
-            return BadRequest(new { Message = "O campeonato atingiu o número máximo de participantes." });
-
-        if (participant is not null && !participant.VagaVale)
-        {
-            participant.InscricaoExpiraEm = DateTime.UtcNow.AddMinutes(Math.Max(1, ch.MinutosParaPagar));
-            await _db.SaveChangesAsync();
-        }
-
-        if (participant is null)
-        {
-            try
-            {
-                await _service.RegisterParticipantAsync(
-                    id, userId, request?.DeckName, request?.DeckId, vagaFirme: ch.EntryFeeInCents <= 0);
-                participant = await _db.ChampionshipParticipants
-                    .Include(p => p.Championship)
-                    .Include(p => p.User)
-                    .FirstAsync(p => p.ChampionshipId == id && p.UserId == userId);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-
-        object? pixDto = null;
-        if (ch.EntryFeeInCents > 0)
-        {
-            var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(
-                participant, ch.EntryFeeInCents, cfg!, userId);
-            if (erro is not null)
-            {
-                if (criouAgora)
-                {
-                    _db.ChampionshipParticipants.Remove(participant);
-                    await _db.SaveChangesAsync();
-                }
-                var prefixo = criouAgora
-                    ? "Não foi possível gerar o Pix; a inscrição não foi criada."
-                    : "Não foi possível retomar o Pix da sua inscrição.";
-                return StatusCode(422, new { Message = $"{prefixo} {erro}" });
-            }
-
-            pixDto = new { pix!.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais };
-        }
-
-        _logger.LogInformation("Usuário {UserId} iniciou inscrição no campeonato {ChampionshipId}", userId, id);
-        return StatusCode(criouAgora ? StatusCodes.Status201Created : StatusCodes.Status200OK, new
-        {
-            Participant = new ParticipantDto
-            {
-                Id = participant.Id,
-                UserId = participant.UserId,
-                UserName = string.Empty,
-                PlayerNumber = participant.PlayerNumber,
-                DeckName = participant.DeckName,
-                DeckId = participant.DeckId,
-                RegisteredAt = participant.RegisteredAt,
-                InscricaoExpiraEm = participant.InscricaoExpiraEm,
-            },
-            Pix = pixDto,
+            var (criada, inscricao) = await inscricoes.InscreverAsync(id, UsuarioId(), request);
+            return StatusCode(criada ? StatusCodes.Status201Created : StatusCodes.Status200OK, inscricao);
         });
-    }
 
-    // -------------------------------------------------------------------------
-    // PAGAMENTO DA INSCRIÇÃO — Pix (cliente) ou balcão (admin marca manual)
-    // -------------------------------------------------------------------------
-
-    /// <summary>Gera cobrança Pix da taxa de inscrição do próprio usuário. Enquanto não pagar,
-/// a vaga fica segurada só até <c>InscricaoExpiraEm</c>.</summary>
+    /// <summary>Pix da inscrição do próprio cliente. Enquanto não pagar, a vaga fica segurada até InscricaoExpiraEm.</summary>
     [HttpPost("{id:guid}/my-inscription/pix")]
     [Authorize]
-    public async Task<IActionResult> GerarPixInscricao(Guid id)
-    {
-        var userId = GetUserId();
+    public Task<IActionResult> GerarPixInscricao(Guid id) => this.Responder(() => inscricoes.GerarPixAsync(id, UsuarioId()));
 
-        var participant = await _db.ChampionshipParticipants
-            .Include(p => p.Championship)
-            .Include(p => p.User)
-            .FirstOrDefaultAsync(p => p.ChampionshipId == id && p.UserId == userId);
-        if (participant is null)
-            return NotFound(new { Message = "Você não está inscrito neste campeonato." });
-
-        if (participant.EntryFeePaidAt is not null)
-            return BadRequest(new { Message = "A inscrição já está paga." });
-
-        var valorEmCentavos = participant.Championship.EntryFeeInCents;
-        if (valorEmCentavos <= 0)
-            return BadRequest(new { Message = "Este campeonato não tem taxa de inscrição." });
-
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg is null)
-            return BadRequest(new { Message = "Pagamento Pix indisponível no momento. Fale com o Maikon; pagamento na chegada não é aceito." });
-
-        var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(participant, valorEmCentavos, cfg, userId);
-        if (erro is not null) return StatusCode(422, new { message = erro });
-
-        return Ok(new { pix!.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais });
-    }
-
-    /// <summary>
-    /// Cobrança da inscrição: reaproveita a que já existe se ainda estiver no prazo, senão
-    /// pede uma nova ao Inter. Sem isso, cada clique em "cobrar" geraria um QR diferente e
-    /// o jogador ficaria com vários códigos válidos pra mesma inscrição.
-    /// </summary>
-    private async Task<(PixCobranca? Pix, string? Erro)> CriarOuReaproveitarCobrancaAsync(
-        ChampionshipParticipant participant, int valorEmCentavos, IntegrationConfig cfg, Guid criadaPor)
-    {
-        var agora = DateTime.UtcNow;
-        var viva = await _db.PixCobrancas
-            .Where(p => p.ChampionshipParticipantId == participant.Id
-                     && p.Status == "ATIVA"
-                     && (p.ExpiraEm == null || p.ExpiraEm > agora))
-            .OrderByDescending(p => p.CriadoEm)
-            .FirstOrDefaultAsync();
-        if (viva is not null) return (viva, null);
-
-        var cpf    = participant.User?.Cpf?.Length == 11 ? participant.User.Cpf : null;
-        var result = await _inter.CriarCobrancaAsync(
-            cfg, valorEmCentavos, participant.User?.Name, cpf,
-            $"Inscrição — {participant.Championship.Name}");
-
-        if (result.Error is not null) return (null, result.Error);
-
-        var pix = new PixCobranca
-        {
-            Origem                    = PixCobrancaOrigem.Campeonato,
-            ChampionshipParticipantId = participant.Id,
-            TxId                      = result.TxId!,
-            ValorEmCentavos           = valorEmCentavos,
-            Status                    = result.Status ?? "ATIVA",
-            PixCopiaCola              = result.PixCopiaCola,
-            ImagemQrCode              = result.ImagemQrCode,
-            NomeDevedor               = participant.User?.Name,
-            CriadoPorAdminId          = criadaPor,
-            ExpiraEm                  = result.ExpiraEm,
-        };
-        _db.PixCobrancas.Add(pix);
-        await _db.SaveChangesAsync();
-        return (pix, null);
-    }
-
-    /// <summary>
-    /// Admin cobra a inscrição de um participante: gera a cobrança, deixa ela visível na
-    /// conta do jogador e avisa por notificação. É o caminho pra quem já estava inscrito
-    /// antes do pagamento virar obrigatório — ninguém perde a vaga, mas dá pra cobrar.
-    /// </summary>
-    [HttpPost("participants/{participantId:guid}/cobrar")]
-    [Authorize(Policy = "OwnerOnly")]
-    public async Task<IActionResult> CobrarInscricao(Guid participantId)
-    {
-        var participant = await _db.ChampionshipParticipants
-            .Include(p => p.Championship)
-            .Include(p => p.User)
-            .FirstOrDefaultAsync(p => p.Id == participantId);
-        if (participant is null)
-            return NotFound(new { Message = "Participante não encontrado." });
-
-        if (participant.EntryFeePaidAt is not null)
-            return BadRequest(new { Message = "A inscrição deste jogador já está paga." });
-
-        var valorEmCentavos = participant.Championship.EntryFeeInCents;
-        if (valorEmCentavos <= 0)
-            return BadRequest(new { Message = "Este campeonato não tem taxa de inscrição." });
-
-        var cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-        if (cfg is null)
-            return BadRequest(new { Message = "Pagamento Pix indisponível no momento. Configure o Pix antes de incluir ou cobrar participantes." });
-
-        var (pix, erro) = await CriarOuReaproveitarCobrancaAsync(
-            participant, valorEmCentavos, cfg, GetUserId());
-        if (erro is not null) return StatusCode(422, new { message = erro });
-
-        await NotificarCobrancaAsync(participant, valorEmCentavos);
-
-        var valor = $"R$ {(valorEmCentavos / 100m):0.00}".Replace(".", ",");
-
-        _logger.LogInformation("Admin cobrou a inscrição {ParticipantId} ({Valor})", participant.Id, valor);
-
-        return Ok(new
-        {
-            pix!.TxId, pix.Status, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais,
-            Message = "Cobrança enviada — o jogador foi notificado e vê o Pix na conta dele.",
-        });
-    }
-
-    /// <summary>Verifica no Inter se a taxa de inscrição caiu; se sim, marca a inscrição como paga (Pix).</summary>
+    /// <summary>Confere no Inter se a entrada caiu; se sim, a inscrição fica paga.</summary>
     [HttpPost("{id:guid}/my-inscription/pix/verificar")]
     [Authorize]
-    public async Task<IActionResult> VerificarPixInscricao(Guid id)
-    {
-        var userId = GetUserId();
+    public Task<IActionResult> VerificarPixInscricao(Guid id) => this.Responder(() => inscricoes.VerificarPixAsync(id, UsuarioId()));
 
-        var participant = await _db.ChampionshipParticipants
-            .FirstOrDefaultAsync(p => p.ChampionshipId == id && p.UserId == userId);
-        if (participant is null)
-            return NotFound(new { Message = "Você não está inscrito neste campeonato." });
+    /// <summary>Admin cobra a inscrição de um participante (gera o Pix e avisa o jogador).</summary>
+    [HttpPost("participants/{participantId:guid}/cobrar")]
+    [Authorize(Policy = "OwnerOnly")]
+    public Task<IActionResult> CobrarInscricao(Guid participantId) =>
+        this.Responder(() => inscricoes.CobrarAsync(participantId, UsuarioId()));
 
-        if (participant.EntryFeePaidAt is not null)
-            return Ok(new { status = "CONCLUIDA", pagoEm = participant.EntryFeePaidAt });
-
-        var pix = await _db.PixCobrancas
-            .Where(p => p.ChampionshipParticipantId == participant.Id && p.Status == "ATIVA")
-            .OrderByDescending(p => p.CriadoEm)
-            .FirstOrDefaultAsync();
-        if (pix is null)
-            return NotFound(new { Message = "Nenhuma cobrança Pix ativa para esta inscrição." });
-
-        // A baixa mora no PixReconciliationService — mesmo caminho do robô.
-        var result = await _pixReconciliation.ReconciliarAsync(pix);
-        if (result.Error is not null)
-            return StatusCode(422, new { message = result.Error });
-
-        return Ok(new { status = pix.Status, pagoEm = pix.PagoEm });
-    }
-
-    /// <summary>Rota legada. Campeonatos pagos aceitam exclusivamente confirmação automática via Pix.</summary>
+    /// <summary>Rota legada. Campeonato pago só aceita confirmação automática via Pix.</summary>
     [HttpPut("participants/{participantId:guid}/pagamento")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> MarcarPagamentoInscricao(Guid participantId, [FromBody] MarcarPagamentoRequest req)
-    {
-        var participant = await _db.ChampionshipParticipants.FindAsync(participantId);
-        if (participant is null)
-            return NotFound(new { Message = "Participante não encontrado." });
+    public Task<IActionResult> MarcarPagamentoInscricao(Guid participantId, [FromBody] MarcarPagamentoRequest req) =>
+        this.Responder(() => inscricoes.MarcarPagamentoAsync(participantId, req.Pago));
 
-        if (req.Pago)
-        {
-            return BadRequest(new { Message = "Pagamento no balcão foi desativado para campeonatos. Envie a cobrança Pix antecipada." });
-        }
-        else
-        {
-            // Pagamento via Pix confirmado pelo banco não pode ser desfeito manualmente
-            if (participant.EntryFeePaymentMethod == "Pix")
-                return BadRequest(new { Message = "Pagamento confirmado via Pix não pode ser desmarcado." });
-            participant.EntryFeePaidAt        = null;
-            participant.EntryFeePaymentMethod = null;
-        }
-
-        await _db.SaveChangesAsync();
-        return Ok(new { participant.Id, participant.EntryFeePaidAt, participant.EntryFeePaymentMethod });
-    }
-
-    // -------------------------------------------------------------------------
-    // INSCRIÇÃO MANUAL — Admin adiciona/remove participante
-    // -------------------------------------------------------------------------
-
-    /// <summary>Maikon inscreve um usuário. Em campeonato pago, o Pix é criado e enviado imediatamente.</summary>
+    /// <summary>Maikon inscreve um cliente. Em campeonato pago, o Pix sai na hora e ele é avisado.</summary>
     [HttpPost("{id:guid}/admin-register")]
     [Authorize(Policy = "OwnerOnly")]
     [ProducesResponseType(typeof(ParticipantDto), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> AdminRegister(Guid id, [FromBody] AdminRegisterRequest request)
-    {
-        var ch = await _service.GetByIdAsync(id);
-        if (ch == null)
-            return NotFound(new { Message = "Campeonato não encontrado." });
+    public Task<IActionResult> AdminRegister(Guid id, [FromBody] AdminRegisterRequest request) =>
+        this.ResponderCom(async () => StatusCode(201, await inscricoes.InscreverPeloAdminAsync(id, request, UsuarioId())));
 
-        if (ch.MaxParticipants.HasValue && ch.Participants.Count(p => p.VagaVale) >= ch.MaxParticipants.Value)
-            return BadRequest(new { Message = "O campeonato atingiu o número máximo de participantes." });
-
-        IntegrationConfig? cfg = null;
-        if (ch.EntryFeeInCents > 0)
-        {
-            cfg = await _db.IntegrationConfigs.FirstOrDefaultAsync(c => c.Source == "inter");
-            if (cfg is null)
-                return BadRequest(new { Message = "Pagamento Pix indisponível. Configure a integração antes de adicionar participantes." });
-        }
-
-        ChampionshipParticipant participant;
-        try
-        {
-            // Campeonato pago só confirma a vaga quando o Pix cair. Gratuito entra firme.
-            participant = await _service.RegisterParticipantAsync(
-                id, request.UserId, request.DeckName, request.DeckId, vagaFirme: ch.EntryFeeInCents <= 0);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
-
-        if (ch.EntryFeeInCents > 0)
-        {
-            var completo = await _db.ChampionshipParticipants
-                .Include(p => p.Championship)
-                .Include(p => p.User)
-                .FirstAsync(p => p.Id == participant.Id);
-            var (_, erro) = await CriarOuReaproveitarCobrancaAsync(
-                completo, ch.EntryFeeInCents, cfg!, GetUserId());
-            if (erro is not null)
-            {
-                _db.ChampionshipParticipants.Remove(completo);
-                await _db.SaveChangesAsync();
-                return StatusCode(422, new { Message = $"Não foi possível criar o Pix; o participante não foi incluído. {erro}" });
-            }
-
-            await NotificarCobrancaAsync(completo, ch.EntryFeeInCents);
-        }
-
-        _logger.LogInformation("Maikon inscreveu usuário {UserId} no campeonato {ChampionshipId}", request.UserId, id);
-
-        // Busca o nome do usuário para retornar no DTO
-        var user = await _service.GetParticipantsAsync(id);
-        var registered = user.FirstOrDefault(p => p.UserId == request.UserId);
-
-        return StatusCode(201, new ParticipantDto
-        {
-            Id           = participant.Id,
-            UserId       = participant.UserId,
-            UserName     = registered?.User?.Name ?? string.Empty,
-            PlayerNumber = participant.PlayerNumber,
-            DeckName     = participant.DeckName,
-            DeckId       = participant.DeckId,
-            RegisteredAt = participant.RegisteredAt,
-            InscricaoExpiraEm = participant.InscricaoExpiraEm,
-        });
-    }
-
-    private async Task NotificarCobrancaAsync(ChampionshipParticipant participant, int valorEmCentavos)
-    {
-        var valor  = $"R$ {(valorEmCentavos / 100m):0.00}".Replace(".", ",");
-        var titulo = $"Pix da inscrição — {participant.Championship.Name}";
-        var corpo  = $"O Maikon adicionou você ao campeonato. Pague {valor} antecipadamente por Pix para confirmar sua vaga.";
-
-        _db.Notifications.Add(new Notification
-        {
-            UserId    = participant.UserId,
-            Title     = titulo,
-            Body      = corpo,
-            Link      = "/cliente",
-            CreatedAt = DateTime.UtcNow,
-        });
-        await _db.SaveChangesAsync();
-        await _push.SendAsync(participant.UserId, titulo, corpo, "/cliente");
-    }
-
-    /// <summary>Admin remove participante de um campeonato.</summary>
+    /// <summary>Admin remove participante.</summary>
     [HttpDelete("{id:guid}/participants/{participantId:guid}")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(200)]
@@ -626,8 +235,8 @@ public class ChampionshipController : ControllerBase
     {
         try
         {
-            await _service.RemoveParticipantAsync(participantId);
-            _logger.LogInformation("Participante {ParticipantId} removido do campeonato {Id}", participantId, id);
+            await campeonatos.RemoveParticipantAsync(participantId);
+            logger.LogInformation("Participante {ParticipantId} removido do campeonato {Id}", participantId, id);
             return Ok(new { Message = "Participante removido." });
         }
         catch (InvalidOperationException ex)
@@ -636,75 +245,8 @@ public class ChampionshipController : ControllerBase
         }
     }
 
-    // -------------------------------------------------------------------------
-    // ATUALIZAÇÃO DE STATUS — apenas Admin
-    // -------------------------------------------------------------------------
+    // ── Pré-inscrição (landing page, sem login) ──────────────────────────────
 
-    /// <summary>Muda o status de um campeonato. Apenas Admin.</summary>
-    [HttpPut("{id:guid}/status")]
-    [Authorize(Policy = "AdminOnly")]
-    [ProducesResponseType(typeof(ChampionshipDto), 200)]
-    [ProducesResponseType(400)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusRequest request)
-    {
-        if (!Enum.TryParse<ChampionshipStatus>(request.Status, ignoreCase: true, out var newStatus))
-            return BadRequest(new { Message = $"Status inválido: '{request.Status}'. Valores válidos: Planejado, Inscricoes, EmAndamento, Finalizado, Cancelado" });
-
-        try
-        {
-            var updated = await _service.UpdateStatusAsync(id, newStatus);
-            _logger.LogInformation("Status do campeonato {Id} alterado para {Status}", id, newStatus);
-            return Ok(ToDto(updated));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // COLOCAÇÃO FINAL — apenas Admin
-    // -------------------------------------------------------------------------
-
-    /// <summary>Define a colocação final de um participante. Apenas Admin.</summary>
-    [HttpPut("{id:guid}/participants/{participantId:guid}/placement")]
-    [Authorize(Policy = "AdminOnly")]
-    [ProducesResponseType(200)]
-    [ProducesResponseType(400)]
-    public async Task<IActionResult> SetPlacement(Guid id, Guid participantId, [FromBody] SetPlacementRequest request)
-    {
-        if (request.Placement <= 0)
-            return BadRequest(new { Message = "A colocação deve ser maior que zero." });
-
-        await _service.SetPlacementAsync(participantId, request.Placement);
-        return Ok(new { Message = $"Colocação {request.Placement}º definida com sucesso." });
-    }
-
-    // -------------------------------------------------------------------------
-    // IMAGEM — apenas Admin
-    // -------------------------------------------------------------------------
-
-    /// <summary>Atualiza a URL da imagem de capa de um campeonato.</summary>
-    [HttpPut("{id:guid}/image")]
-    [Authorize(Policy = "AdminOnly")]
-    [ProducesResponseType(typeof(ChampionshipDto), 200)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> SetImage(Guid id, [FromBody] SetImageRequest request)
-    {
-        var ch = await _service.GetByIdAsync(id);
-        if (ch == null) return NotFound(new { Message = "Campeonato não encontrado." });
-
-        ch.ImageUrl = request.ImageUrl;
-        await _service.UpdateAsync(ch);
-        return Ok(ToDto(ch));
-    }
-
-    // -------------------------------------------------------------------------
-    // PRÉ-INSCRIÇÃO (landing page, sem login)
-    // -------------------------------------------------------------------------
-
-    /// <summary>Registra pré-inscrição pública (nome + WhatsApp) em um campeonato.</summary>
     [HttpPost("{id:guid}/preinscricoes")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(PreInscricaoDto), 201)]
@@ -714,305 +256,38 @@ public class ChampionshipController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        var ch = await _service.GetByIdAsync(id);
-        if (ch == null) return NotFound(new { Message = "Campeonato não encontrado." });
-
+        var ch = await campeonatos.GetByIdAsync(id);
+        if (ch is null) return NotFound(new { Message = NaoEncontrado });
         if (ch.Status != ChampionshipStatus.Inscricoes && ch.Status != ChampionshipStatus.Planejado)
             return BadRequest(new { Message = "Este campeonato não está aceitando inscrições." });
 
-        var (pi, numero) = await _service.AddPreInscricaoAsync(id, request.Nome, request.WhatsApp, request.DeckId, request.DeckName);
-        _logger.LogInformation("Pré-inscrição recebida para campeonato {Id}: {Nome} (nº {Numero})", id, request.Nome, numero);
-        return StatusCode(201, new PreInscricaoDto { Id = pi.Id, Nome = pi.Nome, WhatsApp = pi.WhatsApp, IsListaEspera = pi.IsListaEspera, Numero = numero, CreatedAt = pi.CreatedAt, DeckId = pi.DeckId, DeckName = pi.DeckName });
+        var (pi, numero) = await campeonatos.AddPreInscricaoAsync(id, request.Nome, request.WhatsApp, request.DeckId, request.DeckName);
+        // Sem o nome no log: é dado pessoal e vem digitado pela pessoa (CodeQL: log forging)
+        logger.LogInformation("Pré-inscrição recebida para campeonato {Id} (nº {Numero})", id, numero);
+        return StatusCode(201, pi.ParaDto(numero));
     }
 
-    /// <summary>Lista pré-inscrições de um campeonato (Admin).</summary>
     [HttpGet("{id:guid}/preinscricoes")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(IEnumerable<PreInscricaoDto>), 200)]
-    public async Task<IActionResult> GetPreInscricoes(Guid id)
-    {
-        var list = await _service.GetPreInscricoesAsync(id);
-        var ordered = list.OrderBy(p => p.CreatedAt).ToList();
-        var confirmedOrdered = ordered.Where(p => !p.IsListaEspera).ToList();
-        var waitingOrdered   = ordered.Where(p =>  p.IsListaEspera).ToList();
-        return Ok(ordered.Select(p => new PreInscricaoDto
-        {
-            Id            = p.Id,
-            Nome          = p.Nome,
-            WhatsApp      = p.WhatsApp,
-            IsListaEspera = p.IsListaEspera,
-            Numero        = p.IsListaEspera
-                ? waitingOrdered.IndexOf(p) + 1
-                : confirmedOrdered.IndexOf(p) + 1,
-            CreatedAt     = p.CreatedAt,
-            DeckId        = p.DeckId,
-            DeckName      = p.DeckName,
-        }));
-    }
+    public async Task<IActionResult> GetPreInscricoes(Guid id) =>
+        Ok(CampeonatoMapeamento.Numeradas(await campeonatos.GetPreInscricoesAsync(id)));
 
-    /// <summary>Remove uma pré-inscrição (Admin — recusar ou após confirmar manualmente).</summary>
+    /// <summary>Remove uma pré-inscrição (recusar, ou depois de confirmar à mão).</summary>
     [HttpDelete("{id:guid}/preinscricoes/{preInscricaoId:guid}")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(204)]
     public async Task<IActionResult> DeletePreInscricao(Guid id, Guid preInscricaoId)
     {
-        await _service.DeletePreInscricaoAsync(preInscricaoId);
+        await campeonatos.DeletePreInscricaoAsync(preInscricaoId);
         return NoContent();
     }
 
-    // -------------------------------------------------------------------------
-    // PÓDIO — apenas Admin
-    // -------------------------------------------------------------------------
-
-    /// <summary>Salva o pódio do campeonato como JSON. Apenas Admin.</summary>
-    [HttpPatch("{id:guid}/podio")]
-    [Authorize(Policy = "AdminOnly")]
-    [ProducesResponseType(200)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> SetPodio(Guid id, [FromBody] SetPodioRequest request)
-    {
-        try
-        {
-            await _service.SetPodioAsync(id, request.PodioJson);
-            return Ok(new { Message = "Pódio salvo com sucesso." });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { Message = ex.Message });
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Helpers privados
-    // -------------------------------------------------------------------------
-
-    private Guid GetUserId()
+    private Guid UsuarioId()
     {
         var claim = User.FindFirst("sub") ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (claim is null || !Guid.TryParse(claim.Value, out var id))
             throw new UnauthorizedAccessException("Token inválido: identificador de usuário ausente.");
         return id;
     }
-
-    /// <summary>Mapeia Championship → ChampionshipDto (evita circular reference).</summary>
-    private static ChampionshipDto ToDto(Championship ch) => new()
-    {
-        Id                   = ch.Id,
-        Name                 = ch.Name,
-        Description          = ch.Description,
-        Game                 = ch.Game,
-        StartDate            = ch.StartDate,
-        EndDate              = ch.EndDate,
-        RegistrationDeadline = ch.RegistrationDeadline,
-        MaxParticipants      = ch.MaxParticipants,
-        EntryFeeInCents      = ch.EntryFeeInCents,
-        EntryFeeInReais      = ch.EntryFeeInCents / 100m,
-        MinutosParaPagar     = ch.MinutosParaPagar,
-        Status               = ch.Status.ToString(),
-        ParticipantCount     = ch.Participants?.Count ?? 0,
-        PreInscricaoCount    = ch.PreInscricoes?.Count(p => !p.IsListaEspera)  ?? 0,
-        ListaEsperaCount     = ch.PreInscricoes?.Count(p =>  p.IsListaEspera) ?? 0,
-        CreatedAt            = ch.CreatedAt,
-        ImageUrl             = ch.ImageUrl,
-        PodioJson            = ch.PodioJson,
-        Formato              = ch.Formato.ToString(),
-        Modalidade           = ch.Modalidade.ToString(),
-        RodadaAtual          = ch.RodadaAtual,
-        NumeroRodadas        = ch.NumeroRodadas,
-        PresentesCount       = ch.Participants?.Count(p => p.CheckInEm != null) ?? 0,
-    };
 }
-
-// =============================================================================
-// DTOs e Request Records — definidos no mesmo arquivo para simplicidade
-// =============================================================================
-
-/// <summary>Request para atualizar campos editáveis de um campeonato.</summary>
-public class UpdateChampionshipRequest
-{
-    [System.ComponentModel.DataAnnotations.Required]
-    [System.ComponentModel.DataAnnotations.MaxLength(200)]
-    public string    Name                 { get; init; } = string.Empty;
-
-    [System.ComponentModel.DataAnnotations.MaxLength(1000)]
-    public string?   Description          { get; init; }
-
-    [System.ComponentModel.DataAnnotations.Required]
-    [System.ComponentModel.DataAnnotations.MaxLength(100)]
-    public string    Game                 { get; init; } = string.Empty;
-
-    public DateTime  StartDate            { get; init; }
-    public DateTime? EndDate              { get; init; }
-    public DateTime? RegistrationDeadline { get; init; }
-    public int?      MaxParticipants      { get; init; }
-    public int       EntryFeeInCents      { get; init; }
-    public string?   ImageUrl             { get; init; }
-
-    /// <summary>
-    /// Minutos que a vaga fica segurada esperando o pagamento. Null = mantém o
-    /// que já está gravado (cliente antigo que não manda o campo não zera nada).
-    /// </summary>
-    public int?      MinutosParaPagar     { get; init; }
-    /// <summary>Liga ou Campeonato. Ausente: Liga na criação, mantém na edição.</summary>
-    public ModalidadeTorneio? Modalidade { get; init; }
-}
-
-/// <summary>DTO de resposta de campeonato (sem circular reference).</summary>
-public class ChampionshipDto
-{
-    public Guid      Id                   { get; init; }
-    public string    Name                 { get; init; } = string.Empty;
-    public string?   Description          { get; init; }
-    public string    Game                 { get; init; } = string.Empty;
-    public DateTime  StartDate            { get; init; }
-    public DateTime? EndDate              { get; init; }
-    public DateTime? RegistrationDeadline { get; init; }
-    public int?      MaxParticipants      { get; init; }
-    public int       EntryFeeInCents      { get; init; }
-    public decimal   EntryFeeInReais      { get; init; }
-    /// <summary>Minutos que a vaga fica segurada esperando pagamento.</summary>
-    public int       MinutosParaPagar     { get; init; }
-    public string    Status               { get; init; } = string.Empty;
-    public int       ParticipantCount     { get; init; }
-    public int       PreInscricaoCount    { get; init; }
-    public int       ListaEsperaCount     { get; init; }
-    public DateTime  CreatedAt            { get; init; }
-    public string?   ImageUrl             { get; init; }
-    public string?   PodioJson            { get; init; }
-    /// <summary>"Livre" (campeonato comum ou etapa lançada de fora) ou "Suico" (liguinha rodada no sistema).</summary>
-    public string    Formato              { get; init; } = "Livre";
-    /// <summary>"Liga" (soma na Liga Mensal) ou "Campeonato" (avulso, não soma).</summary>
-    public string    Modalidade           { get; init; } = "Liga";
-    public int       RodadaAtual          { get; init; }
-    public int?      NumeroRodadas        { get; init; }
-    /// <summary>Participantes com check-in feito.</summary>
-    public int       PresentesCount       { get; init; }
-}
-
-/// <summary>DTO de participação do próprio usuário (GET /api/championship/my-participations).</summary>
-public class MyParticipationDto
-{
-    public Guid      ParticipationId  { get; init; }
-    public Guid      ChampionshipId   { get; init; }
-    public string    ChampionshipName { get; init; } = string.Empty;
-    public string    Game             { get; init; } = string.Empty;
-    public DateTime  StartDate        { get; init; }
-    public string    Status           { get; init; } = string.Empty;
-    public decimal   EntryFeeInReais  { get; init; }
-    public int       PlayerNumber     { get; init; }
-    public string?   DeckName         { get; init; }
-    public int?      Placement        { get; init; }
-    public DateTime  RegisteredAt     { get; init; }
-    public DateTime? EntryFeePaidAt        { get; init; }
-    public string?   EntryFeePaymentMethod { get; init; }
-    /// <summary>Até quando a vaga fica segurada esperando pagamento. Null = vaga firme.</summary>
-    public DateTime? InscricaoExpiraEm     { get; init; }
-}
-
-/// <summary>DTO de participante em um campeonato.</summary>
-public class ParticipantDto
-{
-    public Guid      Id           { get; init; }
-    public Guid      UserId       { get; init; }
-    public string    UserName     { get; init; } = string.Empty;
-    public int       PlayerNumber { get; init; }
-    public string?   DeckName     { get; init; }
-    public Guid?     DeckId       { get; init; }
-    public int?      Placement    { get; init; }
-    public DateTime  RegisteredAt { get; init; }
-    public DateTime? EntryFeePaidAt        { get; init; }
-    public string?   EntryFeePaymentMethod { get; init; }
-    /// <summary>Até quando a vaga fica segurada esperando pagamento. Null = vaga firme.</summary>
-    public DateTime? InscricaoExpiraEm     { get; init; }
-    /// <summary>Valor da cobrança Pix da inscrição (null = sem cobrança: grátis ou pago no balcão).</summary>
-    public int?      ValorInscricaoEmCentavos { get; init; }
-    /// <summary>Tem cobrança Pix ativa e ainda não pagou.</summary>
-    public bool      CobrancaEmAberto         { get; init; }
-}
-
-/// <summary>Request do admin para marcar/desmarcar pagamento da inscrição no balcão.</summary>
-public class MarcarPagamentoRequest
-{
-    public bool Pago { get; init; }
-}
-
-/// <summary>Request para criar campeonato.</summary>
-public class CreateChampionshipRequest
-{
-    [System.ComponentModel.DataAnnotations.Required]
-    [System.ComponentModel.DataAnnotations.MaxLength(200)]
-    public string    Name                 { get; init; } = string.Empty;
-
-    [System.ComponentModel.DataAnnotations.MaxLength(1000)]
-    public string?   Description          { get; init; }
-
-    [System.ComponentModel.DataAnnotations.Required]
-    [System.ComponentModel.DataAnnotations.MaxLength(100)]
-    public string    Game                 { get; init; } = string.Empty;
-
-    public DateTime  StartDate            { get; init; }
-    public DateTime? EndDate              { get; init; }
-    public DateTime? RegistrationDeadline { get; init; }
-    public int?      MaxParticipants      { get; init; }
-    public int       EntryFeeInCents      { get; init; }
-    public string?   ImageUrl             { get; init; }
-
-    /// <summary>
-    /// Minutos que a vaga fica segurada esperando o pagamento. Null = mantém o
-    /// que já está gravado (cliente antigo que não manda o campo não zera nada).
-    /// </summary>
-    public int?      MinutosParaPagar     { get; init; }
-    /// <summary>Liga ou Campeonato. Ausente: Liga na criação, mantém na edição.</summary>
-    public ModalidadeTorneio? Modalidade { get; init; }
-}
-
-/// <summary>Request para alterar status do campeonato.</summary>
-public record UpdateStatusRequest(string Status);
-
-/// <summary>Request para o admin inscrever um usuário específico.</summary>
-public class AdminRegisterRequest
-{
-    [System.ComponentModel.DataAnnotations.Required]
-    public Guid UserId { get; init; }
-    public string? DeckName { get; init; }
-    public Guid?   DeckId   { get; init; }
-}
-
-/// <summary>Request para inscrição em campeonato (deck é opcional).</summary>
-public record RegisterChampionshipRequest(
-    [System.ComponentModel.DataAnnotations.MaxLength(200)] string? DeckName,
-    Guid? DeckId = null);
-
-/// <summary>Request para definir colocação de participante.</summary>
-public record SetPlacementRequest(int Placement);
-
-/// <summary>Request para definir/atualizar a imagem de capa do campeonato.</summary>
-public record SetImageRequest(string? ImageUrl);
-
-/// <summary>Request de pré-inscrição pública (sem login).</summary>
-public class PreInscricaoRequest
-{
-    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(200)]
-    public string  Nome     { get; init; } = string.Empty;
-    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(30)]
-    public string  WhatsApp { get; init; } = string.Empty;
-    public Guid?   DeckId   { get; init; }
-    public string? DeckName { get; init; }
-}
-
-/// <summary>DTO de pré-inscrição retornado ao frontend.</summary>
-public class PreInscricaoDto
-{
-    public Guid     Id            { get; init; }
-    public string   Nome          { get; init; } = string.Empty;
-    public string   WhatsApp      { get; init; } = string.Empty;
-    public bool     IsListaEspera { get; init; }
-    /// <summary>Posição na fila de confirmados ou na lista de espera.</summary>
-    public int      Numero        { get; init; }
-    public DateTime CreatedAt     { get; init; }
-    public Guid?    DeckId        { get; init; }
-    public string?  DeckName      { get; init; }
-}
-
-/// <summary>Request para salvar o pódio de um campeonato.</summary>
-public record SetPodioRequest(string PodioJson);

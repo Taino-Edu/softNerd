@@ -35,8 +35,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 1. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
 2. **Código mais limpo pra banca** (pedido do Taino, 27/10), um PR por etapa:
    - ✅ Limpeza das chaves (v1.75.0–v1.77.0).
-   - Clean Architecture no back: ✅ pedidos (v1.78.0); faltam os controllers que falam com o banco direto —
-     `ChampionshipController` (24 acessos), `CrediariosController` (24), `AnalyticsController` (18),
+   - Clean Architecture no back: ✅ pedidos (v1.78.0), ✅ campeonatos (v1.79.0); faltam os controllers que falam
+     com o banco direto — `CrediariosController` (24 acessos), `AnalyticsController` (18),
      `ContasReceberController`, `UserController`, `MarketplaceController`, `LgpdController` e os menores.
    - Boas práticas no front: configurar o ESLint, tirar os 81 `any`, as 6 telas que chamam a API fora do `lib/api`.
    - Segurança: revisão completa (CodeQL aberto, cookies `Secure`, e-mail nos logs, permissões, dependências).
@@ -51,6 +51,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.79.0 | 27/10 | **Campeonatos em camadas**: inscrição e Pix da entrada no `CampeonatoInscricaoService`; `RegraException` + `RespostaDeRegra` comuns; 9 testes novos |
 | v1.78.0 | 27/10 | **Pedidos em camadas**: `ReservationController` (1.568 → 159 linhas) só HTTP; regras em `Services/Pedidos/` (criação, andamento, cobrança, consulta) com interface e `PedidoException` |
 | v1.77.0 | 27/10 | **Limpeza das chaves do site/loja/cliente**: 10 chaves viram o jeito único; saem as telas antigas de entrada, sacola, carrossel e cartão de produto antigos |
 | v1.76.0 | 27/10 | **Limpeza das chaves da Liga/Liguinha**: 9 chaves viram o jeito único (ranking por jogador, relógio separado, página e telão novos, animação, Central, modalidades, "Pronto", entrada simples) |

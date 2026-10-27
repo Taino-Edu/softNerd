@@ -35,12 +35,14 @@ Este README é escrito à mão — o script não mexe nele. Quando descobrir uma
 ### Camadas da API
 - **Controller só fala HTTP**: lê quem está logado, chama o serviço e devolve a resposta. Regra, banco e
   integração ficam no serviço — com interface (`IAlgumaCoisaService`), registrado em `Configuration/ServicosDaLoja.cs`.
-- **Recusa de regra é exceção com status**: o serviço lança `PedidoException("mensagem", 409)` /
-  `TorneioException` / `LigaMensalException` e o controller traduz (`ReservationController.Responder`). Mensagem
-  nula = só o status (404/403 sem corpo); `Extras` entram no corpo (ex.: `pixAberto`, `semEstoque`).
-- **Quem pede** vai como parâmetro (`Ator(Id, Nome, EhAdmin)`), nunca `User`/`HttpContext` dentro do serviço.
-- Já no padrão: pedidos do site (`Services/Pedidos/`: criação, andamento, cobrança Pix, consulta), Liga e
-  Liguinha (`Services/Liga/`). Os controllers grandes que ainda falam com o banco direto estão no BACKLOG.
+- **Recusa de regra é exceção com status**: o serviço lança `RegraException("mensagem", 409)` (`Common/`; a
+  `PedidoException` herda dela) e o controller traduz com `this.Responder(...)` (`Controllers/RespostaDeRegra.cs`).
+  Mensagem nula = só o status (404/403 sem corpo); `Extras` entram no corpo (ex.: `pixAberto`, `semEstoque`).
+  Sucesso com status próprio (201, 200 conforme o caso)? `this.ResponderCom(...)` devolvendo o `IActionResult`.
+- **Quem pede** vai como parâmetro (`Ator(Id, Nome, EhAdmin)`, `Common/`), nunca `User`/`HttpContext` no serviço.
+- **DTOs e mapeamentos** em `DTOs/` (`PedidosDtos.cs`, `CampeonatosDtos.cs` com `CampeonatoMapeamento`), não no controller.
+- Já no padrão: pedidos do site (`Services/Pedidos/`), campeonatos (`Services/Campeonatos/CampeonatoInscricaoService`
+  + `IChampionshipService`), Liga e Liguinha (`Services/Liga/`). Os que ainda falam com o banco direto estão no BACKLOG.
 
 ---
 
