@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **26/10/2026** — produção na **v1.73.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
+Atualizado em **26/10/2026** — produção na **v1.74.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -33,7 +33,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 ## 📋 Na fila (ordem sugerida)
 
 1. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
-2. **Limpeza das chaves vencidas** (RevisarEm 01/12 e 15/12): apagar o jeito antigo do código.
+2. **Limpeza das chaves** (antecipada, 1 PR por área): pedidos e painel feitos na v1.75.0; faltam Liga/Liguinha/campeonato (10) e site/loja/cliente (12). Ficam por enquanto: `vigia-sistema` (liga/desliga de verdade), `pedido-pix-junto`, `pagamento-sem-retirada` e `relatorio-por-subcategoria` (Maikon ainda testando).
 3. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
 4. Botão "Voltar versão" e checks obrigatórios novos no `main`.
 5. Dependabot grandes (.NET 10, Next 16, TS 7) — um por vez, com teste.
@@ -43,6 +43,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.75.0 | 27/10 | **Limpeza das chaves de pedidos e painel**: 5 chaves viram o jeito único (operador pelo menu, menu e telas no azul, Pix do pedido consistente, venda no pagamento); tag `arquivo/chaves-antes-da-limpeza` |
 | v1.74.0 | 26/10 | **Relatório de vendas por subcategoria** (pedido do Maikon): categoria-pai com o total (soma das filhas) e as subcategorias dentro; vendas estornadas fora do relatório |
 | v1.73.0 | 26/10 | Limpeza pela contagem de uso: **WhatsApp automático** (Evolution, n8n, IA, caixa de conversas), **OFX** e **Mercado Pago** fora; tag `arquivo/whatsapp-v1.72.0`; banco intacto |
 | v1.72.0 | 26/10 | Pedidos: **Registrar pagamento** sem dar como retirado (fica "Pago · aguardando retirada", igual ao Pix do site); coluna Vendas vira Reservas |

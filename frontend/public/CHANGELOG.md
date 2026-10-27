@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.75.0] — 2026-10-27
+
+### Limpeza — pedidos e painel sem o "jeito antigo" guardado
+- Cinco mudanças que estavam atrás de chave desde setembro/outubro viram o jeito único (nenhuma foi desligada em produção): **acesso do operador pelo menu**, **menu lateral no azul**, **telas do painel no azul**, **Pix do pedido consistente** e **pedido vira venda no pagamento**
+- Nada muda pra quem usa: o código que sai é o caminho de volta que nunca rodou. Tudo guardado na tag `arquivo/chaves-antes-da-limpeza`
+- A tela "Mudanças com volta" continua, com as chaves que ainda estão em observação
+
 ## [v1.74.0] — 2026-10-26
 
 ### Relatórios — vendas por subcategoria (pedido do Maikon)

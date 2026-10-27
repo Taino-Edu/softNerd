@@ -66,37 +66,21 @@ public static class Permissao
         [Dashboard]   = ["/api/analytics", "/api/relatorios/dashboard"],
         [Pdv]         = ["/api/venda-avulsa"],
         [Comandas]    = ["/api/comanda"],
-        [Estoque]     = ["/api/product"],
+        [Estoque]     = ["/api/product", "/api/reservations", "/api/marketplace", "/api/upload"],
         [Categorias]  = ["/api/category"],
         [Usuarios]    = ["/api/user"],
         [Crediario]   = ["/api/crediarios"],
-        [Campeonatos] = ["/api/championship", "/api/timers"],
-        [Financeiro]  = ["/api/analytics/financeiro", "/api/relatorios/financeiro", "/api/relatorios/pdv"],
+        [Campeonatos] = ["/api/championship", "/api/timers", "/api/liga-mensal", "/api/torneios", "/api/deck"],
+        [Financeiro]  = ["/api/analytics/financeiro", "/api/relatorios/financeiro", "/api/relatorios/pdv", "/api/contas-receber"],
         [Relatorios]  = ["/api/relatorios"],
-        [Anuncios]    = ["/api/announcements"],
+        [Anuncios]    = ["/api/announcements", "/api/admin/mensageria", "/api/upload"],
         [Cartas]      = ["/api/tcg"],
         [QrCodes]     = ["/api/qrcode"],
         [Lgpd]        = ["/api/lgpd", "/api/audit"],
     };
 
-    /// <summary>
-    /// Rotas de telas que já estavam no menu do operador mas ficaram fora do mapa acima
-    /// (davam 403 até a v1.41.0). Só valem com a chave "operador-acesso-pelo-menu" ligada;
-    /// quando a chave for apagada, juntar com RotasPrefixo.
-    /// </summary>
-    public static readonly Dictionary<string, string[]> RotasPrefixoDesdeV141 = new()
-    {
-        [Estoque]     = ["/api/reservations", "/api/marketplace", "/api/upload"],
-        [Campeonatos] = ["/api/liga-mensal", "/api/torneios", "/api/deck"],
-        [Anuncios]    = ["/api/admin/mensageria", "/api/upload"],
-        [Financeiro]  = ["/api/contas-receber"],
-    };
-
     /// <summary>O operador com estas permissões pode chamar esta rota de admin?</summary>
-    public static bool OperadorPode(IReadOnlyCollection<string> permissoes, string path, bool comRotasDesdeV141)
-    {
-        var mapas = comRotasDesdeV141 ? new[] { RotasPrefixo, RotasPrefixoDesdeV141 } : new[] { RotasPrefixo };
-        return mapas.Any(mapa => mapa.Any(par =>
-            permissoes.Contains(par.Key) && par.Value.Any(prefixo => path.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase))));
-    }
+    public static bool OperadorPode(IReadOnlyCollection<string> permissoes, string path) =>
+        RotasPrefixo.Any(par =>
+            permissoes.Contains(par.Key) && par.Value.Any(prefixo => path.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase)));
 }

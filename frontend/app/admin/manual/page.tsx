@@ -1,6 +1,5 @@
 'use client'
 import { useEffect } from 'react'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 const LOJA = 'Santuário Nerd'
 const VERSION = 'v1.25.5'
@@ -494,8 +493,7 @@ const SECOES: Secao[] = [
 
 export default function ManualPdfPage() {
   // Painel novo: a seção que era roxa (Mensageria) sai em azul-céu; chave desligada = cor de antes
-  const telasNovas = useFuncionalidade('admin-telas-novas') !== false
-  const corSecao = (cor: string) => (telasNovas && cor === '#7C3AED' ? '#0EA5E9' : cor)
+  const corSecao = (cor: string) => (cor === '#7C3AED' ? '#0EA5E9' : cor)
   useEffect(() => {
     document.title = `Manual do Sistema — ${LOJA} ${VERSION}`
   }, [])

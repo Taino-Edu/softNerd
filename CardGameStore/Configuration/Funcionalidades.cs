@@ -36,7 +36,6 @@ public sealed record Funcionalidade(
 public static class Funcionalidades
 {
     public const string LigaMensalPorJogador = "liga-mensal-por-jogador";
-    public const string OperadorAcessoPeloMenu = "operador-acesso-pelo-menu";
     public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
     public const string LiguinhaRelogioSeparado = "liguinha-relogio-separado";
     public const string FotosLeves = "fotos-leves";
@@ -47,18 +46,14 @@ public static class Funcionalidades
     public const string VisualProdutoERodape = "visual-produto-e-rodape";
     public const string SacolaNova = "sacola-nova";
     public const string ClienteInicioNovo = "cliente-inicio-novo";
-    public const string AdminEsqueletoNovo = "admin-esqueleto-novo";
     public const string ContaClienteNova = "conta-cliente-nova";
-    public const string AdminTelasNovas = "admin-telas-novas";
     public const string TelaoNovo = "telao-novo";
     public const string LigaAnimacaoResultado = "liga-animacao-resultado";
     public const string AdminLiguinhaCentral = "admin-liguinha-central";
     public const string LigaModalidades = "liga-modalidades";
     public const string LoginTelasUnificadas = "login-telas-unificadas";
-    public const string PedidoPixConsistente = "pedido-pix-consistente";
     public const string LiguinhaProntoNaMesa = "liguinha-pronto-na-mesa";
     public const string LiguinhaEntradaSimples = "liguinha-entrada-simples";
-    public const string PedidoVendaNoPagamento = "pedido-venda-no-pagamento";
     public const string VigiaSistema = "vigia-sistema";
     public const string PokemonPreferido = "pokemon-preferido";
     public const string HomeVisualUniforme = "home-visual-uniforme";
@@ -75,17 +70,6 @@ public static class Funcionalidades
                         "Campeonato cancelado não soma pontos.",
             SeDesligar: "Volta a juntar por nome: dois jogadores com o mesmo nome viram uma linha só " +
                         "e um deles perde os pontos. Campeonato cancelado volta a somar.",
-            Padrao:     true,
-            Desde:      "v1.41.0",
-            RevisarEm:  new DateOnly(2026, 12, 1)),
-
-        new(OperadorAcessoPeloMenu,
-            Nome:       "Operador: acesso às telas do próprio menu",
-            OQueMuda:   "O operador consegue usar Liga Mensal, painel da liguinha, Pré-vendas, Mercado de Cartas, " +
-                        "Mensageria, Contas a Pagar/Receber e o envio de imagens, conforme as permissões do perfil dele. " +
-                        "Páginas públicas e de cliente funcionam pra ele como pra qualquer pessoa logada.",
-            SeDesligar: "Volta a regra antiga: essas telas aparecem no menu do operador, mas dão \"Sem permissão\". " +
-                        "Só o dono consegue usá-las.",
             Padrao:     true,
             Desde:      "v1.41.0",
             RevisarEm:  new DateOnly(2026, 12, 1)),
@@ -185,15 +169,6 @@ public static class Funcionalidades
             Desde:      "v1.50.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
 
-        new(AdminEsqueletoNovo,
-            Nome:       "Painel: menu lateral novo",
-            OQueMuda:   "Menu lateral do painel no azul da loja (nos temas claro e escuro), com o logo de Personalizar Site, " +
-                        "item ativo em destaque branco e rodapé (usuário, Ver Loja, tema, Sair) no mesmo estilo.",
-            SeDesligar: "Volta o menu lateral branco (tema claro) / preto (tema escuro) com o logo antigo.",
-            Padrao:     true,
-            Desde:      "v1.51.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
         new(ContaClienteNova,
             Nome:       "Cliente: Minha conta organizada",
             OQueMuda:   "Em Minha conta: abas com nomes de cliente (Pontos, Compras, Reservas, Campeonatos, Crediário, Notas) " +
@@ -202,16 +177,6 @@ public static class Funcionalidades
             SeDesligar: "Volta a grade de 6 abas (Histórico, Torneios, Pré-vendas, Dívida...), o saldo repetido e o voltar do navegador.",
             Padrao:     true,
             Desde:      "v1.52.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(AdminTelasNovas,
-            Nome:       "Painel: telas no azul da loja",
-            OQueMuda:   "Dentro do painel, botões e destaques no azul da loja (eram azul-claro) e as marcas de status " +
-                        "que eram roxas (fila de espera, pré-venda, cartão, variação) em azul-céu; no tema claro os tons " +
-                        "claros escurecem pra dar leitura.",
-            SeDesligar: "O painel volta ao azul-claro e ao roxo de status de antes. O site público não muda em nenhum dos dois casos.",
-            Padrao:     true,
-            Desde:      "v1.53.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
 
         new(TelaoNovo,
@@ -262,17 +227,6 @@ public static class Funcionalidades
             Desde:      "v1.57.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
 
-        new(PedidoPixConsistente,
-            Nome:       "Pedidos do site: Pix sempre junto com o pedido",
-            OQueMuda:   "Cancelar um pedido não pago derruba o Pix dele no Inter (antes confere se não acabou de ser pago). " +
-                        "Se um Pix cair num pedido já cancelado, o pedido volta como pago quando ainda tem estoque; sem estoque, " +
-                        "os admins recebem aviso de reembolso pendente. Cancelar um item do carrinho não trava mais o Pix dos outros.",
-            SeDesligar: "Cancelar o pedido deixa o Pix aberto (o cliente ainda consegue pagar), o Pix pago de pedido cancelado " +
-                        "só fica anotado em Contas a receber, e o carrinho com item cancelado não gera mais Pix.",
-            Padrao:     true,
-            Desde:      "v1.59.2",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
         new(LiguinhaProntoNaMesa,
             Nome:       "Liguinha: botão \"Pronto\" na mesa",
             OQueMuda:   "Depois que os pareamentos saem, cada jogador aperta \"Estou pronto\" no celular quando estiver com os básicos em campo. " +
@@ -291,16 +245,6 @@ public static class Funcionalidades
             SeDesligar: "Volta a tela de antes: torneios e formulário de código com deck juntos, e o deck só se escolhe ao entrar pelo código.",
             Padrao:     true,
             Desde:      "v1.61.1",
-            RevisarEm:  new DateOnly(2027, 3, 1)),
-
-        new(PedidoVendaNoPagamento,
-            Nome:       "Pedidos do site: venda conta no pagamento",
-            OQueMuda:   "Pedido do site pago no Pix vira venda na hora, no Financeiro do dia do pagamento, como Pix e pelo valor cobrado. " +
-                        "O preço fica congelado no momento do pedido. Na retirada é só \"Entregar\" (sem forma de pagamento nem desconto). " +
-                        "Pedido \"pagar na retirada\" vira venda quando é pago no balcão (Homologar). Cancelar pedido pago estorna a venda.",
-            SeDesligar: "Volta como era: o pedido só vira venda no Financeiro quando alguém clica em Homologar, com o preço do produto naquele momento.",
-            Padrao:     true,
-            Desde:      "v1.62.0",
             RevisarEm:  new DateOnly(2027, 3, 1)),
 
         new(VigiaSistema,

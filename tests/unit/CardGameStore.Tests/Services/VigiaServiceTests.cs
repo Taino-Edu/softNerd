@@ -23,7 +23,7 @@ public class VigiaServiceTests
             new(Db, verificacoes, Chaves, NullLogger<VigiaService>.Instance);
 
         public VigiaService VigiaDePedidos() => Vigia(
-            new VerificacaoPixPagoPedidoCancelado(Db), new VerificacaoPedidoPagoSemVenda(Db, Chaves),
+            new VerificacaoPixPagoPedidoCancelado(Db), new VerificacaoPedidoPagoSemVenda(Db),
             new VerificacaoVendaTravada(Db), new VerificacaoValorPixDiferente(Db),
             new VerificacaoEstoqueNegativo(Db), new VerificacaoPedidoParado(Db));
     }

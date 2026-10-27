@@ -6,7 +6,6 @@
 
 using System.Text.Json;
 using CardGameStore.Common;
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
@@ -64,14 +63,13 @@ public class VerificacaoPixPagoPedidoCancelado(AppDbContext db) : IVerificacaoVi
 }
 
 /// <summary>Pedido pago no Pix que não virou venda (registro falhou, ou pago antes da venda no pagamento).</summary>
-public class VerificacaoPedidoPagoSemVenda(AppDbContext db, FuncionalidadesService funcionalidades) : IVerificacaoVigia
+public class VerificacaoPedidoPagoSemVenda(AppDbContext db) : IVerificacaoVigia
 {
     public string Codigo => "pedido-pago-sem-venda";
     public string Nome => "Pedido pago sem venda no Financeiro";
 
     public async Task<IReadOnlyList<Achado>> VerificarAsync(CancellationToken ct)
     {
-        if (!await funcionalidades.LigadaAsync(Funcionalidades.PedidoVendaNoPagamento)) return [];
         var limite = DateTime.UtcNow.AddMinutes(-15); // dá tempo do registro normal terminar
         var desde = DateTime.UtcNow - VigiaPedidos.Janela;
         var pagos = await db.PixCobrancas.AsNoTracking()

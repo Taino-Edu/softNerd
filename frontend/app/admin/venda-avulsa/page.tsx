@@ -18,7 +18,6 @@ import ConferenciaButton from '@/components/admin/ConferenciaButton'
 import EscolherContaCrediarioModal from '@/components/admin/EscolherContaCrediarioModal'
 import PercentPicker from '@/components/admin/PercentPicker'
 import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 interface CartItem {
   product: Product
@@ -1362,8 +1361,7 @@ function VendaWizard({
 export default function VendaAvulsaPage() {
   const { prefs } = usePreferences()
   // Painel novo: "Pontos" no azul da loja (era roxo); chave desligada = cor de antes
-  const telasNovas = useFuncionalidade('admin-telas-novas') !== false
-  const corPagamento = (m: string) => (telasNovas && m === 'Pontos' ? '#1E4FD6' : PAY_COLORS[m]) ?? '#4B5563'
+  const corPagamento = (m: string) => (m === 'Pontos' ? '#1E4FD6' : PAY_COLORS[m]) ?? '#4B5563'
   const [tab, setTab]               = useState<'venda' | 'historico'>('venda')
   const [products, setProducts]     = useState<Product[]>([])
   const [loading, setLoading]       = useState(true)
