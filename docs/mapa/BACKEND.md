@@ -84,6 +84,10 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Scoped | `IEmailService → EmailService` | `CardGameStore/Services/Implementations/EmailService.cs` |
 | Scoped | `IPushService → PushService` | `CardGameStore/Services/Implementations/PushService.cs` |
 | Scoped | `IReservationPixService → ReservationPixService` | `CardGameStore/Services/Implementations/ReservationPixService.cs` |
+| Scoped | `IPedidoCobrancaService → PedidoCobrancaService` | `CardGameStore/Services/Pedidos/PedidoCobrancaService.cs` |
+| Scoped | `IPedidoCriacaoService → PedidoCriacaoService` | `CardGameStore/Services/Pedidos/PedidoCriacaoService.cs` |
+| Scoped | `IPedidoAndamentoService → PedidoAndamentoService` | `CardGameStore/Services/Pedidos/PedidoAndamentoService.cs` |
+| Scoped | `IPedidoConsultaService → PedidoConsultaService` | `CardGameStore/Services/Pedidos/PedidoConsultaService.cs` |
 | Scoped | `IAiChatService → GeminiChatService` | `CardGameStore/Services/Implementations/GeminiChatService.cs` |
 | Singleton | `ITcgApiClient → TcgApiClient` | `CardGameStore/Services/Implementations/TcgApiClient.cs` |
 | Singleton | `ITcgService → TcgService` | `CardGameStore/Services/Implementations/TcgService.cs` |

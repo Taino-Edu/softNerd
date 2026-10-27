@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.78.0] — 2026-10-27
+
+### Por dentro — pedidos do site em camadas (Clean Architecture)
+- O controller de pedidos (`ReservationController`, 1.568 linhas que falavam direto com o banco) virou só a porta HTTP: 159 linhas que leem quem está logado, chamam o serviço e devolvem a resposta
+- As regras foram pra quatro serviços com interface em `Services/Pedidos/`: criação (site, carrinho e admin), andamento (cancelar, retirar, quantidade, homologar, pagamento por fora), cobrança Pix e consulta
+- Recusa de regra virou exceção com status (`PedidoException`), no mesmo padrão da Liga e da Liguinha; quem pede (`Ator`) vai como parâmetro, sem `HttpContext` dentro do serviço
+- Nada muda pra quem usa: mesmas rotas, mesmas respostas, mesmas mensagens. Os 38 testes de pedidos passam sem mudar o que verificam
+
 ## [v1.77.0] — 2026-10-27
 
 ### Limpeza — site, loja e área do cliente sem o "jeito antigo" guardado
