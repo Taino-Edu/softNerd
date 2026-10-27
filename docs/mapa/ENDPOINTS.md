@@ -121,28 +121,28 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/championship` | público | `GetAll` (56) | `championshipApi.list` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx`<br>`app/page.tsx` |
-| POST | `/api/championship` | AdminOnly | `Create` (174) | `championshipApi.create` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
-| GET | `/api/championship/admin/all` | AdminOnly | `GetAllAdmin` (66) | `championshipApi.listAll` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx` |
-| GET | `/api/championship/my-participations` | logado | `GetMyParticipations` (107) | `championshipApi.myParticipations` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| POST | `/api/championship/participants/{participantId:guid}/cobrar` | OwnerOnly | `CobrarInscricao` (433) | `championshipApi.cobrarInscricao` | `app/admin/campeonatos/page.tsx` |
-| PUT | `/api/championship/participants/{participantId:guid}/pagamento` | AdminOnly | `MarcarPagamentoInscricao` (503) | — | — |
-| DELETE | `/api/championship/{id:guid}` | AdminOnly | `Delete` (78) | `championshipApi.delete` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
-| GET | `/api/championship/{id:guid}` | público | `GetById` (97) | — | `app/campeonato/[id]/page.tsx` |
-| PUT | `/api/championship/{id:guid}` | AdminOnly | `Update` (213) | `championshipApi.update` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
-| POST | `/api/championship/{id:guid}/admin-register` | OwnerOnly | `AdminRegister` (536) | `championshipApi.adminRegister` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
-| PUT | `/api/championship/{id:guid}/image` | AdminOnly | `SetImage` (693) | — | — |
-| POST | `/api/championship/{id:guid}/my-inscription/pix` | logado | `GerarPixInscricao` (356) | — | `app/cliente/page.tsx` |
-| POST | `/api/championship/{id:guid}/my-inscription/pix/verificar` | logado | `VerificarPixInscricao` (473) | `championshipApi.verificarPixInscricao` | `app/cliente/page.tsx`<br>`app/page.tsx` |
-| GET | `/api/championship/{id:guid}/participants` | logado | `GetParticipants` (134) | `championshipApi.participants` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx` |
-| DELETE | `/api/championship/{id:guid}/participants/{participantId:guid}` | AdminOnly | `RemoveParticipant` (625) | `championshipApi.removeParticipant` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
-| PUT | `/api/championship/{id:guid}/participants/{participantId:guid}/placement` | AdminOnly | `SetPlacement` (675) | `championshipApi.setPlacement` | `app/admin/liga-mensal/page.tsx` |
-| PATCH | `/api/championship/{id:guid}/podio` | AdminOnly | `SetPodio` (772) | `championshipApi.setPodio` | `app/admin/campeonatos/page.tsx` |
-| GET | `/api/championship/{id:guid}/preinscricoes` | AdminOnly | `GetPreInscricoes` (732) | `championshipApi.getPreInscricoes` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
-| POST | `/api/championship/{id:guid}/preinscricoes` | público | `AddPreInscricao` (713) | — | `app/campeonato/[id]/page.tsx` |
-| DELETE | `/api/championship/{id:guid}/preinscricoes/{preInscricaoId:guid}` | AdminOnly | `DeletePreInscricao` (757) | `championshipApi.deletePreInscricao` | `app/admin/campeonatos/page.tsx` |
-| POST | `/api/championship/{id:guid}/register` | logado | `Register` (252) | `championshipApi.selfRegister` | `app/page.tsx` |
-| PUT | `/api/championship/{id:guid}/status` | AdminOnly | `UpdateStatus` (649) | `championshipApi.setStatus` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
+| GET | `/api/championship` | público | `GetAll` (31) | `championshipApi.list` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx`<br>`app/page.tsx` |
+| POST | `/api/championship` | AdminOnly | `Create` (68) | `championshipApi.create` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
+| GET | `/api/championship/admin/all` | AdminOnly | `GetAllAdmin` (38) | `championshipApi.listAll` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx` |
+| GET | `/api/championship/my-participations` | logado | `GetMyParticipations` (53) | `championshipApi.myParticipations` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| POST | `/api/championship/participants/{participantId:guid}/cobrar` | OwnerOnly | `CobrarInscricao` (211) | `championshipApi.cobrarInscricao` | `app/admin/campeonatos/page.tsx` |
+| PUT | `/api/championship/participants/{participantId:guid}/pagamento` | AdminOnly | `MarcarPagamentoInscricao` (217) | — | — |
+| DELETE | `/api/championship/{id:guid}` | AdminOnly | `Delete` (101) | `championshipApi.delete` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
+| GET | `/api/championship/{id:guid}` | público | `GetById` (46) | — | `app/campeonato/[id]/page.tsx` |
+| PUT | `/api/championship/{id:guid}` | AdminOnly | `Update` (83) | `championshipApi.update` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
+| POST | `/api/championship/{id:guid}/admin-register` | OwnerOnly | `AdminRegister` (226) | `championshipApi.adminRegister` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| PUT | `/api/championship/{id:guid}/image` | AdminOnly | `SetImage` (155) | — | — |
+| POST | `/api/championship/{id:guid}/my-inscription/pix` | logado | `GerarPixInscricao` (201) | — | `app/cliente/page.tsx` |
+| POST | `/api/championship/{id:guid}/my-inscription/pix/verificar` | logado | `VerificarPixInscricao` (206) | `championshipApi.verificarPixInscricao` | `app/cliente/page.tsx`<br>`app/page.tsx` |
+| GET | `/api/championship/{id:guid}/participants` | logado | `GetParticipants` (60) | `championshipApi.participants` | `app/admin/campeonatos/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx` |
+| DELETE | `/api/championship/{id:guid}/participants/{participantId:guid}` | AdminOnly | `RemoveParticipant` (234) | `championshipApi.removeParticipant` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| PUT | `/api/championship/{id:guid}/participants/{participantId:guid}/placement` | AdminOnly | `SetPlacement` (142) | `championshipApi.setPlacement` | `app/admin/liga-mensal/page.tsx` |
+| PATCH | `/api/championship/{id:guid}/podio` | AdminOnly | `SetPodio` (170) | `championshipApi.setPodio` | `app/admin/campeonatos/page.tsx` |
+| GET | `/api/championship/{id:guid}/preinscricoes` | AdminOnly | `GetPreInscricoes` (272) | `championshipApi.getPreInscricoes` | `app/admin/campeonatos/page.tsx`<br>`app/campeonato/[id]/page.tsx` |
+| POST | `/api/championship/{id:guid}/preinscricoes` | público | `AddPreInscricao` (255) | — | `app/campeonato/[id]/page.tsx` |
+| DELETE | `/api/championship/{id:guid}/preinscricoes/{preInscricaoId:guid}` | AdminOnly | `DeletePreInscricao` (279) | `championshipApi.deletePreInscricao` | `app/admin/campeonatos/page.tsx` |
+| POST | `/api/championship/{id:guid}/register` | logado | `Register` (191) | `championshipApi.selfRegister` | `app/page.tsx` |
+| PUT | `/api/championship/{id:guid}/status` | AdminOnly | `UpdateStatus` (120) | `championshipApi.setStatus` | `app/admin/campeonatos/page.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
 
 ## Comanda
 
@@ -400,22 +400,22 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/products/waitlist/pre-venda/pendentes` | AdminOnly | `CountPreVendaPendentes` (30) | `reservationApi.filaPendentesCount` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/reservations` | AdminOnly | `GetAll` (64) | `reservationApi.list` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
-| POST | `/api/reservations` | logado | `Create` (41) | `reservationApi.create` | `app/cliente/page.tsx` |
-| POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (53) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
-| POST | `/api/reservations/cart` | logado | `CreateCart` (47) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (94) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pagamento` | AdminOnly | `RegistrarPagamentoGrupo` (100) | `reservationApi.registrarPagamento` | `app/admin/reservas/page.tsx` |
-| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (116) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (125) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (106) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (111) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/mine` | logado | `GetMine` (36) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (59) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (88) | — | — |
-| PUT | `/api/reservations/{id:guid}/quantity` | AdminOnly | `UpdateQuantity` (82) | `reservationApi.updateQuantity` | `app/admin/reservas/page.tsx` |
-| PUT | `/api/reservations/{id:guid}/status` | AdminOnly | `UpdateStatus` (76) | `reservationApi.updateStatus` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
+| GET | `/api/products/waitlist/pre-venda/pendentes` | AdminOnly | `CountPreVendaPendentes` (31) | `reservationApi.filaPendentesCount` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/reservations` | AdminOnly | `GetAll` (65) | `reservationApi.list` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
+| POST | `/api/reservations` | logado | `Create` (42) | `reservationApi.create` | `app/cliente/page.tsx` |
+| POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (54) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
+| POST | `/api/reservations/cart` | logado | `CreateCart` (48) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (95) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pagamento` | AdminOnly | `RegistrarPagamentoGrupo` (101) | `reservationApi.registrarPagamento` | `app/admin/reservas/page.tsx` |
+| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (117) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (126) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (107) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (112) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/mine` | logado | `GetMine` (37) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (60) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (89) | — | — |
+| PUT | `/api/reservations/{id:guid}/quantity` | AdminOnly | `UpdateQuantity` (83) | `reservationApi.updateQuantity` | `app/admin/reservas/page.tsx` |
+| PUT | `/api/reservations/{id:guid}/status` | AdminOnly | `UpdateStatus` (77) | `reservationApi.updateStatus` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
 
 ## SiteConfig
 

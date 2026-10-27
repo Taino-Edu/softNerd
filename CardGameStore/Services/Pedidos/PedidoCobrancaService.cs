@@ -5,6 +5,7 @@
 // sem webhook. Pago = ExpiresAt dos itens vira null (venda feita, aguarda retirada).
 // =============================================================================
 
+using CardGameStore.Common;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;

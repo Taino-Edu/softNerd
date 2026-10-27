@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.0] — 2026-10-27
+
+### Por dentro — campeonatos em camadas
+- O controller de campeonatos (1.018 linhas, metade delas falando direto com o banco e com o Inter) ficou só com o HTTP: a inscrição e o Pix da entrada foram pro `CampeonatoInscricaoService` (com interface), e os DTOs e o preenchimento do cadastro pra `DTOs/CampeonatosDtos.cs`
+- A recusa de regra virou uma base comum (`RegraException`) com a tradução pra HTTP num lugar só (`RespostaDeRegra`), usada por pedidos e campeonatos
+- 9 testes novos da inscrição (gratuito, pago, Pix reaproveitado, Inter fora do ar, lotado, inscrições fechadas, balcão desativado) — antes não havia nenhum
+- Nada muda pra quem usa: mesmas rotas, respostas e mensagens
+
 ## [v1.78.0] — 2026-10-27
 
 ### Por dentro — pedidos do site em camadas (Clean Architecture)

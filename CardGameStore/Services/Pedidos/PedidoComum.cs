@@ -1,9 +1,10 @@
 // =============================================================================
 // PedidoComum.cs — o que os serviços de pedido (Services/Pedidos) dividem:
-// quem está pedindo, a recusa de regra (vira resposta HTTP no controller),
+// a recusa de regra (vira resposta HTTP no controller),
 // o DTO do item, a devolução de estoque e o aviso de estoque pra tela do admin.
 // =============================================================================
 
+using CardGameStore.Common;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Hubs;
@@ -14,20 +15,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CardGameStore.Services.Pedidos;
 
-/// <summary>Quem está pedindo (o controller monta a partir dos claims).</summary>
-public sealed record Ator(Guid Id, string Nome, bool EhAdmin);
-
-/// <summary>
-/// Regra de pedido recusada. O controller responde com o Status; Mensagem nula = só o status
-/// (404 sem corpo, 403). Extras entram no corpo junto com a mensagem (ex.: pixAberto, semEstoque).
-/// </summary>
+/// <summary>Regra de pedido recusada (ver Common/RegraException.cs).</summary>
 public class PedidoException(string? mensagem, int status = 400, IReadOnlyDictionary<string, object?>? extras = null)
-    : Exception(mensagem ?? $"HTTP {status}")
-{
-    public string? Mensagem { get; } = mensagem;
-    public int Status { get; } = status;
-    public IReadOnlyDictionary<string, object?>? Extras { get; } = extras;
-}
+    : RegraException(mensagem, status, extras);
 
 public static class Pedido
 {
