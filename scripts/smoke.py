@@ -52,7 +52,7 @@ CHECAGENS = [
     ('Liga Mensal',                     'GET',  f'{API}/api/liga-mensal', {200}, None),
     ('Login responde (config Google)',  'GET',  f'{API}/api/auth/google/config', {200}, json_ok('clientId')),
     # Chaves de "mudança com volta": se essa rota cair, o front não sabe qual jeito mostrar
-    ('Chaves de funcionalidade',        'GET',  f'{API}/api/funcionalidades', {200}, json_ok('liga-mensal-por-jogador')),
+    ('Chaves de funcionalidade',        'GET',  f'{API}/api/funcionalidades', {200}, json_ok('vigia-sistema')),
     # Torneio inexistente tem que dar 404 limpo — 500 aqui é erro de banco/rota
     ('Liguinha responde',               'GET',  f'{API}/api/torneios/{uuid.uuid4()}', {404}, None),
     # Rota protegida sem login tem que recusar (401), nunca abrir nem quebrar
