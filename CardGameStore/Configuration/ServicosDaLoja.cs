@@ -7,6 +7,7 @@
 
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
+using CardGameStore.Services.Pedidos;
 
 namespace CardGameStore.Configuration;
 
@@ -119,6 +120,11 @@ public static class ServicosDaLoja
         services.AddScoped<IEmailService,        EmailService>();
         services.AddScoped<IPushService,         PushService>();
         services.AddScoped<IReservationPixService, ReservationPixService>();
+        // Pedidos do site (Services/Pedidos): o ReservationController só fala HTTP
+        services.AddScoped<IPedidoCobrancaService,  PedidoCobrancaService>();
+        services.AddScoped<IPedidoCriacaoService,   PedidoCriacaoService>();
+        services.AddScoped<IPedidoAndamentoService, PedidoAndamentoService>();
+        services.AddScoped<IPedidoConsultaService,  PedidoConsultaService>();
         services.AddScoped<IAiChatService,       GeminiChatService>();
         services.AddSingleton<ITcgApiClient,     TcgApiClient>();
         services.AddSingleton<ITcgService,       TcgService>();

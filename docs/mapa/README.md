@@ -24,13 +24,23 @@ Este README é escrito à mão — o script não mexe nele. Quando descobrir uma
 
 | Parte | Onde | Observação |
 |---|---|---|
-| API (C#/.NET 10) | `CardGameStore/` | Controllers em `Controllers/`, regra de negócio em `Services/Implementations/` |
+| API (C#/.NET 10) | `CardGameStore/` | Controllers em `Controllers/` (só HTTP), regra de negócio nos serviços (`Services/`). Ver "Camadas da API" abaixo |
 | Front (Next.js 15, React 19) | `frontend/` | Telas em `app/`, peças reutilizáveis em `components/`, chamadas à API em `lib/api/` (um arquivo por assunto; as telas importam de `@/lib/api`) |
 | Banco principal | PostgreSQL | Modelos em `CardGameStore/Models/PostgreSQL/`, configuração em `Data/AppDbContext.cs` |
 | Vendas do balcão | MongoDB | `Models/MongoDB/VendaAvulsa.cs` |
 | Testes | `tests/unit/CardGameStore.Tests/` | `dotnet test tests/unit/CardGameStore.Tests` (SQLite em memória) |
 | Deploy | `deploy/` | `update.sh` na VPS; compose em `deploy/docker-compose.prod.yml` |
 | Histórico de versões | `frontend/public/CHANGELOG.md` | Lido pela tela `/admin/sobre` — atualizar a cada versão |
+
+### Camadas da API
+- **Controller só fala HTTP**: lê quem está logado, chama o serviço e devolve a resposta. Regra, banco e
+  integração ficam no serviço — com interface (`IAlgumaCoisaService`), registrado em `Configuration/ServicosDaLoja.cs`.
+- **Recusa de regra é exceção com status**: o serviço lança `PedidoException("mensagem", 409)` /
+  `TorneioException` / `LigaMensalException` e o controller traduz (`ReservationController.Responder`). Mensagem
+  nula = só o status (404/403 sem corpo); `Extras` entram no corpo (ex.: `pixAberto`, `semEstoque`).
+- **Quem pede** vai como parâmetro (`Ator(Id, Nome, EhAdmin)`), nunca `User`/`HttpContext` dentro do serviço.
+- Já no padrão: pedidos do site (`Services/Pedidos/`: criação, andamento, cobrança Pix, consulta), Liga e
+  Liguinha (`Services/Liga/`). Os controllers grandes que ainda falam com o banco direto estão no BACKLOG.
 
 ---
 
@@ -132,13 +142,13 @@ Catálogo **único** em dois espelhos — forma nova ou regra mudada é uma linh
 - Dá baixa quando pagou: `PixReconciliationService.cs` — um `case` por origem (comanda, crediário,
   campeonato, reserva). Origem nova de cobrança = `case` novo aqui.
 - Robô que confere a cada 5 min: `PixReconciliationBackgroundService.cs`.
-- Pedido do site (reserva): cancelar pedido não pago **derruba o Pix antes** (`ReservationController.DerrubarPixAntesDeCancelarAsync`);
+- Pedido do site (reserva): cancelar pedido não pago **derruba o Pix antes** (`PedidoCobrancaService.DerrubarAntesDeCancelarAsync`);
   Pix que cai em pedido cancelado reativa o pedido se tiver estoque ou avisa os admins (`BaixarReservaAsync`).
-  Chave `pedido-pix-consistente`. Fluxo novo que cancela pedido? Passe pelo mesmo método.
+  Fluxo novo que cancela pedido? Passe pelo mesmo método.
 - Pedido do site vira venda **no pagamento** (`PedidoVendaService`, chamado pela baixa do Pix depois do commit):
   preço congelado em `product_reservations.unit_price_in_cents`, a venda que ele gerou em `venda_avulsa_id`
-  (`registrando:<txid>` = claim). Homologar só vende o que ainda não tem venda; cancelar pedido vendido estorna.
-  Chave `pedido-venda-no-pagamento`.
+  (`registrando:<txid>` = claim). Homologar só vende o que ainda não tem venda; cancelar pedido vendido estorna
+  (`Services/Pedidos/PedidoAndamentoService.cs`).
 - Crediário tem regra própria (reaproveitar cobrança, pagar parte, pagar tudo): `CrediarioPixService.cs`.
 
 ### Vigia do sistema (alertas e erros de tela)
@@ -191,7 +201,7 @@ no `ChampionshipController`; rodadas e partidas ficam em `Services/Liga/` (`Suic
 ### Permissões do operador
 - `Middleware/OperatorPermissionMiddleware.cs` + `Permissao.RotasPrefixo` (`Models/PostgreSQL/Perfil.cs`).
 - Só **rota de admin** (`AdminOnly` / papel Operator) é conferida no mapa; rota pública ou de cliente vale pro
-  operador como pra qualquer logado. Chave `operador-acesso-pelo-menu` (fallback: tudo fora do mapa dava 403).
+  operador como pra qualquer logado.
 - **Rota de admin nova**: ponha o prefixo no mapa da permissão da tela, ou — se for só do dono — na lista
   `SoODonoDeProposito` do teste `TodaRotaAdminOnly_TemPermissaoQueAbre_OuEstaNaListaDoDono`. O teste falha
   se esquecer (era assim que Liga Mensal, Pré-vendas e Mensageria davam "Sem permissão" pro operador).

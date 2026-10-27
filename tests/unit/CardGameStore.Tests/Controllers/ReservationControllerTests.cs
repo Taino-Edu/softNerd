@@ -12,6 +12,7 @@
 // BeginTransactionAsync/rollback só funcionam com um provider relacional de verdade.
 // =============================================================================
 
+using System.Reflection;
 using System.Security.Claims;
 using CardGameStore.Configuration;
 using CardGameStore.Controllers;
@@ -21,6 +22,7 @@ using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
+using CardGameStore.Services.Pedidos;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -86,22 +88,30 @@ public class ReservationControllerTests
             NullLogger<InterSyncService>.Instance);
     }
 
+    /// <summary>Os serviços de pedido de verdade, com banco SQLite e o resto em mock.</summary>
+    private static (PedidoCriacaoService Criacao, PedidoAndamentoService Andamento, PedidoCobrancaService Cobranca) CreateServicos(
+        AppDbContext db, IVendaAvulsaService? vendaService = null, IPixReconciliationService? pixReconciliation = null,
+        InterSyncService? inter = null, FuncionalidadesService? funcionalidades = null)
+    {
+        var audit = new Mock<IAuditService>().Object;
+        var hub = CreateHubMock();
+        var cobranca = new PedidoCobrancaService(db, new Mock<IReservationPixService>().Object,
+            pixReconciliation ?? new Mock<IPixReconciliationService>().Object, inter ?? CreateInterMock(),
+            audit, NullLogger<PedidoCobrancaService>.Instance);
+        return (
+            new PedidoCriacaoService(db, cobranca, new Mock<IPushService>().Object, audit, hub, funcionalidades),
+            new PedidoAndamentoService(db, vendaService ?? new Mock<IVendaAvulsaService>().Object, cobranca,
+                new Mock<IProductService>().Object, audit, hub, funcionalidades),
+            cobranca);
+    }
+
     private static ReservationController CreateController(
         AppDbContext db, Guid? loggedUserId = null, IVendaAvulsaService? vendaService = null,
         IPixReconciliationService? pixReconciliation = null, InterSyncService? inter = null,
         FuncionalidadesService? funcionalidades = null)
     {
-        var controller = new ReservationController(
-            db,
-            vendaService ?? new Mock<IVendaAvulsaService>().Object,
-            new Mock<IReservationPixService>().Object,
-            pixReconciliation ?? new Mock<IPixReconciliationService>().Object,
-            new Mock<IPushService>().Object,
-            new Mock<IAuditService>().Object,
-            CreateHubMock(),
-            inter ?? CreateInterMock(),
-            NullLogger<ReservationController>.Instance,
-            funcionalidades);
+        var (criacao, andamento, cobranca) = CreateServicos(db, vendaService, pixReconciliation, inter, funcionalidades);
+        var controller = new ReservationController(criacao, andamento, cobranca, new PedidoConsultaService(db));
 
         var claims = new List<Claim>();
         if (loggedUserId.HasValue) claims.Add(new Claim("sub", loggedUserId.Value.ToString()));
@@ -877,15 +887,16 @@ public class ReservationControllerTests
         var mock = new Mock<IVendaAvulsaService>();
         mock.Setup(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()))
             .ReturnsAsync(new VendaAvulsaDto { Id = "venda-balcao" });
-        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: mock.Object);
+        var andamento = CreateServicos(db, vendaService: mock.Object).Andamento;
         var lidos = await db.ProductReservations.Include(r => r.Product).Include(r => r.User)
             .Where(r => r.ReservationGroupId == groupId).ToListAsync();      // o que o Homologar leu
         await db.ProductReservations.Where(r => r.Id == itens[0].Id)          // o Pix chegou antes
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.VendaAvulsaId, "venda-pix").SetProperty(r => r.ExpiresAt, (DateTime?)null));
 
-        var result = await controller.HomologarItensParaTesteAsync(lidos, new HomologarRequest { PaymentMethod = "Dinheiro" });
+        var homologar = () => andamento.HomologarItensAsync(lidos, new HomologarRequest { PaymentMethod = "Dinheiro" },
+            new Ator(Guid.NewGuid(), "Admin", EhAdmin: true));
 
-        result.Should().BeOfType<BadRequestObjectResult>();
+        (await homologar.Should().ThrowAsync<PedidoException>()).Which.Status.Should().Be(400);
         mock.Verify(v => v.RegisterAsync(It.IsAny<VendaAvulsaRequest>(), It.IsAny<Guid>(), It.IsAny<string>()), Times.Never);
         (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().Be("venda-pix");
     }
@@ -987,7 +998,8 @@ public class ReservationControllerTests
     // Pedido do Maikon (22/10): a pré-venda adicionada em momentos diferentes virava um Pix por pedido.
 
     private static object Corpo(IActionResult r) => r.Should().BeOfType<OkObjectResult>().Subject.Value!;
-    private static T Campo<T>(object corpo, string nome) => (T)corpo.GetType().GetProperty(nome)!.GetValue(corpo)!;
+    private static T Campo<T>(object corpo, string nome) =>
+        (T)corpo.GetType().GetProperty(nome, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)!.GetValue(corpo)!;
 
     private static CreateReservationCartRequest Carrinho(Product p, string? pagamento = "pix") =>
         new() { Items = [new CreateReservationCartItem { ProductId = p.Id, Quantity = 1 }], PaymentMethod = pagamento };
