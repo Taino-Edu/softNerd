@@ -53,9 +53,14 @@ public class RelatoriosController : ControllerBase
         var inicio = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(inicioLocal, DateTimeKind.Unspecified), BrazilZone);
         var fim    = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(inicioLocal.AddMonths(1), DateTimeKind.Unspecified), BrazilZone);
 
-        // Emojis das categorias cadastradas
-        var categorias = await _db.ProductCategories
-            .ToDictionaryAsync(c => c.Name, c => c.Emoji ?? "📦");
+        // Cadastro de categorias: emoji e pai de cada uma. O produto guarda só o NOME da folha
+        // (Product.Category, sem FK), então o pai sai cruzando esse nome com o cadastro.
+        var cadastro = await _db.ProductCategories.AsNoTracking()
+            .Select(c => new { c.Id, c.Name, c.Emoji, c.ParentCategoryId })
+            .ToListAsync();
+        var categorias = cadastro
+            .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Emoji ?? "📦", StringComparer.OrdinalIgnoreCase);
 
         // ── 1. Itens de Comandas Fechadas no mês ─────────────────────────────
         var comandaItems = await _db.ComandaItems
@@ -72,7 +77,8 @@ public class RelatoriosController : ControllerBase
         var filter = Builders<VendaAvulsa>.Filter.And(
             Builders<VendaAvulsa>.Filter.Gte(v => v.SoldAt, inicio),
             Builders<VendaAvulsa>.Filter.Lt(v => v.SoldAt, fim));
-        var vendasAvulsas = await _vendas.Find(filter).ToListAsync();
+        // Venda estornada sai do relatório, como no resto do financeiro
+        var vendasAvulsas = (await _vendas.Find(filter).ToListAsync()).Where(v => !v.Cancelada).ToList();
 
         // ── 3. Acumula em dicionário categoria → produto → (qty, total) ───────
         // Estrutura: dict[categoria][produto] = (qty, totalCentavos)
@@ -139,6 +145,10 @@ public class RelatoriosController : ControllerBase
             .OrderByDescending(c => c.QuantidadeVendida)
             .ToList();
 
+        // ── 5. Agrupa as subcategorias debaixo da categoria-pai ───────────────
+        var grupos = AgruparPorCategoriaPai(porCategoria,
+            cadastro.Select(c => new CategoriaCadastrada(c.Id, c.Name, c.Emoji, c.ParentCategoryId)).ToList());
+
         return Ok(new RelatorioVendasDto
         {
             Mes                = mes,
@@ -146,7 +156,46 @@ public class RelatoriosController : ControllerBase
             TotalGeralEmReais  = porCategoria.Sum(c => c.TotalEmReais),
             TotalItensVendidos = porCategoria.Sum(c => c.QuantidadeVendida),
             PorCategoria       = porCategoria,
+            Grupos             = grupos,
         });
+    }
+
+    public sealed record CategoriaCadastrada(Guid Id, string Nome, string? Emoji, Guid? PaiId);
+
+    /// <summary>
+    /// Põe cada categoria do relatório debaixo da categoria-pai. A linha do pai é SEMPRE a soma
+    /// das filhas (item vendido direto no pai entra como uma "filha" com o mesmo nome). Nome
+    /// repetido em famílias diferentes não dá pra saber de quem é: fica no próprio grupo em vez
+    /// de somar no pai errado. Categoria fora do cadastro ("Outros", "Cartas TCG") é o próprio grupo.
+    /// </summary>
+    public static List<RelatorioGrupoCategoria> AgruparPorCategoriaPai(
+        IReadOnlyList<RelatorioCategoria> porCategoria, IReadOnlyList<CategoriaCadastrada> cadastro)
+    {
+        var nomePorId = cadastro.ToDictionary(c => c.Id, c => c.Nome);
+        string PaiDe(string cat)
+        {
+            var pais = cadastro
+                .Where(c => string.Equals(c.Nome, cat, StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.PaiId)
+                .Distinct()
+                .ToList();
+            return pais is [Guid paiId] && nomePorId.TryGetValue(paiId, out var nomePai) ? nomePai : cat;
+        }
+        string EmojiDe(string nome) =>
+            cadastro.FirstOrDefault(c => string.Equals(c.Nome, nome, StringComparison.OrdinalIgnoreCase))?.Emoji ?? "📦";
+
+        return porCategoria
+            .GroupBy(c => PaiDe(c.Categoria), StringComparer.OrdinalIgnoreCase)
+            .Select(g => new RelatorioGrupoCategoria
+            {
+                Categoria         = g.Key,
+                Emoji             = EmojiDe(g.Key),
+                QuantidadeVendida = g.Sum(c => c.QuantidadeVendida),
+                TotalEmReais      = g.Sum(c => c.TotalEmReais),
+                Subcategorias     = g.OrderByDescending(c => c.QuantidadeVendida).ToList(),
+            })
+            .OrderByDescending(g => g.QuantidadeVendida)
+            .ToList();
     }
 
     // -------------------------------------------------------------------------

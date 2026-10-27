@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **26/10/2026** — produção na **v1.72.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
+Atualizado em **26/10/2026** — produção na **v1.73.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -37,13 +37,13 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 3. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
 4. Botão "Voltar versão" e checks obrigatórios novos no `main`.
 5. Dependabot grandes (.NET 10, Next 16, TS 7) — um por vez, com teste.
-6. **Relatórios por subcategoria com total na categoria-pai** — Maikon quer vendas por subcategoria (Pokémon, One Piece, Riftbound…) e o total da categoria-pai (soma das filhas) em `admin/relatorios` e `AnalyticsController`. `Product.Category` é string com o nome da folha, sem FK; caminho rápido: resolver o pai na leitura cruzando o nome com `ProductCategory` (risco: duas subcategorias com o mesmo nome em famílias diferentes; se acontecer, migrar pra `Product.ProductCategoryId` com backfill). A linha do pai é **sempre** a soma das filhas.
-7. Produto, mais adiante: "excluir minha conta" (LGPD), auditoria de acessibilidade, SaaS multi-loja (pausado).
+6. Produto, mais adiante: "excluir minha conta" (LGPD), auditoria de acessibilidade, SaaS multi-loja (pausado).
 
 ## ✅ Feito recentemente
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.74.0 | 26/10 | **Relatório de vendas por subcategoria** (pedido do Maikon): categoria-pai com o total (soma das filhas) e as subcategorias dentro; vendas estornadas fora do relatório |
 | v1.73.0 | 26/10 | Limpeza pela contagem de uso: **WhatsApp automático** (Evolution, n8n, IA, caixa de conversas), **OFX** e **Mercado Pago** fora; tag `arquivo/whatsapp-v1.72.0`; banco intacto |
 | v1.72.0 | 26/10 | Pedidos: **Registrar pagamento** sem dar como retirado (fica "Pago · aguardando retirada", igual ao Pix do site); coluna Vendas vira Reservas |
 | v1.71.0 | 26/10 | **Nota fiscal (NFC-e) e Tenant-ERP fora do sistema** — o módulo fica guardado na tag `arquivo/nfce-v1.70.1`; banco intacto |

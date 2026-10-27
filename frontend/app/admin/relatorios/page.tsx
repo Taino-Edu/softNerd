@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import {
-  relatorioApi, RelatorioVendasDto, RelatorioCategoria,
+  relatorioApi, RelatorioVendasDto, RelatorioCategoria, RelatorioGrupoCategoria,
   RelatorioCrediarioDto, DevedorDto, PagamentoMesDto,
   analyticsApi, productApi, categoryApi, userApi, comandaApi,
 } from '@/lib/api'
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { brl as fmt } from '@/lib/format'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR')
 const fmtHour = (d: string) => new Date(d).toLocaleString('pt-BR', {
@@ -72,7 +73,49 @@ function CategoriaCard({ cat, totalGeral }: { cat: RelatorioCategoria; totalGera
   )
 }
 
+/** Categoria-pai com o total (soma das filhas) e, aberta, as subcategorias — cada uma
+ *  com os produtos. Grupo que é só ele mesmo (sem subcategoria) vira o card de sempre. */
+function GrupoCard({ grupo, totalGeral }: { grupo: RelatorioGrupoCategoria; totalGeral: number }) {
+  const [open, setOpen] = useState(false)
+  const unico = grupo.subcategorias.length === 1 && grupo.subcategorias[0].categoria === grupo.categoria
+  if (unico) return <CategoriaCard cat={grupo.subcategorias[0]} totalGeral={totalGeral} />
+  const pct = totalGeral > 0 ? (grupo.quantidadeVendida / totalGeral) * 100 : 0
+
+  return (
+    <div className="card">
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
+        <span className="text-2xl w-8 text-center shrink-0">{grupo.emoji}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-semibold text-white truncate">{grupo.categoria}</p>
+            <span className="text-accent-gold font-bold text-sm shrink-0">{fmt(grupo.totalEmReais)}</span>
+          </div>
+          <div className="mt-1.5 h-1.5 bg-surface-600 rounded-full overflow-hidden">
+            <div className="h-full bg-brand-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
+            <span>{grupo.quantidadeVendida} un. · {grupo.subcategorias.length} {grupo.subcategorias.length === 1 ? 'subcategoria' : 'subcategorias'}</span>
+            <span>{pct.toFixed(1)}% do total</span>
+          </div>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
+      </button>
+
+      {open && (
+        <div className="mt-3 border-t border-surface-500 pt-3 space-y-2">
+          {grupo.subcategorias.map(sub => (
+            <CategoriaCard key={sub.categoria}
+              cat={sub.categoria === grupo.categoria ? { ...sub, categoria: `${sub.categoria} (sem subcategoria)` } : sub}
+              totalGeral={grupo.quantidadeVendida} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AbaVendas({ mes, ano }: { mes: number; ano: number }) {
+  const porSubcategoria = useFuncionalidade('relatorio-por-subcategoria') === true
   const [data, setData]       = useState<RelatorioVendasDto | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -101,7 +144,7 @@ function AbaVendas({ mes, ano }: { mes: number; ano: number }) {
         {[
           { label: 'Total vendido',     value: fmt(data.totalGeralEmReais),      icon: TrendingUp,  color: 'text-accent-gold',  bg: 'bg-amber-500/10' },
           { label: 'Itens vendidos',    value: `${data.totalItensVendidos} un.`, icon: ShoppingCart, color: 'text-brand-400',   bg: 'bg-brand-500/10' },
-          { label: 'Categorias',        value: `${data.porCategoria.length}`,    icon: Package,      color: 'text-accent-green', bg: 'bg-accent-green/10' },
+          { label: 'Categorias',        value: `${porSubcategoria ? data.grupos.length : data.porCategoria.length}`,    icon: Package,      color: 'text-accent-green', bg: 'bg-accent-green/10' },
         ].map(m => (
           <div key={m.label} className="card flex items-center gap-3 py-3">
             <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', m.bg)}>
@@ -118,9 +161,11 @@ function AbaVendas({ mes, ano }: { mes: number; ano: number }) {
       <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
         {MESES[mes - 1]} {ano} — clique para ver os produtos
       </p>
-      {data.porCategoria.map((cat, i) => (
-        <CategoriaCard key={i} cat={cat} totalGeral={data.totalItensVendidos} />
-      ))}
+      {porSubcategoria
+        ? data.grupos.map(g => <GrupoCard key={g.categoria} grupo={g} totalGeral={data.totalItensVendidos} />)
+        : data.porCategoria.map((cat, i) => (
+          <CategoriaCard key={i} cat={cat} totalGeral={data.totalItensVendidos} />
+        ))}
     </div>
   )
 }

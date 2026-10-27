@@ -65,6 +65,7 @@ public static class Funcionalidades
     public const string PedidoPixJunto = "pedido-pix-junto";
     public const string CampeonatoSeparado = "campeonato-separado";
     public const string PagamentoSemRetirada = "pagamento-sem-retirada";
+    public const string RelatorioPorSubcategoria = "relatorio-por-subcategoria";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -358,6 +359,15 @@ public static class Funcionalidades
             SeDesligar: "Volta só o Homologar: lançar o pagamento já marca o pedido como retirado e ele sai da tela.",
             Padrao:     true,
             Desde:      "v1.72.0",
+            RevisarEm:  new DateOnly(2027, 5, 1)),
+
+        new(RelatorioPorSubcategoria,
+            Nome:       "Relatório de vendas por subcategoria",
+            OQueMuda:   "Em Relatórios → Vendas, cada categoria-pai (ex.: Cartas) mostra o total e, dentro, as subcategorias " +
+                        "(Pokémon, One Piece, Riftbound…) com os produtos de cada uma. O total do pai é sempre a soma das filhas.",
+            SeDesligar: "Volta a lista de antes: uma linha por subcategoria, sem o total da categoria-pai.",
+            Padrao:     true,
+            Desde:      "v1.74.0",
             RevisarEm:  new DateOnly(2027, 5, 1)),
     ];
 
