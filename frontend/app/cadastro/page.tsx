@@ -1,14 +1,13 @@
 'use client'
-// Cadastro do cliente. Com a chave "login-telas-unificadas" (v1.57.0) usa a mesma moldura do /entrar
-// (components/auth/Moldura.tsx) com o seletor Entrar | Criar conta; desligada, o cartão de antes.
+// Cadastro do cliente, na mesma moldura do /entrar (components/auth/Moldura.tsx) com o seletor
+// Entrar | Criar conta.
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { authApi } from '@/lib/api'
 import { saveAuth } from '@/lib/auth'
-import toast, { Toaster } from 'react-hot-toast'
-import { Mail, KeyRound, Loader2, Gamepad2, ArrowLeft, User, Phone } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { Mail, KeyRound, User, Phone } from 'lucide-react'
 import Link from 'next/link'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { MolduraEntrada, TituloEntrada, AbasEntrada, CampoEntrada, BotaoEntrada, LinhaEntrada, LinkEntrada, useMarca } from '@/components/auth/Moldura'
 
 export default function CadastroPage() {
@@ -36,7 +35,6 @@ function CadastroForm() {
   // embaixo do campo certo em vez de um toast solto dizendo "erro ao criar conta".
   const [erroCampo,    setErroCampo]    = useState<string | null>(null)
   const [erroMensagem, setErroMensagem] = useState<string | null>(null)
-  const unificadas = useFuncionalidade('login-telas-unificadas') !== false
   const { cor } = useMarca()
   const entrarHref = pedido && returnTo !== '/cliente/perfil' ? `/entrar?returnTo=${encodeURIComponent(returnTo)}` : '/entrar'
 
@@ -64,148 +62,30 @@ function CadastroForm() {
     }
   }
 
-  if (unificadas) {
-    const limpaErro = (campo: string) => { if (erroCampo === campo) { setErroCampo(null); setErroMensagem(null) } }
-    const irProLogin = <> <Link href={entrarHref} className="underline">Ir para o login</Link></>
-    return (
-      <MolduraEntrada>
-        <TituloEntrada titulo="Crie sua conta" sub="Acompanhe campeonatos, reservas e seus pontos." />
-        <AbasEntrada ativa="criar" entrarHref={entrarHref} criarHref="#" />
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <CampoEntrada rotulo="Nome" icone={User} required autoComplete="name" value={name}
-            onChange={e => setName(e.target.value)} placeholder="Seu nome completo" />
-          <CampoEntrada rotulo="E-mail" icone={Mail} type="email" required autoComplete="email" value={email}
-            onChange={e => { setEmail(e.target.value); limpaErro('email') }} placeholder="voce@email.com"
-            erro={erroCampo === 'email' ? <>{erroMensagem}{irProLogin}</> : undefined} />
-          <CampoEntrada rotulo="WhatsApp" opcional icone={Phone} type="tel" autoComplete="tel" value={whatsApp}
-            onChange={e => { setWhatsApp(e.target.value); limpaErro('whatsapp') }} placeholder="(17) 99999-9999"
-            erro={erroCampo === 'whatsapp' ? <>{erroMensagem}{irProLogin}</> : undefined} />
-          <CampoEntrada rotulo="Senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
-            value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
-          <CampoEntrada rotulo="Confirmar senha" icone={KeyRound} senha cor={cor} required autoComplete="new-password"
-            value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha"
-            erro={confirm && password !== confirm ? 'As senhas não coincidem.' : undefined} />
-          <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Criando...' : 'Criar minha conta →'}</BotaoEntrada>
-        </form>
-        <LinhaEntrada>Já tem conta? <LinkEntrada href={entrarHref} cor={cor}>Entrar</LinkEntrada></LinhaEntrada>
-        <LinhaEntrada pequena>Já comprou na loja física? <LinkEntrada href="/primeiro-acesso" cor={cor}>Ative sua conta pelo CPF</LinkEntrada></LinhaEntrada>
-      </MolduraEntrada>
-    )
-  }
-
+  const limpaErro = (campo: string) => { if (erroCampo === campo) { setErroCampo(null); setErroMensagem(null) } }
+  const irProLogin = <> <Link href={entrarHref} className="underline">Ir para o login</Link></>
   return (
-    <div className="min-h-screen bg-surface-900 flex items-center justify-center p-4">
-      <Toaster position="top-center" toastOptions={{ style: { background: '#1e1e28', color: '#fff', border: '1px solid #32323f' }}} />
-
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-600/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-brand-800/10 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md">
-        <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-white transition mb-8 w-fit">
-          <ArrowLeft className="w-4 h-4" /> Voltar para a loja
-        </Link>
-
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600/20 border border-brand-500/30 rounded-2xl mb-4">
-            <Gamepad2 className="w-8 h-8 text-brand-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Criar Conta</h1>
-          <p className="text-gray-400 mt-1 text-sm">Cadastre-se para acompanhar campeonatos, pagamentos e seus pontos</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="card space-y-5">
-          <div>
-            <label className="label">Nome</label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="text" required value={name}
-                onChange={e => setName(e.target.value)}
-                className="input pl-9"
-                placeholder="Seu nome completo"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="label">E-mail</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="email" required value={email}
-                onChange={e => { setEmail(e.target.value); if (erroCampo === 'email') { setErroCampo(null); setErroMensagem(null) } }}
-                className={`input pl-9 ${erroCampo === 'email' ? 'border-red-500/60' : ''}`}
-                placeholder="seu@email.com"
-              />
-            </div>
-            {erroCampo === 'email' && (
-              <p className="text-xs text-red-400 mt-1.5">
-                {erroMensagem} <Link href="/entrar" className="underline hover:text-red-300">Ir para o login</Link>
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="label">WhatsApp <span className="text-gray-500 font-normal">(opcional)</span></label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="tel" value={whatsApp}
-                onChange={e => { setWhatsApp(e.target.value); if (erroCampo === 'whatsapp') { setErroCampo(null); setErroMensagem(null) } }}
-                className={`input pl-9 ${erroCampo === 'whatsapp' ? 'border-red-500/60' : ''}`}
-                placeholder="11999999999"
-              />
-            </div>
-            {erroCampo === 'whatsapp' && (
-              <p className="text-xs text-red-400 mt-1.5">
-                {erroMensagem} <Link href="/entrar" className="underline hover:text-red-300">Ir para o login</Link>
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="label">Senha</label>
-            <div className="relative">
-              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="password" required value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="input pl-9"
-                placeholder="Mínimo 8 caracteres"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="label">Confirmar senha</label>
-            <div className="relative">
-              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="password" required value={confirm}
-                onChange={e => setConfirm(e.target.value)}
-                className="input pl-9"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <User className="w-5 h-5" />}
-            {loading ? 'Criando...' : 'Criar conta'}
-          </button>
-
-          <div className="text-center text-sm text-gray-500">
-            Já tem conta?{' '}
-            <Link href="/entrar" className="text-brand-400 hover:text-brand-300 font-medium transition">
-              Entrar
-            </Link>
-          </div>
-          <div className="text-center text-xs text-gray-600">
-            Já comprou na loja física?{' '}
-            <Link href="/primeiro-acesso" className="text-brand-400 hover:text-brand-300 transition">
-              Ative sua conta pelo CPF
-            </Link>
-          </div>
-        </form>
-      </div>
-    </div>
+    <MolduraEntrada>
+      <TituloEntrada titulo="Crie sua conta" sub="Acompanhe campeonatos, reservas e seus pontos." />
+      <AbasEntrada ativa="criar" entrarHref={entrarHref} criarHref="#" />
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <CampoEntrada rotulo="Nome" icone={User} required autoComplete="name" value={name}
+          onChange={e => setName(e.target.value)} placeholder="Seu nome completo" />
+        <CampoEntrada rotulo="E-mail" icone={Mail} type="email" required autoComplete="email" value={email}
+          onChange={e => { setEmail(e.target.value); limpaErro('email') }} placeholder="voce@email.com"
+          erro={erroCampo === 'email' ? <>{erroMensagem}{irProLogin}</> : undefined} />
+        <CampoEntrada rotulo="WhatsApp" opcional icone={Phone} type="tel" autoComplete="tel" value={whatsApp}
+          onChange={e => { setWhatsApp(e.target.value); limpaErro('whatsapp') }} placeholder="(17) 99999-9999"
+          erro={erroCampo === 'whatsapp' ? <>{erroMensagem}{irProLogin}</> : undefined} />
+        <CampoEntrada rotulo="Senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
+          value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
+        <CampoEntrada rotulo="Confirmar senha" icone={KeyRound} senha cor={cor} required autoComplete="new-password"
+          value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha"
+          erro={confirm && password !== confirm ? 'As senhas não coincidem.' : undefined} />
+        <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Criando...' : 'Criar minha conta →'}</BotaoEntrada>
+      </form>
+      <LinhaEntrada>Já tem conta? <LinkEntrada href={entrarHref} cor={cor}>Entrar</LinkEntrada></LinhaEntrada>
+      <LinhaEntrada pequena>Já comprou na loja física? <LinkEntrada href="/primeiro-acesso" cor={cor}>Ative sua conta pelo CPF</LinkEntrada></LinhaEntrada>
+    </MolduraEntrada>
   )
 }

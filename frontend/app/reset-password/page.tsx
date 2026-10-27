@@ -1,13 +1,11 @@
 'use client'
 // Recuperar senha: pede o link por e-mail; com ?token= define a senha nova.
-// Com a chave "login-telas-unificadas" (v1.57.0) usa a moldura do /entrar; desligada, o cartão de antes.
+// Na moldura do /entrar (components/auth/Moldura.tsx).
 import { useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { authApi } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { Sword, Loader2, CheckCircle, KeyRound, Mail } from 'lucide-react'
-import Link from 'next/link'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { CheckCircle, KeyRound, Mail } from 'lucide-react'
 import { MolduraEntrada, TituloEntrada, CampoEntrada, BotaoEntrada, LinhaEntrada, LinkEntrada, useMarca, L } from '@/components/auth/Moldura'
 
 function ResetPasswordForm() {
@@ -24,7 +22,6 @@ function ResetPasswordForm() {
   const [confirm,  setConfirm]  = useState('')
   const [done,     setDone]     = useState(false)
   const [loading,  setLoading]  = useState(false)
-  const unificadas = useFuncionalidade('login-telas-unificadas') !== false
   const { cor } = useMarca()
 
   // ── Fase 1: solicitar link ─────────────────────────────────────────────────
@@ -57,170 +54,54 @@ function ResetPasswordForm() {
     }
   }
 
-  if (unificadas) {
-    return (
-      <MolduraEntrada selo="Recuperar acesso">
-        {done ? (
-          <div className="text-center py-2 space-y-4">
-            <CheckCircle className="w-12 h-12 mx-auto" style={{ color: '#22A55B' }} />
-            <TituloEntrada titulo="Senha nova salva!" sub="Agora é só entrar com ela." />
-            <BotaoEntrada type="button" cor={cor} onClick={() => router.push('/entrar')}>Ir para o login →</BotaoEntrada>
-          </div>
-        ) : token ? (
-          <>
-            <TituloEntrada titulo="Crie uma senha nova" sub="Mínimo 8 caracteres." />
-            <form onSubmit={handleReset} className="mt-6 space-y-4">
-              <CampoEntrada rotulo="Nova senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
-                value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
-              <CampoEntrada rotulo="Confirmar senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
-                value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha"
-                erro={confirm && password !== confirm ? 'As senhas não coincidem.' : undefined} />
-              <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Salvando...' : 'Salvar senha nova →'}</BotaoEntrada>
-            </form>
-          </>
-        ) : emailSent ? (
-          <div className="space-y-4">
-            <Mail className="w-12 h-12" style={{ color: cor }} />
-            <TituloEntrada titulo="Confira seu e-mail" />
-            <p className="text-sm" style={{ color: L.suave }}>
-              Se <strong style={{ color: L.texto }}>{email}</strong> estiver cadastrado, o link chega em instantes (olhe também o spam).
-              Ele vale por 2 horas.
-            </p>
-            <p className="text-xs rounded-xl p-3" style={{ backgroundColor: L.campo, color: L.suave, border: `1px solid ${L.borda}` }}>
-              Não recebeu? Se sua conta foi criada na loja só com nome e WhatsApp (sem e-mail), fale com a gente no balcão
-              ou pelo WhatsApp — a equipe redefine sua senha na hora.
-            </p>
-            <button type="button" onClick={() => setEmailSent(false)} className="text-sm font-semibold hover:underline" style={{ color: cor }}>
-              Usar outro e-mail
-            </button>
-          </div>
-        ) : (
-          <>
-            <TituloEntrada titulo="Esqueceu a senha?" sub="A gente manda um link pro seu e-mail pra criar uma nova." />
-            <form onSubmit={handleRequestLink} className="mt-6 space-y-4">
-              <CampoEntrada rotulo="E-mail da conta" icone={Mail} type="email" required autoComplete="email"
-                value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@email.com" />
-              <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Enviando...' : 'Enviar link →'}</BotaoEntrada>
-            </form>
-          </>
-        )}
-        <LinhaEntrada>Lembrou? <LinkEntrada href="/entrar" cor={cor}>Voltar para o login</LinkEntrada></LinhaEntrada>
-      </MolduraEntrada>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-surface-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-10 h-10 bg-brand-600/30 border border-brand-500/30 rounded-xl flex items-center justify-center">
-            <Sword className="w-5 h-5 text-brand-400" />
-          </div>
-          <span className="font-bold text-white text-xl">Santuário Nerd</span>
+    <MolduraEntrada selo="Recuperar acesso">
+      {done ? (
+        <div className="text-center py-2 space-y-4">
+          <CheckCircle className="w-12 h-12 mx-auto" style={{ color: '#22A55B' }} />
+          <TituloEntrada titulo="Senha nova salva!" sub="Agora é só entrar com ela." />
+          <BotaoEntrada type="button" cor={cor} onClick={() => router.push('/entrar')}>Ir para o login →</BotaoEntrada>
         </div>
-
-        <div className="card">
-          {/* ── Fase 2: sucesso ── */}
-          {done && (
-            <div className="text-center py-4 space-y-4">
-              <CheckCircle className="w-12 h-12 text-accent-green mx-auto" />
-              <div>
-                <p className="font-bold text-white text-lg">Senha redefinida!</p>
-                <p className="text-gray-400 text-sm mt-1">Sua nova senha foi salva com sucesso.</p>
-              </div>
-              <button onClick={() => router.push('/entrar')} className="btn-primary w-full justify-center">
-                Ir para o login
-              </button>
-            </div>
-          )}
-
-          {/* ── Fase 2: formulário nova senha ── */}
-          {!done && token && (
-            <>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-9 h-9 bg-brand-600/20 rounded-lg flex items-center justify-center">
-                  <KeyRound className="w-4 h-4 text-brand-400" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-white">Nova senha</h1>
-                  <p className="text-xs text-gray-500">Mínimo 8 caracteres</p>
-                </div>
-              </div>
-              <form onSubmit={handleReset} className="space-y-4">
-                <div>
-                  <label className="label">Nova senha</label>
-                  <input type="password" className="input" placeholder="••••••••"
-                    value={password} onChange={e => setPassword(e.target.value)}
-                    required minLength={8} />
-                </div>
-                <div>
-                  <label className="label">Confirmar senha</label>
-                  <input type="password" className="input" placeholder="••••••••"
-                    value={confirm} onChange={e => setConfirm(e.target.value)}
-                    required minLength={8} />
-                </div>
-                <button type="submit" disabled={loading} className="btn-primary w-full justify-center">
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : 'Redefinir senha'}
-                </button>
-              </form>
-            </>
-          )}
-
-          {/* ── Fase 1: email enviado ── */}
-          {!token && emailSent && (
-            <div className="text-center py-4 space-y-4">
-              <Mail className="w-12 h-12 text-brand-400 mx-auto" />
-              <div>
-                <p className="font-bold text-white text-lg">Se este e-mail estiver cadastrado, o link chega em instantes</p>
-                <p className="text-gray-400 text-sm mt-1">
-                  Verifique a caixa de entrada de <span className="text-white">{email}</span> (e o spam).
-                  O link expira em 2 horas.
-                </p>
-                <p className="text-gray-500 text-xs mt-3">
-                  Não recebeu? Se sua conta foi criada na loja só com nome e WhatsApp (sem e-mail),
-                  fale com a gente no balcão ou pelo WhatsApp — a equipe redefine sua senha na hora.
-                </p>
-              </div>
-              <button onClick={() => setEmailSent(false)} className="text-sm text-gray-500 hover:text-gray-300 transition">
-                Usar outro e-mail
-              </button>
-            </div>
-          )}
-
-          {/* ── Fase 1: solicitar link ── */}
-          {!token && !emailSent && (
-            <>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-9 h-9 bg-brand-600/20 rounded-lg flex items-center justify-center">
-                  <Mail className="w-4 h-4 text-brand-400" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-white">Recuperar senha</h1>
-                  <p className="text-xs text-gray-500">Enviaremos um link por e-mail</p>
-                </div>
-              </div>
-              <form onSubmit={handleRequestLink} className="space-y-4">
-                <div>
-                  <label className="label">E-mail da conta</label>
-                  <input type="email" className="input" placeholder="seu@email.com"
-                    value={email} onChange={e => setEmail(e.target.value)}
-                    required />
-                </div>
-                <button type="submit" disabled={loading} className="btn-primary w-full justify-center">
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</> : 'Enviar link de recuperação'}
-                </button>
-              </form>
-              <div className="mt-4 text-center">
-                <Link href="/entrar" className="text-xs text-gray-500 hover:text-gray-300 transition">
-                  Voltar para o login
-                </Link>
-              </div>
-            </>
-          )}
+      ) : token ? (
+        <>
+          <TituloEntrada titulo="Crie uma senha nova" sub="Mínimo 8 caracteres." />
+          <form onSubmit={handleReset} className="mt-6 space-y-4">
+            <CampoEntrada rotulo="Nova senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
+              value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
+            <CampoEntrada rotulo="Confirmar senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
+              value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha"
+              erro={confirm && password !== confirm ? 'As senhas não coincidem.' : undefined} />
+            <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Salvando...' : 'Salvar senha nova →'}</BotaoEntrada>
+          </form>
+        </>
+      ) : emailSent ? (
+        <div className="space-y-4">
+          <Mail className="w-12 h-12" style={{ color: cor }} />
+          <TituloEntrada titulo="Confira seu e-mail" />
+          <p className="text-sm" style={{ color: L.suave }}>
+            Se <strong style={{ color: L.texto }}>{email}</strong> estiver cadastrado, o link chega em instantes (olhe também o spam).
+            Ele vale por 2 horas.
+          </p>
+          <p className="text-xs rounded-xl p-3" style={{ backgroundColor: L.campo, color: L.suave, border: `1px solid ${L.borda}` }}>
+            Não recebeu? Se sua conta foi criada na loja só com nome e WhatsApp (sem e-mail), fale com a gente no balcão
+            ou pelo WhatsApp — a equipe redefine sua senha na hora.
+          </p>
+          <button type="button" onClick={() => setEmailSent(false)} className="text-sm font-semibold hover:underline" style={{ color: cor }}>
+            Usar outro e-mail
+          </button>
         </div>
-      </div>
-    </div>
+      ) : (
+        <>
+          <TituloEntrada titulo="Esqueceu a senha?" sub="A gente manda um link pro seu e-mail pra criar uma nova." />
+          <form onSubmit={handleRequestLink} className="mt-6 space-y-4">
+            <CampoEntrada rotulo="E-mail da conta" icone={Mail} type="email" required autoComplete="email"
+              value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@email.com" />
+            <BotaoEntrada carregando={loading} cor={cor}>{loading ? 'Enviando...' : 'Enviar link →'}</BotaoEntrada>
+          </form>
+        </>
+      )}
+      <LinhaEntrada>Lembrou? <LinkEntrada href="/entrar" cor={cor}>Voltar para o login</LinkEntrada></LinhaEntrada>
+    </MolduraEntrada>
   )
 }
 

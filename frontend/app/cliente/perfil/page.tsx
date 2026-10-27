@@ -12,7 +12,7 @@ import { getUserName, clearAuth } from '@/lib/auth'
 import { authApi } from '@/lib/api'
 import {
   Star, User, Phone, CreditCard, Clock, AlertCircle, ArrowLeft, LogOut,
-  CheckCircle, Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
+  Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
   ShoppingBag, XCircle, Trophy, Coins, ShieldCheck, Mail, Settings, BookOpen,
   Bell, Package, X, Hourglass, Pencil, Check, Loader2 as Loader2Icon,
   QrCode, ShoppingCart, ChevronRight,
@@ -28,7 +28,6 @@ import { fotoLeve } from '@/lib/fotoLeve'
 import EscolherPokemon from '@/components/pokemon/EscolherPokemon'
 import ParceiroDaConta from '@/components/pokemon/ParceiroDaConta'
 import { nomeDoId } from '@/lib/pokemonPreferido'
-
 
 /** Data com hora — "12/08/2026 às 14:32". Sem a hora, duas compras no mesmo dia
  *  ficam indistinguíveis pra quem quer conferir o que pagou e quando. */
@@ -436,22 +435,14 @@ export default function PerfilPage() {
   }
 
   const isExpired = profile?.pointsExpired
-  // Conta nova (v1.52.0): abas com nomes de cliente, pontos uma vez só (com o valor em reais),
-  // "voltar" sempre pra área do cliente e Decks/Configurações/Sair juntos em "Mais".
-  const contaNova = useFuncionalidade('conta-cliente-nova') !== false
-
-  const tabs = contaNova ? [
+  // Abas com nomes de cliente, pontos uma vez só (com o valor em reais), "voltar" sempre pra
+  // área do cliente e Decks/Configurações/Sair juntos em "Mais".
+  const tabs = [
     { id: 'pontos',    icon: Star,    label: 'Pontos'      },
     { id: 'historico', icon: Receipt, label: 'Compras'     },
     { id: 'filas',     icon: Bell,    label: 'Reservas', badge: fila.length + reservations.length },
     { id: 'torneios',  icon: Trophy,  label: 'Campeonatos' },
     { id: 'crediario', icon: Wallet,  label: 'Crediário'   },
-  ] as const : [
-    { id: 'pontos',    icon: Star,    label: 'Pontos'   },
-    { id: 'historico', icon: Receipt, label: 'Histórico' },
-    { id: 'torneios',  icon: Trophy,  label: 'Torneios' },
-    { id: 'filas',     icon: Bell,    label: 'Pré-vendas', badge: fila.length + reservations.length },
-    { id: 'crediario', icon: Wallet,  label: 'Dívida'   },
   ] as const
 
   return (
@@ -472,9 +463,9 @@ export default function PerfilPage() {
         {/* Barra de navegação */}
         <div className="relative flex items-center justify-between px-5 pt-12 pb-4 max-w-lg mx-auto">
           <button
-            onClick={() => (contaNova ? router.push('/cliente') : router.back())}
+            onClick={() => router.push('/cliente')}
             className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors active:scale-90"
-            aria-label={contaNova ? 'Voltar pro início' : 'Voltar'}
+            aria-label="Voltar pro início"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -647,7 +638,7 @@ export default function PerfilPage() {
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <p className="text-[10px] font-black text-[#1E4FD6] uppercase tracking-wider mb-1">Pontos Nerd</p>
                 <p className="text-2xl font-black text-gray-900">{(profile?.pointsBalance ?? 0).toLocaleString('pt-BR')}</p>
-                {contaNova && !isExpired && (profile?.pointsBalance ?? 0) > 0 && (
+                {!isExpired && (profile?.pointsBalance ?? 0) > 0 && (
                   <p className="text-[11px] font-bold text-gray-500 mt-0.5">= {brl((profile?.pointsBalance ?? 0) / 100)} de desconto</p>
                 )}
                 {isExpired && (
@@ -664,10 +655,8 @@ export default function PerfilPage() {
               </div>
             </div>
 
-            {/* ── TABS ── */}
-            {contaNova ? (
-            // Celular: grade de 3 colunas (todas as abas à vista, nenhuma cortada na direita); maior: uma linha.
-            // Em tela bem estreita (320px) o ícone some e o texto encolhe em vez de vazar da pílula.
+            {/* ── TABS ── Celular: grade de 3 colunas (todas as abas à vista, nenhuma cortada na direita);
+                maior: uma linha. Em tela bem estreita (320px) o ícone some e o texto encolhe. */}
             <nav className="grid grid-cols-3 gap-1.5 min-[400px]:gap-2 mb-5 sm:flex sm:flex-wrap" aria-label="Seções da conta">
               {tabs.map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
@@ -688,59 +677,17 @@ export default function PerfilPage() {
                 </button>
               ))}
             </nav>
-            ) : (
-            <nav className="flex bg-white border border-gray-100 shadow-sm p-1 rounded-2xl gap-1 mb-5 sticky top-4 z-20">
-              {tabs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={clsx(
-                    'relative flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all',
-                    tab === t.id
-                      ? 'text-white shadow-md'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                  )}
-                  style={tab === t.id ? { background: 'linear-gradient(135deg, #2F63E8, #1E4FD6)' } : {}}
-                >
-                  {'badge' in t && t.badge > 0 && (
-                    <span className="absolute top-1 right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center">
-                      {t.badge}
-                    </span>
-                  )}
-                  <t.icon className={clsx('w-4 h-4 mb-1', tab === t.id ? 'text-white' : 'text-gray-400')} />
-                  <span className="text-[10px] font-black uppercase tracking-tight">{t.label}</span>
-                </button>
-              ))}
-            </nav>
-            )}
 
             {/* ── TAB: PONTOS ── */}
             {tab === 'pontos' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {contaNova && (
-                  <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-                    <p className="text-xs font-black text-[#1E4FD6] uppercase tracking-widest mb-3">Como funcionam os pontos</p>
-                    <ul className="space-y-2.5 text-sm text-gray-700">
-                      <li className="flex gap-2.5"><span className="w-6 h-6 rounded-full bg-[#EAF0FD] text-[#1E4FD6] text-xs font-black flex items-center justify-center shrink-0">1</span>Você ganha pontos a cada compra na loja.</li>
-                      <li className="flex gap-2.5"><span className="w-6 h-6 rounded-full bg-[#EAF0FD] text-[#1E4FD6] text-xs font-black flex items-center justify-center shrink-0">2</span><span><strong>100 pontos = R$ 1,00</strong> de desconto.</span></li>
-                      <li className="flex gap-2.5"><span className="w-6 h-6 rounded-full bg-[#EAF0FD] text-[#1E4FD6] text-xs font-black flex items-center justify-center shrink-0">3</span>Na comanda, toque em usar pontos — o desconto sai na hora.</li>
-                    </ul>
-                    {isExpired && (
-                      <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-500 text-xs font-medium">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        Seus pontos expiraram. Continue frequentando para ganhar novos!
-                      </div>
-                    )}
-                  </div>
-                )}
-                {!contaNova && (
-                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                  <Star className="absolute -right-4 -bottom-4 w-24 h-24 text-[#1E4FD6] opacity-[0.06]" />
-                  <p className="text-xs font-black text-[#1E4FD6] uppercase tracking-widest mb-1">Saldo de Experiência</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black text-gray-900">{profile?.pointsBalance ?? 0}</span>
-                    <span className="text-gray-400 font-bold uppercase text-xs tracking-widest">Pontos</span>
-                  </div>
+                <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                  <p className="text-xs font-black text-[#1E4FD6] uppercase tracking-widest mb-3">Como funcionam os pontos</p>
+                  <ul className="space-y-2.5 text-sm text-gray-700">
+                    <li className="flex gap-2.5"><span className="w-6 h-6 rounded-full bg-[#EAF0FD] text-[#1E4FD6] text-xs font-black flex items-center justify-center shrink-0">1</span>Você ganha pontos a cada compra na loja.</li>
+                    <li className="flex gap-2.5"><span className="w-6 h-6 rounded-full bg-[#EAF0FD] text-[#1E4FD6] text-xs font-black flex items-center justify-center shrink-0">2</span><span><strong>100 pontos = R$ 1,00</strong> de desconto.</span></li>
+                    <li className="flex gap-2.5"><span className="w-6 h-6 rounded-full bg-[#EAF0FD] text-[#1E4FD6] text-xs font-black flex items-center justify-center shrink-0">3</span>Na comanda, toque em usar pontos — o desconto sai na hora.</li>
+                  </ul>
                   {isExpired && (
                     <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-500 text-xs font-medium">
                       <AlertCircle className="w-4 h-4 shrink-0" />
@@ -748,7 +695,6 @@ export default function PerfilPage() {
                     </div>
                   )}
                 </div>
-                )}
 
                 <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -949,7 +895,7 @@ export default function PerfilPage() {
             {tab === 'torneios' && (
               <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {/* Liga do jogador (v1.60.0): posição, decks com % de vitória e etapas */}
-                {contaNova && <MinhaLiga />}
+                <MinhaLiga />
                 {participations.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
                     <Trophy className="w-10 h-10 mx-auto mb-3 text-gray-200" />
@@ -1136,7 +1082,7 @@ export default function PerfilPage() {
               </div>
             )}
 
-            {contaNova && <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-8 mb-1 px-1">Mais</p>}
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-8 mb-1 px-1">Mais</p>
             {/* ── MEUS DECKS ── */}
             <Link
               href="/cliente/decks"
@@ -1165,23 +1111,22 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <p className="text-sm font-black text-gray-900">Configurações</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{contaNova ? 'Acessibilidade e notificações' : 'IA, sons e preferências'}</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Acessibilidade e notificações</p>
                 </div>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-300 -rotate-90" />
             </Link>
 
-            {contaNova && (
-              <button onClick={handleLogout}
-                className="w-full flex items-center justify-between bg-white border border-gray-100 rounded-2xl p-4 shadow-sm mt-2 hover:bg-red-50 transition-colors active:scale-[0.98]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
-                    <LogOut className="w-5 h-5 text-red-500" />
-                  </div>
-                  <p className="text-sm font-black text-red-600">Sair da conta</p>
+            <button onClick={handleLogout}
+              className="w-full flex items-center justify-between bg-white border border-gray-100 rounded-2xl p-4 shadow-sm mt-2 hover:bg-red-50 transition-colors active:scale-[0.98]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
+                  <LogOut className="w-5 h-5 text-red-500" />
                 </div>
-              </button>
-            )}
+                <p className="text-sm font-black text-red-600">Sair da conta</p>
+              </div>
+            </button>
+            
           </>
         )}
       </div>

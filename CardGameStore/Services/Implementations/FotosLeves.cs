@@ -7,7 +7,7 @@
 // guardada em uploads/.leves/ (volume persistente) e a Cloudflare guarda o resto.
 // Vale pras fotos antigas também: nada muda no banco nem no endereço da foto.
 //
-// Quem chama: Middleware/FotosLevesMiddleware.cs (chave "fotos-leves").
+// Quem chama: Middleware/FotosLevesMiddleware.cs.
 // =============================================================================
 
 using SkiaSharp;

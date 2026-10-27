@@ -1,7 +1,6 @@
 'use client'
-// Página do produto. Com a chave "visual-produto-e-rodape" (v1.49.0): barra com a marca e a Sacola,
-// caminho Início › Produtos › Categoria, preço com contraste, "Últimas N", garantias da loja e
-// "Você também pode gostar". Lógica de reserva, login e WhatsApp é a mesma nos dois visuais.
+// Página do produto: barra com a marca e a Sacola, caminho Início › Produtos › Categoria, preço com
+// contraste, "Últimas N", garantias da loja e "Você também pode gostar".
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { productApi, authApi, userApi, siteConfigApi, categoryApi, Product, UserProfile, SiteConfigDto, ProductCategory } from '@/lib/api'
@@ -10,11 +9,10 @@ import { useReservationCart } from '@/hooks/useReservationCart'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
+import { ChevronRight, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import CartaoProduto from '@/components/loja/CartaoProduto'
 
 const NAVY = '#0C3D5A'
@@ -55,8 +53,6 @@ export default function ProductPage() {
   const [categorias, setCategorias] = useState<ProductCategory[]>([])
 
   const { items: cartItems, addItem, totalItems: cartCount } = useReservationCart()
-  const chaveNova = useFuncionalidade('visual-produto-e-rodape')
-  const nova = chaveNova !== false
   const [relacionados, setRelacionados] = useState<Product[]>([])
   const inCart = product ? cartItems.some(i => i.productId === product.id) : false
   const [qty, setQty] = useState(1)
@@ -112,12 +108,11 @@ export default function ProductPage() {
     categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [id, router])
 
-  // "Você também pode gostar": até 4 da mesma categoria. Só busca com a chave confirmada ligada
-  // (=== true, não "enquanto carrega") — desligar a chave numa emergência corta também esta requisição.
+  // "Você também pode gostar": até 4 da mesma categoria
   const produtoId = product?.id
   const categoria = product?.category
   useEffect(() => {
-    if (chaveNova !== true || !produtoId || !categoria) return
+    if (!produtoId || !categoria) return
     let vivo = true
     productApi.list(categoria)
       .then(rs => { if (vivo) setRelacionados(rs.data
@@ -126,7 +121,7 @@ export default function ProductPage() {
         .slice(0, 4)) })
       .catch(() => {})
     return () => { vivo = false }
-  }, [chaveNova, produtoId, categoria])
+  }, [produtoId, categoria])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -222,7 +217,6 @@ export default function ProductPage() {
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 
       {/* Nav */}
-      {nova ? (
       <nav className="sticky top-0 z-40 h-16 flex items-center border-b"
         style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="w-full max-w-5xl mx-auto px-4 flex items-center gap-3">
@@ -256,47 +250,24 @@ export default function ProductPage() {
           </div>
         </div>
       </nav>
-      ) : (
-      <nav className="sticky top-0 z-40 h-14 flex items-center px-4 gap-3 border-b"
-        style={{ backgroundColor: '#0F3460', borderColor: 'rgba(255,255,255,0.08)' }}>
-        <button onClick={() => router.back()} className="flex items-center gap-1 text-sm hover:opacity-70 transition-opacity" style={{ color: '#fff' }}>
-          <ChevronLeft className="w-4 h-4" /> Voltar
-        </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: '#fff' }}>{product.name}</p>
-        </div>
-        <button onClick={() => { const n = !isDark; setIsDark(n); setOptionalItem('landing-theme', n ? 'dark' : 'light') }}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors" style={{ color: '#fff' }}>
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
-        <button
-          onClick={() => navigator.share?.({ title: product.name, url: window.location.href }).catch(() => navigator.clipboard?.writeText(window.location.href))}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors" style={{ color: '#fff' }}>
-          <Share2 className="w-4 h-4" />
-        </button>
-
-        {/* Avatar do usuário logado */}
-        {avatar}
-      </nav>
-      )}
+      
 
       <div className="max-w-5xl mx-auto px-4 py-6">
-        {nova && (
-          <nav aria-label="Caminho" className="flex items-center flex-wrap gap-1 text-xs mb-4" style={{ color: C.muted }}>
-            <Link href="/" className="hover:underline">Início</Link>
-            <ChevronRight className="w-3 h-3" />
-            <Link href="/produtos" className="hover:underline">Produtos</Link>
-            <ChevronRight className="w-3 h-3" />
-            <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`} className="hover:underline font-semibold"
-              style={{ color: destaque }}>{product.category}</Link>
-          </nav>
-        )}
+        <nav aria-label="Caminho" className="flex items-center flex-wrap gap-1 text-xs mb-4" style={{ color: C.muted }}>
+          <Link href="/" className="hover:underline">Início</Link>
+          <ChevronRight className="w-3 h-3" />
+          <Link href="/produtos" className="hover:underline">Produtos</Link>
+          <ChevronRight className="w-3 h-3" />
+          <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`} className="hover:underline font-semibold"
+            style={{ color: destaque }}>{product.category}</Link>
+        </nav>
+        
         <div className="flex flex-col lg:flex-row gap-6">
 
           {/* ── Galeria ── */}
           <div className="lg:w-[420px] shrink-0 space-y-3">
-            <div className={`overflow-hidden border flex items-center justify-center ${nova ? 'rounded-3xl' : 'rounded-2xl'}`}
-              style={{ backgroundColor: nova ? CN.cardAlt : C.card, borderColor: C.border, aspectRatio: '1' }}>
+            <div className={`overflow-hidden border flex items-center justify-center rounded-3xl`}
+              style={{ backgroundColor: CN.cardAlt, borderColor: C.border, aspectRatio: '1' }}>
               {mainImg
                 ? <img src={fotoLeve(mainImg, 960)} alt={product.name} className="w-full h-full object-contain p-6" />
                 : <Package className="w-20 h-20 opacity-10" style={{ color: C.navy }} />
@@ -307,7 +278,7 @@ export default function ProductPage() {
                 {allImgs.map((url, i) => (
                   <button key={i} onClick={() => setMainImg(url)}
                     className="shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all"
-                    style={{ borderColor: mainImg === url ? (nova ? destaque : BLUE) : C.border, backgroundColor: C.card }}>
+                    style={{ borderColor: mainImg === url ? destaque : C.border, backgroundColor: C.card }}>
                     <img src={fotoLeve(url, 160)} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
                   </button>
                 ))}
@@ -353,7 +324,7 @@ export default function ProductPage() {
                   </p>
                 </div>
               ) : (
-                <p className="text-4xl font-black" style={{ color: nova ? C.navy : BLUE }}>{fmt(product.priceInReais)}</p>
+                <p className="text-4xl font-black" style={{ color: C.navy }}>{fmt(product.priceInReais)}</p>
               )}
 
               {/* Cartão × Pix — o que o cliente pergunta antes de comprar */}
@@ -369,11 +340,11 @@ export default function ProductPage() {
                 </p>
               )}
 
-              <p className={`text-xs mt-3 flex items-center gap-1.5 ${nova && ultimas ? 'font-bold' : ''}`}
-                style={{ color: !emEstoque ? '#EF4444' : nova && ultimas ? '#E11D48' : '#22C55E' }}>
+              <p className={`text-xs mt-3 flex items-center gap-1.5 ${ultimas ? 'font-bold' : ''}`}
+                style={{ color: !emEstoque ? '#EF4444' : ultimas ? '#E11D48' : '#22C55E' }}>
                 <CheckCircle className="w-3.5 h-3.5" />
                 {!emEstoque ? 'Produto esgotado'
-                  : nova && ultimas ? `Últimas ${product.stockQuantity} ${product.stockQuantity === 1 ? 'unidade' : 'unidades'}!`
+                  : ultimas ? `Últimas ${product.stockQuantity} ${product.stockQuantity === 1 ? 'unidade' : 'unidades'}!`
                   : `${product.stockQuantity} unidades em estoque`}
               </p>
             </div>
@@ -405,7 +376,7 @@ export default function ProductPage() {
                       </div>
                       <button onClick={handleAddToCart}
                         className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg"
-                        style={nova && !ehPreVenda
+                        style={!ehPreVenda
                           ? { backgroundColor: corTopo, color: '#fff', boxShadow: `0 10px 26px -10px ${corTopo}` }
                           : { backgroundColor: '#1E4FD6', color: '#fff', boxShadow: '0 8px 24px rgba(30,79,214,0.30)' }}>
                         <BookmarkPlus className="w-5 h-5" />
@@ -423,21 +394,20 @@ export default function ProductPage() {
                     </p>
                   </div>
 
-                  {nova && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { icon: PackageCheck, titulo: 'Separado na hora', texto: 'Fica guardado pra você' },
-                        { icon: Wallet,       titulo: 'Pix ou na retirada', texto: 'Você escolhe como pagar' },
-                        { icon: Store,        titulo: 'Retire na loja', texto: 'José Bonifácio, SP' },
-                      ].map(({ icon: Icon, titulo, texto }) => (
-                        <div key={titulo} className="rounded-xl border p-2.5 text-center" style={{ backgroundColor: C.card, borderColor: C.border }}>
-                          <Icon className="w-4 h-4 mx-auto mb-1" style={{ color: destaque }} />
-                          <p className="text-[11px] font-black leading-tight" style={{ color: C.navy }}>{titulo}</p>
-                          <p className="text-[10px] leading-tight mt-0.5" style={{ color: C.muted }}>{texto}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { icon: PackageCheck, titulo: 'Separado na hora', texto: 'Fica guardado pra você' },
+                      { icon: Wallet,       titulo: 'Pix ou na retirada', texto: 'Você escolhe como pagar' },
+                      { icon: Store,        titulo: 'Retire na loja', texto: 'José Bonifácio, SP' },
+                    ].map(({ icon: Icon, titulo, texto }) => (
+                      <div key={titulo} className="rounded-xl border p-2.5 text-center" style={{ backgroundColor: C.card, borderColor: C.border }}>
+                        <Icon className="w-4 h-4 mx-auto mb-1" style={{ color: destaque }} />
+                        <p className="text-[11px] font-black leading-tight" style={{ color: C.navy }}>{titulo}</p>
+                        <p className="text-[10px] leading-tight mt-0.5" style={{ color: C.muted }}>{texto}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
 
                   <div>
                     <a href={`https://wa.me/${WA_NUM}?text=${waMsg}`}
@@ -511,7 +481,7 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {nova && relacionados.length > 0 && (
+        {relacionados.length > 0 && (
           <section className="mt-12">
             <div className="flex items-end justify-between gap-3 mb-4">
               <h2 className="text-xl md:text-2xl font-black" style={{ color: C.navy }}>Você também pode gostar</h2>
