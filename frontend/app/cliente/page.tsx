@@ -1,18 +1,16 @@
 'use client'
 // Área do cliente (/cliente) — onde todo cliente logado cai (a página inicial redireciona pra cá).
-// Com a chave "cliente-inicio-novo" (v1.50.0): barra no azul da loja com o logo de Personalizar Site,
-// cartão de pontos com quanto valem em reais e atalhos pra Loja, Sacola, Liga, Mercado, Decks e Conta.
-// Comanda, Pix, campeonatos e produtos da comanda não mudam.
+// Barra no azul da loja com o logo de Personalizar Site, cartão de pontos com quanto valem em reais
+// e atalhos pra Loja, Sacola, Liga, Mercado, Decks e Conta.
 import { useEffect, useState, useCallback } from 'react'
 import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, championshipApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation, Championship } from '@/lib/api'
-import { getUserName } from '@/lib/auth'
 import { fmtRestante } from '@/lib/prazo'
 import NotificationBell from '@/components/cliente/NotificationBell'
 import { startHub, stopHub, ComandaOpenedEvent } from '@/lib/signalr'
 import toast, { Toaster } from 'react-hot-toast'
 import {
   ShoppingCart, Plus, Trash2, Loader2, Search,
-  Receipt, PackageOpen, Star, User as UserIcon, Package, ChevronRight, ChevronDown,
+  PackageOpen, Star, User as UserIcon, Package, ChevronDown,
   Trophy, Swords, Medal, BookOpen, Bell, ShoppingBag,
   QrCode, Copy, Share2,
 } from 'lucide-react'
@@ -20,7 +18,6 @@ import Link from 'next/link'
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { useSiteConfig } from '@/lib/useSiteConfig'
 import { useReservationCart } from '@/hooks/useReservationCart'
 
@@ -523,7 +520,6 @@ export default function ClientePage() {
   const [loadingVariants, setLoadingVariants] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [pix,             setPix]             = useState<PixCobrancaDto | null>(null)
-  const inicioNovo = useFuncionalidade('cliente-inicio-novo') !== false
   const site = useSiteConfig()
   const corTopo = site?.colorHero ?? '#1E4FD6'
   const { totalItems: itensSacola } = useReservationCart()
@@ -851,15 +847,15 @@ export default function ClientePage() {
       )}
 
       {/* ── HEADER ──────────────────────────────────────────────────── */}
-      <header style={{ backgroundColor: inicioNovo ? mixHex(corTopo, '#000000', 0.32) : C.navy }}>
+      <header style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32) }}>
         <div className="max-w-lg mx-auto px-5 pt-10 pb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={inicioNovo && site?.logoUrl ? (fotoLeve(site.logoUrl, 160) ?? site.logoUrl) : '/logo-maikon-128.png'}
+            <img src={site?.logoUrl ? (fotoLeve(site.logoUrl, 160) ?? site.logoUrl) : '/logo-maikon-128.png'}
               alt={site?.siteName ?? 'Santuário Nerd'} className="w-10 h-10 object-contain drop-shadow-md" />
             <div>
               {/* Cor no style: o tema claro do site força .text-white pra escuro e o nome sumia no fundo */}
-              <p className="font-black text-base leading-tight" style={{ color: '#FFFFFF' }}>{inicioNovo ? (site?.siteName ?? 'Santuário Nerd') : 'Santuário Nerd'}</p>
+              <p className="font-black text-base leading-tight" style={{ color: '#FFFFFF' }}>{site?.siteName ?? 'Santuário Nerd'}</p>
               {profile && (
                 <p className="text-xs font-bold mt-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   Olá, {profile.name.split(' ')[0]}!
@@ -886,8 +882,8 @@ export default function ClientePage() {
       {/* ── CONTENT ─────────────────────────────────────────────────── */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4 pb-24">
 
-        {/* Pontos (novo): quanto valem em reais — 1 ponto = 1 centavo de desconto na comanda */}
-        {inicioNovo && profile && (
+        {/* Pontos: quanto valem em reais — 1 ponto = 1 centavo de desconto na comanda */}
+        {profile && (
           <div className="relative overflow-hidden rounded-3xl p-5"
             style={{ background: `linear-gradient(135deg, ${mixHex(corTopo, '#FFFFFF', 0.12)} 0%, ${corTopo} 55%, ${mixHex(corTopo, '#000000', 0.3)} 100%)`, color: '#FFFFFF' }}>
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full border border-white/15 pointer-events-none" aria-hidden />
@@ -915,92 +911,36 @@ export default function ClientePage() {
           </div>
         )}
 
-        {inicioNovo && (
-          <div className="grid grid-cols-3 gap-2.5">
-            {[
-              { href: '/produtos', icon: ShoppingBag, titulo: 'Loja', sub: 'Ver produtos' },
-              { href: '/cliente/reserva/carrinho', icon: ShoppingCart, titulo: 'Sacola', sub: itensSacola > 0 ? `${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}` : 'Vazia', badge: itensSacola },
-              { href: '/liga', icon: Trophy, titulo: 'Liga', sub: 'Ranking do mês' },
-              { href: '/cliente/mercado', icon: Swords, titulo: 'Mercado', sub: 'Cartas avulsas' },
-              { href: '/cliente/decks', icon: BookOpen, titulo: 'Meus decks', sub: 'Sua coleção' },
-              { href: '/cliente/perfil', icon: UserIcon, titulo: 'Minha conta', sub: 'Pontos e notas' },
-            ].map(({ href, icon: Icon, titulo, sub, badge }) => (
-              <Link key={href} href={href}
-                className="relative flex flex-col items-center text-center gap-1.5 rounded-2xl p-3 transition-all active:scale-95 hover:-translate-y-0.5"
-                style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${corTopo}14` }}>
-                  <Icon className="w-5 h-5" style={{ color: corTopo }} />
-                </span>
-                <span className="text-xs font-black leading-tight" style={{ color: C.navy }}>{titulo}</span>
-                <span className="text-[10px] leading-tight" style={{ color: C.muted }}>{sub}</span>
-                {!!badge && (
-                  <span className="absolute top-2 right-2 min-w-[1.25rem] h-5 px-1 rounded-full text-[10px] font-black flex items-center justify-center"
-                    style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{badge}</span>
-                )}
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {/* Pontos (visual antigo) */}
-        {!inicioNovo && profile && (
-          <div className="rounded-2xl p-4 flex items-center justify-between"
-            style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(12,61,90,0.06)' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${C.blue}18` }}>
-                <Star className="w-5 h-5" style={{ color: C.blue }} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: C.muted }}>Seus Pontos</p>
-                <p className="text-xl font-black leading-tight" style={{ color: C.navy }}>
-                  {profile.pointsBalance} <span className="text-xs font-semibold" style={{ color: C.muted }}>pts</span>
-                </p>
-              </div>
-            </div>
-            {profile.balanceInCents > 0 && (
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: C.muted }}>Cashback</p>
-                <p className="text-base font-black" style={{ color: '#22c55e' }}>
-                  {brl((profile.balanceInCents / 100))}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Atalhos rápidos (visual antigo) */}
-        {!inicioNovo && (
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/cliente/mercado" className="flex items-center gap-3 rounded-2xl p-4 transition-all active:scale-95"
-            style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${C.blue}18` }}>
-              <ShoppingBag className="w-4 h-4" style={{ color: C.blue }} />
-            </div>
-            <div>
-              <p className="text-xs font-black" style={{ color: C.navy }}>Mercado de Cartas</p>
-              <p className="text-[10px]" style={{ color: C.muted }}>Compre e venda cartas</p>
-            </div>
-          </Link>
-          <Link href="/cliente/decks" className="flex items-center gap-3 rounded-2xl p-4 transition-all active:scale-95"
-            style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${C.blue}18` }}>
-              <BookOpen className="w-4 h-4" style={{ color: C.blue }} />
-            </div>
-            <div>
-              <p className="text-xs font-black" style={{ color: C.navy }}>Meus Decks</p>
-              <p className="text-[10px]" style={{ color: C.muted }}>Gerenciar coleção</p>
-            </div>
-          </Link>
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            { href: '/produtos', icon: ShoppingBag, titulo: 'Loja', sub: 'Ver produtos' },
+            { href: '/cliente/reserva/carrinho', icon: ShoppingCart, titulo: 'Sacola', sub: itensSacola > 0 ? `${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}` : 'Vazia', badge: itensSacola },
+            { href: '/liga', icon: Trophy, titulo: 'Liga', sub: 'Ranking do mês' },
+            { href: '/cliente/mercado', icon: Swords, titulo: 'Mercado', sub: 'Cartas avulsas' },
+            { href: '/cliente/decks', icon: BookOpen, titulo: 'Meus decks', sub: 'Sua coleção' },
+            { href: '/cliente/perfil', icon: UserIcon, titulo: 'Minha conta', sub: 'Pontos e notas' },
+          ].map(({ href, icon: Icon, titulo, sub, badge }) => (
+            <Link key={href} href={href}
+              className="relative flex flex-col items-center text-center gap-1.5 rounded-2xl p-3 transition-all active:scale-95 hover:-translate-y-0.5"
+              style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
+              <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${corTopo}14` }}>
+                <Icon className="w-5 h-5" style={{ color: corTopo }} />
+              </span>
+              <span className="text-xs font-black leading-tight" style={{ color: C.navy }}>{titulo}</span>
+              <span className="text-[10px] leading-tight" style={{ color: C.muted }}>{sub}</span>
+              {!!badge && (
+                <span className="absolute top-2 right-2 min-w-[1.25rem] h-5 px-1 rounded-full text-[10px] font-black flex items-center justify-center"
+                  style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{badge}</span>
+              )}
+            </Link>
+          ))}
         </div>
-        )}
 
         {/* Meus Campeonatos */}
         <MeusCampeonatos />
 
-        {/* Próximos campeonatos (área do cliente nova) */}
-        {inicioNovo && <ProximosCampeonatos cor={corTopo} />}
-
+        {/* Próximos campeonatos */}
+        <ProximosCampeonatos cor={corTopo} />
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">

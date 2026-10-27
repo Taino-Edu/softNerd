@@ -1,5 +1,5 @@
 'use client'
-// Moldura única das telas de entrada (v1.57.0, chave "login-telas-unificadas"): painel da marca
+// Moldura única das telas de entrada: painel da marca
 // na cor do topo com a arte de Personalizar Site + formulário à direita — o visual que o Maikon
 // aprovou pro /entrar (14/10/2026), agora também no cadastro, no primeiro acesso pelo CPF, na
 // recuperação de senha e no login do painel. Antes cada uma tinha um visual e o fluxo parecia

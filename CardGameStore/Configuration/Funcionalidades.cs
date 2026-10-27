@@ -35,16 +35,6 @@ public sealed record Funcionalidade(
 
 public static class Funcionalidades
 {
-    public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
-    public const string FotosLeves = "fotos-leves";
-    public const string VisualTopoELogin = "visual-topo-e-login";
-    public const string HomeDetalhesMaikon = "home-detalhes-maikon";
-    public const string VitrineNova = "vitrine-nova";
-    public const string VisualProdutoERodape = "visual-produto-e-rodape";
-    public const string SacolaNova = "sacola-nova";
-    public const string ClienteInicioNovo = "cliente-inicio-novo";
-    public const string ContaClienteNova = "conta-cliente-nova";
-    public const string LoginTelasUnificadas = "login-telas-unificadas";
     public const string VigiaSistema = "vigia-sistema";
     public const string PokemonPreferido = "pokemon-preferido";
     public const string HomeVisualUniforme = "home-visual-uniforme";
@@ -55,102 +45,6 @@ public static class Funcionalidades
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
-
-        new(CadastroCompletoPodeAdiar,
-            Nome:       "Cliente: \"Complete seu cadastro\" com \"Agora não\"",
-            OQueMuda:   "O aviso pra cadastrar e-mail e senha tem o botão \"Agora não\": quem abriu a comanda pela " +
-                        "mesa segue usando a comanda e o aviso volta na próxima visita ao site.",
-            SeDesligar: "Volta o aviso obrigatório: a pessoa só usa a área do cliente depois de cadastrar e-mail e senha " +
-                        "(quem digitar um e-mail que já tem conta fica presa no aviso).",
-            Padrao:     true,
-            Desde:      "v1.42.1",
-            RevisarEm:  new DateOnly(2026, 12, 15)),
-
-        new(FotosLeves,
-            Nome:       "Site: fotos leves",
-            OQueMuda:   "As fotos de produto, banner e campeonato vão pro site no tamanho em que aparecem e em WebP: " +
-                        "a página inicial cai de ~4 MB pra menos de 1 MB e abre bem mais rápido no celular.",
-            SeDesligar: "Volta a mandar a foto original, do tamanho em que foi enviada (PNG de até 2 MB por foto).",
-            Padrao:     true,
-            Desde:      "v1.44.0",
-            RevisarEm:  new DateOnly(2027, 1, 15)),
-
-        new(VisualTopoELogin,
-            Nome:       "Site: topo novo e login dos clientes novo",
-            OQueMuda:   "Topo da página inicial no azul do topo, com a etiqueta e a ilustração (mascote) de " +
-                        "Personalizar Site; login dos clientes em duas partes (painel azul + formulário), sempre claro.",
-            SeDesligar: "Volta o topo antigo (azul-petróleo, imagem = logo) e o login dos clientes antigo (cartão simples).",
-            Padrao:     true,
-            Desde:      "v1.45.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(HomeDetalhesMaikon,
-            Nome:       "Página inicial: detalhes do modelo do Maikon",
-            OQueMuda:   "Faixa fina acima do menu (texto em Personalizar Site), topo com cantos arredondados, " +
-                        "três cartões curtos abaixo do topo, chamada \"Quero jogar\" antes do rodapé, rodapé no azul " +
-                        "e o parcelamento no cartão nos cartões de produto.",
-            SeDesligar: "A página inicial volta a ser como na v1.46.1 (sem faixa, sem cartões e chamada, rodapé claro).",
-            Padrao:     true,
-            Desde:      "v1.47.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(VitrineNova,
-            Nome:       "Loja: vitrine nova",
-            OQueMuda:   "Na página inicial os produtos viram uma grade de 8 (sem o carrossel), com atalhos das " +
-                        "categorias; cartão de produto novo (selo, parcelamento, Pix, últimas unidades) na home e em " +
-                        "/produtos; botão Sacola com o carrinho de reserva na barra.",
-            SeDesligar: "Volta o carrossel de destaques na home, a barra \"Loja\" e o cartão pequeno em /produtos.",
-            Padrao:     true,
-            Desde:      "v1.48.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(VisualProdutoERodape,
-            Nome:       "Loja: página do produto nova e rodapé no azul",
-            OQueMuda:   "Página do produto com a barra da marca e a Sacola, caminho Início › Produtos › Categoria, " +
-                        "preço com contraste, \"Últimas N\", garantias da loja e \"Você também pode gostar\"; " +
-                        "o rodapé geral do site segue o azul do topo.",
-            SeDesligar: "Volta a página do produto de antes (barra escura com o nome) e o rodapé geral roxo-escuro.",
-            Padrao:     true,
-            Desde:      "v1.49.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(SacolaNova,
-            Nome:       "Loja: sacola nova",
-            OQueMuda:   "Carrinho de reserva no visual da loja: passos, itens com foto maior e \"+\" travado no estoque, " +
-                        "resumo com o total no Pix e garantias; quem não está logado vê \"Entre pra ver sua sacola\" " +
-                        "e volta pra sacola depois de entrar.",
-            SeDesligar: "Volta o carrinho de antes — e quem não está logado volta a ser mandado pra página inicial.",
-            Padrao:     true,
-            Desde:      "v1.50.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(ClienteInicioNovo,
-            Nome:       "Cliente: área do cliente nova",
-            OQueMuda:   "Na área do cliente (/cliente): barra no azul da loja com o logo de Personalizar Site, cartão de " +
-                        "pontos com quanto valem em reais e atalhos pra Loja, Sacola, Liga, Mercado, Decks e Conta.",
-            SeDesligar: "Volta a barra azul-petróleo com o logo antigo, o cartão de pontos simples e os 2 atalhos.",
-            Padrao:     true,
-            Desde:      "v1.50.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(ContaClienteNova,
-            Nome:       "Cliente: Minha conta organizada",
-            OQueMuda:   "Em Minha conta: abas com nomes de cliente (Pontos, Compras, Reservas, Campeonatos, Crediário, Notas) " +
-                        "em pílulas, pontos uma vez só com o valor em reais e como usar, \"voltar\" sempre pra área do cliente " +
-                        "e Meus decks / Configurações / Sair juntos em \"Mais\".",
-            SeDesligar: "Volta a grade de 6 abas (Histórico, Torneios, Pré-vendas, Dívida...), o saldo repetido e o voltar do navegador.",
-            Padrao:     true,
-            Desde:      "v1.52.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(LoginTelasUnificadas,
-            Nome:       "Entrada: todas as telas no mesmo visual",
-            OQueMuda:   "Cadastro, primeiro acesso pelo CPF, recuperar senha e o login do painel passam a usar a mesma moldura do " +
-                        "/entrar (painel da marca + formulário), com o seletor Entrar | Criar conta e passos no primeiro acesso.",
-            SeDesligar: "Essas telas voltam ao cartão escuro de antes (o /entrar segue a chave \"visual-topo-e-login\").",
-            Padrao:     true,
-            Desde:      "v1.57.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
 
         new(VigiaSistema,
             Nome:       "Vigia do sistema: alertas automáticos e erros de tela",

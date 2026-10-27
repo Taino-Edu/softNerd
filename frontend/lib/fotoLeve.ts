@@ -4,8 +4,7 @@
 //
 // A API devolve a foto reduzida e em WebP (CardGameStore/Services/Implementations/FotosLeves.cs),
 // uma vez só, e a Cloudflare guarda. A largura é a do lugar na tela em telas de celular
-// com densidade 2x (card de 190 px → 480). Com a chave "fotos-leves" desligada a API
-// ignora o "?w" e manda a original — nada a mudar aqui.
+// com densidade 2x (card de 190 px → 480).
 //
 // Foto de fora (cartas de TCG, Google, QR do Pix) volta igual: só /uploads é nosso.
 

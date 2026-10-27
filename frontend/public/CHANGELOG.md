@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.77.0] — 2026-10-27
+
+### Limpeza — site, loja e área do cliente sem o "jeito antigo" guardado
+- Dez mudanças do site que estavam atrás de chave viram o jeito único (nenhuma foi desligada em produção): **"Agora não" no cadastro completo**, **fotos leves**, **topo e login novos**, **detalhes da home do Maikon**, **vitrine nova**, **página do produto e rodapé no azul**, **sacola nova**, **área do cliente nova**, **Minha conta organizada** e **telas de entrada unificadas**
+- Saem as telas antigas de login, cadastro, primeiro acesso e recuperar senha, a sacola antiga, o carrossel e o cartão de produto antigos da home e da loja
+- Nada muda pra quem usa. Tudo guardado na tag `arquivo/chaves-antes-da-limpeza`
+- Ficam por enquanto: `pokemon-preferido` e `home-visual-uniforme` (v1.65+, ainda em observação)
+
 ## [v1.76.0] — 2026-10-27
 
 ### Limpeza — Liga e Liguinha sem o "jeito antigo" guardado

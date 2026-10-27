@@ -1,15 +1,10 @@
 // =============================================================================
-// FotosLevesMiddlewareTests.cs — "/uploads/x.png?w=480" e a chave fotos-leves
+// FotosLevesMiddlewareTests.cs — "/uploads/x.png?w=480"
 // =============================================================================
 
-using CardGameStore.Configuration;
-using CardGameStore.Data;
 using CardGameStore.Middleware;
 using CardGameStore.Services.Implementations;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkiaSharp;
 
@@ -19,7 +14,6 @@ public sealed class FotosLevesMiddlewareTests : IDisposable
 {
     private readonly string _uploads = Path.Combine(Path.GetTempPath(), "fotos-mw-" + Guid.NewGuid().ToString("N"));
     private readonly FotosLeves _fotos;
-    private readonly FuncionalidadesService _funcionalidades;
 
     public FotosLevesMiddlewareTests()
     {
@@ -31,11 +25,6 @@ public sealed class FotosLevesMiddlewareTests : IDisposable
         using (var f = File.Create(Path.Combine(_uploads, "banner.png"))) dados.SaveTo(f);
 
         _fotos = new FotosLeves(_uploads, NullLogger<FotosLeves>.Instance);
-        var conexao = new SqliteConnection("Filename=:memory:");
-        conexao.Open();
-        var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(conexao).Options);
-        db.Database.EnsureCreated();
-        _funcionalidades = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
     }
 
     public void Dispose()
@@ -53,12 +42,12 @@ public sealed class FotosLevesMiddlewareTests : IDisposable
         ctx.Response.Body = new MemoryStream();
         var passou = false;
         var mw = new FotosLevesMiddleware(_ => { passou = true; return Task.CompletedTask; });
-        await mw.InvokeAsync(ctx, _fotos, _funcionalidades);
+        await mw.InvokeAsync(ctx, _fotos);
         return (ctx, passou);
     }
 
     [Fact]
-    public async Task ComW_ChaveLigada_ServeAMiniaturaWebp()
+    public async Task ComW_ServeAMiniaturaWebp()
     {
         var (ctx, passou) = await Pedir("/uploads/banner.png", "?w=480");
 
@@ -66,17 +55,6 @@ public sealed class FotosLevesMiddlewareTests : IDisposable
         ctx.Response.ContentType.Should().Be("image/webp");
         ctx.Response.Headers["X-Foto-Leve"].ToString().Should().Be("480");
         ctx.Response.Body.Length.Should().BeGreaterThan(0);
-    }
-
-    [Fact]
-    public async Task ChaveDesligada_IgnoraOW_EServeAOriginal()
-    {
-        await _funcionalidades.DefinirAsync(Funcionalidades.FotosLeves, false, Guid.NewGuid());
-
-        var (ctx, passou) = await Pedir("/uploads/banner.png", "?w=480");
-
-        passou.Should().BeTrue();
-        ctx.Response.ContentType.Should().BeNull();
     }
 
     [Theory]

@@ -98,7 +98,6 @@ function fmtPixPct(v: number) { return `${(Math.round(v * 10) / 10).toString().r
 export default function LandingPage() {
   const router = useRouter()
   const [championships, setChampionships] = useState<Championship[]>([])
-  const [products,      setProducts]      = useState<Product[]>([])
   // Vitrine nova: todos os visíveis (destaques primeiro) — a grade mostra 8 e as categorias saem daqui
   const [vitrine,       setVitrine]       = useState<Product[]>([])
   const [announcements, setAnnouncements] = useState<AnnouncementDto[]>([])
@@ -114,8 +113,6 @@ export default function LandingPage() {
   const [annIdx,       setAnnIdx]     = useState(0)
   const [site,         setSite]       = useState<SiteConfigDto>(DEFAULT_SITE)
   const [categorias,   setCategorias] = useState<ProductCategory[]>([])
-  const carouselRef   = useRef<HTMLDivElement>(null)
-  const carouselPaused = useRef(false)
   const bannerPaused   = useRef(false)
   const annPaused      = useRef(false)
 
@@ -180,37 +177,24 @@ export default function LandingPage() {
   // configurada, então muda junto quando o admin troca a cor em Personalizar Site.
   const bannerGradient = `linear-gradient(135deg, ${site.colorNavy} 0%, ${mixHex(site.colorNavy, '#000000', 0.35)} 100%)`
 
-  // Topo novo (pedido do Maikon, 14/10): azul do topo, etiqueta e ilustração próprias de
-  // Personalizar Site. Chave "visual-topo-e-login": só o "desligada" (false) volta o antigo —
-  // enquanto carrega já mostra o novo, senão o topo piscava de cor a cada visita.
-  const visualNovo = useFuncionalidade('visual-topo-e-login') !== false
-  const heroGradient = visualNovo
-    ? `linear-gradient(135deg, ${mixHex(site.colorHero, '#FFFFFF', 0.10)} 0%, ${site.colorHero} 45%, ${mixHex(site.colorHero, '#000000', 0.38)} 100%)`
-    : bannerGradient
-  const navBg = visualNovo ? mixHex(site.colorHero, '#000000', 0.32) : '#0F3460'
-  const heroImagem = (visualNovo && site.heroImageUrl) || site.logoUrl || '/logo-santuario.webp'
+  // Topo (pedido do Maikon, 14/10): azul do topo, etiqueta e ilustração próprias de Personalizar Site
+  const heroGradient = `linear-gradient(135deg, ${mixHex(site.colorHero, '#FFFFFF', 0.10)} 0%, ${site.colorHero} 45%, ${mixHex(site.colorHero, '#000000', 0.38)} 100%)`
+  const navBg = mixHex(site.colorHero, '#000000', 0.32)
+  const heroImagem = site.heroImageUrl || site.logoUrl || '/logo-santuario.webp'
 
-  // Detalhes do modelo do Maikon (14/10, v1.47.0) — só acréscimos, nada do que já existe sai:
-  // faixa acima do menu, topo arredondado, 3 cartões, chamada "Quero jogar", rodapé no azul e
-  // parcelamento no cartão de produto. Chave "home-detalhes-maikon" desligada = home da v1.46.1.
-  const detalhes  = useFuncionalidade('home-detalhes-maikon') !== false
-  // Vitrine nova (v1.48.0): grade no lugar do carrossel, cartão novo e botão Sacola (carrinho de
-  // reserva que já existia). Chave "vitrine-nova" desligada = carrossel e cartão de antes.
-  const vitrineNova = useFuncionalidade('vitrine-nova') !== false
-  // Rodapé geral no azul (v1.49.0): ele já traz o copyright, então o da home não se repete
-  const rodapeNovo  = useFuncionalidade('visual-produto-e-rodape') !== false
+  // Detalhes do modelo do Maikon (14/10): faixa acima do menu, topo arredondado, 3 cartões, chamada
+  // "Quero jogar", rodapé no azul e parcelamento no cartão de produto. Vitrine em grade com o botão
+  // Sacola. O copyright fica no rodapé geral (components/Footer.tsx).
   const { totalItems: itensSacola } = useReservationCart()
   const categoriasVitrine = Object.entries(
     vitrine.reduce<Record<string, number>>((acc, p) => { acc[p.category] = (acc[p.category] ?? 0) + 1; return acc }, {}),
   ).sort((a, b) => b[1] - a[1]).slice(0, 6)
-  const avisoTopo = detalhes ? (site.avisoTopo ?? '').trim() : ''
+  const avisoTopo = (site.avisoTopo ?? '').trim()
   const faixa     = avisoTopo ? 32 : 0          // altura da faixa (px): empurra menu e topo pra baixo
   // "Jogue, evolua e divirta-se — encontre tudo…": o trecho antes do travessão sai em amarelo
   const [avisoDestaque, ...avisoResto] = avisoTopo.split(' — ')
   const corRodape = uniforme ? navBg : mixHex(site.colorHero, '#000000', 0.45)
-  const F = detalhes
-    ? { navy: '#FFFFFF', text: 'rgba(255,255,255,0.72)', blue: '#FFFFFF', border: 'rgba(255,255,255,0.14)' }
-    : { navy: C.navy, text: C.text, blue: C.blue, border: C.border }
+  const F = { navy: '#FFFFFF', text: 'rgba(255,255,255,0.72)', blue: '#FFFFFF', border: 'rgba(255,255,255,0.14)' }
 
   function toggleDark() {
     const next = !isDark
@@ -228,20 +212,6 @@ export default function LandingPage() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
-
-  useEffect(() => {
-    if (!products.length) return
-    const el = carouselRef.current
-    if (!el) return
-    const interval = setInterval(() => {
-      if (carouselPaused.current) return
-      const cardW = 192 + 12 // w-48 + gap-3
-      const maxLeft = el.scrollWidth - el.clientWidth
-      const next = el.scrollLeft + cardW
-      el.scrollTo({ left: next >= maxLeft ? 0 : next, behavior: 'smooth' })
-    }, 1500)
-    return () => clearInterval(interval)
-  }, [products])
 
   useEffect(() => {
     if (heroBanners.length <= 1) return
@@ -278,7 +248,6 @@ export default function LandingPage() {
       productApi.list().then(r => {
         const visible  = r.data.filter(p => p.isActive && p.stockQuantity > 0 && p.showOnMarketplace !== false)
         const featured = visible.filter(p => p.isFeatured)
-        setProducts(featured.length > 0 ? featured : visible)
         setVitrine([...featured, ...visible.filter(p => !p.isFeatured)])
       }),
       announcementApi.visible().then(r => setAnnouncements(r.data)),
@@ -340,42 +309,26 @@ export default function LandingPage() {
         onMouseEnter={() => setNavHover(true)}
         onMouseLeave={() => setNavHover(false)}>
 
-        {/* Marca centralizada absolutamente (visual antigo; no novo ela abre a barra, à esquerda) */}
-        {!visualNovo && (
-          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none flex items-center gap-2">
-            {site.logoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={site.logoUrl} alt={site.siteName} className="h-8 w-auto object-contain" />
-            )}
-            <span className="font-black text-2xl leading-none" style={{ color: '#ffffff' }}>{site.siteName}</span>
-          </div>
-        )}
-
         {/* Menu numa linha só: nada quebra em duas (era "Mercado de / Cartas" entre 1280 e 1440px) */}
         <div className="w-full max-w-7xl mx-auto px-5 flex items-center justify-between gap-4 2xl:gap-6">
 
           {/* Marca no começo, como nas lojas grandes — pedido do Maikon (cabeça do mascote + nome) */}
-          {visualNovo && (
-            <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink">
-              {site.logoUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={fotoLeve(site.logoUrl, 160) ?? site.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
-              )}
-              <span className="font-black text-xl leading-none truncate" style={{ color: '#ffffff' }}>{site.siteName}</span>
-            </Link>
-          )}
+          <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink">
+            {site.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fotoLeve(site.logoUrl, 160) ?? site.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
+            )}
+            <span className="font-black text-xl leading-none truncate" style={{ color: '#ffffff' }}>{site.siteName}</span>
+          </Link>
 
           {/* Links desktop — esquerda */}
-          <div className={`hidden xl:flex items-center gap-3 2xl:gap-5 text-sm font-medium whitespace-nowrap ${visualNovo ? 'flex-1 justify-center' : ''}`}>
+          <div className={`hidden xl:flex items-center gap-3 2xl:gap-5 text-sm font-medium whitespace-nowrap flex-1 justify-center`}>
             <a href="#eventos"  style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navTorneiosLabel}</a>
             <Link href="/produtos" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navProdutosLabel}</Link>
             <Link href="/cliente/mercado" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navMercadoLabel}</Link>
             <Link href="/liga" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navLigaLabel}</Link>
             <a href="#pontos"   style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navPontosLabel}</a>
           </div>
-
-          {/* Espaço mobile esquerda */}
-          {!visualNovo && <div className="xl:hidden" />}
 
           {/* Ações direita */}
           <div className="flex items-center gap-2 shrink-0">
@@ -396,17 +349,16 @@ export default function LandingPage() {
               style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
               Minha Conta
             </Link>
-            {vitrineNova && (
-              // Sacola = carrinho de reserva (/cliente/reserva/carrinho); no celular vira só o ícone
-              <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
-                className="flex items-center gap-2 text-sm px-2.5 xl:px-4 py-2 rounded-xl xl:border transition-colors hover:bg-white/10 whitespace-nowrap"
-                style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
-                <ShoppingBag className="w-4 h-4" />
-                <span className="hidden xl:inline">Sacola</span>
-                <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
-                  style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{itensSacola}</span>
-              </Link>
-            )}
+            {/* Sacola = carrinho de reserva (/cliente/reserva/carrinho); no celular vira só o ícone */}
+            <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
+              className="flex items-center gap-2 text-sm px-2.5 xl:px-4 py-2 rounded-xl xl:border transition-colors hover:bg-white/10 whitespace-nowrap"
+              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden xl:inline">Sacola</span>
+              <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
+                style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{itensSacola}</span>
+            </Link>
+            
             {/* "Ver Eventos" repete o link Torneios: só aparece quando sobra espaço (2xl) */}
             <a href="#eventos"
               className="hidden 2xl:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95 whitespace-nowrap"
@@ -427,7 +379,7 @@ export default function LandingPage() {
       {/* Menu mobile */}
       {mobileMenu && (
         <div className="fixed inset-x-0 top-16 z-40 border-b xl:hidden px-5 py-4 space-y-1"
-          style={{ top: 64 + faixa, backgroundColor: visualNovo ? navBg : site.colorNavy, borderColor: 'rgba(255,255,255,0.10)' }}>
+          style={{ top: 64 + faixa, backgroundColor: navBg, borderColor: 'rgba(255,255,255,0.10)' }}>
           <a href="#eventos" onClick={() => setMobileMenu(false)}
             className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
             {site.navTorneiosLabel}
@@ -477,7 +429,7 @@ export default function LandingPage() {
 
       {/* ── HERO + CAROUSEL DE FUNDO ───────────────────────────────────── */}
       <section
-        className={`relative pt-16 overflow-hidden ${detalhes ? 'rounded-b-[2rem] md:rounded-b-[2.75rem]' : ''}`}
+        className={`relative pt-16 overflow-hidden rounded-b-[2rem] md:rounded-b-[2.75rem]`}
         style={faixa ? { paddingTop: 64 + faixa } : undefined}
         onMouseEnter={() => { bannerPaused.current = true }}
         onMouseLeave={() => { bannerPaused.current = false }}
@@ -503,7 +455,7 @@ export default function LandingPage() {
           </>
         ) : (
           <div className="absolute inset-0" style={{ background: heroGradient }}>
-            {visualNovo && !uniforme && (
+            {!uniforme && (
               // Anéis de fundo do mockup: só decoração, não pegam clique
               <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
                 <div className="absolute -right-24 top-1/2 -translate-y-1/2 w-[34rem] h-[34rem] rounded-full border border-white/10" />
@@ -520,7 +472,7 @@ export default function LandingPage() {
 
             {/* Texto */}
             <div className="flex-1 text-center md:text-left">
-              {visualNovo && site.heroEyebrow && (
+              {site.heroEyebrow && (
                 <span className="inline-flex items-center gap-2 mb-5 px-3 sm:px-3.5 py-1.5 rounded-full border text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.06em] sm:tracking-[0.14em] whitespace-nowrap"
                   style={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.22)', backgroundColor: 'rgba(255,255,255,0.10)' }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.yellow }} />
@@ -539,7 +491,7 @@ export default function LandingPage() {
                 <a href="#eventos"
                   className="inline-flex items-center justify-center gap-2 font-black px-7 py-3.5 rounded-xl transition-all active:scale-95"
                   style={{ backgroundColor: C.yellow, color: site.colorNavy, boxShadow: `0 8px 28px rgba(255,228,94,0.22)` }}>
-                  <Trophy className="w-5 h-5" /> {site.ctaVerTorneiosLabel}{detalhes && ' →'}
+                  <Trophy className="w-5 h-5" /> {site.ctaVerTorneiosLabel} →
                 </a>
                 <Link href="/produtos"
                   className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-xl border transition-all hover:border-white/30 hover:text-white"
@@ -604,27 +556,25 @@ export default function LandingPage() {
       </section>
 
       {/* ── 3 CARTÕES CURTOS (modelo do Maikon) ────────────────────────── */}
-      {detalhes && (
-        <section className="px-5 pt-6 max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { icon: Package, titulo: 'Produtos para jogar',     texto: 'Cartas e acessórios para seu deck',   href: '/produtos' },
-            { icon: Trophy,  titulo: 'Feito para a comunidade', texto: 'Jogue junto, troque ideias e evolua', href: '#eventos' },
-            { icon: Heart,   titulo: 'Uma loja de quem joga',   texto: 'Encontre sua próxima aventura TCG',   href: '/liga' },
-          ].map(({ icon: Icon, titulo, texto, href }) => (
-            <a key={titulo} href={href}
-              className="flex items-center gap-3 p-4 rounded-2xl border transition-all hover:translate-y-[-2px]"
-              style={{ backgroundColor: C.card, borderColor: C.border }}>
-              <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${C.blue}18` }}>
-                <Icon className="w-5 h-5" style={{ color: C.blue }} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-black leading-tight" style={{ color: C.navy }}>{titulo}</span>
-                <span className="block text-xs mt-0.5" style={{ color: C.text }}>{texto}</span>
-              </span>
-            </a>
-          ))}
-        </section>
-      )}
+      <section className="px-5 pt-6 max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { icon: Package, titulo: 'Produtos para jogar',     texto: 'Cartas e acessórios para seu deck',   href: '/produtos' },
+          { icon: Trophy,  titulo: 'Feito para a comunidade', texto: 'Jogue junto, troque ideias e evolua', href: '#eventos' },
+          { icon: Heart,   titulo: 'Uma loja de quem joga',   texto: 'Encontre sua próxima aventura TCG',   href: '/liga' },
+        ].map(({ icon: Icon, titulo, texto, href }) => (
+          <a key={titulo} href={href}
+            className="flex items-center gap-3 p-4 rounded-2xl border transition-all hover:translate-y-[-2px]"
+            style={{ backgroundColor: C.card, borderColor: C.border }}>
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${C.blue}18` }}>
+              <Icon className="w-5 h-5" style={{ color: C.blue }} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-black leading-tight" style={{ color: C.navy }}>{titulo}</span>
+              <span className="block text-xs mt-0.5" style={{ color: C.text }}>{texto}</span>
+            </span>
+          </a>
+        ))}
+      </section>
 
       {/* ── CARROSSEL DE AVISOS & DESTAQUES ────────────────────────────── */}
       {visibleAnnouncements.length > 0 && (
@@ -722,7 +672,7 @@ export default function LandingPage() {
       )}
 
       {/* ── TORNEIOS ────────────────────────────────────────────────────── */}
-      <section id="eventos" className={`py-16 px-5 ${detalhes ? '' : 'border-t'}`} style={{ borderColor: C.border }}>
+      <section id="eventos" className="py-16 px-5">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-baseline justify-between mb-8">
             <div>
@@ -760,8 +710,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PRODUTOS: VITRINE NOVA (grade, sem carrossel parado) ─────────── */}
-      {vitrineNova ? (
-      <section id="produtos" className={`py-16 px-5 ${detalhes ? '' : 'border-t'}`} style={{ borderColor: C.border }}>
+      <section id="produtos" className="py-16 px-5">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
             <div>
@@ -819,113 +768,6 @@ export default function LandingPage() {
           )}
         </div>
       </section>
-      ) : (
-      /* ── PRODUTOS (carrossel antigo, guardado pra volta) ─────────────── */
-      <section id="produtos" className="py-16 px-5 border-t" style={{ borderColor: C.border }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-baseline justify-between mb-8">
-            <div>
-              <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: C.blue }}>{site.produtosEyebrow}</p>
-              <h2 className="text-2xl md:text-3xl font-black" style={{ color: C.navy }}>{site.produtosTitle}</h2>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-14">
-              <div className="w-7 h-7 border-2 rounded-full animate-spin"
-                style={{ borderColor: C.blue, borderTopColor: 'transparent' }} />
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-14 rounded-2xl border" style={{ borderColor: C.border, backgroundColor: C.card }}>
-              <Package className="w-8 h-8 mx-auto mb-3 opacity-20" style={{ color: C.navy }} />
-              <p className="font-medium opacity-50" style={{ color: C.navy }}>Produtos em breve.</p>
-            </div>
-          ) : (
-            <>
-              {/* Carrossel lateral */}
-              <div className="relative group">
-                {/* Seta esquerda */}
-                <button
-                  onClick={() => {
-                    carouselPaused.current = true
-                    carouselRef.current?.scrollBy({ left: -204, behavior: 'smooth' })
-                    setTimeout(() => { carouselPaused.current = false }, 1500)
-                  }}
-                  className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-9 h-9 rounded-full items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, color: C.navy }}>
-                  <ChevronRight className="w-4 h-4 rotate-180" />
-                </button>
-
-                {/* Scroll */}
-                <div
-                  ref={carouselRef}
-                  className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                  onMouseEnter={() => { carouselPaused.current = true }}
-                  onMouseLeave={() => { carouselPaused.current = false }}
-                  onTouchStart={() => { carouselPaused.current = true }}
-                  onTouchEnd={() => { setTimeout(() => { carouselPaused.current = false }, 2000) }}
-                >
-                  {products.map(p => (
-                    <div key={p.id} className="snap-start shrink-0 w-40 sm:w-48">
-                      <ProductCard product={p} onClick={() => setProductModal(p)} C={C} pix={pixDoProduto(p)} cartao={detalhes ? cartaoDoProduto(p) : null} />
-                    </div>
-                  ))}
-                  {/* Card final "Ver todos" */}
-                  <div className="snap-start shrink-0 w-40 sm:w-48 flex items-center justify-center">
-                    <Link
-                      href="/produtos"
-                      className="flex flex-col items-center justify-center gap-3 w-full h-full min-h-[220px] rounded-2xl border-2 border-dashed transition-all hover:opacity-80"
-                      style={{ borderColor: C.blue, color: C.blue }}>
-                      <ChevronRight className="w-8 h-8" />
-                      <span className="text-xs font-black text-center leading-snug px-2">
-                        Ver todos<br />{products.length} produtos
-                      </span>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Seta direita */}
-                <button
-                  onClick={() => {
-                    carouselPaused.current = true
-                    carouselRef.current?.scrollBy({ left: 204, behavior: 'smooth' })
-                    setTimeout(() => { carouselPaused.current = false }, 1500)
-                  }}
-                  className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-9 h-9 rounded-full items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, color: C.navy }}>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Indicadores + botão */}
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex gap-1.5">
-                  {products.slice(0, 8).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        carouselPaused.current = true
-                        carouselRef.current?.scrollTo({ left: i * 204, behavior: 'smooth' })
-                        setTimeout(() => { carouselPaused.current = false }, 1500)
-                      }}
-                      className="w-1.5 h-1.5 rounded-full transition-all"
-                      style={{ backgroundColor: C.blue, opacity: 0.3 }}
-                    />
-                  ))}
-                </div>
-                <Link
-                  href="/produtos"
-                  className="flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl transition-all active:scale-95"
-                  style={{ backgroundColor: C.blue, color: '#fff', boxShadow: `0 4px 16px rgba(62,194,242,0.25)` }}>
-                  Ver todos os {products.length} produtos <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-      )}
 
       {/* ── PONTOS / FIDELIDADE ─────────────────────────────────────────── */}
       <section id="pontos" className="py-16 px-5 border-t" style={{ borderColor: C.border }}>
@@ -988,31 +830,28 @@ export default function LandingPage() {
       </section>
 
       {/* ── CHAMADA "QUERO JOGAR" (modelo do Maikon) ──────────────────────── */}
-      {detalhes && (
-        <section className="px-5 pb-16">
-          <div className="max-w-6xl mx-auto rounded-2xl border p-6 md:px-8 flex flex-col md:flex-row items-center justify-between gap-5 text-center md:text-left"
-            style={{ backgroundColor: mixHex(C.yellow, C.card, isDark ? 0.86 : 0.72), borderColor: `${C.yellow}66` }}>
-            <div>
-              <h2 className={`${uniforme ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} font-black leading-tight`} style={{ color: C.navy }}>
-                Partidas, amizades e muita diversão 💛
-              </h2>
-              <p className="text-sm mt-1.5" style={{ color: isDark ? C.text : mixHex(C.navy, '#FFFFFF', 0.2) }}>
-                Conheça os campeonatos semanais e faça parte da comunidade do {site.siteName}.
-              </p>
-            </div>
-            <a href="#eventos"
-              className="shrink-0 inline-flex items-center gap-2 font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95"
-              style={{ backgroundColor: site.colorHero, color: '#FFFFFF', boxShadow: `0 10px 24px -10px ${site.colorHero}` }}>
-              Quero jogar →
-            </a>
+      <section className="px-5 pb-16">
+        <div className="max-w-6xl mx-auto rounded-2xl border p-6 md:px-8 flex flex-col md:flex-row items-center justify-between gap-5 text-center md:text-left"
+          style={{ backgroundColor: mixHex(C.yellow, C.card, isDark ? 0.86 : 0.72), borderColor: `${C.yellow}66` }}>
+          <div>
+            <h2 className={`${uniforme ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} font-black leading-tight`} style={{ color: C.navy }}>
+              Partidas, amizades e muita diversão 💛
+            </h2>
+            <p className="text-sm mt-1.5" style={{ color: isDark ? C.text : mixHex(C.navy, '#FFFFFF', 0.2) }}>
+              Conheça os campeonatos semanais e faça parte da comunidade do {site.siteName}.
+            </p>
           </div>
-        </section>
-      )}
+          <a href="#eventos"
+            className="shrink-0 inline-flex items-center gap-2 font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95"
+            style={{ backgroundColor: site.colorHero, color: '#FFFFFF', boxShadow: `0 10px 24px -10px ${site.colorHero}` }}>
+            Quero jogar →
+          </a>
+        </div>
+      </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-      {/* Com os detalhes do Maikon o rodapé fica no azul do topo; as cores do texto vêm de F */}
-      <footer className={`pt-8 pb-6 px-5 ${detalhes ? '' : 'border-t'}`}
-        style={detalhes ? { backgroundColor: corRodape } : { borderColor: C.border }}>
+      {/* Rodapé no azul do topo; as cores do texto vêm de F */}
+      <footer className="pt-8 pb-6 px-5" style={{ backgroundColor: corRodape }}>
         <div className="max-w-6xl mx-auto">
           {/* Linha principal */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
@@ -1060,12 +899,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Rodapé copyright (com o rodapé geral novo, quem mostra é ele) */}
-          {!(detalhes && rodapeNovo) && (
-            <div className="border-t pt-4 text-center text-[11px]" style={{ borderColor: F.border, color: F.text }}>
-              © {new Date().getFullYear()} {site.siteName} · {site.addressLine} · Todos os direitos reservados
-            </div>
-          )}
         </div>
       </footer>
 
@@ -1276,78 +1109,6 @@ function ChampionshipCard({ championship: c, onRegister, C }: { championship: Ch
 }
 
 // ── Product Card ──────────────────────────────────────────────────────────────
-
-function ProductCard({ product: p, onClick, C, pix, cartao = null }: { product: Product; onClick: () => void; C: Theme; pix: PixVitrine; cartao?: CartaoVitrine }) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-left rounded-2xl overflow-hidden group transition-all active:scale-95 hover:translate-y-[-2px]"
-      style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}
-    >
-      <div className="relative w-full aspect-[3/4] overflow-hidden"
-        style={{ backgroundColor: C.cardAlt }}>
-        {p.imageUrl
-          ? <img src={fotoLeve(p.imageUrl, 480)} alt={p.name} loading="lazy" decoding="async"
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
-          : <div className="w-full h-full flex items-center justify-center">
-              <Package className="w-10 h-10 opacity-20" style={{ color: C.navy }} />
-            </div>
-        }
-        {p.isPreVenda && (
-          <span className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
-            style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>
-            Pré-venda
-          </span>
-        )}
-        {p.isOnPromo && !p.isPreVenda && (
-          <span className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md"
-            style={{ backgroundColor: '#FF3B3B', color: '#fff' }}>
-            Promoção
-          </span>
-        )}
-      </div>
-      <div className="p-3">
-        <p className="text-[10px] uppercase tracking-wide mb-1 font-medium" style={{ color: C.text }}>
-          {p.category}
-        </p>
-        <p className="text-xs font-bold leading-snug line-clamp-2 mb-2" style={{ color: C.navy }}>{p.name}</p>
-        <div className="flex items-center justify-between">
-          {p.isOnPromo && p.discountPriceInReais != null ? (
-            <div className="flex flex-col">
-              <span className="text-[10px] line-through" style={{ color: C.text }}>
-                {brl(p.priceInReais)}
-              </span>
-              <span className="text-sm font-black" style={{ color: '#FF3B3B' }}>
-                {brl(p.discountPriceInReais)}
-              </span>
-            </div>
-          ) : (
-            <span className="text-sm font-black" style={{ color: C.yellow }}>
-              {brl(p.priceInReais)}
-            </span>
-          )}
-          <span className="text-[10px] font-medium" style={{ color: C.text }}>
-            {p.stockQuantity} un.
-          </span>
-        </div>
-
-        {cartao && (
-          <p className="text-[10px] leading-tight mt-1" style={{ color: C.text }}>
-            {cartao.parcelas}x de {fmtBRL(cartao.valorParcela)} no cartão
-          </p>
-        )}
-
-        {/* Preço no Pix já na vitrine — o cliente compara antes mesmo de abrir o produto */}
-        {pix && (
-          <p className="text-[10px] font-semibold leading-tight mt-1" style={{ color: C.pix }}>
-            {fmtBRL(pix.precoPix)} no Pix
-            <span className="font-normal" style={{ color: C.text }}> · {fmtPixPct(pix.pixPercent)} OFF</span>
-          </p>
-        )}
-      </div>
-    </button>
-  )
-}
 
 // ── Modais ────────────────────────────────────────────────────────────────────
 

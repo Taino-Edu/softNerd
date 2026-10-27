@@ -4,7 +4,7 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 (regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
 detalhe de como ficou mora no CHANGELOG e no código.
 
-Atualizado em **26/10/2026** — produção na **v1.75.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
+Atualizado em **26/10/2026** — produção na **v1.76.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -33,7 +33,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 ## 📋 Na fila (ordem sugerida)
 
 1. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
-2. **Limpeza das chaves** (antecipada, 1 PR por área): pedidos e painel na v1.75.0, Liga/Liguinha na v1.76.0; falta site/loja/cliente (12). Ficam por enquanto: `vigia-sistema` (liga/desliga de verdade), `campeonato-separado`, `pedido-pix-junto`, `pagamento-sem-retirada` e `relatorio-por-subcategoria` (Maikon ainda testando).
+2. **Limpeza das chaves** (antecipada, 1 PR por área): pedidos e painel na v1.75.0, Liga/Liguinha na v1.76.0, site/loja/cliente na v1.77.0 — feita. Ficam por enquanto: `vigia-sistema` (liga/desliga de verdade), `pokemon-preferido`, `home-visual-uniforme`, `campeonato-separado`, `pedido-pix-junto`, `pagamento-sem-retirada` e `relatorio-por-subcategoria` (Maikon ainda testando).
 3. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
 4. Botão "Voltar versão" e checks obrigatórios novos no `main`.
 5. Dependabot grandes (.NET 10, Next 16, TS 7) — um por vez, com teste.
@@ -43,6 +43,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.77.0 | 27/10 | **Limpeza das chaves do site/loja/cliente**: 10 chaves viram o jeito único; saem as telas antigas de entrada, sacola, carrossel e cartão de produto antigos |
 | v1.76.0 | 27/10 | **Limpeza das chaves da Liga/Liguinha**: 9 chaves viram o jeito único (ranking por jogador, relógio separado, página e telão novos, animação, Central, modalidades, "Pronto", entrada simples) |
 | v1.75.0 | 27/10 | **Limpeza das chaves de pedidos e painel**: 5 chaves viram o jeito único (operador pelo menu, menu e telas no azul, Pix do pedido consistente, venda no pagamento); tag `arquivo/chaves-antes-da-limpeza` |
 | v1.74.0 | 26/10 | **Relatório de vendas por subcategoria** (pedido do Maikon): categoria-pai com o total (soma das filhas) e as subcategorias dentro; vendas estornadas fora do relatório |

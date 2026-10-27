@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { authApi, userApi } from '@/lib/api'
 import { isLoggedIn } from '@/lib/auth'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { Loader2, MailCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -12,8 +11,7 @@ import toast from 'react-hot-toast'
  * Montado no layout de /cliente: busca o perfil e, se incompleto, abre um modal
  * pedindo e-mail + senha.
  *
- * Com a chave "cadastro-completo-pode-adiar" ligada, o modal tem "Agora não" (vale
- * até fechar o navegador): era obrigatório, e quem abria a comanda pela mesa e
+ * O modal tem "Agora não" (vale até fechar o navegador): era obrigatório, e quem abria a comanda pela mesa e
  * digitava um e-mail que já tinha conta ficava preso nele, sem ver a comanda.
  *
  * Conta criada pelo Google já tem e-mail confirmado e não precisa de senha: aí o
@@ -26,8 +24,6 @@ function adiadoNestaSessao() {
 }
 
 export default function CompleteProfileGuard() {
-  const chaveAdiar = useFuncionalidade('cadastro-completo-pode-adiar')
-  const podeAdiar = chaveAdiar === true
   const [incomplete, setIncomplete] = useState(false)
   /** O e-mail digitado já é de outra conta: explica e deixa seguir com a comanda. */
   const [emailDeOutraConta, setEmailDeOutraConta] = useState(false)
@@ -96,8 +92,7 @@ export default function CompleteProfileGuard() {
     setIncomplete(false)
   }
 
-  // Espera a chave: sem isso o modal piscava pra quem já tinha tocado em "Agora não"
-  if (!incomplete || chaveAdiar === undefined || (podeAdiar && adiadoNestaSessao())) return null
+  if (!incomplete || adiadoNestaSessao()) return null
 
   const inputStyle: React.CSSProperties = {
     borderColor: 'rgba(12,61,90,0.15)', color: '#0C3D5A', backgroundColor: '#F5F8FA',
@@ -154,7 +149,7 @@ export default function CompleteProfileGuard() {
         />
         {emailDeOutraConta && (
           <p className="text-xs rounded-xl p-3" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
-            Esse e-mail já tem outra conta no site. Use outro e-mail{podeAdiar ? ' ou toque em "Agora não" pra seguir com a comanda' : ''} —
+            Esse e-mail já tem outra conta no site. Use outro e-mail ou toque em &quot;Agora não&quot; pra seguir com a comanda —
             se as duas contas são suas, peça no balcão pra juntar.
           </p>
         )}
@@ -166,13 +161,11 @@ export default function CompleteProfileGuard() {
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           Salvar e continuar
         </button>
-        {podeAdiar && (
-          <button type="button" onClick={agoraNao} disabled={loading}
-            className="w-full py-2 text-sm font-semibold transition-opacity hover:opacity-70"
-            style={{ color: '#4D8FAC' }}>
-            Agora não
-          </button>
-        )}
+        <button type="button" onClick={agoraNao} disabled={loading}
+          className="w-full py-2 text-sm font-semibold transition-opacity hover:opacity-70"
+          style={{ color: '#4D8FAC' }}>
+          Agora não
+        </button>
       </form>
     </div>
   )

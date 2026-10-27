@@ -410,7 +410,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // SSL gerenciado pelo reverse proxy (Nginx/Cloudflare) — não redirecionar aqui
-app.UseFotosLeves();  // /uploads/x.png?w=480 → miniatura WebP (chave fotos-leves)
+app.UseFotosLeves();  // /uploads/x.png?w=480 → miniatura WebP
 app.UseStaticFiles(); // serve wwwroot/uploads/* como arquivos estáticos
 app.UseCors("FrontendPolicy");
 app.UseRequestTimeouts();

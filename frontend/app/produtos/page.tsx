@@ -1,88 +1,21 @@
 'use client'
-// Loja (/produtos). Com a chave "vitrine-nova" (v1.48.0): barra com a marca e a Sacola (carrinho de
-// reserva), título "Todos os produtos" e o cartão novo (components/loja/CartaoProduto). Desligada,
-// volta a barra "Loja" e o cartão pequeno de antes. ?categoria=X abre já filtrado (atalhos da home).
+// Loja (/produtos): barra com a marca e a Sacola (carrinho de reserva), título "Todos os produtos" e
+// o cartão de produto (components/loja/CartaoProduto). ?categoria=X abre já filtrado (atalhos da home).
 import { useEffect, useState, useMemo } from 'react'
 import { productApi, siteConfigApi, categoryApi, Product, ProductCategory, SiteConfigDto } from '@/lib/api'
 import { resolvePixPercent, calcPrecoVitrine } from '@/lib/precoVitrine'
 import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
 import {
-  Package, ShoppingBag, ChevronLeft,
+  ShoppingBag,
   Sun, Moon, Search, Tag,
 } from 'lucide-react'
-import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import CartaoProduto from '@/components/loja/CartaoProduto'
 
-const NAVY = '#0C3D5A'
-
 type Theme = { bg: string; card: string; border: string; blue: string; yellow: string; text: string; navy: string; muted: string; pix: string }
-
-/** "3" → "3%" e "2.5" → "2,5%" (sem casa decimal à toa no caso comum). */
-function fmtPct(v: number) { return `${(Math.round(v * 10) / 10).toString().replace('.', ',')}%` }
-
-function ProductBadge({ p }: { p: Product }) {
-  if (p.isPreVenda) return (
-    <span className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded z-10"
-      style={{ backgroundColor: '#1E4FD6', color: '#fff' }}>Pré-venda</span>
-  )
-  if (p.isOnPromo) return (
-    <span className="absolute top-2 left-2 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded z-10"
-      style={{ backgroundColor: '#EF4444', color: '#fff' }}>Promoção</span>
-  )
-  return null
-}
-
-function ProductCard({ p, C, pix }: { p: Product; C: Theme; pix: { precoPix: number; pixPercent: number } | null }) {
-  return (
-    <Link
-      href={`/produtos/${p.id}`}
-      className="relative text-left rounded-2xl overflow-hidden border transition-all hover:scale-[1.02] active:scale-95 flex flex-col"
-      style={{ backgroundColor: C.card, borderColor: C.border }}
-    >
-      <ProductBadge p={p} />
-      <div className="w-full aspect-square overflow-hidden flex items-center justify-center p-3"
-        style={{ backgroundColor: C.bg }}>
-        {p.imageUrl
-          ? <img src={fotoLeve(p.imageUrl, 480)} alt={p.name} className="w-full h-full object-contain" loading="lazy" decoding="async" />
-          : <Package className="w-10 h-10 opacity-20" style={{ color: C.blue }} />
-        }
-      </div>
-      <div className="p-3 flex flex-col gap-1 flex-1">
-        <p className="text-xs font-bold leading-snug line-clamp-2 flex-1" style={{ color: C.navy }}>{p.name}</p>
-        <div className="flex items-center justify-between mt-1 gap-1">
-          {p.isOnPromo && p.discountPriceInReais != null ? (
-            <div className="flex flex-col">
-              <span className="text-[10px] line-through" style={{ color: C.muted }}>
-                {fmt(p.priceInReais)}
-              </span>
-              <span className="text-sm font-black" style={{ color: '#EF4444' }}>
-                {fmt(p.discountPriceInReais)}
-              </span>
-            </div>
-          ) : (
-            <span className="text-sm font-black" style={{ color: C.blue }}>{fmt(p.priceInReais)}</span>
-          )}
-          <span className="text-[10px]" style={{ color: C.muted }}>
-            {p.stockQuantity > 0 ? `${p.stockQuantity} un.` : 'Esgotado'}
-          </span>
-        </div>
-
-        {/* Aviso do Pix já na vitrine — o cliente vê o preço à vista antes de abrir o produto */}
-        {pix && pix.pixPercent > 0 && (
-          <p className="text-[10px] font-semibold leading-tight" style={{ color: C.pix }}>
-            {fmt(pix.precoPix)} no Pix
-            <span className="font-normal" style={{ color: C.muted }}> · {fmtPct(pix.pixPercent)} OFF</span>
-          </p>
-        )}
-      </div>
-    </Link>
-  )
-}
 
 export default function ProdutosPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -92,7 +25,6 @@ export default function ProdutosPage() {
   const [isDark,   setIsDark]   = useState(false)
   const [siteCfg,    setSiteCfg]    = useState<SiteConfigDto | null>(null)
   const [categorias, setCategorias] = useState<ProductCategory[]>([])
-  const vitrineNova = useFuncionalidade('vitrine-nova') !== false
   const { totalItems: itensSacola } = useReservationCart()
 
   // pix: tom fechado no claro e aberto no escuro, pra manter contraste nos dois temas
@@ -120,15 +52,6 @@ export default function ProdutosPage() {
     siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
     categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [])
-
-  /** Preço no Pix de um item, com a herança item → categoria → categoria pai → loja. */
-  function pixDoProduto(p: Product) {
-    if (!siteCfg) return null
-    const preco = p.isOnPromo && p.discountPriceInReais != null ? p.discountPriceInReais : p.priceInReais
-    const { precoPix, pixPercent } = calcPrecoVitrine(
-      preco, p.maxInstallments, siteCfg, resolvePixPercent(p, categorias, siteCfg.pixDiscountPercent))
-    return { precoPix, pixPercent }
-  }
 
   /** Pix e cartão no formato do cartão novo (null = a linha some). */
   function precosNovos(p: Product) {
@@ -171,7 +94,6 @@ export default function ProdutosPage() {
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 
       {/* Navbar */}
-      {vitrineNova ? (
       <nav className="fixed inset-x-0 top-0 z-50 h-16 flex items-center"
         style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), backdropFilter: 'blur(16px)' }}>
         <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between gap-4">
@@ -203,38 +125,16 @@ export default function ProdutosPage() {
           </div>
         </div>
       </nav>
-      ) : (
-      <nav className="fixed inset-x-0 top-0 z-50 h-14 flex items-center px-5 gap-4"
-        style={{ backgroundColor: '#0F3460', backdropFilter: 'blur(16px)' }}>
-        <Link href="/" className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity"
-          style={{ color: '#ffffff' }}>
-          <ChevronLeft className="w-4 h-4" />
-          <span className="text-sm font-semibold">Início</span>
-        </Link>
-        <div className="flex-1 flex justify-center">
-          <span className="font-black text-lg" style={{ color: '#ffffff' }}>Loja</span>
+
+      <div className={`max-w-6xl mx-auto px-5 pb-16 pt-24`}>
+
+        <div className="mb-6">
+          <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: CN.blue }}>Catálogo completo</p>
+          <h1 className="text-3xl md:text-4xl font-black" style={{ color: C.navy }}>Todos os produtos</h1>
+          <p className="text-sm mt-1" style={{ color: CN.text }}>
+            Busque e filtre pra achar o que precisa pra próxima partida{products.length ? ` — ${products.length} itens em estoque` : ''}.
+          </p>
         </div>
-        <button onClick={() => {
-          const next = !isDark
-          setIsDark(next)
-          setOptionalItem('landing-theme', next ? 'dark' : 'light')
-        }} className="p-2 rounded-xl hover:bg-white/10 transition-colors" style={{ color: '#ffffff' }}>
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
-      </nav>
-      )}
-
-      <div className={`max-w-6xl mx-auto px-5 pb-16 ${vitrineNova ? 'pt-24' : 'pt-20'}`}>
-
-        {vitrineNova && (
-          <div className="mb-6">
-            <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: CN.blue }}>Catálogo completo</p>
-            <h1 className="text-3xl md:text-4xl font-black" style={{ color: C.navy }}>Todos os produtos</h1>
-            <p className="text-sm mt-1" style={{ color: CN.text }}>
-              Busque e filtre pra achar o que precisa pra próxima partida{products.length ? ` — ${products.length} itens em estoque` : ''}.
-            </p>
-          </div>
-        )}
 
         {/* Busca */}
         <div className="relative mb-6">
@@ -293,20 +193,13 @@ export default function ProdutosPage() {
                   </span>
                   <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
                 </div>
-                {vitrineNova ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                     {items.map(p => {
                       const { pix, cartao } = precosNovos(p)
                       return <CartaoProduto key={p.id} p={p} C={CN} pix={pix} cartao={cartao} href={`/produtos/${p.id}`} />
                     })}
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                    {items.map(p => (
-                      <ProductCard key={p.id} p={p} C={C} pix={pixDoProduto(p)} />
-                    ))}
-                  </div>
-                )}
+                
               </section>
             ))}
           </div>

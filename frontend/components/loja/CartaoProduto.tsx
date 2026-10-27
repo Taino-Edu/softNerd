@@ -1,5 +1,5 @@
 'use client'
-// Cartão de produto da vitrine nova (chave "vitrine-nova", v1.48.0) — usado na home e em /produtos.
+// Cartão de produto da vitrine — usado na home e em /produtos.
 // Desenho do modelo do Maikon: área da foto com fundo suave, selo, categoria, nome, preço grande,
 // parcelamento no cartão, preço no Pix e um botão "Ver produto". Só mostra dado que existe de
 // verdade (nada de estrela de avaliação inventada); "Últimas N" sai do estoque mínimo do produto.
