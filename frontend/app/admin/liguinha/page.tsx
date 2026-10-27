@@ -1,7 +1,7 @@
 'use client'
 
 // =============================================================================
-// /admin/liguinha — Central da Liguinha (chave "admin-liguinha-central", v1.56.0)
+// /admin/liguinha — Central da Liguinha
 //
 // Pedido do Maikon (19/10/2026): "algo igual o Challonge" pra conferir, lançar e
 // administrar os torneios e a Liga num lugar só, na identidade visual da loja.
@@ -66,7 +66,6 @@ export default function CentralLiguinhaPage() {
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<Filtro>('todos')
   const [criando, setCriando] = useState(false)
-  const modalidades = useFuncionalidade('liga-modalidades') !== false
   // Chave campeonato-separado: a Central é da Liguinha; campeonato se abre pela tela de Campeonatos
   const separado = useFuncionalidade('campeonato-separado') === true
   const [modo, setModo] = useState<'tudo' | Modalidade>('tudo')
@@ -86,13 +85,13 @@ export default function CentralLiguinhaPage() {
     return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
   }), [lista, separado])
   const termo = normalizarNome(busca)
-  const doModo = ordenada.filter(c => !modalidades || modo === 'tudo' || modalidadeDe(c) === modo)
+  const doModo = ordenada.filter(c => modo === 'tudo' || modalidadeDe(c) === modo)
   const visiveis = doModo.filter(c => passaNoFiltro(c, filtro) && (!termo || normalizarNome(c.name).includes(termo)))
   const contagem = (f: Filtro) => doModo.filter(c => passaNoFiltro(c, f)).length
 
   // etapa da Liga = evento de modalidade Liga encerrado no mês (campeonato avulso não conta)
   const etapasNoMes = ordenada.filter(c => c.status === 'Finalizado' && mesBR(c.startDate) === mesAtual
-    && (!modalidades || modalidadeDe(c) === 'Liga')).length
+    && modalidadeDe(c) === 'Liga').length
   const agora = ordenada.filter(emJogo)
   const lider = liga?.ranking[0]
 
@@ -132,7 +131,7 @@ export default function CentralLiguinhaPage() {
               Só liguinhas aqui. Campeonatos ficam em <Link href="/admin/campeonatos" className="underline text-brand-400">Campeonatos</Link>.
             </p>
           )}
-          {modalidades && !separado && (
+          {!separado && (
             <div className="inline-flex rounded-xl border border-surface-500 p-1 gap-1" role="tablist" aria-label="Modalidade">
               {([['tudo', 'Tudo'], ['Liga', 'Liga'], ['Campeonato', 'Campeonatos']] as const).map(([m, rotulo]) => (
                 <button key={m} role="tab" aria-selected={modo === m} onClick={() => setModo(m)}
@@ -183,8 +182,8 @@ export default function CentralLiguinhaPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-white truncate">{c.name}</p>
                         <p className="text-xs text-gray-400 truncate">
-                          {modalidades ? `${modalidadeDe(c) === 'Liga' ? 'Liguinha' : 'Campeonato'} · ` : ''}{c.game}
-                          {modalidades && modalidadeDe(c) === 'Campeonato' && !suico
+                          {modalidadeDe(c) === 'Liga' ? 'Liguinha' : 'Campeonato'} · {c.game}
+                          {modalidadeDe(c) === 'Campeonato' && !suico
                             ? ` · ${jogadores} inscrito${jogadores === 1 ? '' : 's'}${c.maxParticipants ? ` de ${c.maxParticipants}` : ''}`
                             : ` · ${suico ? 'Suíço' : 'Livre / lançado'} · ${jogadores} jogador${jogadores === 1 ? '' : 'es'}`}
                           {` · ${c.entryFeeInCents > 0 ? `entrada ${brlDeCentavos(c.entryFeeInCents)}` : 'grátis'}`}

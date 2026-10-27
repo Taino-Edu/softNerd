@@ -2,7 +2,6 @@
 // TorneioServiceTests.cs — Liguinha de ponta a ponta (Services/Liga/TorneioService.cs)
 // =============================================================================
 
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
@@ -11,15 +10,13 @@ using CardGameStore.Services.Liga;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CardGameStore.Tests.Services;
 
 public class TorneioServiceTests
 {
-    private sealed record Ambiente(AppDbContext Db, TorneioService Torneio, Championship Ch, List<User> Jogadores,
-        FuncionalidadesService Funcionalidades);
+    private sealed record Ambiente(AppDbContext Db, TorneioService Torneio, Championship Ch, List<User> Jogadores);
 
     private static Ambiente Criar(int jogadores, int taxaEmCentavos = 0)
     {
@@ -47,9 +44,7 @@ public class TorneioServiceTests
         clients.Setup(c => c.Group(It.IsAny<string>())).Returns(new Mock<IClientProxy>().Object);
         hub.Setup(h => h.Clients).Returns(clients.Object);
 
-        var funcionalidades = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        return new(db, new TorneioService(db, hub.Object, NullLogger<TorneioService>.Instance, funcionalidades), ch, users,
-            funcionalidades);
+        return new(db, new TorneioService(db, hub.Object, NullLogger<TorneioService>.Instance), ch, users);
     }
 
     private static async Task<int> InscreverEEntrarTodosAsync(Ambiente amb, int lugares = 24)
@@ -276,9 +271,8 @@ public class TorneioServiceTests
 
         var tabela = await amb.Torneio.EncerrarAsync(amb.Ch.Id);
 
-        var funcionalidades = new FuncionalidadesService(amb.Db, new MemoryCache(new MemoryCacheOptions()));
         var hoje = CardGameStore.Common.Brasilia.Hoje();
-        var liga = await new LigaMensalService(amb.Db, funcionalidades).RankingAsync(hoje.Year, hoje.Month);
+        var liga = await new LigaMensalService(amb.Db).RankingAsync(hoje.Year, hoje.Month);
 
         liga.Ranking.Select(l => (l.UserId, l.TotalPoints, l.EventsPlayed)).Should().Equal(
             tabela.Select(l => (l.UserId, LigaMensalService.PontosPorColocacao(l.Posicao), 1)));
@@ -329,18 +323,6 @@ public class TorneioServiceTests
 
         await FluentActions.Awaiting(() => amb.Torneio.ComecarRodadaAsync(amb.Ch.Id))
             .Should().ThrowAsync<TorneioException>();
-    }
-
-    [Fact]
-    public async Task Fallback_ChaveDesligada_SoltarPareamentosLigaORelogioNaHora()
-    {
-        var amb = Criar(2);
-        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LiguinhaRelogioSeparado, false, Guid.NewGuid());
-        await InscreverEEntrarTodosAsync(amb);
-
-        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
-
-        (await amb.Db.Timers.AsNoTracking().SingleAsync()).State.Should().Be(TimerState.Running);
     }
 
     [Fact]
@@ -518,17 +500,6 @@ public class TorneioServiceTests
         var acao = () => amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, null, "Lugia");
 
         (await acao.Should().ThrowAsync<TorneioException>()).Which.Status.Should().Be(409);
-    }
-
-    [Fact]
-    public async Task MeuDeck_ChaveDesligada_Recusa()
-    {
-        var amb = Criar(2);
-        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LiguinhaEntradaSimples, false, Guid.NewGuid());
-        await InscreverEEntrarTodosAsync(amb);
-
-        await FluentActions.Awaiting(() => amb.Torneio.TrocarMeuDeckAsync(amb.Jogadores[0].Id, amb.Ch.Id, null, "Lugia"))
-            .Should().ThrowAsync<TorneioException>();
     }
 
     [Fact]
@@ -727,17 +698,4 @@ public class TorneioServiceTests
         (await amb.Torneio.TodasProntasAsync(amb.Ch.Id, 1)).Should().BeTrue("a mesa 3 joga quando uma liberar");
     }
 
-    [Fact]
-    public async Task Pronto_ChaveDesligada_Recusa()
-    {
-        var amb = Criar(2);
-        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LiguinhaProntoNaMesa, false, Guid.NewGuid());
-        await InscreverEEntrarTodosAsync(amb);
-        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
-        var mesa = (await MesasDaRodadaAsync(amb)).Single();
-
-        await FluentActions.Awaiting(() => amb.Torneio.MarcarProntoAsync(mesa.ParticipanteA.UserId, amb.Ch.Id, true))
-            .Should().ThrowAsync<TorneioException>();
-        (await amb.Db.TorneioPartidas.AsNoTracking().SingleAsync()).ProntoAEm.Should().BeNull();
-    }
 }

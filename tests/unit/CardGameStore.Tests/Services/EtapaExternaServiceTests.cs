@@ -5,14 +5,12 @@
 // =============================================================================
 
 using CardGameStore.Common;
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Liga;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace CardGameStore.Tests.Services;
 
@@ -26,8 +24,7 @@ public class EtapaExternaServiceTests
         connection.Open();
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         db.Database.EnsureCreated();
-        var funcionalidades = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        return (db, new EtapaExternaService(db), new LigaMensalService(db, funcionalidades));
+        return (db, new EtapaExternaService(db), new LigaMensalService(db));
     }
 
     private static User Cliente(AppDbContext db, string nome)

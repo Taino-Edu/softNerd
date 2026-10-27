@@ -56,12 +56,11 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
   useEffect(() => { recarregar() }, [recarregar])
   useTorneioAoVivo(id, recarregar)
 
-  // "Estou pronto" (chave liguinha-pronto-na-mesa): quando a última mesa fica pronta, avisa
+  // "Estou pronto": quando a última mesa fica pronta, avisa
   // com som e toast — o organizador pode estar longe do computador, olhando as mesas.
-  const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
   const separado = useFuncionalidade('campeonato-separado') === true
   const setupAgora = p && p.rodadaAtual > 0 && !rodadaComecou(p.timer, p.rodadaAtual, p.rodadaComecou) ? mesasDeSetup(p.mesas) : null
-  const todasProntas = !!prontoLigado && !!setupAgora?.todas
+  const todasProntas = !!setupAgora?.todas
   const avisouRodada = useRef<number | null>(null)
   useEffect(() => {
     if (!todasProntas || !p || avisouRodada.current === p.rodadaAtual) return
@@ -230,7 +229,7 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
           {esperandoComecar && (
             <div className={clsx('flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3',
               todasProntas ? 'border-green-500 bg-green-500/10' : 'border-surface-400 bg-surface-700')}>
-              {prontoLigado && setupAgora ? (
+              {setupAgora ? (
                 <div className="flex-1 min-w-[14rem] space-y-2">
                   <p className={clsx('text-sm font-semibold flex items-center gap-1.5', todasProntas ? 'txt-ok' : 'text-white')}>
                     {todasProntas
@@ -272,7 +271,7 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
               {p.mesas.map(m => (
                 <Mesa key={m.partidaId} m={m} ocupado={ocupado !== null}
                   resolver={r => acao(`m${m.partidaId}`, () => torneioApi.resolver(id, m.partidaId, r))}
-                  setup={prontoLigado && esperandoComecar}
+                  setup={esperandoComecar}
                   marcarPronta={v => acao(`p${m.partidaId}`, () => torneioApi.mesaPronta(id, m.partidaId, v))} />
               ))}
             </div>

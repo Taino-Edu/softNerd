@@ -1,6 +1,6 @@
 'use client'
-// Animação de vitória, derrota, empate e colocação final na tela do jogador (/liga/jogar),
-// chave "liga-animacao-resultado" (v1.55.0). Quem venceu: o Pokémon do deck pula e o do
+// Animação de vitória, derrota, empate e colocação final na tela do jogador (/liga/jogar).
+// Quem venceu: o Pokémon do deck pula e o do
 // oponente desmaia (cai de lado, cinza). Na derrota, o contrário. Empate: os dois balançam.
 // No fim do torneio: colocação, com coroa e confete pro pódio.
 // Cores no style (não em text-white): o tema claro do site força .text-white pra escuro.

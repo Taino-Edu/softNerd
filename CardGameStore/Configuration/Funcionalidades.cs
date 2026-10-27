@@ -35,25 +35,16 @@ public sealed record Funcionalidade(
 
 public static class Funcionalidades
 {
-    public const string LigaMensalPorJogador = "liga-mensal-por-jogador";
     public const string CadastroCompletoPodeAdiar = "cadastro-completo-pode-adiar";
-    public const string LiguinhaRelogioSeparado = "liguinha-relogio-separado";
     public const string FotosLeves = "fotos-leves";
     public const string VisualTopoELogin = "visual-topo-e-login";
-    public const string LigaVisualNovo = "liga-visual-novo";
     public const string HomeDetalhesMaikon = "home-detalhes-maikon";
     public const string VitrineNova = "vitrine-nova";
     public const string VisualProdutoERodape = "visual-produto-e-rodape";
     public const string SacolaNova = "sacola-nova";
     public const string ClienteInicioNovo = "cliente-inicio-novo";
     public const string ContaClienteNova = "conta-cliente-nova";
-    public const string TelaoNovo = "telao-novo";
-    public const string LigaAnimacaoResultado = "liga-animacao-resultado";
-    public const string AdminLiguinhaCentral = "admin-liguinha-central";
-    public const string LigaModalidades = "liga-modalidades";
     public const string LoginTelasUnificadas = "login-telas-unificadas";
-    public const string LiguinhaProntoNaMesa = "liguinha-pronto-na-mesa";
-    public const string LiguinhaEntradaSimples = "liguinha-entrada-simples";
     public const string VigiaSistema = "vigia-sistema";
     public const string PokemonPreferido = "pokemon-preferido";
     public const string HomeVisualUniforme = "home-visual-uniforme";
@@ -64,15 +55,6 @@ public static class Funcionalidades
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
-        new(LigaMensalPorJogador,
-            Nome:       "Liga Mensal: ranking por jogador",
-            OQueMuda:   "Cada jogador do sistema tem a sua linha, mesmo com nome igual ao de outro. " +
-                        "Campeonato cancelado não soma pontos.",
-            SeDesligar: "Volta a juntar por nome: dois jogadores com o mesmo nome viram uma linha só " +
-                        "e um deles perde os pontos. Campeonato cancelado volta a somar.",
-            Padrao:     true,
-            Desde:      "v1.41.0",
-            RevisarEm:  new DateOnly(2026, 12, 1)),
 
         new(CadastroCompletoPodeAdiar,
             Nome:       "Cliente: \"Complete seu cadastro\" com \"Agora não\"",
@@ -83,15 +65,6 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.42.1",
             RevisarEm:  new DateOnly(2026, 12, 15)),
-
-        new(LiguinhaRelogioSeparado,
-            Nome:       "Liguinha: soltar pareamentos sem ligar o relógio",
-            OQueMuda:   "\"Soltar pareamentos\" só distribui as mesas; o relógio da rodada só corre quando o " +
-                        "organizador clica em \"Começar rodada\" — dá tempo de todo mundo montar o setup.",
-            SeDesligar: "Volta ao jeito da primeira versão: gerar a rodada já liga o relógio na hora.",
-            Padrao:     true,
-            Desde:      "v1.43.0",
-            RevisarEm:  new DateOnly(2027, 1, 15)),
 
         new(FotosLeves,
             Nome:       "Site: fotos leves",
@@ -109,15 +82,6 @@ public static class Funcionalidades
             SeDesligar: "Volta o topo antigo (azul-petróleo, imagem = logo) e o login dos clientes antigo (cartão simples).",
             Padrao:     true,
             Desde:      "v1.45.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(LigaVisualNovo,
-            Nome:       "Liga Mensal: página nova",
-            OQueMuda:   "Página pública da liga com pódio do top 3, ranking com o sprite do deck de cada jogador, " +
-                        "decks do mês e meses em botões, no visual da loja.",
-            SeDesligar: "Volta a lista simples de antes (nome, decks em texto e pontos).",
-            Padrao:     true,
-            Desde:      "v1.46.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
 
         new(HomeDetalhesMaikon,
@@ -179,45 +143,6 @@ public static class Funcionalidades
             Desde:      "v1.52.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
 
-        new(TelaoNovo,
-            Nome:       "Liguinha: telão novo com os sprites",
-            OQueMuda:   "Telão do torneio no estilo da Liga Mensal, pra TV: relógio gigante em fonte pixel com barra de tempo, " +
-                        "mesas com o sprite do deck de cada lado, classificação com sprite, deck, V-E-D, OWP e pontos, " +
-                        "e pódio com sprites grandes quando o torneio encerra.",
-            SeDesligar: "Volta o telão de antes (tema escuro simples, sem deck nem sprite).",
-            Padrao:     true,
-            Desde:      "v1.54.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(LigaAnimacaoResultado,
-            Nome:       "Liguinha: animação de vitória e derrota",
-            OQueMuda:   "Na tela do jogador (/liga/jogar), quando o resultado da mesa é confirmado aparece uma animação em tela cheia " +
-                        "com o Pokémon do deck: vitória (o seu pula e o do oponente desmaia, confete, +3 pts), derrota (o seu desmaia) " +
-                        "ou empate (os dois balançam). No fim do torneio, a colocação com coroa pro campeão. A mesa mostra você vs oponente com os sprites.",
-            SeDesligar: "A tela do jogador volta a mostrar só o texto do resultado e o nome do oponente, sem animação nem sprite.",
-            Padrao:     true,
-            Desde:      "v1.55.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(AdminLiguinhaCentral,
-            Nome:       "Painel: Central da Liguinha",
-            OQueMuda:   "Item novo no menu do painel (Eventos → Central da Liguinha), no estilo do Challonge: lista de torneios com busca e filtro, " +
-                        "criar torneio em um passo, adicionar jogadores por nome ou vários de uma vez, histórico de rodadas, classificação, " +
-                        "Liga do mês ao lado e \"Lançar etapa de fora\" pra etapa jogada no papel ou em outro app entrar no histórico e na Liga.",
-            SeDesligar: "O item some do menu e fica só o de antes (Campeonatos, Liga Mensal, Timers). Etapas já lançadas continuam no histórico.",
-            Padrao:     true,
-            Desde:      "v1.56.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(LigaModalidades,
-            Nome:       "Liga × Campeonato",
-            OQueMuda:   "Ao criar, escolhe a modalidade: Liga (liguinha semanal, suíço, soma na Liga Mensal) ou Campeonato " +
-                        "(evento avulso — por enquanto só inscrição e venda, NÃO soma na Liga). Os que já existiam continuam Liga.",
-            SeDesligar: "A Liga Mensal volta a somar todo evento com colocação, seja Liga ou Campeonato (como antes).",
-            Padrao:     true,
-            Desde:      "v1.56.0",
-            RevisarEm:  new DateOnly(2027, 2, 1)),
-
         new(LoginTelasUnificadas,
             Nome:       "Entrada: todas as telas no mesmo visual",
             OQueMuda:   "Cadastro, primeiro acesso pelo CPF, recuperar senha e o login do painel passam a usar a mesma moldura do " +
@@ -226,26 +151,6 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.57.0",
             RevisarEm:  new DateOnly(2027, 2, 1)),
-
-        new(LiguinhaProntoNaMesa,
-            Nome:       "Liguinha: botão \"Pronto\" na mesa",
-            OQueMuda:   "Depois que os pareamentos saem, cada jogador aperta \"Estou pronto\" no celular quando estiver com os básicos em campo. " +
-                        "O organizador vê quantas mesas estão prontas (e pode marcar a mesa de quem está sem celular); quando todas ficam " +
-                        "prontas, a Central avisa com som e destaque pra começar a rodada. O telão mostra quem já está pronto.",
-            SeDesligar: "Some o botão: o organizador volta a olhar as mesas e começar a rodada quando achar que todos montaram o setup.",
-            Padrao:     true,
-            Desde:      "v1.61.0",
-            RevisarEm:  new DateOnly(2027, 3, 1)),
-
-        new(LiguinhaEntradaSimples,
-            Nome:       "Liguinha: entrada em uma tela e deck na tela do torneio",
-            OQueMuda:   "No celular, quem já está num torneio vê só os torneios dele (o código fica atrás de \"Entrar em outro torneio\"). " +
-                        "Quem não está vê só o código; depois de entrar vai pra tela do torneio. O deck (o Pokémon que aparece no telão e na Liga) " +
-                        "se escolhe e troca na tela do torneio — vale pra quem entrou pelo \"Estou aqui\" ou foi adicionado pelo organizador.",
-            SeDesligar: "Volta a tela de antes: torneios e formulário de código com deck juntos, e o deck só se escolhe ao entrar pelo código.",
-            Padrao:     true,
-            Desde:      "v1.61.1",
-            RevisarEm:  new DateOnly(2027, 3, 1)),
 
         new(VigiaSistema,
             Nome:       "Vigia do sistema: alertas automáticos e erros de tela",

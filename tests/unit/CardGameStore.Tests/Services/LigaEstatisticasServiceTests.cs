@@ -8,7 +8,6 @@ using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Liga;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace CardGameStore.Tests.Services;
 
@@ -65,8 +64,7 @@ public class LigaEstatisticasServiceTests
         connection.Open();
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         db.Database.EnsureCreated();
-        var funcionalidades = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        return new Amb { Db = db, Stats = new LigaEstatisticasService(db, funcionalidades) };
+        return new Amb { Db = db, Stats = new LigaEstatisticasService(db) };
     }
 
     /// <summary>Brasília (UTC−3) → UTC.</summary>
@@ -129,26 +127,6 @@ public class LigaEstatisticasServiceTests
         var dragapult = r.Decks.Single(d => d.Deck == "Dragapult ex");
         (dragapult.Usos, dragapult.Vitorias, dragapult.PctVitoria).Should().Be((1, 1, 100.0));
         r.Decks.Single(d => d.Deck == "Gardevoir ex").Partidas.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task ChaveDoRankingPorJogadorDesligada_UsaOCalculoAntigo_IgualALigaMensal()
-    {
-        var a = Criar();
-        var funcionalidades = new FuncionalidadesService(a.Db, new MemoryCache(new MemoryCacheOptions()));
-        await funcionalidades.DefinirAsync(CardGameStore.Configuration.Funcionalidades.LigaMensalPorJogador, false, AdminId);
-        var stats = new LigaEstatisticasService(a.Db, funcionalidades);
-        var liga = new LigaMensalService(a.Db, funcionalidades);
-        var ana = a.Jogador("Ana"); var outraAna = a.Jogador("ana"); var beto = a.Jogador("Beto");
-        a.Etapa(Br(2026, 10, 3), (ana, null), (outraAna, null));
-        var (cancelado, _) = a.Etapa(Br(2026, 10, 10), (beto, null), (ana, null));   // o cálculo antigo soma cancelado
-        cancelado.Status = ChampionshipStatus.Cancelado;
-        a.Db.SaveChanges();
-
-        var r = await stats.EstatisticasAsync("mes", 2026, 10, null);
-        var mensal = await liga.RankingAsync(2026, 10);
-
-        r.Ranking.Select(l => (l.Nome, l.Pontos)).Should().Equal(mensal.Ranking.Select(l => (l.PlayerName, l.TotalPoints)));
     }
 
     [Fact]

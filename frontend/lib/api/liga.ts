@@ -27,7 +27,7 @@ export interface MesaDto {
   resultado: ResultadoPartida | null; divergente: boolean
   /** Mesa além dos lugares da loja: joga quando uma liberar. */
   aguardandoMesa: boolean
-  /** Jogador A/B apertou "Estou pronto" (setup montado) — chave liguinha-pronto-na-mesa. */
+  /** Jogador A/B apertou "Estou pronto" (setup montado). */
   prontoA?: boolean
   prontoB?: boolean
 }

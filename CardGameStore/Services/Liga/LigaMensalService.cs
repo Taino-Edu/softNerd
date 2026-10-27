@@ -9,14 +9,10 @@
 //
 // Pontuação por colocação: 1º=10, 2º=7, 3º=5, 4º=3, demais colocados=1.
 // O mês é o do calendário de Brasília (campeonato às 22h do dia 31 é do mês 31).
-//
-// Chave de funcionalidade "liga-mensal-por-jogador" (Configuration/Funcionalidades.cs):
-//   ligada    → RankingPorJogador: uma linha por jogador, campeonato cancelado não soma
-//   desligada → RankingLegadoPorNome: o cálculo de antes da v1.41.0, que juntava por nome
+// Uma linha por jogador (RankingPorJogador); campeonato cancelado não soma.
 // =============================================================================
 
 using CardGameStore.Common;
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
@@ -40,12 +36,10 @@ public class LigaMensalService
     };
 
     private readonly AppDbContext _db;
-    private readonly FuncionalidadesService _funcionalidades;
 
-    public LigaMensalService(AppDbContext db, FuncionalidadesService funcionalidades)
+    public LigaMensalService(AppDbContext db)
     {
-        _db              = db;
-        _funcionalidades = funcionalidades;
+        _db = db;
     }
 
     /// <summary>Pontos por colocação: 1º=10, 2º=7, 3º=5, 4º=3, demais=1.</summary>
@@ -76,9 +70,7 @@ public class LigaMensalService
         var inicioUtc   = Brasilia.DiaUtc(primeiroDia).InicioUtc;
         var fimUtc      = Brasilia.DiaUtc(primeiroDia.AddMonths(1)).InicioUtc;
 
-        // Chave "liga-modalidades": campeonato avulso (modalidade Campeonato) não soma na Liga.
-        // Desligada: soma tudo, como antes da v1.56.0.
-        var soLiga = await _funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
+        // Campeonato avulso (modalidade Campeonato) não soma na Liga
         var participantes = await _db.ChampionshipParticipants
             .AsNoTracking()
             .Include(p => p.User)
@@ -86,7 +78,7 @@ public class LigaMensalService
             .Where(p => p.Placement != null
                         && p.Championship.StartDate >= inicioUtc
                         && p.Championship.StartDate < fimUtc
-                        && (!soLiga || p.Championship.Modalidade == ModalidadeTorneio.Liga))
+                        && p.Championship.Modalidade == ModalidadeTorneio.Liga)
             .ToListAsync();
 
         var manuais = await _db.LigaMensalManualEntries
@@ -94,9 +86,7 @@ public class LigaMensalService
             .Where(e => e.Ano == anoAlvo && e.Mes == mesAlvo)
             .ToListAsync();
 
-        var ranking = await _funcionalidades.LigadaAsync(Funcionalidades.LigaMensalPorJogador)
-            ? RankingPorJogador(participantes, manuais)
-            : RankingLegadoPorNome(participantes, manuais);
+        var ranking = RankingPorJogador(participantes, manuais);
 
         return new LigaMensalDto
         {
@@ -159,67 +149,6 @@ public class LigaMensalService
         return porJogador.Concat(soManual.Values).ToList();
     }
 
-    // FALLBACK da chave "liga-mensal-por-jogador" — cálculo de antes da v1.41.0, copiado
-    // sem mudança. Apagar junto com a chave (Configuration/Funcionalidades.cs → RevisarEm).
-    // Defeitos conhecidos, mantidos de propósito pra volta ser fiel: dois jogadores com o
-    // mesmo nome viram uma linha só e o primeiro perde os pontos; campeonato cancelado soma.
-    internal static List<LigaMensalRankingDto> RankingLegadoPorNome(
-        IEnumerable<ChampionshipParticipant> participantes, IEnumerable<LigaMensalManualEntry> manuais)
-    {
-        var acumulado = new Dictionary<string, LigaMensalRankingDto>();
-
-        foreach (var g in participantes.GroupBy(p => p.UserId))
-        {
-            var nome = g.First().User?.Name ?? "Jogador";
-            var key  = nome.Trim().ToLowerInvariant();
-            acumulado[key] = new LigaMensalRankingDto
-            {
-                UserId        = g.Key,
-                PlayerName    = nome,
-                TotalPoints   = g.Sum(p => PontosPorColocacao(p.Placement!.Value)),
-                EventsPlayed  = g.Count(),
-                BestPlacement = g.Min(p => p.Placement!.Value),
-                Decks = g.Select(p => p.DeckName)
-                    .Where(d => !string.IsNullOrWhiteSpace(d))
-                    .Select(d => d!)
-                    .Distinct()
-                    .OrderBy(d => d)
-                    .ToList(),
-                // Só a foto (chave pokemon-preferido) — a regra antiga de pontos segue igual
-                Pokemon = g.First().User?.PokemonFavorito,
-                Shiny   = g.First().User?.PokemonFavoritoShiny ?? false,
-            };
-        }
-
-        foreach (var m in manuais)
-        {
-            var key = m.PlayerName.Trim().ToLowerInvariant();
-            var decksManual = (m.Decks ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToList();
-
-            if (acumulado.TryGetValue(key, out var existente))
-            {
-                existente.TotalPoints += m.TotalPoints;
-                existente.Decks = existente.Decks.Concat(decksManual).Distinct().OrderBy(d => d).ToList();
-            }
-            else
-            {
-                acumulado[key] = new LigaMensalRankingDto
-                {
-                    UserId        = m.Id,
-                    PlayerName    = m.PlayerName,
-                    TotalPoints   = m.TotalPoints,
-                    EventsPlayed  = 0,
-                    BestPlacement = 0,
-                    Decks         = decksManual,
-                };
-            }
-        }
-
-        return acumulado.Values.ToList();
-    }
-
     /// <summary>Mais pontos primeiro; empate: quem jogou mais eventos; depois o nome.</summary>
     internal static List<LigaMensalRankingDto> Ordenar(IEnumerable<LigaMensalRankingDto> linhas) => linhas
         .OrderByDescending(r => r.TotalPoints)
@@ -230,9 +159,8 @@ public class LigaMensalService
     /// <summary>Meses que têm campeonato com colocação ou lançamento manual, do mais novo pro mais antigo.</summary>
     public async Task<List<LigaMensalMesDto>> MesesComDadosAsync()
     {
-        var soLiga = await _funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
         var datasCampeonatos = await _db.ChampionshipParticipants
-            .Where(p => p.Placement != null && (!soLiga || p.Championship.Modalidade == ModalidadeTorneio.Liga))
+            .Where(p => p.Placement != null && p.Championship.Modalidade == ModalidadeTorneio.Liga)
             .Select(p => p.Championship.StartDate)
             .ToListAsync();
 

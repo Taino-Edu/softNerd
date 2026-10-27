@@ -71,9 +71,8 @@ function TorneioCentral() {
   useTorneioAoVivo(id, recarregar)
 
   const suico = p?.formato === 'Suico'
-  const modalidades = useFuncionalidade('liga-modalidades') !== false
-  // Campeonato avulso não soma na Liga (com a chave ligada); sem saber ainda, trata como Liga
-  const somaNaLiga = !modalidades || (ch?.modalidade ?? 'Liga') === 'Liga'
+  // Campeonato avulso não soma na Liga; sem saber ainda, trata como Liga
+  const somaNaLiga = (ch?.modalidade ?? 'Liga') === 'Liga'
   const separado = useFuncionalidade('campeonato-separado') === true
   // Campeonato avulso que não virou suíço: só inscrição e venda
   const avulso = !somaNaLiga && !suico
@@ -116,7 +115,7 @@ function TorneioCentral() {
             <h1 className="text-2xl font-bold text-white truncate">{p.nome}</h1>
             <p className="text-sm text-gray-400">
               {ch ? `${dataBR(ch.startDate, { weekday: 'long', day: '2-digit', month: 'long' })} · ${ch.game} · ` : ''}
-              {modalidades && ch ? (somaNaLiga ? 'Liguinha (soma na Liga Mensal) · ' : 'Campeonato (inscrição e venda, não soma na Liga)') : ''}
+              {ch ? (somaNaLiga ? 'Liguinha (soma na Liga Mensal) · ' : 'Campeonato (inscrição e venda, não soma na Liga)') : ''}
               {avulso ? '' : suico ? `Suíço · melhor de ${p.melhorDe} · ${p.minutosRodada} min` : lancado ? 'Etapa lançada (colocação final)' : 'Formato livre'}
             </p>
           </div>

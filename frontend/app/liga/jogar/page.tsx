@@ -94,20 +94,15 @@ function EntrarNoTorneio({ onEntrou, modo, separado }: {
   modo: string
   separado: boolean
 }) {
-  // Chave "liguinha-entrada-simples": código numa tela só; o deck se escolhe na tela do torneio
-  const simples = useFuncionalidade('liguinha-entrada-simples') !== false
+  // Código numa tela só; o deck se escolhe na tela do torneio
   const [carregou, setCarregou] = useState(false)
   const [mostrarCodigo, setMostrarCodigo] = useState(false)
   const [codigo, setCodigo] = useState('')
-  const [decks, setDecks] = useState<DeckListDto[]>([])
-  const [deckId, setDeckId] = useState('')
-  const [deckNome, setDeckNome] = useState('')
   const [todos, setTodos] = useState<TorneioResumoDto[]>([])
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
 
   useEffect(() => {
-    deckApi.list().then(r => setDecks(r.data)).catch(() => {})
     torneioApi.ativos().then(r => setTodos(r.data)).catch(() => {}).finally(() => setCarregou(true))
   }, [])
   // Chave campeonato-separado: a Liguinha lista só Liga e /campeonato/jogar só Campeonato. O filtro
@@ -121,8 +116,8 @@ function EntrarNoTorneio({ onEntrou, modo, separado }: {
     try {
       const r = await torneioApi.entrar({
         codigo: codigo.trim(),
-        deckId: simples ? null : (deckId || null),
-        deckNome: simples || deckId ? null : (deckNome.trim() || null),
+        deckId: null,
+        deckNome: null,
       })
       onEntrou(r.data.championshipId, r.data.modalidade)
     } catch (e) {
@@ -132,8 +127,8 @@ function EntrarNoTorneio({ onEntrou, modo, separado }: {
     }
   }
 
-  if (simples && !carregou) return <Carregando />
-  const formAberto = !simples || ativos.length === 0 || mostrarCodigo
+  if (!carregou) return <Carregando />
+  const formAberto = ativos.length === 0 || mostrarCodigo
 
   return (
     <div className="space-y-5">
@@ -151,7 +146,7 @@ function EntrarNoTorneio({ onEntrou, modo, separado }: {
                     {t.checkIn ? ' · check-in feito' : ' · sem check-in'}
                   </span>
                 </span>
-                {simples && t.checkIn && <span className="text-sm font-semibold text-brand-400 shrink-0">Abrir →</span>}
+                {t.checkIn && <span className="text-sm font-semibold text-brand-400 shrink-0">Abrir →</span>}
               </button>
               {!t.checkIn && (
                 <button
@@ -191,23 +186,7 @@ function EntrarNoTorneio({ onEntrou, modo, separado }: {
           />
         </div>
 
-        {!simples && <div>
-          <label className="block text-xs font-semibold text-gray-400 mb-1.5">Seu deck nesta etapa</label>
-          {decks.length > 0 && (
-            <select value={deckId} onChange={e => setDeckId(e.target.value)} className="input w-full mb-2">
-              <option value="">Digitar o nome…</option>
-              {decks.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          )}
-          {!deckId && (
-            <input value={deckNome} onChange={e => setDeckNome(e.target.value)} maxLength={200}
-              placeholder="Ex.: Charizard ex" className="input w-full" />
-          )}
-          <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
-            <Layers className="w-3.5 h-3.5" /> Os decks salvos em <Link href="/cliente/decks" className="text-brand-400">Meus decks</Link> aparecem aqui.
-          </p>
-        </div>}
-        {simples && <p className="text-xs text-gray-500 text-center">O deck você escolhe na próxima tela.</p>}
+        <p className="text-xs text-gray-500 text-center">O deck você escolhe na próxima tela.</p>
 
         {erro && <p className="txt-erro text-sm flex items-start gap-1.5"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{erro}</p>}
 
@@ -307,7 +286,7 @@ function MeuDeckNoTorneio({ torneioId, deck, podeTrocar, onSalvou }: {
 
 const ROTULO: Record<ResultadoJogador, string> = { Venci: 'Venci', Perdi: 'Perdi', Empatei: 'Empatei' }
 
-// Animação de resultado (chave "liga-animacao-resultado"): toca uma vez por partida e uma vez no fim do
+// Animação de resultado: toca uma vez por partida e uma vez no fim do
 // torneio. Guarda as últimas vistas no aparelho; sem armazenamento, lembra só enquanto a página está aberta.
 const CHAVE_VISTAS = 'liga-animacoes-vistas'
 const vistasNaMemoria = new Set<string>()
@@ -367,19 +346,18 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
     if (certa !== modo) router.replace(`${rotasDoEvento(certa, true).jogar}?t=${torneioId}`)
   }, [separado, dados, modo, router, torneioId])
 
-  const animar = useFuncionalidade('liga-animacao-resultado') !== false
   const [cena, setCena] = useState<CenaResultado | null>(null)
   const fecharCena = useCallback(() => setCena(null), [])
   // Resultado confirmado (pelo oponente, ao vivo, ou pelo organizador) → anima uma vez
   useEffect(() => {
-    if (!animar || !dados || cena) return
+    if (!dados || cena) return
     const fim = cenaFinal(dados)
     const nova = fim ?? cenaDaMesa(dados)
     const chave = fim ? `fim-${dados.torneio.id}` : `partida-${dados.mesa?.partidaId}`
     if (!nova || jaViu(chave)) return
     marcaVista(chave)
     setCena(nova)
-  }, [animar, dados, cena])
+  }, [dados, cena])
 
   async function lancar(r: ResultadoJogador) {
     if (!dados?.mesa) return
@@ -394,9 +372,7 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
     }
   }
 
-  // "Estou pronto" (chave liguinha-pronto-na-mesa): setup montado, básicos em campo
-  const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
-  const entradaSimples = useFuncionalidade('liguinha-entrada-simples') !== false
+  // "Estou pronto": setup montado, básicos em campo
   const [marcandoPronto, setMarcandoPronto] = useState(false)
   async function marcarPronto(pronto: boolean) {
     setMarcandoPronto(true)
@@ -433,7 +409,7 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
   const emSetup = !!mesa && !mesa.resultado && !mesa.aguardandoMesa && !rodadaComecou(t.timer, t.rodadaAtual, t.rodadaComecou)
   const euPronto = !!mesa && (souA ? mesa.prontoA : mesa.prontoB)
   const oponentePronto = !!mesa && (souA ? mesa.prontoB : mesa.prontoA)
-  const rever = animar ? (encerrado ? cenaFinal(dados) : cenaDaMesa(dados)) : null
+  const rever = encerrado ? cenaFinal(dados) : cenaDaMesa(dados)
 
   return (
     <div className="space-y-4">
@@ -450,7 +426,7 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
 
       {!encerrado && t.rodadaAtual > 0 && <Relogio timer={t.timer} />}
 
-      {entradaSimples && dados.participanteId && !encerrado && !dados.desistiuNaRodada && (
+      {dados.participanteId && !encerrado && !dados.desistiuNaRodada && (
         <MeuDeckNoTorneio torneioId={torneioId} deck={dados.deck ?? null}
           podeTrocar={t.rodadaAtual === 0 || !dados.deck} onSalvou={recarregar} />
       )}
@@ -514,7 +490,7 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
               <p className="text-5xl font-bold text-white leading-tight">{mesa.mesa}</p>
             </div>
           )}
-          {emSetup && (prontoLigado ? (
+          {emSetup && (
             <div className="bg-surface-700 rounded-xl p-4 space-y-3 text-center">
               {euPronto ? (
                 <>
@@ -546,13 +522,8 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
                 </>
               )}
             </div>
-          ) : (
-            <p className="text-sm text-center text-gray-300 bg-surface-700 rounded-xl p-3">
-              Vá pra mesa e monte o setup. O relógio começa quando o organizador mandar.
-            </p>
-          ))}
-          {animar ? (
-            <div className="bg-surface-700 rounded-xl p-3 flex items-end gap-2">
+          )}
+          <div className="bg-surface-700 rounded-xl p-3 flex items-end gap-2">
               <div className="flex-1 min-w-0 flex flex-col items-center text-center">
                 <AvatarJogador pokemon={euNaMesa?.pokemon} shiny={euNaMesa?.shiny} deck={meuDeck} tamanho={64} />
                 <p className="text-sm font-semibold text-white">Você</p>
@@ -565,20 +536,13 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
                 {oponente.deck && <p className="text-xs text-gray-400 truncate max-w-full">{oponente.deck}</p>}
               </div>
             </div>
-          ) : (
-            <div className="bg-surface-700 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400">Seu oponente</p>
-              <p className="text-lg font-semibold text-white">{oponente.nome}</p>
-              {oponente.deck && <p className="text-xs text-gray-400">{oponente.deck}</p>}
-            </div>
-          )}
 
           {mesa.resultado && rever && (
             <button onClick={() => setCena(rever)} className="w-full text-sm text-brand-400 flex items-center justify-center gap-1.5">
               <PartyPopper className="w-4 h-4" /> Ver a animação de novo
             </button>
           )}
-          {emSetup && prontoLigado ? null : mesa.resultado ? (
+          {emSetup ? null : mesa.resultado ? (
             <p className="flex items-center justify-center gap-2 txt-ok font-semibold">
               <CheckCircle2 className="w-5 h-5" /> Resultado confirmado: {dados.meuReport ? ROTULO[dados.meuReport] : 'definido pelo organizador'}
             </p>
