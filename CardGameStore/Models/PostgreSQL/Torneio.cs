@@ -19,7 +19,7 @@ public enum FormatoTorneio { Livre, Suico }
 
 /// <summary>
 /// Liga = liguinha semanal, soma na Liga Mensal. Campeonato = evento avulso (por enquanto só inscrição
-/// e venda), não soma na Liga (com a chave "liga-modalidades" ligada). Os que já existiam ficaram Liga.
+/// e venda), não soma na Liga. Os que já existiam ficaram Liga.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ModalidadeTorneio { Liga, Campeonato }

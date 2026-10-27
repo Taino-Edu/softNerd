@@ -35,11 +35,11 @@ public class FuncionalidadesServiceTests
     public async Task Desligar_ValeNaHora_MesmoComOEstadoEmCache()
     {
         var (_, servico) = Criar();
-        (await servico.LigadaAsync(Funcionalidades.LigaMensalPorJogador)).Should().BeTrue(); // enche o cache
+        (await servico.LigadaAsync(Funcionalidades.VigiaSistema)).Should().BeTrue(); // enche o cache
 
-        await servico.DefinirAsync(Funcionalidades.LigaMensalPorJogador, false, Guid.NewGuid());
+        await servico.DefinirAsync(Funcionalidades.VigiaSistema, false, Guid.NewGuid());
 
-        (await servico.LigadaAsync(Funcionalidades.LigaMensalPorJogador)).Should().BeFalse();
+        (await servico.LigadaAsync(Funcionalidades.VigiaSistema)).Should().BeFalse();
     }
 
     [Fact]
@@ -48,10 +48,10 @@ public class FuncionalidadesServiceTests
         var (db, servico) = Criar();
         var dono = Guid.NewGuid();
 
-        await servico.DefinirAsync(Funcionalidades.LigaMensalPorJogador, false, dono);
-        await servico.DefinirAsync(Funcionalidades.LigaMensalPorJogador, true, dono);
+        await servico.DefinirAsync(Funcionalidades.VigiaSistema, false, dono);
+        await servico.DefinirAsync(Funcionalidades.VigiaSistema, true, dono);
 
-        var estado = (await servico.ListarAsync()).Single(e => e.Funcionalidade.Codigo == Funcionalidades.LigaMensalPorJogador);
+        var estado = (await servico.ListarAsync()).Single(e => e.Funcionalidade.Codigo == Funcionalidades.VigiaSistema);
         estado.Ligada.Should().BeTrue();
         estado.AlteradaPorId.Should().Be(dono);
         estado.AlteradaEm.Should().NotBeNull();

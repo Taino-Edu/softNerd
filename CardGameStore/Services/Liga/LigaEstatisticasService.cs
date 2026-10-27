@@ -4,7 +4,7 @@
 // Pedido do Maikon (08/10 e 19/10/2026): posição, pontuação, V/E/D, decks mais usados,
 // % de vitória por deck, campeões da semana/mês/ano e as informações pra decidir prêmios.
 // Tudo calculado na hora, sem tabela nova:
-//   - etapas = campeonatos da modalidade Liga (chave "liga-modalidades") com colocação,
+//   - etapas = campeonatos da modalidade Liga com colocação,
 //     não cancelados, no período em Brasília (semana seg–dom, mês, ano)
 //   - pontos = mesma regra e mesmo ranking da Liga Mensal (LigaMensalService), inclusive
 //     os lançamentos manuais (só mês e ano: o manual não tem dia)
@@ -13,7 +13,6 @@
 // =============================================================================
 
 using CardGameStore.Common;
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
@@ -115,7 +114,7 @@ public class MinhaEtapaDto
     public string? Deck { get; init; }
 }
 
-public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService funcionalidades)
+public class LigaEstatisticasService(AppDbContext db)
 {
     /// <summary>
     /// A Liga do jogador logado no período: a linha dele no mesmo ranking da Liga, os decks que usou com
@@ -126,15 +125,13 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
         var geral = await EstatisticasAsync(periodo, ano, mes, dia);
         var inicioUtc = Brasilia.DiaUtc(geral.Inicio).InicioUtc;
         var fimUtc = Brasilia.DiaUtc(geral.Fim.AddDays(1)).InicioUtc;
-        var soLiga = await funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
-        var porJogador = await funcionalidades.LigadaAsync(Funcionalidades.LigaMensalPorJogador);
 
         var minhas = await db.ChampionshipParticipants.AsNoTracking()
             .Include(x => x.Championship)
             .Where(x => x.UserId == userId && x.Placement != null
-                        && (!porJogador || x.Championship.Status != ChampionshipStatus.Cancelado)
+                        && x.Championship.Status != ChampionshipStatus.Cancelado
                         && x.Championship.StartDate >= inicioUtc && x.Championship.StartDate < fimUtc
-                        && (!soLiga || x.Championship.Modalidade == ModalidadeTorneio.Liga))
+                        && x.Championship.Modalidade == ModalidadeTorneio.Liga)
             .ToListAsync();
         var ids = minhas.Select(x => x.Id).ToList();
         var etapaIds = minhas.Select(x => x.ChampionshipId).ToList();
@@ -263,16 +260,12 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
         var inicioUtc = Brasilia.DiaUtc(inicio).InicioUtc;
         var fimUtc = Brasilia.DiaUtc(fim).InicioUtc;
 
-        var soLiga = await funcionalidades.LigadaAsync(Funcionalidades.LigaModalidades);
-        // Chave "liga-mensal-por-jogador" desligada = cálculo antigo da Liga Mensal, que também somava
-        // campeonato cancelado; as métricas seguem o mesmo pra mostrar os mesmos pontos
-        var porJogador = await funcionalidades.LigadaAsync(Funcionalidades.LigaMensalPorJogador);
         var participantes = await db.ChampionshipParticipants.AsNoTracking()
             .Include(x => x.User).Include(x => x.Championship)
             .Where(x => x.Placement != null
-                        && (!porJogador || x.Championship.Status != ChampionshipStatus.Cancelado)
+                        && x.Championship.Status != ChampionshipStatus.Cancelado
                         && x.Championship.StartDate >= inicioUtc && x.Championship.StartDate < fimUtc
-                        && (!soLiga || x.Championship.Modalidade == ModalidadeTorneio.Liga))
+                        && x.Championship.Modalidade == ModalidadeTorneio.Liga)
             .ToListAsync();
 
         // Lançamento manual não tem dia: entra no mês e no ano, não na semana
@@ -280,11 +273,8 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
             .Where(e => e.Ano == inicio.Year && (p == "ano" || e.Mes == inicio.Month))
             .ToListAsync();
 
-        // Ranking: o mesmo da Liga Mensal (pontos 10/7/5/3/1, mesmo jogador = mesma linha, manual pelo nome),
-        // inclusive a volta da chave "liga-mensal-por-jogador" pro cálculo antigo por nome
-        var ranking = LigaMensalService.Ordenar(porJogador
-            ? LigaMensalService.RankingPorJogador(participantes, manuais)
-            : LigaMensalService.RankingLegadoPorNome(participantes, manuais));
+        // Ranking: o mesmo da Liga Mensal (pontos 10/7/5/3/1, mesmo jogador = mesma linha, manual pelo nome)
+        var ranking = LigaMensalService.Ordenar(LigaMensalService.RankingPorJogador(participantes, manuais));
 
         // Partidas do suíço dessas etapas (bye não é partida)
         var etapaIds = participantes.Select(x => x.ChampionshipId).Distinct().ToList();
@@ -399,7 +389,7 @@ public class LigaEstatisticasService(AppDbContext db, FuncionalidadesService fun
         var primeiras = await db.ChampionshipParticipants.AsNoTracking()
             .Where(x => usuarios.Contains(x.UserId) && x.Placement != null
                         && x.Championship.Status != ChampionshipStatus.Cancelado
-                        && (!soLiga || x.Championship.Modalidade == ModalidadeTorneio.Liga))
+                        && x.Championship.Modalidade == ModalidadeTorneio.Liga)
             .GroupBy(x => x.UserId)
             .Select(g => g.Min(x => x.Championship.StartDate))
             .ToListAsync();

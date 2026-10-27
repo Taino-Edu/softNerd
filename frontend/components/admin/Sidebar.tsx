@@ -12,7 +12,7 @@ import { authApi, notificationsApi } from '@/lib/api'
 import {
   LayoutDashboard, Package, Trophy, Search, QrCode, Swords,
   LogOut, ShoppingBag, Users, Megaphone,
-  Loader2, X, Menu, CreditCard, Store, Shield, TrendingUp, Tag, BarChart2, Info, UserCog, Settings, Timer, BookOpen, History,
+  Loader2, X, Menu, CreditCard, Store, Shield, TrendingUp, Tag, BarChart2, Info, UserCog, Settings, Timer, BookOpen,
   Wallet, Plug, ClipboardList, MessageSquare, Palette, ChevronsLeft, ChevronsRight, Award, RotateCcw,
   BellRing,
 } from 'lucide-react'
@@ -68,8 +68,7 @@ const sections = [
   {
     label: 'Eventos',
     items: [
-      // Central da Liguinha (v1.56.0): só aparece com a chave "admin-liguinha-central" ligada
-      { href: '/admin/liguinha',    label: 'Central da Liguinha', icon: Swords, perm: 'campeonatos', chave: 'admin-liguinha-central' },
+      { href: '/admin/liguinha',    label: 'Central da Liguinha', icon: Swords, perm: 'campeonatos' },
       { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy, perm: 'campeonatos' },
       { href: '/admin/liga-mensal', label: 'Liga Mensal', icon: Award,  perm: 'campeonatos' },
       { href: '/admin/timer',       label: 'Timers',      icon: Timer,  perm: 'campeonatos' },
@@ -114,7 +113,6 @@ function NavItems({ pathname, onClose, unreadCount, collapsed = false, cor = '#1
   // Perfil e permissões vêm de cookie: só depois de montar (senão o menu do servidor
   // sai diferente do navegador e a hidratação falha)
   const montado = useMontado()
-  const central = useFuncionalidade('admin-liguinha-central') !== false
   const vigia = useFuncionalidade('vigia-sistema') !== false
   const role = montado ? getRole() : ''
   const isAdmin = role === 'Admin'
@@ -125,8 +123,7 @@ function NavItems({ pathname, onClose, unreadCount, collapsed = false, cor = '#1
         if (adminOnly && !isAdmin) return null
         const visibleItems = montado
           ? items.filter((i: { perm: string | null; chave?: string }) =>
-              (i.perm === null || hasPermission(i.perm)) && (i.chave !== 'admin-liguinha-central' || central)
-              && (i.chave !== 'vigia-sistema' || vigia))
+              (i.perm === null || hasPermission(i.perm)) && (i.chave !== 'vigia-sistema' || vigia))
           : []
         if (visibleItems.length === 0) return null
         return (

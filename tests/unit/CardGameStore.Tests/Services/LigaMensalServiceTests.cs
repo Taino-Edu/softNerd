@@ -1,11 +1,7 @@
 // =============================================================================
 // LigaMensalServiceTests.cs — ranking da Liga Mensal (Services/Liga/LigaMensalService.cs)
-//
-// Cobre o caminho novo (chave "liga-mensal-por-jogador" ligada) e o fallback
-// (desligada), que precisa reproduzir o cálculo de antes da v1.41.0.
 // =============================================================================
 
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
@@ -13,7 +9,6 @@ using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Liga;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace CardGameStore.Tests.Services;
 
@@ -24,7 +19,6 @@ public class LigaMensalServiceTests
     private sealed class Ambiente
     {
         public required AppDbContext Db { get; init; }
-        public required FuncionalidadesService Funcionalidades { get; init; }
         public required LigaMensalService Liga { get; init; }
 
         public User Jogador(string nome)
@@ -62,18 +56,14 @@ public class LigaMensalServiceTests
         }
     }
 
-    private static Ambiente Criar(bool porJogador = true)
+    private static Ambiente Criar()
     {
         var connection = new SqliteConnection("Filename=:memory:");
         connection.Open();
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         db.Database.EnsureCreated();
 
-        var funcionalidades = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        if (!porJogador)
-            funcionalidades.DefinirAsync(Funcionalidades.LigaMensalPorJogador, false, AdminId).GetAwaiter().GetResult();
-
-        return new Ambiente { Db = db, Funcionalidades = funcionalidades, Liga = new LigaMensalService(db, funcionalidades) };
+        return new Ambiente { Db = db, Liga = new LigaMensalService(db) };
     }
 
     /// <summary>Instante em Brasília (UTC−3, sem horário de verão desde 2019) → UTC.</summary>
@@ -94,13 +84,11 @@ public class LigaMensalServiceTests
     public void PontosPorColocacao_SegueATabelaDaLoja(int colocacao, int pontos) =>
         LigaMensalService.PontosPorColocacao(colocacao).Should().Be(pontos);
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Ranking_LevaOPokemonPreferido_NosDoisCalculos(bool porJogador)
+    [Fact]
+    public async Task Ranking_LevaOPokemonPreferido()
     {
-        // Foto do jogador no ranking da Liga (chave pokemon-preferido) — também no cálculo antigo
-        var amb = Criar(porJogador);
+        // Foto do jogador no ranking da Liga (chave pokemon-preferido)
+        var amb = Criar();
         var ana = amb.Jogador("Ana");
         ana.PokemonFavorito = "eevee"; ana.PokemonFavoritoShiny = true; amb.Db.SaveChanges();
         var beto = amb.Jogador("Beto");
@@ -144,20 +132,6 @@ public class LigaMensalServiceTests
         var r = await amb.Liga.RankingAsync(2026, 10);
 
         r.Ranking.Select(l => (l.PlayerName, l.TotalPoints, l.EventsPlayed)).Should().Equal(("Ana", 10, 1), ("Beto", 7, 1));
-    }
-
-    [Fact]
-    public async Task Ranking_ChaveDeModalidadesDesligada_SomaOCampeonatoComoAntes()
-    {
-        var amb = Criar();
-        await amb.Funcionalidades.DefinirAsync(Funcionalidades.LigaModalidades, false, AdminId);
-        var ana = amb.Jogador("Ana");
-        var avulso = amb.Campeonato(Br(2026, 10, 10), resultado: [(ana, 1, null)]);
-        avulso.Modalidade = ModalidadeTorneio.Campeonato;
-        amb.Db.SaveChanges();
-
-        (await amb.Liga.RankingAsync(2026, 10)).Ranking.Single().TotalPoints.Should().Be(10);
-        (await amb.Liga.MesesComDadosAsync()).Should().ContainSingle();
     }
 
     [Fact]
@@ -304,52 +278,6 @@ public class LigaMensalServiceTests
     // -------------------------------------------------------------------------
     // Fallback (chave desligada) — tem que ser o cálculo de antes, defeitos inclusos
     // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task Fallback_JuntaPorNome_ComoAntes()
-    {
-        var amb = Criar(porJogador: false);
-        var joao1 = amb.Jogador("João Silva");
-        var joao2 = amb.Jogador("João Silva");
-        amb.Campeonato(Br(2026, 10, 3), resultado: [(joao1, 1, null), (joao2, 2, null)]);
-
-        var r = await amb.Liga.RankingAsync(2026, 10);
-
-        // Defeito conhecido do jeito antigo: o segundo sobrescreve o primeiro
-        r.Ranking.Should().ContainSingle();
-    }
-
-    [Fact]
-    public async Task Fallback_CampeonatoCancelado_Soma_ComoAntes()
-    {
-        var amb = Criar(porJogador: false);
-        var ana = amb.Jogador("Ana");
-        amb.Campeonato(Br(2026, 10, 10), ChampionshipStatus.Cancelado, (ana, 1, null));
-
-        (await amb.Liga.RankingAsync(2026, 10)).Ranking.Single().TotalPoints.Should().Be(10);
-    }
-
-    [Fact]
-    public async Task CaminhoNovoEFallback_DaoOMesmoResultado_NoCasoComum()
-    {
-        // Sem homônimo e sem cancelado, desligar a chave não pode mudar o ranking
-        async Task<List<LigaMensalRankingDto>> Rodar(bool porJogador)
-        {
-            var amb = Criar(porJogador);
-            var ana = amb.Jogador("Ana");
-            var beto = amb.Jogador("Beto");
-            amb.Campeonato(Br(2026, 10, 3), resultado: [(ana, 1, "Charizard"), (beto, 3, null)]);
-            amb.Manual(2026, 10, "Beto", 4, "Gardevoir");
-            amb.Manual(2026, 10, "Cabral", 6);
-            return (await amb.Liga.RankingAsync(2026, 10)).Ranking;
-        }
-
-        var novo = await Rodar(true);
-        var antigo = await Rodar(false);
-
-        novo.Select(l => (l.PlayerName, l.TotalPoints, l.EventsPlayed, l.BestPlacement, string.Join(",", l.Decks)))
-            .Should().Equal(antigo.Select(l => (l.PlayerName, l.TotalPoints, l.EventsPlayed, l.BestPlacement, string.Join(",", l.Decks))));
-    }
 
     // -------------------------------------------------------------------------
     // Validação, meses e lançamentos manuais

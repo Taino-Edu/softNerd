@@ -55,7 +55,7 @@
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
 | `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/AnimacaoResultado`, `liga/AvatarJogador`, `liga/Relogio`, `liga/SpriteDeck`, `liga/TabelaTorneio` |
 | `/liga` | `app/liga/page.tsx` | `liga/AvatarJogador`, `liga/SpriteDeck` |
-| `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/Relogio`, `liga/TabelaTorneio`, `liga/TelaoNovo` |
+| `/liga/torneio/[id]` | `app/liga/torneio/[id]/page.tsx` | `liga/TelaoNovo` |
 | `/login` | `app/login/page.tsx` | `auth/Moldura` |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
@@ -109,9 +109,9 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/AnimacaoResultado` | `AnimacaoResultado` | `app/liga/jogar/page.tsx` |
 | `liga/AvatarJogador` | `AvatarJogador` | `app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/liga/AnimacaoResultado.tsx`<br>`components/liga/TelaoNovo.tsx`<br>`components/liga/admin/HistoricoRodadas.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | `liga/PainelTorneio` | `PainelTorneio` | `app/admin/campeonatos/[id]/torneio/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx` |
-| `liga/Relogio` | `Relogio` | `app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
+| `liga/Relogio` | `Relogio` | `app/liga/jogar/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
 | `liga/SpriteDeck` | `SpriteDeck` | `app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/page.tsx`<br>`components/cliente/MinhaLiga.tsx`<br>`components/liga/AvatarJogador.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
-| `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/liguinha/[id]/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/liga/torneio/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
+| `liga/TabelaTorneio` | `TabelaTorneio` | `app/admin/liguinha/[id]/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
 | `liga/TelaoNovo` | `TelaoNovo` | `app/liga/torneio/[id]/page.tsx` |
 | `liga/admin/CriarTorneio` | `CriarTorneio` | `app/admin/liguinha/page.tsx` |
 | `liga/admin/EscolherCliente` | `finalWhats`, `EscolherCliente` | **nenhum lugar** |

@@ -13,7 +13,6 @@
 
 using System.Security.Cryptography;
 using System.Text.Json;
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Hubs;
 using CardGameStore.Models.PostgreSQL;
@@ -41,15 +40,12 @@ public class TorneioService
     private readonly AppDbContext _db;
     private readonly IHubContext<TorneioHub> _hub;
     private readonly ILogger<TorneioService> _logger;
-    private readonly FuncionalidadesService _funcionalidades;
 
-    public TorneioService(AppDbContext db, IHubContext<TorneioHub> hub, ILogger<TorneioService> logger,
-        FuncionalidadesService funcionalidades)
+    public TorneioService(AppDbContext db, IHubContext<TorneioHub> hub, ILogger<TorneioService> logger)
     {
         _db = db;
         _hub = hub;
         _logger = logger;
-        _funcionalidades = funcionalidades;
     }
 
     // =========================================================================
@@ -187,13 +183,9 @@ public class TorneioService
             throw new TorneioException("Essa rodada acabou de ser gerada. Atualize a tela.", 409);
         }
 
-        // Pokémon e afins: cada um monta o setup antes de o relógio correr. Com a chave ligada,
-        // soltar os pareamentos só deixa o relógio pronto (cheio, parado); quem dispara é o
-        // ComecarRodadaAsync. Desligada: liga na hora, como na primeira versão.
-        if (await _funcionalidades.LigadaAsync(Funcionalidades.LiguinhaRelogioSeparado))
-            await PrepararTimerAsync(ch, numero);
-        else
-            await ReiniciarTimerAsync(ch, numero);
+        // Pokémon e afins: cada um monta o setup antes de o relógio correr. Soltar os pareamentos
+        // só deixa o relógio pronto (cheio, parado); quem dispara é o ComecarRodadaAsync.
+        await PrepararTimerAsync(ch, numero);
         await AvisarAsync(championshipId, "rodada");
         return rodada;
     }
@@ -214,7 +206,7 @@ public class TorneioService
         await AvisarAsync(championshipId, "rodada");
     }
 
-    // ── "Estou pronto" (chave liguinha-pronto-na-mesa) ───────────────────────
+    // ── "Estou pronto" ──────────────────────────────────────────────────────
     // Pokémon: todo mundo precisa estar com os básicos em campo antes do relógio correr.
     // Cada jogador confirma no celular; o organizador é avisado quando todas as mesas da
     // loja estão prontas e ele mesmo começa a rodada (ComecarRodadaAsync), como antes.
@@ -261,8 +253,6 @@ public class TorneioService
     /// <summary>Rodada atual com pareamentos soltos e relógio ainda parado.</summary>
     private async Task<(Championship Ch, TimerEntity? Timer)> RodadaEmSetupAsync(Guid championshipId)
     {
-        if (!await _funcionalidades.LigadaAsync(Funcionalidades.LiguinhaProntoNaMesa))
-            throw new TorneioException("O botão \"Pronto\" está desligado nesta loja.");
         var ch = await CampeonatoAsync(championshipId);
         if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
             throw new TorneioException("Torneio encerrado.");
@@ -468,8 +458,6 @@ public class TorneioService
     /// </summary>
     public async Task TrocarMeuDeckAsync(Guid userId, Guid championshipId, Guid? deckId, string? deckNome)
     {
-        if (!await _funcionalidades.LigadaAsync(Funcionalidades.LiguinhaEntradaSimples))
-            throw new TorneioException("Trocar o deck pela tela do torneio está desligado nesta loja.");
         var ch = await CampeonatoAsync(championshipId);
         if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
             throw new TorneioException("Esse torneio já foi encerrado.");
@@ -816,7 +804,7 @@ public sealed record LinhaTabela(
 public sealed record JogadorMesa(Guid ParticipanteId, Guid UserId, string Nome, string? Deck, string? Pokemon = null, bool Shiny = false);
 
 /// <param name="AguardandoMesa">Mesa além dos lugares da loja: joga quando uma liberar.</param>
-/// <param name="ProntoA">Jogador A apertou "Estou pronto" (setup montado) — chave liguinha-pronto-na-mesa.</param>
+/// <param name="ProntoA">Jogador A apertou "Estou pronto" (setup montado).</param>
 public sealed record MesaDto(
     Guid PartidaId, int Mesa, JogadorMesa A, JogadorMesa? B,
     ResultadoPartida? ReportA, ResultadoPartida? ReportB, ResultadoPartida? Resultado, bool Divergente,

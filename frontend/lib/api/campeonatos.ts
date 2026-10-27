@@ -3,7 +3,7 @@
 import { api } from './client'
 import type { PixCobrancaDto } from './crediario'
 
-/** Liga = soma na Liga Mensal; Campeonato = evento avulso, não soma (chave "liga-modalidades"). */
+/** Liga = soma na Liga Mensal; Campeonato = evento avulso, não soma. */
 export type Modalidade = 'Liga' | 'Campeonato'
 
 export interface Championship {

@@ -1,5 +1,5 @@
 'use client'
-// Telão da liguinha no estilo da Liga Mensal (chave "telao-novo", v1.54.0) — feito pra TV de longe:
+// Telão da liguinha no estilo da Liga Mensal — feito pra TV de longe:
 // relógio gigante em fonte pixel, mesas com o sprite do deck de cada lado, classificação com sprite,
 // deck, V/E/D, OWP e pontos, e pódio com sprites grandes quando encerra.
 // Cores no style (não em text-white): o tema claro do site força .text-white pra escuro.
@@ -183,7 +183,6 @@ function Podio({ linhas }: { linhas: LinhaTabela[] }) {
 
 export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
   const site = useSiteConfig()
-  const prontoLigado = useFuncionalidade('liguinha-pronto-na-mesa') !== false
   // Campeonato não volta pra Liga nem manda o jogador pra Liguinha (chave campeonato-separado)
   const rotas = rotasDoEvento(t.modalidade, useFuncionalidade('campeonato-separado') === true)
   const voltar = rotas.voltar(t.id)
@@ -245,7 +244,7 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
                 <p className={`${pixel.className} text-center text-[10px] md:text-sm leading-relaxed rounded-2xl py-4 px-3`}
                   style={{ backgroundColor: 'rgba(255,228,94,0.12)', color: AMARELO, border: '1px solid rgba(255,228,94,0.35)' }}>
                   PAREAMENTOS DA RODADA {t.rodadaAtual} SAÍRAM — VÁ PRA SUA MESA E MONTE O SETUP
-                  {prontoLigado && setupInfo.total > 0 && (
+                  {setupInfo.total > 0 && (
                     <span className="block mt-2" style={{ color: setupInfo.todas ? '#4ADE80' : AMARELO }}>
                       {setupInfo.todas ? 'TODAS AS MESAS PRONTAS!' : `${setupInfo.prontas} DE ${setupInfo.total} MESAS PRONTAS — APERTE "ESTOU PRONTO" NO CELULAR`}
                     </span>
@@ -256,7 +255,7 @@ export default function TelaoNovo({ t }: { t: TorneioPublicoDto }) {
                 <section className="space-y-3">
                   <h2 className={`${pixel.className} text-[11px]`} style={{ color: AMARELO }}>MESAS DA RODADA {t.rodadaAtual}</h2>
                   <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${muitasMesas ? '2xl:grid-cols-3' : ''}`}>
-                    {t.mesas.map(m => <CartaoMesa key={m.partidaId} m={m} compacto={muitasMesas} setup={setup && prontoLigado} />)}
+                    {t.mesas.map(m => <CartaoMesa key={m.partidaId} m={m} compacto={muitasMesas} setup={setup} />)}
                   </div>
                 </section>
               )}

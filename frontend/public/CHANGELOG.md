@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.76.0] — 2026-10-27
+
+### Limpeza — Liga e Liguinha sem o "jeito antigo" guardado
+- Nove mudanças da Liga/Liguinha que estavam atrás de chave viram o jeito único (nenhuma foi desligada em produção): **ranking por jogador**, **relógio separado dos pareamentos**, **página nova da Liga Mensal**, **telão novo**, **animação de vitória/derrota**, **Central da Liguinha**, **Liga × Campeonato**, **botão "Pronto" na mesa** e **entrada em uma tela só**
+- Saem a página antiga da Liga, o telão antigo, o cálculo antigo do ranking (que juntava jogadores pelo nome) e a escolha de deck no formulário de entrada (o deck se escolhe na tela do torneio)
+- Nada muda pra quem usa. Tudo guardado na tag `arquivo/chaves-antes-da-limpeza`
+- Fica por enquanto: `campeonato-separado` (v1.68.0, ainda em observação)
+
 ## [v1.75.0] — 2026-10-27
 
 ### Limpeza — pedidos e painel sem o "jeito antigo" guardado

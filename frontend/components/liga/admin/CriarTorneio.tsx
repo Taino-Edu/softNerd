@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Loader2, Swords, Trophy } from 'lucide-react'
 import { championshipApi, torneioApi, Modalidade } from '@/lib/api'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import EscolherModalidade from './EscolherModalidade'
 import EscolherEntrada from './EscolherEntrada'
 import { hojeBrasil } from '@/lib/format'
@@ -25,7 +24,7 @@ function mensagemDe(e: unknown, padrao: string) {
 export default function CriarTorneio({ onFechar, sugestoes, soLiga = false }: { onFechar: () => void; sugestoes?: Record<Modalidade, number[]>; soLiga?: boolean }) {
   const router = useRouter()
   const hoje = hojeBrasil()
-  const modalidades = useFuncionalidade('liga-modalidades') !== false && !soLiga
+  const modalidades = !soLiga
   const [modalidade, setModalidade] = useState<Modalidade>('Liga')
   const ehLiga = modalidade === 'Liga' || !modalidades
   const nomePadrao = (m: Modalidade) => `${m === 'Liga' ? 'Liguinha' : 'Campeonato'} ${hoje.slice(8, 10)}/${hoje.slice(5, 7)}`

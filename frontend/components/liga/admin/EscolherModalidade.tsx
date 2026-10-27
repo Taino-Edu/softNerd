@@ -1,5 +1,5 @@
 'use client'
-// Liga × Campeonato (chave "liga-modalidades", v1.56.0) — duas modalidades diferentes:
+// Liga × Campeonato — duas modalidades diferentes:
 //   Liga       = liguinha semanal, a colocação soma na Liga Mensal (10/7/5/3/1)
 //   Campeonato = evento avulso — por enquanto só inscrição e venda; NÃO soma na Liga
 // Usado na Central (criar) e na tela de Campeonatos.
