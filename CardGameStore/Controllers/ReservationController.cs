@@ -70,13 +70,8 @@ public class ReservationController : ControllerBase
             ? Funcionalidades.Buscar(codigo)!.Padrao
             : await _funcionalidades.LigadaAsync(codigo);
 
-    private async Task<bool> VendaNoPagamentoAsync() =>
-        _funcionalidades is null
-            ? Funcionalidades.Buscar(Funcionalidades.PedidoVendaNoPagamento)!.Padrao
-            : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoVendaNoPagamento);
-
     /// <summary>
-    /// Chave "pedido-venda-no-pagamento": cancelar um item pago que já virou venda estorna a
+    /// Cancelar um item pago que já virou venda estorna a
     /// venda (que devolve o estoque) e cancela o pedido pago inteiro que ela cobria — uma venda
     /// por pedido, sem estorno parcial. null = não é o caso, segue o cancelamento normal.
     /// </summary>
@@ -88,8 +83,6 @@ public class ReservationController : ControllerBase
                 return Conflict(new { Message = "A venda deste pedido está sendo registrada agora — tente de novo em instantes." });
             return null;
         }
-        // Sem checar a chave: venda que já existe sempre se cancela pelo estorno (a chave só decide
-        // se vendas NOVAS nascem no pagamento) — senão o pedido ficaria impossível de cancelar.
         if (!User.IsInRole("Admin"))
             return BadRequest(new { Message = "Esta pré-venda já foi paga — fale com a loja pra cancelar e combinar o estorno." });
 
@@ -123,13 +116,8 @@ public class ReservationController : ControllerBase
         return Ok(new { jaPaga = true, vendaEstornada = true, itens });
     }
 
-    private async Task<bool> PedidoPixConsistenteAsync() =>
-        _funcionalidades is null
-            ? Funcionalidades.Buscar(Funcionalidades.PedidoPixConsistente)!.Padrao
-            : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoPixConsistente);
-
     /// <summary>
-    /// Chave "pedido-pix-consistente": pedido não pago sendo cancelado com Pix aberto tem a
+    /// Pedido não pago sendo cancelado com Pix aberto tem a
     /// cobrança derrubada no Inter ANTES — senão o QR continua pagável e o dinheiro cai num
     /// pedido cancelado (o estoque já voltou pra prateleira e nada vira venda). Devolve o
     /// erro pra responder ao chamador, ou null pra seguir com o cancelamento.
@@ -137,7 +125,6 @@ public class ReservationController : ControllerBase
     private async Task<IActionResult?> DerrubarPixAntesDeCancelarAsync(ProductReservation res)
     {
         if (res.Kind != "pre_venda" || res.Status != "active" || res.ExpiresAt is null) return null;
-        if (!await PedidoPixConsistenteAsync()) return null;
 
         var pix = await _db.PixCobrancas
             .Where(p => p.ReservationGroupId == res.ReservationGroupId && p.Origem == PixCobrancaOrigem.Reserva && p.Status == "ATIVA")
@@ -860,8 +847,8 @@ public class ReservationController : ControllerBase
 
         if (req.Status == "cancelled" && res.Status == "active" && await CancelarPedidoComVendaAsync(res) is { } comVenda) return comVenda;
         if (req.Status == "cancelled" && await DerrubarPixAntesDeCancelarAsync(res) is { } pixTravou) return pixTravou;
-        // Chave "pedido-venda-no-pagamento": "retirado" sem venda perderia o faturamento
-        if (req.Status == "fulfilled" && res.Kind == "pre_venda" && !PedidoVendaService.TemVenda(res) && await VendaNoPagamentoAsync())
+        // "Retirado" sem venda perderia o faturamento
+        if (req.Status == "fulfilled" && res.Kind == "pre_venda" && !PedidoVendaService.TemVenda(res))
             return BadRequest(new { Message = "Este pedido ainda não virou venda — use \"Homologar\" pra registrar o pagamento na retirada." });
 
         var statusOriginal  = res.Status;
@@ -1098,10 +1085,8 @@ public class ReservationController : ControllerBase
         var ids       = itens.Select(r => r.Id).ToList();
         var primeiro  = itens[0];
 
-        // O que já virou venda no pagamento só é entregue — vale mesmo com a chave desligada depois,
-        // senão a venda entraria duas vezes. Vende só o que falta: pedido "pagar na retirada" ou pago
-        // antes da chave. Com a chave "pedido-venda-no-pagamento" ligada, pelo preço congelado.
-        var novo = await VendaNoPagamentoAsync();
+        // O que já virou venda no pagamento só é entregue, senão a venda entraria duas vezes.
+        // Vende só o que falta (pedido "pagar na retirada"), pelo preço congelado no pedido.
         if (itens.Any(r => r.VendaAvulsaId is not null && !PedidoVendaService.TemVenda(r)))
             return Conflict(new { Message = "A venda deste pedido está sendo registrada agora — tente de novo em instantes." });
         var aVender = itens.Where(r => !PedidoVendaService.TemVenda(r)).ToList();
@@ -1175,7 +1160,7 @@ public class ReservationController : ControllerBase
                         .Select(r => new VendaAvulsaItemRequest
                         {
                             ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity,
-                            UnitPriceInCents = novo ? PedidoVendaService.PrecoDoPedido(r) : null,
+                            UnitPriceInCents = PedidoVendaService.PrecoDoPedido(r),
                         })
                         .ToList(),
                 };
@@ -1245,7 +1230,6 @@ public class ReservationController : ControllerBase
         if (temPixAberto)
             return Conflict(new { Message = "Este pedido tem um Pix aberto — cancele o Pix antes de lançar o pagamento por fora.", pixAberto = true });
 
-        var novo       = await VendaNoPagamentoAsync();
         var ids        = aVender.Select(r => r.Id).ToList();
         var primeiro   = itens[0];
         var adminId    = GetUserId();
@@ -1292,7 +1276,7 @@ public class ReservationController : ControllerBase
                     Items = aVender.Select(r => new VendaAvulsaItemRequest
                     {
                         ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity,
-                        UnitPriceInCents = novo ? PedidoVendaService.PrecoDoPedido(r) : null,
+                        UnitPriceInCents = PedidoVendaService.PrecoDoPedido(r),
                     }).ToList(),
                 }, adminId, adminName);
                 await _db.ProductReservations.Where(r => ids.Contains(r.Id) && r.VendaAvulsaId == marca)
@@ -1487,7 +1471,7 @@ public class ReservationController : ControllerBase
             r.FulfilledAt,
             r.CancelledAt,
             posicaoFila,
-            // Já virou venda no Financeiro (pago no Pix com a chave "pedido-venda-no-pagamento")
+            // Já virou venda no Financeiro (pago no Pix)
             vendaRegistrada = PedidoVendaService.TemVenda(r),
             preVendaReleaseDate = r.Product?.PreVendaReleaseDate,
             precoUnitarioEmReais = precoUnitario.HasValue ? precoUnitario.Value / 100m : (decimal?)null,

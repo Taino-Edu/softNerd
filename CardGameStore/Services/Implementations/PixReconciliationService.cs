@@ -13,7 +13,6 @@
 // =============================================================================
 
 using System.Text.Json;
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
@@ -30,13 +29,12 @@ public class PixReconciliationService : IPixReconciliationService
     private readonly IEmailService    _email;
     private readonly IPushService     _push;
     private readonly ILogger<PixReconciliationService> _logger;
-    private readonly FuncionalidadesService? _funcionalidades;
     private readonly PedidoVendaService? _pedidoVenda;
 
     public PixReconciliationService(
         AppDbContext db, InterSyncService inter, IComandaService comanda,
         IEmailService email, IPushService push, ILogger<PixReconciliationService> logger,
-        FuncionalidadesService? funcionalidades = null, PedidoVendaService? pedidoVenda = null)
+        PedidoVendaService? pedidoVenda = null)
     {
         _pedidoVenda = pedidoVenda;
         _db      = db;
@@ -45,14 +43,7 @@ public class PixReconciliationService : IPixReconciliationService
         _email   = email;
         _push    = push;
         _logger  = logger;
-        _funcionalidades = funcionalidades;
     }
-
-    /// <summary>Sem o serviço (testes antigos) vale o padrão do catálogo.</summary>
-    private async Task<bool> PedidoPixConsistenteAsync() =>
-        _funcionalidades is null
-            ? Funcionalidades.Buscar(Funcionalidades.PedidoPixConsistente)!.Padrao
-            : await _funcionalidades.LigadaAsync(Funcionalidades.PedidoPixConsistente);
 
     /// <summary>Push que só pode sair depois do commit — dentro da transação, um
     /// envio lento seguraria o lock, e um rollback avisaria de um pagamento que
@@ -144,8 +135,7 @@ public class PixReconciliationService : IPixReconciliationService
             return new PixReconciliationResult { Status = pix.Status, PagoEm = pix.PagoEm };
         }
 
-        // Pedido do site pago = venda do dia (chave "pedido-venda-no-pagamento"). Fora da
-        // transação: a venda mora no Mongo. Falha aqui não desfaz a baixa — o serviço avisa
+        // Pedido do site pago = venda do dia. Fora da transação: a venda mora no Mongo. Falha aqui não desfaz a baixa — o serviço avisa
         // os admins e o "Homologar" continua resolvendo.
         if (pix.Origem == PixCobrancaOrigem.Reserva && _pedidoVenda is not null)
         {
@@ -401,9 +391,9 @@ public class PixReconciliationService : IPixReconciliationService
                 .Where(r => snapshot.Contains(r.Id) && r.Status == "cancelled" && r.Kind == "pre_venda")
                 .ToListAsync();
 
-            // Chave "pedido-pix-consistente": quem pagou quer o produto. Se o estoque ainda
-            // der, o pedido volta como pago (aguardando retirada); senão os admins são avisados.
-            if (cancelados.Count > 0 && await PedidoPixConsistenteAsync())
+            // Quem pagou quer o produto. Se o estoque ainda der, o pedido volta como pago
+            // (aguardando retirada); senão os admins são avisados.
+            if (cancelados.Count > 0)
             {
                 foreach (var r in cancelados)
                 {

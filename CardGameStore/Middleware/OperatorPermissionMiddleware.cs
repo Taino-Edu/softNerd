@@ -1,6 +1,4 @@
-using CardGameStore.Configuration;
 using CardGameStore.Models.PostgreSQL;
-using CardGameStore.Services.Implementations;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
@@ -9,13 +7,9 @@ namespace CardGameStore.Middleware;
 /// <summary>
 /// Verifica se um Operator tem a permissão necessária para acessar uma rota.
 /// Admin sempre passa; Customer e anônimo seguem pro [Authorize] normal.
-///
-/// Chave "operador-acesso-pelo-menu" (Configuration/Funcionalidades.cs):
-///   ligada    → só rota de admin (AdminOnly / papel Operator) é conferida no mapa de permissões,
-///               que inclui as rotas de Permissao.RotasPrefixoDesdeV141; rota pública ou de cliente
-///               vale pro operador como pra qualquer pessoa logada
-///   desligada → regra de antes da v1.41.0: toda rota /api fora do mapa dá 403 pro operador,
-///               inclusive as públicas (Liga Mensal, site-config…)
+/// Só rota de admin (AdminOnly / papel Operator) é conferida no mapa de permissões
+/// (Permissao.RotasPrefixo); rota pública ou de cliente vale pro operador como pra
+/// qualquer pessoa logada.
 /// </summary>
 public class OperatorPermissionMiddleware
 {
@@ -48,10 +42,7 @@ public class OperatorPermissionMiddleware
             return;
         }
 
-        var acessoPeloMenu = await context.RequestServices.GetRequiredService<FuncionalidadesService>()
-            .LigadaAsync(Funcionalidades.OperadorAcessoPeloMenu);
-
-        var decisao = Decidir(path, user.FindFirst("permissions")?.Value, EhRotaDeAdmin(context.GetEndpoint()), acessoPeloMenu);
+        var decisao = Decidir(path, user.FindFirst("permissions")?.Value, EhRotaDeAdmin(context.GetEndpoint()));
         if (decisao == Decisao.Passa)
         {
             await _next(context);
@@ -71,9 +62,9 @@ public class OperatorPermissionMiddleware
     }
 
     /// <summary>Regra pura (testada em OperatorPermissionMiddlewareTests).</summary>
-    internal static Decisao Decidir(string path, string? permissionsClaim, bool rotaDeAdmin, bool acessoPeloMenu)
+    internal static Decisao Decidir(string path, string? permissionsClaim, bool rotaDeAdmin)
     {
-        if (acessoPeloMenu && !rotaDeAdmin) return Decisao.Passa;
+        if (!rotaDeAdmin) return Decisao.Passa;
 
         if (string.IsNullOrEmpty(permissionsClaim)) return Decisao.SemPermissoesConfiguradas;
 
@@ -84,7 +75,7 @@ public class OperatorPermissionMiddleware
         // Sempre permite rotas genéricas de leitura própria
         if (path.StartsWith("/api/user/me") || path.StartsWith("/api/comanda/mesa")) return Decisao.Passa;
 
-        return Permissao.OperadorPode(permissoes, path, comRotasDesdeV141: acessoPeloMenu)
+        return Permissao.OperadorPode(permissoes, path)
             ? Decisao.Passa
             : Decisao.SemPermissao;
     }

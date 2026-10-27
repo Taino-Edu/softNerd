@@ -1,6 +1,5 @@
 // =============================================================================
-// PedidoVendaService.cs — Pedido do site vira venda NO PAGAMENTO (chave
-// "pedido-venda-no-pagamento"), no padrão de e-commerce: pagou o Pix, é venda do dia
+// PedidoVendaService.cs — Pedido do site vira venda NO PAGAMENTO, no padrão de e-commerce: pagou o Pix, é venda do dia
 // no Financeiro, como Pix e pelo valor cobrado (preço congelado no pedido). A retirada
 // só registra a entrega.
 //
@@ -12,7 +11,6 @@
 // =============================================================================
 
 using System.Text.Json;
-using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
@@ -28,19 +26,14 @@ public class PedidoVendaService
 
     private readonly AppDbContext _db;
     private readonly IVendaAvulsaService _vendas;
-    private readonly FuncionalidadesService _funcionalidades;
     private readonly ILogger<PedidoVendaService> _logger;
 
-    public PedidoVendaService(AppDbContext db, IVendaAvulsaService vendas, FuncionalidadesService funcionalidades,
-        ILogger<PedidoVendaService> logger)
+    public PedidoVendaService(AppDbContext db, IVendaAvulsaService vendas, ILogger<PedidoVendaService> logger)
     {
         _db = db;
         _vendas = vendas;
-        _funcionalidades = funcionalidades;
         _logger = logger;
     }
-
-    public Task<bool> LigadaAsync() => _funcionalidades.LigadaAsync(Funcionalidades.PedidoVendaNoPagamento);
 
     /// <summary>Venda já gravada (id do Mongo), sem contar o claim em andamento.</summary>
     public static bool TemVenda(ProductReservation r) =>
@@ -58,7 +51,7 @@ public class PedidoVendaService
     /// </summary>
     public async Task<string?> RegistrarVendaDoPagamentoAsync(PixCobranca pix)
     {
-        if (pix.ReservationGroupId is not { } groupId || !await LigadaAsync()) return null;
+        if (pix.ReservationGroupId is not { } groupId) return null;
 
         HashSet<Guid>? snapshot = null;
         if (!string.IsNullOrWhiteSpace(pix.ReservationItemIdsJson))

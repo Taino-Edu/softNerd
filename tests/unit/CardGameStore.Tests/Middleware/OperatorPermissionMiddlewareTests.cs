@@ -1,8 +1,5 @@
 // =============================================================================
 // OperatorPermissionMiddlewareTests.cs — o que o operador pode chamar na API
-//
-// Chave "operador-acesso-pelo-menu": ligada = regra nova; desligada = regra de
-// antes da v1.41.0 (toda rota fora do mapa dava 403, até as públicas).
 // =============================================================================
 
 using System.Reflection;
@@ -31,17 +28,13 @@ public class OperatorPermissionMiddlewareTests
         return new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(metadados), metodo);
     }
 
-    // -------------------------------------------------------------------------
-    // Regra nova (chave ligada)
-    // -------------------------------------------------------------------------
-
     [Fact]
     public void RotaPublica_PassaParaOperador()
     {
         var rotaDeAdmin = OperatorPermissionMiddleware.EhRotaDeAdmin(EndpointDe<LigaMensalController>(nameof(LigaMensalController.GetRanking)));
 
         rotaDeAdmin.Should().BeFalse();
-        OperatorPermissionMiddleware.Decidir("/api/liga-mensal", "[]", rotaDeAdmin, acessoPeloMenu: true).Should().Be(D.Passa);
+        OperatorPermissionMiddleware.Decidir("/api/liga-mensal", "[]", rotaDeAdmin).Should().Be(D.Passa);
     }
 
     [Fact]
@@ -50,13 +43,13 @@ public class OperatorPermissionMiddlewareTests
         var rotaDeAdmin = OperatorPermissionMiddleware.EhRotaDeAdmin(EndpointDe<LigaMensalController>(nameof(LigaMensalController.CreateManualEntry)));
 
         rotaDeAdmin.Should().BeTrue();
-        OperatorPermissionMiddleware.Decidir("/api/liga-mensal/manual", SoCampeonatos, rotaDeAdmin, true).Should().Be(D.Passa);
+        OperatorPermissionMiddleware.Decidir("/api/liga-mensal/manual", SoCampeonatos, rotaDeAdmin).Should().Be(D.Passa);
     }
 
     [Fact]
     public void RotaDeAdmin_SemAPermissao_Recusa()
     {
-        OperatorPermissionMiddleware.Decidir("/api/liga-mensal/manual", "[\"pdv\"]", rotaDeAdmin: true, true)
+        OperatorPermissionMiddleware.Decidir("/api/liga-mensal/manual", "[\"pdv\"]", rotaDeAdmin: true)
             .Should().Be(D.SemPermissao);
     }
 
@@ -77,43 +70,25 @@ public class OperatorPermissionMiddlewareTests
     [InlineData("anuncios",    "/api/admin/mensageria/enviar")]
     [InlineData("anuncios",    "/api/upload/image")]
     [InlineData("financeiro",  "/api/contas-receber")]
-    public void TelasDoMenuQueDavam403_AgoraPassam(string permissao, string path)
-    {
-        var claim = $"[\"{permissao}\"]";
-
-        OperatorPermissionMiddleware.Decidir(path, claim, rotaDeAdmin: true, acessoPeloMenu: true).Should().Be(D.Passa);
-        OperatorPermissionMiddleware.Decidir(path, claim, rotaDeAdmin: true, acessoPeloMenu: false).Should().Be(D.SemPermissao);
-    }
+    public void TelasDoMenu_Passam(string permissao, string path) =>
+        OperatorPermissionMiddleware.Decidir(path, $"[\"{permissao}\"]", rotaDeAdmin: true).Should().Be(D.Passa);
 
     [Fact]
     public void OperadorSemPermissoes_SoNaoEntraEmRotaDeAdmin()
     {
-        OperatorPermissionMiddleware.Decidir("/api/site-config", null, rotaDeAdmin: false, true).Should().Be(D.Passa);
-        OperatorPermissionMiddleware.Decidir("/api/comanda", null, rotaDeAdmin: true, true).Should().Be(D.SemPermissoesConfiguradas);
+        OperatorPermissionMiddleware.Decidir("/api/site-config", null, rotaDeAdmin: false).Should().Be(D.Passa);
+        OperatorPermissionMiddleware.Decidir("/api/comanda", null, rotaDeAdmin: true).Should().Be(D.SemPermissoesConfiguradas);
     }
 
     [Fact]
     public void RotaDesconhecida_ContaComoDeAdmin() =>
         OperatorPermissionMiddleware.EhRotaDeAdmin(null).Should().BeTrue();
 
-    // -------------------------------------------------------------------------
-    // Fallback (chave desligada) — a regra antiga, igualzinha
-    // -------------------------------------------------------------------------
-
     [Fact]
-    public void Fallback_RotaPublicaForaDoMapa_Da403_ComoAntes()
+    public void RotasDeLeituraPropria_SemprePassam()
     {
-        OperatorPermissionMiddleware.Decidir("/api/liga-mensal", SoCampeonatos, rotaDeAdmin: false, acessoPeloMenu: false)
-            .Should().Be(D.SemPermissao);
-        OperatorPermissionMiddleware.Decidir("/api/site-config", null, rotaDeAdmin: false, false)
-            .Should().Be(D.SemPermissoesConfiguradas);
-    }
-
-    [Fact]
-    public void Fallback_RotasDoMapaAntigo_ContinuamPassando()
-    {
-        OperatorPermissionMiddleware.Decidir("/api/championship/abc", SoCampeonatos, true, false).Should().Be(D.Passa);
-        OperatorPermissionMiddleware.Decidir("/api/user/me", "[]", true, false).Should().Be(D.Passa);
+        OperatorPermissionMiddleware.Decidir("/api/championship/abc", SoCampeonatos, true).Should().Be(D.Passa);
+        OperatorPermissionMiddleware.Decidir("/api/user/me", "[]", true).Should().Be(D.Passa);
     }
 
     // -------------------------------------------------------------------------
@@ -154,7 +129,7 @@ public class OperatorPermissionMiddlewareTests
                 var molde = metodo.GetCustomAttributes<HttpMethodAttribute>().First().Template;
                 var rota = (molde is null ? baseRota : $"{baseRota}/{molde}").ToLowerInvariant();
 
-                var abre = Permissao.Todos.Any(p => Permissao.OperadorPode([p], rota, comRotasDesdeV141: true));
+                var abre = Permissao.Todos.Any(p => Permissao.OperadorPode([p], rota));
                 var doDono = SoODonoDeProposito.Any(r => rota.StartsWith(r));
                 if (!abre && !doDono) semDono.Add($"{controller.Name}.{metodo.Name} → {rota}");
             }

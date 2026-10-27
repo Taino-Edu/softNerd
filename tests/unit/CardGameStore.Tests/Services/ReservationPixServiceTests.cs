@@ -1,7 +1,7 @@
 // =============================================================================
 // ReservationPixServiceTests.cs — Pix do carrinho do site
 // Carrinho com um item cancelado travava o Pix do resto ("Só é possível gerar Pix
-// para pré-vendas ativas"). Com a chave "pedido-pix-consistente" o Pix sai só dos
+// para pré-vendas ativas"). Agora o Pix sai só dos
 // itens ativos e ainda não pagos.
 // =============================================================================
 
@@ -87,17 +87,4 @@ public class ReservationPixServiceTests
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string>()), Times.Once);
     }
 
-    [Fact]
-    public async Task Gerar_ChaveDesligada_CarrinhoComItemCanceladoContinuaTravado()
-    {
-        var db = CreateDb();
-        var (groupId, cliente) = await SeedCarrinhoAsync(db);
-        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        await chaves.DefinirAsync(Funcionalidades.PedidoPixConsistente, false, cliente.Id);
-
-        var r = await new ReservationPixService(db, CreateInterMock().Object, chaves).GerarAsync(groupId, cliente.Id);
-
-        r.Success.Should().BeFalse();
-        r.Error.Should().Contain("pré-vendas ativas");
-    }
 }

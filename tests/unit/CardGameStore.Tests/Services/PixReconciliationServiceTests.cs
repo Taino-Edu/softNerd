@@ -57,12 +57,12 @@ public class PixReconciliationServiceTests
     private static PixReconciliationService CreateService(
         AppDbContext db, InterSyncService inter, IComandaService comanda,
         IEmailService? email = null, IPushService? push = null,
-        FuncionalidadesService? funcionalidades = null, PedidoVendaService? pedidoVenda = null) =>
+        PedidoVendaService? pedidoVenda = null) =>
         new(db, inter, comanda,
             email ?? new Mock<IEmailService>().Object,
             push ?? new Mock<IPushService>().Object,
             NullLogger<PixReconciliationService>.Instance,
-            funcionalidades, pedidoVenda);
+            pedidoVenda);
 
     private static async Task<User> SeedBaseAsync(AppDbContext db)
     {
@@ -452,7 +452,7 @@ public class PixReconciliationServiceTests
             .Should().Be(1);
     }
 
-    // ── Pix pago depois do pedido cancelado (chave "pedido-pix-consistente") ──
+    // ── Pix pago depois do pedido cancelado ──
     // Caso real de 20/10/2026: pedido criado 11:32, cancelado 11:36, Pix pago 11:37.
     // O dinheiro entrou, o estoque já tinha voltado e nada virou venda nem aviso.
 
@@ -530,28 +530,7 @@ public class PixReconciliationServiceTests
             .Should().Contain("ATENÇÃO");
     }
 
-    [Fact]
-    public async Task Reconciliar_PixDePedidoCancelado_ChaveDesligada_ComportamentoAntigo()
-    {
-        var db = CreateDb(nameof(Reconciliar_PixDePedidoCancelado_ChaveDesligada_ComportamentoAntigo));
-        var (reserva, produto, pix, admin) = await SeedPedidoCanceladoComPixAsync(db, estoque: 3);
-        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        await chaves.DefinirAsync(Funcionalidades.PedidoPixConsistente, false, admin.Id);
-        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
-            funcionalidades: chaves);
-
-        await service.ReconciliarAsync(pix);
-
-        await db.Entry(reserva).ReloadAsync();
-        await db.Entry(produto).ReloadAsync();
-        reserva.Status.Should().Be("cancelled");
-        produto.StockQuantity.Should().Be(3);
-        (await db.Notifications.CountAsync()).Should().Be(0);
-        (await db.ExternalTransactions.SingleAsync(x => x.ExternalId == pix.TxId)).Notes
-            .Should().Contain("ATENÇÃO", "o jeito antigo só anota no lançamento");
-    }
-
-    // ── Pedido pago = venda do dia (chave "pedido-venda-no-pagamento") ───────
+    // ── Pedido pago = venda do dia ───────
 
     private static async Task<(ProductReservation Reserva, PixCobranca Pix, User Admin)> SeedPedidoNaoPagoAsync(AppDbContext db)
     {
@@ -587,9 +566,8 @@ public class PixReconciliationServiceTests
         return (mock, pedidos);
     }
 
-    private static PedidoVendaService PedidoVenda(AppDbContext db, IVendaAvulsaService vendas, FuncionalidadesService? chaves = null) =>
-        new(db, vendas, chaves ?? new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions())),
-            NullLogger<PedidoVendaService>.Instance);
+    private static PedidoVendaService PedidoVenda(AppDbContext db, IVendaAvulsaService vendas) =>
+        new(db, vendas, NullLogger<PedidoVendaService>.Instance);
 
     [Fact]
     public async Task Reconciliar_PedidoPago_RegistraUmaVendaPixComPrecoCongelado()
@@ -647,23 +625,6 @@ public class PixReconciliationServiceTests
 
         (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().Be("venda-gravada",
             "liberar faria o Homologar vender o mesmo pedido de novo");
-    }
-
-    [Fact]
-    public async Task Reconciliar_PedidoPago_ChaveDesligada_NaoRegistraVenda()
-    {
-        var db = CreateDb(nameof(Reconciliar_PedidoPago_ChaveDesligada_NaoRegistraVenda));
-        var (_, pix, admin) = await SeedPedidoNaoPagoAsync(db);
-        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        await chaves.DefinirAsync(Funcionalidades.PedidoVendaNoPagamento, false, admin.Id);
-        var (vendas, pedidos) = VendaSpy();
-        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object,
-            pedidoVenda: PedidoVenda(db, vendas.Object, chaves));
-
-        await service.ReconciliarAsync(pix);
-
-        pedidos.Should().BeEmpty("jeito antigo: vira venda só no Homologar");
-        (await db.ProductReservations.AsNoTracking().SingleAsync()).VendaAvulsaId.Should().BeNull();
     }
 
     // ── Casos sem baixa ───────────────────────────────────────────────────────

@@ -559,7 +559,7 @@ public class ReservationControllerTests
         pix.Status.Should().Be("ATIVA");
     }
 
-    // ── Cancelar pedido não pago derruba o Pix (chave "pedido-pix-consistente") ──
+    // ── Cancelar pedido não pago derruba o Pix ──
     // Caso real de 20/10/2026: pedido cancelado 11:36 com o QR ainda de pé; o cliente
     // pagou 11:37 e o dinheiro caiu num pedido cancelado.
 
@@ -708,24 +708,6 @@ public class ReservationControllerTests
         (await db.PixCobrancas.SingleAsync()).Status.Should().Be("REMOVIDA_PELO_USUARIO_RECEBEDOR");
     }
 
-    [Fact]
-    public async Task Cancel_ChaveDesligada_DeixaOPixAbertoComoAntes()
-    {
-        var db = CreateDb(nameof(ReservationControllerTests));
-        var (reserva, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
-        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        await chaves.DefinirAsync(Funcionalidades.PedidoPixConsistente, false, cliente.Id);
-        var inter = CreateInterMockConfiguravel();
-        var controller = CreateController(db, loggedUserId: cliente.Id, inter: inter.Object, funcionalidades: chaves);
-
-        var result = await controller.Cancel(reserva.Id);
-
-        result.Should().BeOfType<OkObjectResult>();
-        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
-        (await db.PixCobrancas.SingleAsync()).Status.Should().Be("ATIVA");
-        (await db.ProductReservations.AsNoTracking().SingleAsync()).Status.Should().Be("cancelled");
-    }
-
     // ── Pagamento lançado à mão sem retirada (chave "pagamento-sem-retirada") ──
     // Pedido do Maikon: quem paga adiantado por fora tem que ficar igual a quem pagou o Pix
     // do site — pago, aguardando retirada — em vez de sumir da tela como "retirado".
@@ -822,7 +804,7 @@ public class ReservationControllerTests
         capturadas.Should().BeEmpty();
     }
 
-    // ── Venda no pagamento (chave "pedido-venda-no-pagamento") ─────────────────
+    // ── Venda no pagamento ─────────────────
 
     [Fact]
     public async Task Create_CongelaOPrecoDoPedido()
@@ -948,30 +930,6 @@ public class ReservationControllerTests
     }
 
     [Fact]
-    public async Task CancelarPedidoComVenda_ChaveDesligada_AindaEstorna()
-    {
-        var db = CreateDb(nameof(ReservationControllerTests));
-        var cliente = await SeedUserAsync(db);
-        var produto = await SeedProductAsync(db, stock: 5);
-        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
-        itens[0].ExpiresAt = null; itens[0].VendaAvulsaId = "venda-pix";
-        await db.SaveChangesAsync();
-        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        await chaves.DefinirAsync(Funcionalidades.PedidoVendaNoPagamento, false, cliente.Id);
-        var vendas = new Mock<IVendaAvulsaService>();
-        vendas.Setup(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()))
-              .ReturnsAsync(new VendaAvulsaDto { Id = "venda-pix" });
-        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: vendas.Object, funcionalidades: chaves);
-        controller.ControllerContext.HttpContext.User.AddIdentity(
-            new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin")]));
-
-        var result = await controller.UpdateStatus(itens[0].Id, new UpdateReservationStatusRequest { Status = "cancelled" });
-
-        result.Should().BeOfType<OkObjectResult>("venda que já existe sempre cancela pelo estorno");
-        vendas.Verify(v => v.EstornarAsync("venda-pix", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
-    }
-
-    [Fact]
     public async Task UpdateStatusRetirado_SemVenda_Recusa()
     {
         var db = CreateDb(nameof(ReservationControllerTests));
@@ -1011,31 +969,6 @@ public class ReservationControllerTests
         (await db.ProductReservations.AsNoTracking().ToListAsync()).Should().OnlyContain(r => r.Status == "cancelled");
         (await db.Products.AsNoTracking().Select(p => p.StockQuantity).ToListAsync())
             .Should().OnlyContain(q => q == 5, "quem devolve o estoque é o estorno da venda");
-    }
-
-    [Fact]
-    public async Task HomologarGrupo_ChaveDesligada_VendePeloPrecoDoMomentoMasNuncaVendeDuasVezes()
-    {
-        var db = CreateDb(nameof(ReservationControllerTests));
-        var cliente = await SeedUserAsync(db);
-        var produto = await SeedProductAsync(db, stock: 5);
-        var vendidoNoPix = await SeedProductAsync(db, stock: 5);
-        var groupId = Guid.NewGuid();
-        var itens = await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 1), (vendidoNoPix.Id, 1));
-        itens[0].UnitPriceInCents = 1200;
-        itens[1].ExpiresAt = null; itens[1].VendaAvulsaId = "venda-pix"; // vendeu enquanto a chave estava ligada
-        await db.SaveChangesAsync();
-        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
-        await chaves.DefinirAsync(Funcionalidades.PedidoVendaNoPagamento, false, cliente.Id);
-        var (venda, capturadas) = CreateVendaSpy();
-        var controller = CreateController(db, loggedUserId: Guid.NewGuid(), vendaService: venda, funcionalidades: chaves);
-
-        await controller.HomologarGrupo(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" });
-
-        capturadas.Should().ContainSingle();
-        var item = capturadas[0].Items.Single();
-        item.ProductId.Should().Be(produto.Id, "o que já virou venda no Pix não entra de novo");
-        item.UnitPriceInCents.Should().BeNull("jeito antigo: preço do momento");
     }
 
     // ── Timer de expiração removido ─────────────────────────────────────────────

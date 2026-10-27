@@ -13,7 +13,6 @@ import {
 import clsx from 'clsx'
 import { FORMAS_PAGAMENTO } from '@/lib/pagamentos'
 import { brl as fmt } from '@/lib/format'
-import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function toDateInput(d: Date) {
@@ -1163,8 +1162,7 @@ function DayPieChart({ formas, receita, custo, date }: {
 }) {
   const [hovered, setHovered] = useState<string | null>(null)
   // Painel novo: cartão sai do roxo pro azul-céu; chave desligada = cor de antes (rollback completo)
-  const telasNovas = useFuncionalidade('admin-telas-novas') !== false
-  const corDe = (forma: string) => (telasNovas && forma === 'CartaoCredito' ? '#0EA5E9' : FORMA_CORES[forma]) ?? '#6b7280'
+  const corDe = (forma: string) => (forma === 'CartaoCredito' ? '#0EA5E9' : FORMA_CORES[forma]) ?? '#6b7280'
   const total = formas.reduce((s, f) => s + f.total, 0)
   if (total === 0) return null
 

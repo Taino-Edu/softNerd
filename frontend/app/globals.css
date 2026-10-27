@@ -93,7 +93,6 @@
   .badge-andamento { @apply badge bg-amber-500/20 text-amber-400 border border-amber-500/30; }
   .badge-fechada   { @apply badge bg-accent-green/20 text-accent-green border border-accent-green/30; }
   .badge-cancelada { @apply badge bg-accent-red/20 text-accent-red border border-accent-red/30; }
-  .badge-admin     { @apply badge bg-brand-500/20 text-brand-400 border border-brand-500/30; }
 
   /* Página de conteúdo admin — entrada suave */
   @keyframes slideUp {
@@ -118,18 +117,6 @@
 
   /* Transição suave ao trocar tema */
   html { transition: background-color 0.2s ease, color 0.2s ease; }
-
-  /* Nav sidebar — item ativo adaptado ao tema */
-  .nav-item-active {
-    background-color: rgba(66, 182, 238, 0.15);
-    color: #42B6EE;
-  }
-  .nav-item-label { color: inherit; }
-  html.light .nav-item-active {
-    background-color: #E3F5FD;
-    color: #0e7ab5;
-  }
-  html.light .nav-item-active .nav-item-label { color: #0e7ab5; }
 
   /* Fundo do painel admin com gradiente que usa variável de tema */
   .admin-main {
