@@ -262,7 +262,8 @@ public class ChampionshipController(
             return BadRequest(new { Message = "Este campeonato não está aceitando inscrições." });
 
         var (pi, numero) = await campeonatos.AddPreInscricaoAsync(id, request.Nome, request.WhatsApp, request.DeckId, request.DeckName);
-        logger.LogInformation("Pré-inscrição recebida para campeonato {Id}: {Nome} (nº {Numero})", id, request.Nome, numero);
+        // Sem o nome no log: é dado pessoal e vem digitado pela pessoa (CodeQL: log forging)
+        logger.LogInformation("Pré-inscrição recebida para campeonato {Id} (nº {Numero})", id, numero);
         return StatusCode(201, pi.ParaDto(numero));
     }
 
