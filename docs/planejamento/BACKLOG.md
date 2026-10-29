@@ -28,6 +28,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 | Cor adicional em "Personalizar Site" | Maikon | Não ficou claro qual elemento |
 | Chaves da API Pokémon TCG e Riot novas | Taino | Gerar na conta do Maikon e rodar `bash deploy/configurar-chave.sh POKEMON_API_KEY` na VPS |
 | Login com Google | Taino | Client ID do Google Cloud |
+| Pietro: pedido sem baixa no estoque e fora do Financeiro | Taino/Maikon | Saber se foi pré-venda paga no Pix ou item lançado à mão no crediário (item digitado na edição do crediário não mexe em estoque nem no Financeiro) |
 | Conferir o 1º pedido real pago no Pix | Taino/Maikon | A venda deve aparecer no Financeiro do dia, como Pix (só tem teste automatizado) |
 
 ## 📋 Na fila (ordem sugerida)
@@ -51,6 +52,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.79.2 | 29/10 | **Pedidos do Maikon**: pré-venda lançada pelo admin soma no pedido sem pagar (um Pix, um pagamento); botão "Juntar num pedido só"; busca por cliente nos pedidos; aviso de pré-venda nova (sininho, push, e-mail); item adicionado no crediário soma na conta |
 | v1.79.1 | 29/10 | **Pix da pré-venda vencido**: não reaproveita mais o QR depois da 1h (o banco recusava "QR Code não é válido"); gera um novo com o total (derrubando o antigo antes); Vigia ganha o alerta "Pix vencido sem pagamento" |
 | v1.79.0 | 27/10 | **Campeonatos em camadas**: inscrição e Pix da entrada no `CampeonatoInscricaoService`; `RegraException` + `RespostaDeRegra` comuns; 9 testes novos |
 | v1.78.0 | 27/10 | **Pedidos em camadas**: `ReservationController` (1.568 → 159 linhas) só HTTP; regras em `Services/Pedidos/` (criação, andamento, cobrança, consulta) com interface e `PedidoException` |

@@ -1,5 +1,24 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.2] — 2026-10-29
+
+### Pré-venda — um pedido só por cliente (relato do Maikon, caso da Priscila)
+- Quando o **admin lança a pré-venda** em nome do cliente (pedido do WhatsApp), os itens agora **somam no pedido sem pagar** que ele já tinha, igual ao carrinho do site: um Pix com o total e um "Registrar pagamento" só. Antes, cada lançamento virava um pedido com o seu próprio Pix e o pagamento tinha que ser registrado um por um
+- Se o pedido aberto já tinha Pix, ele é cancelado no banco (conferindo se não foi pago) — mande o Pix novo, com o total
+- Pedidos que já estão separados: na raia "A pagar", a gaveta do cliente ganha o botão **"Juntar num pedido só"**. Pedido cujo Pix acabou de ser pago (ou com o banco fora do ar) fica separado, e a tela avisa
+- Na mesma chave de antes ("Pré-venda: itens novos entram no pedido sem pagar"); desligada, volta cada lançamento a ser um pedido
+
+### Pedidos — busca por cliente
+- Campo **"Buscar por cliente..."** em cima do quadro de pedidos, igual ao do crediário (nome ou WhatsApp, sem ligar pra acento)
+
+### Pedidos — aviso de pré-venda nova
+- Quando o cliente faz uma pré-venda pelo site, os admins recebem o aviso na hora: **sininho, notificação no celular e e-mail** ("Pré-venda nova: nome — itens e valor"). Antes só se sabia quando o Pix caía, pelo e-mail do banco
+
+### Crediário — item adicionado soma na conta
+- Ao editar a conta e **adicionar um item**, o valor total já soma o item (e tirar um item desconta). O campo continua editável pra acertar na mão
+- O bloco "Itens adicionados na edição" passa a valer o que tem dentro: antes ficava R$ 0, e a lista mostrava o item sem a conta somar (conta do Pietro: R$ 248,50 em vez de R$ 298,00)
+- Conta **vencida** volta a poder ser editada: a tela mandava o vencimento junto mesmo sem mudar, e o sistema recusava com "A data de vencimento não pode ser no passado"
+
 ## [v1.79.1] — 2026-10-29
 
 ### Pix da pré-venda — "O QR Code não é válido" (relato do Maikon)
