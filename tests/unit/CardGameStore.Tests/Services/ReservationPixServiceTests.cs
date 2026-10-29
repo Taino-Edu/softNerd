@@ -87,4 +87,35 @@ public class ReservationPixServiceTests
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string>()), Times.Once);
     }
 
+    /// <summary>
+    /// Pix vencido segue "ATIVA" no Inter, mas o banco do cliente recusa o QR. Era ele que voltava
+    /// pra quem pagava depois do prazo (ex.: código mandado no WhatsApp e pago no dia seguinte).
+    /// </summary>
+    [Theory]
+    [InlineData(-120, false)] // venceu há 2 horas
+    [InlineData(3, false)]    // vence em 3 min: não dá tempo de pagar
+    [InlineData(40, true)]    // ainda no prazo
+    public async Task Gerar_PixAtivoSoEReaproveitadoNoPrazo(int minutosParaVencer, bool reaproveita)
+    {
+        var db = CreateDb();
+        var (groupId, cliente) = await SeedCarrinhoAsync(db);
+        var antigo = new PixCobranca
+        {
+            Origem = PixCobrancaOrigem.Reserva, ReservationGroupId = groupId, TxId = "txantigo",
+            ValorEmCentavos = 1500, Status = "ATIVA", PixCopiaCola = "000201antigo",
+            ExpiraEm = DateTime.UtcNow.AddMinutes(minutosParaVencer),
+        };
+        db.PixCobrancas.Add(antigo);
+        await db.SaveChangesAsync();
+        var inter = CreateInterMock();
+
+        var r = await new ReservationPixService(db, inter.Object).GerarAsync(groupId, cliente.Id);
+
+        r.Success.Should().BeTrue(r.Error);
+        r.Reused.Should().Be(reaproveita);
+        if (reaproveita) r.Pix!.TxId.Should().Be("txantigo");
+        else r.Pix!.TxId.Should().NotBe("txantigo", "o QR vencido não pode voltar pro cliente");
+        inter.Verify(i => i.CriarCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<int>(),
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string>()), reaproveita ? Times.Never() : Times.Once());
+    }
 }

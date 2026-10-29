@@ -27,7 +27,9 @@ export default function PixReservaModal({ groupId, dark = false, clienteWhatsApp
     setLoading(true)
     try {
       const { data } = await reservationApi.getPix(groupId)
-      if (data.hasPix && (data.status === 'CONCLUIDA' || (data.status === 'ATIVA' && data.pixCopiaCola))) {
+      // Vencido segue "ATIVA" no Inter, mas o banco recusa o QR — pede um novo (mesma folga de 5 min da API)
+      const vivo = !data.expiraEm || new Date(data.expiraEm).getTime() > Date.now() + 5 * 60_000
+      if (data.hasPix && (data.status === 'CONCLUIDA' || (data.status === 'ATIVA' && data.pixCopiaCola && vivo))) {
         setPix(data)
       } else {
         const r = await reservationApi.gerarPix(groupId)
