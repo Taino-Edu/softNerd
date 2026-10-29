@@ -1097,4 +1097,154 @@ public class ReservationControllerTests
         var desligada = Corpo(await controller.CreateCart(Carrinho(produto)));
         Campo<bool>(desligada, "juntou").Should().BeFalse("chave desligada: cada carrinho é um pedido, como antes");
     }
+
+
+    // ── Pedido do Maikon (29/10): pré-venda lançada pelo admin aos poucos virava um pedido por vez ──
+
+    private static AdminCreateReservationRequest PeloAdmin(Guid clienteId, Product p) =>
+        new() { UserId = clienteId, Items = [new AdminCreateReservationItem { ProductId = p.Id, Quantity = 1 }] };
+
+    private static Mock<InterSyncService> InterQueRemove()
+    {
+        var inter = CreateInterMockConfiguravel();
+        inter.Setup(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()))
+             .ReturnsAsync(new PixCobrancaResult { Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR" });
+        return inter;
+    }
+
+    [Fact]
+    public async Task AdminCreate_ClienteComPedidoSemPagar_SomaNele_EDerrubaOPixAntigo()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var outro = await SeedProductAsync(db, stock: 3);
+        var inter = InterQueRemove();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(),
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object, funcionalidades: Chaves(db));
+
+        var corpo = Corpo(await controller.AdminCreate(PeloAdmin(cliente.Id, outro)));
+
+        Campo<bool>(corpo, "juntou").Should().BeTrue();
+        Campo<Guid>(corpo, "groupId").Should().Be(antiga.ReservationGroupId);
+        (await db.ProductReservations.CountAsync(r => r.ReservationGroupId == antiga.ReservationGroupId)).Should().Be(2,
+            "um pedido só: um Pix com o total e um Registrar pagamento");
+        (await db.PixCobrancas.AsNoTracking().SingleAsync()).Status.Should().Be("REMOVIDA_PELO_USUARIO_RECEBEDOR");
+    }
+
+    [Fact]
+    public async Task AdminCreate_ChaveDesligada_PedidoSeparadoComoAntes()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var outro = await SeedProductAsync(db, stock: 3);
+        var chaves = Chaves(db);
+        await chaves.DefinirAsync(Funcionalidades.PedidoPixJunto, false, Guid.NewGuid());
+        var inter = InterQueRemove();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(),
+            pixReconciliation: PixAindaAberto().Object, inter: inter.Object, funcionalidades: chaves);
+
+        var corpo = Corpo(await controller.AdminCreate(PeloAdmin(cliente.Id, outro)));
+
+        Campo<bool>(corpo, "juntou").Should().BeFalse();
+        Campo<Guid>(corpo, "groupId").Should().NotBe(antiga.ReservationGroupId);
+        inter.Verify(i => i.RemoverCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Juntar_PedidosSeparadosDoCliente_ViramUm_EOsPixCaem()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var outro = await SeedProductAsync(db, stock: 3);
+        var grupo2 = Guid.NewGuid();
+        var segundo = await SeedCarrinhoAsync(db, cliente.Id, grupo2, (outro.Id, 2));
+        segundo[0].PaymentMethod = "retirada"; // forma diferente não impede: é o admin juntando
+        db.PixCobrancas.Add(new PixCobranca
+        {
+            Id = Guid.NewGuid(), Origem = PixCobrancaOrigem.Reserva, ReservationGroupId = grupo2,
+            TxId = Guid.NewGuid().ToString("N"), ValorEmCentavos = 3000, Status = "ATIVA",
+            ExpiraEm = DateTime.UtcNow.AddMinutes(40), CriadoPorAdminId = cliente.Id,
+        });
+        var pago = Guid.NewGuid(); // pedido pago do mesmo cliente: fica de fora
+        var jaPago = await SeedCarrinhoAsync(db, cliente.Id, pago, (outro.Id, 1));
+        jaPago[0].ExpiresAt = null;
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(),
+            pixReconciliation: PixAindaAberto().Object, inter: InterQueRemove().Object);
+
+        var corpo = Corpo(await controller.JuntarPedidos(antiga.ReservationGroupId));
+
+        Campo<int>(corpo, "juntados").Should().Be(1);
+        Campo<int>(corpo, "naoJuntados").Should().Be(0);
+        var doPedido = await db.ProductReservations.AsNoTracking()
+            .Where(r => r.ReservationGroupId == antiga.ReservationGroupId).ToListAsync();
+        doPedido.Should().HaveCount(2);
+        doPedido.Should().OnlyContain(r => r.PaymentMethod == antiga.PaymentMethod, "o pedido fica com uma forma só");
+        (await db.ProductReservations.CountAsync(r => r.ReservationGroupId == pago)).Should().Be(1, "pedido pago não se mexe");
+        (await db.PixCobrancas.AsNoTracking().ToListAsync()).Should().OnlyContain(p => p.Status == "REMOVIDA_PELO_USUARIO_RECEBEDOR",
+            "os dois QRs antigos cobravam só uma parte");
+    }
+
+    [Fact]
+    public async Task Juntar_PixDoOutroPedidoAcabouDeSerPago_ElePermaneceSeparado()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var outro = await SeedProductAsync(db, stock: 3);
+        var grupo2 = Guid.NewGuid();
+        await SeedCarrinhoAsync(db, cliente.Id, grupo2, (outro.Id, 1));
+        var pixDele = new PixCobranca
+        {
+            Id = Guid.NewGuid(), Origem = PixCobrancaOrigem.Reserva, ReservationGroupId = grupo2,
+            TxId = Guid.NewGuid().ToString("N"), ValorEmCentavos = 1500, Status = "ATIVA",
+            ExpiraEm = DateTime.UtcNow.AddMinutes(40), CriadoPorAdminId = cliente.Id,
+        };
+        db.PixCobrancas.Add(pixDele);
+        await db.SaveChangesAsync();
+        var reconciliacao = new Mock<IPixReconciliationService>();
+        reconciliacao.Setup(r => r.ReconciliarAsync(It.Is<PixCobranca>(p => p.Id == pixDele.Id), It.IsAny<Guid?>()))
+            .ReturnsAsync(new PixReconciliationResult { Status = "CONCLUIDA", PagoEm = DateTime.UtcNow });
+        reconciliacao.Setup(r => r.ReconciliarAsync(It.Is<PixCobranca>(p => p.Id != pixDele.Id), It.IsAny<Guid?>()))
+            .ReturnsAsync(new PixReconciliationResult { Status = "ATIVA" });
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid(),
+            pixReconciliation: reconciliacao.Object, inter: InterQueRemove().Object);
+
+        var corpo = Corpo(await controller.JuntarPedidos(antiga.ReservationGroupId));
+
+        Campo<int>(corpo, "juntados").Should().Be(0);
+        Campo<int>(corpo, "naoJuntados").Should().Be(1);
+        (await db.ProductReservations.CountAsync(r => r.ReservationGroupId == grupo2)).Should().Be(1,
+            "o cliente pagou aquele valor — o pedido não pode mudar");
+    }
+
+    [Fact]
+    public async Task Juntar_SemOutroPedidoAberto_Recusa()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, _) = await SeedPedidoNaoPagoComPixAsync(db);
+        var controller = CreateController(db, loggedUserId: Guid.NewGuid());
+
+        var r = await controller.JuntarPedidos(antiga.ReservationGroupId);
+
+        r.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(409);
+    }
+
+    [Fact]
+    public async Task Carrinho_DoCliente_AvisaOsAdminsNoSininho()
+    {
+        // O Maikon só ficava sabendo da pré-venda quando o Pix caía (e-mail do Inter)
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db, "Priscila");
+        var admin = await SeedUserAsync(db, "Maikon");
+        admin.Role = UserRole.Admin; await db.SaveChangesAsync();
+        var produto = await SeedProductAsync(db, stock: 3);
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: Chaves(db));
+
+        Corpo(await controller.CreateCart(Carrinho(produto)));
+
+        var aviso = await db.Notifications.AsNoTracking().SingleAsync(n => n.UserId == admin.Id);
+        aviso.Title.Should().Contain("Priscila");
+        aviso.Link.Should().Be("/admin/reservas");
+        (await db.Notifications.AnyAsync(n => n.UserId == cliente.Id)).Should().BeFalse("o aviso é da loja, não do cliente");
+    }
 }

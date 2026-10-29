@@ -12,6 +12,7 @@
 // =============================================================================
 
 using System.Text.Json;
+using CardGameStore.Common;
 using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.DTOs;
@@ -34,11 +35,15 @@ public interface IPedidoCriacaoService
 
     /// <summary>Admin registra o pedido em nome do cliente (WhatsApp, balcão).</summary>
     Task<PedidoAdminCriadoDto> CriarPeloAdminAsync(AdminCreateReservationRequest req);
+
+    /// <summary>Admin junta no pedido os outros pedidos de pré-venda sem pagar do mesmo cliente.</summary>
+    Task<PedidosJuntadosDto> JuntarPedidosAbertosAsync(Guid groupId);
 }
 
 public class PedidoCriacaoService(
     AppDbContext db, IPedidoCobrancaService cobranca, IPushService push, IAuditService audit,
-    IHubContext<ComandaHub> hub, FuncionalidadesService? funcionalidades = null) : IPedidoCriacaoService
+    IHubContext<ComandaHub> hub, FuncionalidadesService? funcionalidades = null,
+    IEmailService? email = null) : IPedidoCriacaoService
 {
     /// <summary>Por que um item não pôde ser criado (vira a resposta de quem chamou).</summary>
     private sealed record Recusa(int Status, string Mensagem);
@@ -54,6 +59,7 @@ public class PedidoCriacaoService(
 
         if (r.Kind == "pre_venda") await Pedido.AvisarEstoqueMudouAsync(hub); // fila não mexe em estoque
         await Pedido.CarregarProdutoAsync(db, r);
+        await AvisarLojaAsync(userId, criadas, juntou: false);
         return Pedido.ParaDto(r);
     }
 
@@ -91,6 +97,7 @@ public class PedidoCriacaoService(
                 details: $"{{\"itens\":{criadas.Count}}}");
         }
 
+        await AvisarLojaAsync(userId, criadas, juntou);
         return new CarrinhoCriadoDto(groupId, juntou, criadas.Select(r => Pedido.ParaDto(r)));
     }
 
@@ -106,11 +113,25 @@ public class PedidoCriacaoService(
             ? req.Items
             : [new AdminCreateReservationItem { ProductId = req.ProductId, VariantId = req.VariantId, Quantity = req.Quantity }];
 
+        // Mesma regra do carrinho do site (chave pedido-pix-junto): o Maikon lança a pré-venda aos
+        // poucos, conforme o cliente pede no WhatsApp, e cada lançamento virava um pedido com o seu
+        // Pix — o cliente pagava cada um e o "Registrar pagamento" era um por um.
+        var juntar = await LigadaAsync(Funcionalidades.PedidoPixJunto)
+            ? await PedidoAbertoParaJuntarAsync(req.UserId, formaDePagamento: null)
+            : null;
+
         var criadas = await CriarEPersistirAsync(req.UserId,
             itens.Select(i => (i.ProductId, i.VariantId, Math.Max(1, i.Quantity))).ToList(),
             req.Notes, permitirFila: true, formaDePagamento: null);
 
         if (criadas.Any(r => r.Kind == "pre_venda")) await Pedido.AvisarEstoqueMudouAsync(hub);
+
+        // Fila não entra: o pedido aberto só aceita pré-venda (é o que o Pix cobra)
+        var juntou = juntar is not null && criadas.All(r => r.Kind == "pre_venda")
+                     && await JuntarAsync(juntar.Value, req.UserId, formaDePagamento: null, criadas);
+        if (juntou)
+            await audit.LogAsync("JuntouItensNoPedido", "ProductReservation", juntar!.Value.ToString(),
+                details: $"{{\"itens\":{criadas.Count},\"peloAdmin\":true}}");
 
         // Reserva manual movimenta estoque em nome de terceiro — registra quem fez
         foreach (var r in criadas)
@@ -121,7 +142,99 @@ public class PedidoCriacaoService(
 
         await AvisarClienteAsync(req.UserId, criadas);
 
-        return new PedidoAdminCriadoDto(criadas[0].ReservationGroupId, criadas.Select(r => Pedido.ParaDto(r)));
+        return new PedidoAdminCriadoDto(criadas[0].ReservationGroupId, criadas.Select(r => Pedido.ParaDto(r)), juntou);
+    }
+
+    /// <summary>
+    /// Pedidos separados de antes (ou que não puderam somar na hora): o admin junta tudo num só,
+    /// com um Pix do total e um "Registrar pagamento". Cada Pix aberto é derrubado conferindo se não
+    /// foi pago — pago agora ou Inter fora do ar, aquele pedido fica separado e entra na contagem.
+    /// </summary>
+    public async Task<PedidosJuntadosDto> JuntarPedidosAbertosAsync(Guid groupId)
+    {
+        var dono = await db.ProductReservations.AsNoTracking()
+            .Where(r => r.ReservationGroupId == groupId)
+            .Select(r => (Guid?)r.UserId)
+            .FirstOrDefaultAsync()
+            ?? throw new PedidoException("Pedido não encontrado.", 404);
+
+        var abertos = await PedidosAbertosAsync(dono, qualquerForma: true);
+        if (!abertos.Contains(groupId))
+            throw new PedidoException("Esse pedido já foi pago ou tem item que não é pré-venda — não dá pra juntar nele.", 409);
+        var outros = abertos.Where(g => g != groupId).ToList();
+        if (outros.Count == 0)
+            throw new PedidoException("O cliente não tem outro pedido sem pagar pra juntar.", 409);
+
+        var forma = await db.ProductReservations.AsNoTracking()
+            .Where(r => r.ReservationGroupId == groupId)
+            .Select(r => r.PaymentMethod)
+            .FirstOrDefaultAsync();
+
+        var juntados = 0;
+        foreach (var origem in outros)
+        {
+            // As duas travas, sempre na mesma ordem: ninguém gera Pix em nenhum dos dois no meio da troca
+            var primeiro = groupId.CompareTo(origem) < 0 ? groupId : origem;
+            var segundo  = primeiro == groupId ? origem : groupId;
+            using var trava1 = await ReservationPixService.TravarPedidoAsync(primeiro);
+            using var trava2 = await ReservationPixService.TravarPedidoAsync(segundo);
+
+            // Pode ter sido pago ou cancelado desde a lista: confere de novo, já com as travas
+            var aindaAbertos = await PedidosAbertosAsync(dono, qualquerForma: true);
+            if (!aindaAbertos.Contains(groupId)) break;
+            if (!aindaAbertos.Contains(origem)) continue;
+            if (!await cobranca.DerrubarParaJuntarAsync(origem) || !await cobranca.DerrubarParaJuntarAsync(groupId)) continue;
+
+            await db.ProductReservations.Where(r => r.ReservationGroupId == origem)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.ReservationGroupId, groupId)
+                    .SetProperty(r => r.PaymentMethod, forma));
+            juntados++;
+        }
+
+        if (juntados > 0)
+            await audit.LogAsync("JuntouPedidosDoCliente", "ProductReservation", groupId.ToString(),
+                details: $"{{\"pedidos\":{juntados}}}");
+
+        return new PedidosJuntadosDto(groupId, juntados, outros.Count - juntados);
+    }
+
+    /// <summary>
+    /// Sininho, push e e-mail pros admins quando o CLIENTE faz uma pré-venda pelo site: o Maikon só
+    /// ficava sabendo quando o Pix caía (pelo e-mail do Inter). Melhor-esforço: o pedido já vale.
+    /// </summary>
+    private async Task AvisarLojaAsync(Guid userId, List<ProductReservation> criadas, bool juntou)
+    {
+        try
+        {
+            var preVendas = criadas.Where(r => r.Kind == "pre_venda").ToList();
+            if (preVendas.Count == 0) return;
+
+            var cliente = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync();
+            var quem    = string.IsNullOrWhiteSpace(cliente) ? "Um cliente" : cliente;
+            var valor   = Dinheiro.Brl(preVendas.Sum(r => PedidoVendaService.PrecoDoPedido(r) * r.Quantity) / 100m);
+            var oQue    = preVendas.Count == 1 ? $"\"{preVendas[0].Product?.Name}\"" : $"{preVendas.Count} itens";
+            var titulo  = $"Pré-venda nova: {quem}";
+            var corpo   = $"{quem} reservou {oQue} ({valor}) pelo site" +
+                          (juntou ? ", somado ao pedido que ainda não foi pago." : ". Ainda não pagou.");
+
+            var admins = await db.Users.AsNoTracking()
+                .Where(u => u.Role == UserRole.Admin && u.IsActive)
+                .Select(u => new { u.Id, u.Name, u.Email })
+                .ToListAsync();
+            if (admins.Count == 0) return;
+
+            foreach (var a in admins)
+                db.Notifications.Add(new Notification { UserId = a.Id, Title = titulo, Body = corpo, Link = "/admin/reservas" });
+            await db.SaveChangesAsync();
+
+            await push.SendToManyAsync(admins.Select(a => a.Id), titulo, corpo, "/admin/reservas");
+            if (email is not null)
+                await email.SendAnuncioAsync(
+                    admins.Where(a => !string.IsNullOrWhiteSpace(a.Email)).Select(a => (a.Email!, a.Name)),
+                    titulo, corpo, link: "/admin/reservas");
+        }
+        catch { /* aviso é melhor-esforço — o pedido já está valendo */ }
     }
 
     /// <summary>Notificação in-app + push, uma só pro pedido inteiro. Melhor-esforço: o pedido já vale.</summary>
@@ -317,7 +430,15 @@ public class PedidoCriacaoService(
     /// Pedido de pré-venda do cliente que ainda aceita itens: tudo ativo, sem pagar (ExpiresAt
     /// marcado), sem venda registrada e na mesma forma de pagamento. O mais recente.
     /// </summary>
-    private async Task<Guid?> PedidoAbertoParaJuntarAsync(Guid userId, string? formaDePagamento, Guid? exceto = null)
+    private async Task<Guid?> PedidoAbertoParaJuntarAsync(Guid userId, string? formaDePagamento, Guid? exceto = null) =>
+        (await PedidosAbertosAsync(userId, qualquerForma: false, formaDePagamento))
+            .Where(g => g != exceto)
+            .Select(g => (Guid?)g)
+            .FirstOrDefault();
+
+    /// <summary>Os pedidos do cliente que ainda aceitam itens, do mais recente pro mais antigo.
+    /// qualquerForma: o admin juntando à mão não olha a forma de pagamento declarada.</summary>
+    private async Task<List<Guid>> PedidosAbertosAsync(Guid userId, bool qualquerForma, string? formaDePagamento = null)
     {
         // Poucos itens por cliente: agrupa em memória (All dentro de GroupBy não traduz pra SQL)
         var itens = await db.ProductReservations.AsNoTracking()
@@ -325,13 +446,12 @@ public class PedidoCriacaoService(
             .Select(r => new { r.ReservationGroupId, r.ReservedAt, r.Kind, r.Status, r.ExpiresAt, r.VendaAvulsaId, r.PaymentMethod })
             .ToListAsync();
         return itens
-            .Where(r => r.ReservationGroupId != exceto)
             .GroupBy(r => r.ReservationGroupId)
             .Where(g => g.All(r => r.Kind == "pre_venda" && r.Status == "active" && r.ExpiresAt != null
-                                   && r.VendaAvulsaId == null && r.PaymentMethod == formaDePagamento))
+                                   && r.VendaAvulsaId == null && (qualquerForma || r.PaymentMethod == formaDePagamento)))
             .OrderByDescending(g => g.Max(r => r.ReservedAt))
-            .Select(g => (Guid?)g.Key)
-            .FirstOrDefault();
+            .Select(g => g.Key)
+            .ToList();
     }
 
     private async Task<bool> LigadaAsync(string codigo) =>

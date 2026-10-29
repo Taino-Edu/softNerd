@@ -76,10 +76,11 @@ public static class Funcionalidades
 
         new(PedidoPixJunto,
             Nome:       "Pré-venda: itens novos entram no pedido sem pagar (um Pix só)",
-            OQueMuda:   "Quando o cliente fecha o carrinho e já tem um pedido de pré-venda sem pagar (mesma forma de pagamento, ainda sem venda), " +
-                        "os itens novos entram nesse pedido e o Pix sai com o total. Se o pedido já tinha Pix, ele é cancelado no Inter antes — " +
-                        "conferindo se não foi pago; pago ou Inter fora do ar, os itens novos viram um pedido separado, como antes.",
-            SeDesligar: "Cada carrinho fechado vira um pedido com o seu próprio Pix (o cliente paga cada um separado).",
+            OQueMuda:   "Quando o cliente fecha o carrinho (ou o admin lança a pré-venda por ele) e já tem um pedido de pré-venda sem pagar " +
+                        "(mesma forma de pagamento, ainda sem venda), os itens novos entram nesse pedido e o Pix sai com o total. Se o pedido já " +
+                        "tinha Pix, ele é cancelado no Inter antes — conferindo se não foi pago; pago ou Inter fora do ar, os itens novos viram " +
+                        "um pedido separado, como antes.",
+            SeDesligar: "Cada carrinho fechado ou lançamento do admin vira um pedido com o seu próprio Pix (o cliente paga cada um separado).",
             Padrao:     true,
             Desde:      "v1.69.0",
             RevisarEm:  new DateOnly(2027, 4, 15)),
