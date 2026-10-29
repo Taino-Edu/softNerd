@@ -28,7 +28,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 | Cor adicional em "Personalizar Site" | Maikon | Não ficou claro qual elemento |
 | Chaves da API Pokémon TCG e Riot novas | Taino | Gerar na conta do Maikon e rodar `bash deploy/configurar-chave.sh POKEMON_API_KEY` na VPS |
 | Login com Google | Taino | Client ID do Google Cloud |
-| Pietro: pedido sem baixa no estoque e fora do Financeiro | Taino/Maikon | Saber se foi pré-venda paga no Pix ou item lançado à mão no crediário (item digitado na edição do crediário não mexe em estoque nem no Financeiro) |
+| Pietro: "sem baixa no estoque e fora do Financeiro" | Maikon | Produção (29/10): o único pedido dele foi cancelado em 20/10, sem venda — não houve Pix perdido. Item digitado na edição do crediário é só texto (não mexe em estoque nem no Financeiro); pra baixar estoque, lançar pela comanda ou venda no balcão como crediário. Confirmar com ele como o item entrou |
 | Conferir o 1º pedido real pago no Pix | Taino/Maikon | A venda deve aparecer no Financeiro do dia, como Pix (só tem teste automatizado) |
 
 ## 📋 Na fila (ordem sugerida)
