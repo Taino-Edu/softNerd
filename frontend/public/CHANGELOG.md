@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.3] — 2026-10-29
+
+### Pedidos — tela mais rápida (relato de lentidão)
+- Ao abrir a tela de pedidos, o sistema conferia **no Inter, ao vivo, o Pix de cada pedido aberto** — inclusive os já vencidos, que no Inter seguem "ativos" pra sempre. Com vários pedidos, a tela ficava esperando o banco responder um por um
+- Agora o Pix **vencido** mostra o status gravado (o banco do cliente já não aceita aquele QR, e o robô continua conferindo os das últimas 24 h a cada 5 minutos). O que ainda está no prazo é conferido no máximo uma vez a cada 30 segundos
+- A conexão com o Inter passa a ser **reaproveitada**: antes cada consulta lia o certificado do disco e abria uma conexão segura nova (o aperto de mão com certificado é a parte mais lenta). Vale pra tudo que fala com o Inter: Pix de pedido, comanda, crediário e campeonato, saldo e extrato
+
 ## [v1.79.2] — 2026-10-29
 
 ### Pré-venda — um pedido só por cliente (relato do Maikon, caso da Priscila)

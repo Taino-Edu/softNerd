@@ -12,6 +12,7 @@ using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace CardGameStore.Services.Pedidos;
 
@@ -38,7 +39,8 @@ public interface IPedidoCobrancaService
 
 public class PedidoCobrancaService(
     AppDbContext db, IReservationPixService reservationPix, IPixReconciliationService reconciliacao,
-    InterSyncService inter, IAuditService audit, ILogger<PedidoCobrancaService> logger) : IPedidoCobrancaService
+    InterSyncService inter, IAuditService audit, ILogger<PedidoCobrancaService> logger,
+    IMemoryCache? cache = null) : IPedidoCobrancaService
 {
     public async Task<PixPedidoGeradoDto> GerarAsync(Guid groupId, Ator ator)
     {
@@ -108,7 +110,7 @@ public class PedidoCobrancaService(
         if (pix is null) return new PixPedidoStatusDto(HasPix: false);
 
         // Falha na consulta ao Inter não derruba a consulta — fica o último status conhecido
-        if (pix.Status == "ATIVA") await reconciliacao.ReconciliarAsync(pix);
+        if (pix.Status == "ATIVA" && DeveConferirNoInter(pix)) await reconciliacao.ReconciliarAsync(pix);
 
         return new PixPedidoStatusDto(true, pix.Status, pix.PagoEm, pix.PixCopiaCola, pix.ImagemQrCode, pix.ExpiraEm, pix.ValorEmReais);
     }
@@ -128,6 +130,22 @@ public class PedidoCobrancaService(
             pagaAgora: "O Pix deste pedido acabou de ser pago — ele está pago agora e não foi cancelado. Recarregue a tela.",
             interRecusou: "Não deu pra cancelar o Pix no banco agora, então o pedido não foi cancelado (o cliente ainda conseguiria pagar). Tente de novo em instantes.",
             motivo: "pedido cancelado");
+    }
+
+    /// <summary>
+    /// A tela de pedidos pede o status de cada pedido ao abrir, e cada um ia ao Inter: com muitos Pix
+    /// abertos a tela esperava segundos. Vencido não é mais pagável (o banco recusa o QR) — o robô da
+    /// reconciliação confere os das últimas 24 h a cada 5 min. No prazo, no máximo uma consulta a cada
+    /// 30 s por cobrança; nas outras vale o status gravado.
+    /// </summary>
+    private bool DeveConferirNoInter(PixCobranca pix)
+    {
+        if (pix.ExpiraEm is { } expira && expira <= DateTime.UtcNow) return false;
+        if (cache is null) return true;
+        var chave = $"pix-status-inter:{pix.TxId}";
+        if (cache.TryGetValue(chave, out _)) return false;
+        cache.Set(chave, true, TimeSpan.FromSeconds(30));
+        return true;
     }
 
     public async Task<bool> DerrubarParaJuntarAsync(Guid groupId)

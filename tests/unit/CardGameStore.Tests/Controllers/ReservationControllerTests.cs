@@ -1247,4 +1247,26 @@ public class ReservationControllerTests
         aviso.Link.Should().Be("/admin/reservas");
         (await db.Notifications.AnyAsync(n => n.UserId == cliente.Id)).Should().BeFalse("o aviso é da loja, não do cliente");
     }
+
+    // ── Tela de pedidos lenta (29/10): o status de cada pedido ia ao Inter, até de Pix já vencido ──
+
+    [Theory]
+    [InlineData(-30, false)] // vencido: o banco não aceita mais o QR, vale o status gravado
+    [InlineData(30, true)]   // no prazo: confere no Inter
+    public async Task StatusDoPix_SoVaiAoInterSeAindaEstaNoPrazo(int minutosParaVencer, bool consultaInter)
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var pix = await db.PixCobrancas.SingleAsync();
+        pix.ExpiraEm = DateTime.UtcNow.AddMinutes(minutosParaVencer);
+        await db.SaveChangesAsync();
+        var reconciliacao = PixAindaAberto();
+        var controller = CreateController(db, loggedUserId: cliente.Id, pixReconciliation: reconciliacao.Object);
+
+        var r = await controller.GetPixReserva(reserva.ReservationGroupId);
+
+        r.Should().BeOfType<OkObjectResult>();
+        reconciliacao.Verify(x => x.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()),
+            consultaInter ? Times.Once() : Times.Never());
+    }
 }
