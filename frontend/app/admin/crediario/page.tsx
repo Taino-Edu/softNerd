@@ -360,8 +360,8 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
   const [valor, setValor]     = useState(crediario.valorEmReais.toFixed(2).replace('.', ','))
   const [obs, setObs]         = useState(crediario.observacao ?? '')
   // Data no fuso de Brasília: o vencimento é guardado no fim do dia daqui, que em UTC já é o dia seguinte
-  const [venc, setVenc]       = useState(
-    new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(crediario.dataVencimento)))
+  const vencOriginal = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(crediario.dataVencimento))
+  const [venc, setVenc]       = useState(vencOriginal)
   const [loading, setLoading] = useState(false)
 
   // Editor de itens
@@ -370,6 +370,15 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
   const [novoNome, setNovoNome]     = useState('')
   const [novoQtd, setNovoQtd]       = useState('1')
   const [novoPreco, setNovoPreco]   = useState('')
+
+  // Item novo soma no valor da conta e item tirado desconta (o Maikon adicionava o item e o total
+  // ficava o mesmo). O campo continua editável pra acertar na mão.
+  function somarNoValor(deltaReais: number) {
+    setValor(v => {
+      const atual = parseFloat(v.replace(',', '.')) || 0
+      return Math.max(0, Math.round((atual + deltaReais) * 100) / 100).toFixed(2).replace('.', ',')
+    })
+  }
 
   function addItem() {
     const qtd   = parseInt(novoQtd) || 1
@@ -384,6 +393,7 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
       unitPriceInReais: preco,
       subtotalInReais:  preco * qtd,
     }])
+    somarNoValor(preco * qtd)
     setItensEditado(true)
     setNovoNome('')
     setNovoQtd('1')
@@ -391,6 +401,7 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
   }
 
   function removeItem(idx: number) {
+    somarNoValor(-(itens[idx]?.subtotalInReais ?? 0))
     setItens(prev => prev.filter((_, i) => i !== idx))
     setItensEditado(true)
   }
@@ -405,7 +416,8 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
       await crediarioApi.editar(crediario.id, {
         valorEmCentavos: Math.round(valorNum * 100),
         observacao:      obs || undefined,
-        dataVencimento:  venc || undefined,
+        // Só manda o vencimento se mudou: conta vencida recusava qualquer edição ("não pode ser no passado")
+        dataVencimento:  venc && venc !== vencOriginal ? venc : undefined,
         itens:           itensEditado ? itens : undefined,
       })
       toast.success('Crediário atualizado!')
