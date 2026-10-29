@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-250 endpoints em 35 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+251 endpoints em 35 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -33,7 +33,7 @@
 - [PublicProfile](#publicprofile) (1)
 - [Push](#push) (3)
 - [Relatorios](#relatorios) (2)
-- [Reservation](#reservation) (16)
+- [Reservation](#reservation) (17)
 - [SiteConfig](#siteconfig) (2)
 - [Tcg](#tcg) (8)
 - [Timer](#timer) (4)
@@ -197,18 +197,18 @@
 |---|---|---|---|---|---|
 | GET | `/api/crediarios` | AdminOnly | `GetAll` (168) | `crediarioApi.list` | `app/admin/crediario/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | POST | `/api/crediarios` | AdminOnly | `CriarManual` (61) | `crediarioApi.criarManual` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (509) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
-| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (517) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (510) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (518) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
 | GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (211) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
 | GET | `/api/crediarios/por-cliente` | AdminOnly | `GetPorCliente` (125) | `crediarioApi.porCliente` | `app/admin/crediario/page.tsx` |
 | GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (193) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
-| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (602) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
+| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (603) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
 | PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (234) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (571) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
-| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (549) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
-| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (322) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (466) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (491) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (572) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (550) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
+| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (323) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (467) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (492) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
 
 ## Deck
 
@@ -406,11 +406,12 @@
 | POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (54) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
 | POST | `/api/reservations/cart` | logado | `CreateCart` (48) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
 | POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (95) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/juntar` | AdminOnly | `JuntarPedidos` (107) | `reservationApi.juntar` | `app/admin/reservas/page.tsx` |
 | POST | `/api/reservations/group/{groupId:guid}/pagamento` | AdminOnly | `RegistrarPagamentoGrupo` (101) | `reservationApi.registrarPagamento` | `app/admin/reservas/page.tsx` |
-| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (117) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (126) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (107) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (112) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (123) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (132) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (113) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (118) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
 | GET | `/api/reservations/mine` | logado | `GetMine` (37) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
 | DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (60) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
 | POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (89) | — | — |

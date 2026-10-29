@@ -130,7 +130,11 @@ public sealed record PedidosPaginaDto(IEnumerable<PedidoItemDto> Items, int Tota
 
 public sealed record CarrinhoCriadoDto(Guid GroupId, bool Juntou, IEnumerable<PedidoItemDto> Items);
 
-public sealed record PedidoAdminCriadoDto(Guid GroupId, IEnumerable<PedidoItemDto> Items);
+/// <summary>Juntou: os itens entraram no pedido sem pagar que o cliente já tinha (chave pedido-pix-junto).</summary>
+public sealed record PedidoAdminCriadoDto(Guid GroupId, IEnumerable<PedidoItemDto> Items, bool Juntou = false);
+
+/// <summary>NaoJuntados: pedidos que ficaram separados (Pix pago agora ou Inter fora do ar).</summary>
+public sealed record PedidosJuntadosDto(Guid GroupId, int Juntados, int NaoJuntados);
 
 /// <summary>VendaEstornada/Itens só aparecem quando o cancelamento estornou a venda do pedido pago.</summary>
 public sealed record PedidoCanceladoDto(

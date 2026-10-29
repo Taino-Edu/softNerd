@@ -14,7 +14,7 @@ import {
   LayoutList, RefreshCw, Loader2,
   TimerIcon, Plus, Users, ChevronDown, ChevronUp, X, Megaphone,
   QrCode, Layers, UserPlus, Wallet, ShoppingCart, Trophy, Pencil, Tag, Trash2,
-  AlertTriangle, Banknote,
+  AlertTriangle, Banknote, Search,
 } from 'lucide-react'
 import { brl } from '@/lib/format'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
@@ -34,6 +34,8 @@ type ReservationCart = {
 
 type Lanes = { aPagar: ReservationCart[]; pago: ReservationCart[] }
 
+const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
 type CustomerGroup = { userId: string; name: string; carts: ReservationCart[]; total: number }
 
 /**
@@ -41,7 +43,7 @@ type CustomerGroup = { userId: string; name: string; carts: ReservationCart[]; t
  * de 1 item só"), então o mesmo cliente que compra em dias diferentes gera vários
  * carrinhos soltos, embaralhados com os de todo mundo. Aqui eles ficam debaixo do nome
  * dele. É só arrumação de tela: o carrinho continua sendo a unidade de Pix, entrega e
- * homologação — nada é fundido.
+ * homologação. Na raia "A pagar" o admin pode juntar os pedidos num só (botão da gaveta).
  */
 function groupByCustomer(items: ReservationCart[]): CustomerGroup[] {
   const map = new Map<string, CustomerGroup>()
@@ -60,8 +62,10 @@ function groupByCustomer(items: ReservationCart[]): CustomerGroup[] {
 
 /** Gaveta de um cliente com mais de um pedido na mesma raia. Abre por padrão: agrupar
  *  é pra juntar o que é do mesmo dono, não pra esconder pedido do Maikon. */
-function CustomerGroupCard({ group, renderCard }: {
+function CustomerGroupCard({ group, renderCard, onJuntar }: {
   group: CustomerGroup; renderCard: (cart: ReservationCart) => React.ReactNode
+  /** Só na raia "A pagar": junta os pedidos sem pagar do cliente num só (um Pix, um pagamento). */
+  onJuntar?: (group: CustomerGroup) => void
 }) {
   const [open, setOpen] = useState(true)
   return (
@@ -76,14 +80,23 @@ function CustomerGroupCard({ group, renderCard }: {
         {open ? <ChevronUp className="w-3.5 h-3.5 text-gray-500 shrink-0" />
               : <ChevronDown className="w-3.5 h-3.5 text-gray-500 shrink-0" />}
       </button>
+      {open && onJuntar && (
+        <div className="px-2 pb-2">
+          <button onClick={() => onJuntar(group)}
+            className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-brand-300 border border-brand-500/40 rounded-lg py-1.5 hover:bg-brand-500/15 transition-colors">
+            <Layers className="w-3.5 h-3.5" /> Juntar num pedido só · um Pix de {brl(group.total)}
+          </button>
+        </div>
+      )}
       {open && <div className="flex flex-col gap-2 p-2 pt-0">{group.carts.map(renderCard)}</div>}
     </div>
   )
 }
 
-function Lane({ title, tint, items, renderCard, emptyText }: {
+function Lane({ title, tint, items, renderCard, emptyText, onJuntar }: {
   title: string; tint: string; items: ReservationCart[]
   renderCard: (cart: ReservationCart) => React.ReactNode; emptyText: string
+  onJuntar?: (group: CustomerGroup) => void
 }) {
   const groups = groupByCustomer(items)
   return (
@@ -98,7 +111,7 @@ function Lane({ title, tint, items, renderCard, emptyText }: {
           {groups.map(group => group.carts.length === 1
             // Cliente com um pedido só continua exatamente como era — gaveta de 1 seria ruído.
             ? <div key={group.userId}>{renderCard(group.carts[0])}</div>
-            : <CustomerGroupCard key={group.userId} group={group} renderCard={renderCard} />)}
+            : <CustomerGroupCard key={group.userId} group={group} renderCard={renderCard} onJuntar={onJuntar} />)}
         </div>
       )}
     </div>
@@ -106,10 +119,11 @@ function Lane({ title, tint, items, renderCard, emptyText }: {
 }
 
 // ── Coluna operacional do kanban (Vendas ou Pré-vendas): A pagar → Pago ──
-function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard }: {
+function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard, onJuntar }: {
   title: string; subtitle: string; icon: React.ReactNode; tint: string
   lanesData: Lanes
   renderCard: (cart: ReservationCart) => React.ReactNode
+  onJuntar: (group: CustomerGroup) => void
 }) {
   return (
     <div className={clsx('card !p-4 space-y-5 border', tint)}>
@@ -122,7 +136,7 @@ function KanbanColumn({ title, subtitle, icon, tint, lanesData, renderCard }: {
       </div>
 
       <Lane title="A pagar" tint="text-amber-400" items={lanesData.aPagar} renderCard={renderCard}
-        emptyText="Nada aguardando pagamento." />
+        emptyText="Nada aguardando pagamento." onJuntar={onJuntar} />
       <Lane title="Pago · aguardando retirada" tint="text-blue-400" items={lanesData.pago} renderCard={renderCard}
         emptyText="Nada pago aguardando retirada." />
     </div>
@@ -231,7 +245,9 @@ function NovaPreVendaModal({ onClose, onCreated }: { onClose: () => void; onCrea
       const quanto = linhas.length === 1 ? `"${linhas[0].product.name}"` : `${linhas.length} itens`
       toast.success(soFila
         ? `${user.name} entrou na fila de ${quanto}`
-        : `Pré-venda criada pra ${user.name} (${quanto}) — estoque baixado`)
+        : data.juntou
+          ? `${quanto} somado ao pedido sem pagar de ${user.name} — se já tinha mandado o Pix, mande o novo, com o total`
+          : `Pré-venda criada pra ${user.name} (${quanto}) — estoque baixado`, { duration: data.juntou ? 7000 : 4000 })
       onCreated()
       onClose()
     } catch (e: any) {
@@ -504,6 +520,8 @@ export default function ReservasPage() {
 
   // ── Fila (item que ainda não chegou) — seção dobrável dentro da mesma tela ──
   const [showFila,    setShowFila]    = useState(false)
+  // Busca pelo nome do cliente, igual à do crediário (pedido do Maikon, 29/10)
+  const [busca,       setBusca]       = useState('')
   const [wlProducts,  setWlProducts]  = useState<Product[]>([])
   const [wlLoading,   setWlLoading]   = useState(false)
   const [wlExpanded,  setWlExpanded]  = useState<string | null>(null)
@@ -600,6 +618,7 @@ export default function ReservasPage() {
     acc[item.reservationGroupId] = cartItems
     return acc
   }, {})
+  const termoBusca = semAcento(busca.trim())
   const carts: ReservationCart[] = Object.entries(grouped).map(([groupId, cartItems]) => ({
     groupId,
     items: cartItems,
@@ -608,6 +627,8 @@ export default function ReservasPage() {
     expiresAt: cartItems.find(item => item.expiresAt)?.expiresAt ?? null,
     totalEmReais: cartItems.reduce((sum, item) => sum + (item.subtotalEmReais ?? 0), 0),
   }))
+    .filter(cart => !termoBusca || semAcento(cart.representative.userName ?? '').includes(termoBusca)
+                                || (cart.representative.userWhatsApp ?? '').replace(/\D/g, '').includes(termoBusca.replace(/\D/g, '') || '#'))
 
   const vendas    = carts.filter(cart => !cart.isPreVenda)
   const preVendas = carts.filter(cart => cart.isPreVenda)
@@ -745,6 +766,21 @@ export default function ReservasPage() {
       toast.success(r.vendaRegistrada ? 'Pedido cancelado e venda estornada — devolva o valor pelo Inter' : 'Pré-venda cancelada — estoque devolvido')
       load()
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Erro ao cancelar') }
+  }
+
+  /** Pedidos do mesmo cliente feitos em vezes diferentes viram um: um Pix com o total e um "Registrar pagamento". */
+  async function handleJuntar(group: CustomerGroup) {
+    if (!confirm(`Juntar os pedidos sem pagar de ${group.name} num pedido só? Os Pix que já foram mandados pra ele são cancelados — mande o Pix novo, com o total.`)) return
+    try {
+      const { data } = await reservationApi.juntar(group.carts[0].groupId)
+      if (data.juntados === 0)
+        toast.error('Nada foi juntado: o Pix do outro pedido acabou de ser pago ou não pôde ser cancelado agora. Tente de novo em instantes.', { duration: 7000 })
+      else if (data.naoJuntados > 0)
+        toast.success(`${data.juntados + 1} pedidos juntados; ${data.naoJuntados} ficou separado (o Pix dele acabou de ser pago ou não pôde ser cancelado agora)`, { duration: 7000 })
+      else
+        toast.success(`Pedidos de ${group.name} juntados num só`)
+      load()
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Erro ao juntar os pedidos') }
   }
 
   function refreshAll() {
@@ -947,6 +983,16 @@ export default function ReservasPage() {
         </div>
       </div>
 
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <input
+          className="input pl-9 w-full"
+          placeholder="Buscar por cliente..."
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+        />
+      </div>
+
       {/* ── Kanban de pedidos: Reservas × Pré-vendas ── */}
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
@@ -955,12 +1001,12 @@ export default function ReservasPage() {
           <KanbanColumn
             title="Reservas" subtitle="produto sem tag de pré-venda"
             icon={<ShoppingCart className="w-4 h-4 text-blue-400" />} tint="border-blue-500/20"
-            lanesData={vendasLanes} renderCard={renderCard}
+            lanesData={vendasLanes} renderCard={renderCard} onJuntar={handleJuntar}
           />
           <KanbanColumn
             title="Pré-vendas" subtitle="produto marcado como pré-venda"
             icon={<Trophy className="w-4 h-4 text-amber-400" />} tint="border-amber-500/20"
-            lanesData={preVendasLanes} renderCard={renderCard}
+            lanesData={preVendasLanes} renderCard={renderCard} onJuntar={handleJuntar}
           />
         </div>
       )}

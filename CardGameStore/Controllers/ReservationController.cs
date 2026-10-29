@@ -101,6 +101,12 @@ public class ReservationController(
     public Task<IActionResult> RegistrarPagamentoGrupo(Guid groupId, [FromBody] HomologarRequest req) =>
         this.Responder(() => andamento.RegistrarPagamentoAsync(groupId, req, Ator()));
 
+    // POST /api/reservations/group/{groupId}/juntar — os outros pedidos sem pagar do cliente entram neste
+    [HttpPost("group/{groupId:guid}/juntar")]
+    [Authorize(Policy = "AdminOnly")]
+    public Task<IActionResult> JuntarPedidos(Guid groupId) =>
+        this.Responder(() => criacao.JuntarPedidosAbertosAsync(groupId));
+
     // POST /api/reservations/group/{groupId}/pix — Pix do total das pré-vendas do pedido
     [HttpPost("group/{groupId:guid}/pix")]
     [Authorize]

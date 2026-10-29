@@ -202,6 +202,13 @@ public class PedidoAndamentoService(
     {
         var res = await ItensComDetalhes().FirstOrDefaultAsync(r => r.Id == id)
             ?? throw new PedidoException(null, 404);
+
+        // A trava do pedido: o "Juntar pedidos" não move o item no meio da homologação
+        using var trava = await ReservationPixService.TravarPedidoAsync(res.ReservationGroupId);
+        var grupoLido = res.ReservationGroupId;
+        await db.Entry(res).ReloadAsync();
+        if (res.ReservationGroupId != grupoLido)
+            throw new PedidoException("O pedido mudou enquanto você preenchia — abra de novo pra ver como ficou.", 409);
         if (res.Status != "active" || res.Kind != "pre_venda")
             throw new PedidoException("Só pré-vendas ativas podem ser homologadas.");
 
@@ -211,8 +218,12 @@ public class PedidoAndamentoService(
     // O cliente reserva vários itens juntos (mesmo ReservationGroupId) e retira tudo junto no balcão;
     // homologar por linha deixava o resto "active" pra sempre. Reserva avulsa tem ReservationGroupId =
     // o próprio Id, então este cobre os dois casos.
-    public async Task<HomologacaoDto> HomologarPedidoAsync(Guid groupId, HomologarRequest req, Ator ator) =>
-        await HomologarItensAsync(await AtivosDoPedidoAsync(groupId), req, ator);
+    public async Task<HomologacaoDto> HomologarPedidoAsync(Guid groupId, HomologarRequest req, Ator ator)
+    {
+        // Mesma trava do Pix e do "Juntar pedidos": os itens lidos aqui são os que continuam no pedido
+        using var trava = await ReservationPixService.TravarPedidoAsync(groupId);
+        return await HomologarItensAsync(await AtivosDoPedidoAsync(groupId), req, ator);
+    }
 
     /// <summary>
     /// Núcleo da homologação: marca os itens como retirados e lança UMA venda no PDV com o que ainda
@@ -277,6 +288,9 @@ public class PedidoAndamentoService(
         if (!await LigadaAsync(Funcionalidades.PagamentoSemRetirada))
             throw new PedidoException("Use o Homologar pra lançar o pagamento.", 404);
 
+        // Mesma trava do Pix e do "Juntar pedidos": sem ela, o pedido podia ser pago enquanto era juntado
+        // a outro e ficar com itens pagos e não pagos no mesmo pedido (Codex no PR #126)
+        using var trava = await ReservationPixService.TravarPedidoAsync(groupId);
         var itens = await AtivosDoPedidoAsync(groupId);
         if (itens.Any(r => r.VendaAvulsaId is not null && !PedidoVendaService.TemVenda(r)))
             throw new PedidoException(Pedido.VendaSendoRegistrada, 409);

@@ -281,22 +281,23 @@ public class CrediariosController : ControllerBase
             var semCompra = request.Itens
                 .Where(i => i.LancamentoId is null || !idsAtivos.Contains(i.LancamentoId.Value))
                 .ToList();
-            if (semCompra.Count > 0)
+            var ajuste = ativos.FirstOrDefault(l => l.Origem == CrediarioLancamentoOrigem.Ajuste);
+            if (ajuste is null && semCompra.Count > 0)
             {
-                var ajuste = ativos.FirstOrDefault(l => l.Origem == CrediarioLancamentoOrigem.Ajuste);
-                if (ajuste is null)
+                ajuste = new CrediarioLancamento
                 {
-                    ajuste = new CrediarioLancamento
-                    {
-                        CrediarioId     = crediario.Id,
-                        Origem          = CrediarioLancamentoOrigem.Ajuste,
-                        ValorEmCentavos = 0,
-                        Descricao       = "Itens adicionados na edição da conta",
-                    };
-                    _db.CrediarioLancamentos.Add(ajuste);
-                }
-                ajuste.ItensJson = CrediarioLancamentos.SerializarItens(
-                    request.Itens.Where(i => i.LancamentoId == ajuste.Id).Concat(semCompra));
+                    CrediarioId = crediario.Id,
+                    Origem      = CrediarioLancamentoOrigem.Ajuste,
+                    Descricao   = "Itens adicionados na edição da conta",
+                };
+                _db.CrediarioLancamentos.Add(ajuste);
+            }
+            if (ajuste is not null)
+            {
+                var doAjuste = request.Itens.Where(i => i.LancamentoId == ajuste.Id).Concat(semCompra).ToList();
+                ajuste.ItensJson = CrediarioLancamentos.SerializarItens(doAjuste);
+                // O bloco vale o que tem dentro: com valor 0 a tela via o item, mas a conta não somava
+                ajuste.ValorEmCentavos = (int)Math.Round(doAjuste.Sum(i => i.SubtotalInReais) * 100);
             }
         }
 
