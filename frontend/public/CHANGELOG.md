@@ -8,6 +8,10 @@
 - Antes de gerar o novo, o sistema **confere e cancela o antigo no banco**, para nunca ficarem dois códigos pagáveis no mesmo pedido. Se o antigo acabou de ser pago, o pedido aparece como pago e não sai outro Pix. Se o banco não responder, também não sai outro (tente de novo em instantes)
 - Comanda, crediário e campeonato já faziam essa troca; só a pré-venda não fazia
 
+### Alertas do sistema — Pix vencido sem pagamento
+- O Vigia não acusou esse caso porque nenhuma tela deu erro: o site entregou o código, e a recusa aconteceu no app do banco do cliente
+- Novo alerta (aviso): **"Pix vencido sem pagamento"** quando o Pix de um pedido aberto venceu e o pedido não tem outro código válido. Mostra o valor e a hora em que venceu. Some sozinho quando o cliente paga, o Pix é trocado ou o pedido é cancelado; depois de 3 dias, o pedido aparece como "pedido parado"
+
 ## [v1.79.0] — 2026-10-27
 
 ### Por dentro — campeonatos em camadas

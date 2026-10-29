@@ -51,7 +51,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
-| v1.79.1 | 29/10 | **Pix da pré-venda vencido**: não reaproveita mais o QR depois da 1h (o banco recusava "QR Code não é válido"); gera um novo com o total |
+| v1.79.1 | 29/10 | **Pix da pré-venda vencido**: não reaproveita mais o QR depois da 1h (o banco recusava "QR Code não é válido"); gera um novo com o total (derrubando o antigo antes); Vigia ganha o alerta "Pix vencido sem pagamento" |
 | v1.79.0 | 27/10 | **Campeonatos em camadas**: inscrição e Pix da entrada no `CampeonatoInscricaoService`; `RegraException` + `RespostaDeRegra` comuns; 9 testes novos |
 | v1.78.0 | 27/10 | **Pedidos em camadas**: `ReservationController` (1.568 → 159 linhas) só HTTP; regras em `Services/Pedidos/` (criação, andamento, cobrança, consulta) com interface e `PedidoException` |
 | v1.77.0 | 27/10 | **Limpeza das chaves do site/loja/cliente**: 10 chaves viram o jeito único; saem as telas antigas de entrada, sacola, carrossel e cartão de produto antigos |
