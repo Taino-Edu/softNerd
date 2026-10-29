@@ -152,6 +152,50 @@ public class VerificacaoValorPixDiferente(AppDbContext db) : IVerificacaoVigia
     }
 }
 
+/// <summary>
+/// Pix do pedido venceu (1h) sem pagamento e o pedido segue aberto. O código antigo não paga mais
+/// ("O QR Code não é válido" no banco) — foi o que aconteceu com o pedido de R$ 800 de 27/10, e nada
+/// acusou porque nenhuma tela deu erro. Some sozinho quando o cliente paga, o Pix é trocado
+/// (abrir o pagamento gera outro) ou o pedido é cancelado. Depois de 3 dias vira "pedido parado".
+/// </summary>
+public class VerificacaoPixPedidoVencido(AppDbContext db) : IVerificacaoVigia
+{
+    public string Codigo => "pix-pedido-vencido";
+    public string Nome => "Pix do pedido venceu sem pagamento";
+
+    public async Task<IReadOnlyList<Achado>> VerificarAsync(CancellationToken ct)
+    {
+        var agora = DateTime.UtcNow;
+        var desde = agora - VerificacaoPedidoParado.Prazo;
+        var vencidos = await db.PixCobrancas.AsNoTracking()
+            .Where(p => p.Origem == PixCobrancaOrigem.Reserva && p.Status == "ATIVA" && p.PagoEm == null
+                        && p.ReservationGroupId != null && p.ExpiraEm != null && p.ExpiraEm < agora && p.ExpiraEm >= desde)
+            .ToListAsync(ct);
+        var grupos = vencidos.Select(p => p.ReservationGroupId!.Value).Distinct().ToList();
+        // Pedido ainda aberto: pré-venda ativa e não paga
+        var abertos = await db.ProductReservations.AsNoTracking().Include(r => r.User)
+            .Where(r => grupos.Contains(r.ReservationGroupId) && r.Kind == "pre_venda" && r.Status == "active" && r.ExpiresAt != null)
+            .ToListAsync(ct);
+        // Pedido que já tem um Pix novo no prazo não precisa de nada
+        var comPixVivo = await db.PixCobrancas.AsNoTracking()
+            .Where(p => p.ReservationGroupId != null && grupos.Contains(p.ReservationGroupId.Value)
+                        && p.Status == "ATIVA" && (p.ExpiraEm == null || p.ExpiraEm >= agora))
+            .Select(p => p.ReservationGroupId!.Value).Distinct().ToListAsync(ct);
+
+        return vencidos
+            .Where(p => !comPixVivo.Contains(p.ReservationGroupId!.Value))
+            .Select(p => (Pix: p, Itens: abertos.Where(r => r.ReservationGroupId == p.ReservationGroupId).ToList()))
+            .Where(x => x.Itens.Count > 0)
+            .Select(x => new Achado(x.Pix.TxId, VigiaGravidade.Aviso,
+                $"Pix vencido sem pagamento: {x.Itens[0].User?.Name ?? "cliente"}",
+                $"O Pix de {VigiaPedidos.Reais(x.Pix.ValorEmCentavos)} venceu em {Brasilia.Formatar(x.Pix.ExpiraEm!.Value)} sem pagamento " +
+                "e o pedido segue aberto. O código antigo não funciona mais: se o cliente ainda vai pagar, " +
+                "abra o Pix do pedido em Pedidos (sai um código novo) e mande pra ele.",
+                VigiaPedidos.LinkPedidos))
+            .ToList();
+    }
+}
+
 /// <summary>Produto ou variante com estoque negativo: alguma baixa passou do que havia.</summary>
 public class VerificacaoEstoqueNegativo(AppDbContext db) : IVerificacaoVigia
 {

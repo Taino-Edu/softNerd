@@ -252,6 +252,51 @@ public class VigiaServiceTests
         (await a.Db.Notifications.CountAsync()).Should().Be(0);
     }
 
+    /// <summary>
+    /// Pedido de R$ 800 de 27/10: o Pix venceu em 1h, o cliente tentou pagar no dia seguinte e o banco
+    /// recusou o QR — e nada acusou, porque nenhuma tela deu erro.
+    /// </summary>
+    [Fact]
+    public async Task PixPedidoVencido_AcusaESomeQuandoSaiUmNovo()
+    {
+        var a = Criar();
+        var p = Produto(a);
+        var grupo = Guid.NewGuid();
+        a.Db.ProductReservations.Add(new ProductReservation
+        {
+            ReservationGroupId = grupo, UserId = a.Cliente.Id, ProductId = p.Id, Quantity = 4, Kind = "pre_venda",
+            Status = "active", ExpiresAt = DateTime.UtcNow.AddDays(5), ReservedAt = DateTime.UtcNow.AddHours(-20),
+            UnitPriceInCents = 20000,
+        });
+        var vencido = new PixCobranca
+        {
+            Origem = PixCobrancaOrigem.Reserva, ReservationGroupId = grupo, TxId = "txvencido", ValorEmCentavos = 80000,
+            Status = "ATIVA", CriadoPorAdminId = a.Admin.Id,
+            CriadoEm = DateTime.UtcNow.AddHours(-19), ExpiraEm = DateTime.UtcNow.AddHours(-18),
+        };
+        a.Db.PixCobrancas.Add(vencido);
+        a.Db.SaveChanges();
+
+        await a.Vigia(new VerificacaoPixPedidoVencido(a.Db)).RodarAsync();
+
+        var alerta = await a.Db.AlertasSistema.SingleAsync();
+        (alerta.Codigo, alerta.Gravidade).Should().Be(("pix-pedido-vencido", VigiaGravidade.Aviso));
+        alerta.Detalhe.Should().Contain("800,00");
+
+        // Abrir o pagamento troca o código: o antigo é removido e sai um novo no prazo
+        vencido.Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR";
+        a.Db.PixCobrancas.Add(new PixCobranca
+        {
+            Origem = PixCobrancaOrigem.Reserva, ReservationGroupId = grupo, TxId = "txnovo", ValorEmCentavos = 80000,
+            Status = "ATIVA", CriadoPorAdminId = a.Admin.Id, ExpiraEm = DateTime.UtcNow.AddMinutes(55),
+        });
+        a.Db.SaveChanges();
+
+        await a.Vigia(new VerificacaoPixPedidoVencido(a.Db)).RodarAsync();
+
+        (await a.Db.AlertasSistema.SingleAsync()).ResolvidoEm.Should().NotBeNull();
+    }
+
     [Fact]
     public async Task Listar_FiltraPorStatusEBusca()
     {

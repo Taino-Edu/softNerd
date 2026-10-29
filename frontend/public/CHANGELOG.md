@@ -1,5 +1,17 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.1] — 2026-10-29
+
+### Pix da pré-venda — "O QR Code não é válido" (relato do Maikon)
+- O Pix da pré-venda vale **1 hora** no banco. Passado o prazo, o sistema continuava devolvendo o **mesmo QR vencido** (no Inter ele segue "ativo"), e o banco do cliente recusava: "O QR Code não é válido". Acontecia com quem pagava depois, por exemplo com o código mandado no WhatsApp e pago no dia seguinte
+- Agora, ao abrir o pagamento ou pedir o Pix de novo, um código vencido (ou que vence em menos de 5 minutos) é trocado por um **novo, com o total do pedido**. O que ainda está no prazo continua sendo reaproveitado
+- Antes de gerar o novo, o sistema **confere e cancela o antigo no banco**, para nunca ficarem dois códigos pagáveis no mesmo pedido. Se o antigo acabou de ser pago, o pedido aparece como pago e não sai outro Pix. Se o banco não responder, também não sai outro (tente de novo em instantes)
+- Comanda, crediário e campeonato já faziam essa troca; só a pré-venda não fazia
+
+### Alertas do sistema — Pix vencido sem pagamento
+- O Vigia não acusou esse caso porque nenhuma tela deu erro: o site entregou o código, e a recusa aconteceu no app do banco do cliente
+- Novo alerta (aviso): **"Pix vencido sem pagamento"** quando o Pix de um pedido aberto venceu e o pedido não tem outro código válido. Mostra o valor e a hora em que venceu. Some sozinho quando o cliente paga, o Pix é trocado ou o pedido é cancelado; depois de 3 dias, o pedido aparece como "pedido parado"
+
 ## [v1.79.0] — 2026-10-27
 
 ### Por dentro — campeonatos em camadas
