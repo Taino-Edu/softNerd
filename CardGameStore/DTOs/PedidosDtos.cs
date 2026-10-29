@@ -124,7 +124,10 @@ public sealed record PedidoItemDto(
     bool VendaRegistrada,
     DateTime? PreVendaReleaseDate,
     decimal? PrecoUnitarioEmReais,
-    decimal? SubtotalEmReais);
+    decimal? SubtotalEmReais,
+    // Último Pix do pedido, só na listagem do admin (o kanban fazia uma chamada por pedido pra isso)
+    string? PixStatus = null,
+    DateTime? PixExpiraEm = null);
 
 public sealed record PedidosPaginaDto(IEnumerable<PedidoItemDto> Items, int Total, int TotalPages);
 

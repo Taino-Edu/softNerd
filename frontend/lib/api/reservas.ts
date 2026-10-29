@@ -55,6 +55,9 @@ export interface AdminReservation {
   subtotalEmReais?: number | null
   /** Já virou venda no Financeiro (pago no Pix): retirada é só entregar. */
   vendaRegistrada?: boolean
+  /** Último Pix do pedido (só na listagem): null = nunca gerou cobrança. */
+  pixStatus?: string | null
+  pixExpiraEm?: string | null
 }
 
 export const reservationApi = {

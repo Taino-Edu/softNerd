@@ -65,9 +65,25 @@ public class PedidoConsultaService(AppDbContext db) : IPedidoConsultaService
             .Skip((page - 1) * pageSize).Take(pageSize)
             .ToListAsync();
 
+        // Status do Pix de todos os pedidos da página numa consulta só. O kanban fazia uma
+        // chamada por pedido, e cada chamada do Brasil até a VPS custa ~150 ms de rede.
+        var grupos = items.Select(r => r.ReservationGroupId).Distinct().ToList();
+        var pixPorGrupo = (await db.PixCobrancas.AsNoTracking()
+                .Where(p => p.Origem == PixCobrancaOrigem.Reserva
+                    && p.ReservationGroupId != null && grupos.Contains(p.ReservationGroupId.Value))
+                .Select(p => new { Grupo = p.ReservationGroupId!.Value, p.Status, p.ExpiraEm, p.CriadoEm })
+                .ToListAsync())
+            .GroupBy(p => p.Grupo)
+            .ToDictionary(g => g.Key, g => g.MaxBy(p => p.CriadoEm)!);
+
         var dtos = new List<PedidoItemDto>();
         foreach (var r in items)
-            dtos.Add(Pedido.ParaDto(r, r.Kind == "fila" && r.Status == "waiting" ? await PosicaoNaFilaAsync(r) : null));
+        {
+            var dto = Pedido.ParaDto(r, r.Kind == "fila" && r.Status == "waiting" ? await PosicaoNaFilaAsync(r) : null);
+            if (pixPorGrupo.TryGetValue(r.ReservationGroupId, out var pix))
+                dto = dto with { PixStatus = pix.Status, PixExpiraEm = pix.ExpiraEm };
+            dtos.Add(dto);
+        }
 
         return new PedidosPaginaDto(dtos, total, (int)Math.Ceiling(total / (double)pageSize));
     }

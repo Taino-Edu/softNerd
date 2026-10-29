@@ -33,6 +33,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 ## 📋 Na fila (ordem sugerida)
 
+0. **Lentidão nas telas do painel** (Taino, 29/10) — medido: a API responde em 4–19 ms dentro da VPS e o banco em ~7 ms; nenhum pedido ≥ 2 s no log. O tempo é a rede: a VPS fica em **Boston** e cada chamada do Brasil custa 150–700 ms. Feito: Pix junto da lista de pedidos (v1.79.3). Próximos: mover a VPS pra São Paulo (maior ganho, todas as telas), juntar chamadas repetidas nas telas, miniaturas das fotos (148 fotos = 48 MB, 7 acima de 1 MB).
+
 1. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
 2. **Código mais limpo pra banca** (pedido do Taino, 27/10), um PR por etapa:
    - ✅ Limpeza das chaves (v1.75.0–v1.77.0).
@@ -52,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.79.3 | 29/10 | **Tela de pedidos mais rápida**: status do Pix não vai mais ao Inter pra Pix vencido (e no máx. 1×/30 s no prazo); conexão mTLS com o Inter reaproveitada; lista de pedidos já traz o status do Pix (sem 1 chamada por pedido); `logs.sh --dias` consertado |
 | v1.79.2 | 29/10 | **Pedidos do Maikon**: pré-venda lançada pelo admin soma no pedido sem pagar (um Pix, um pagamento); botão "Juntar num pedido só"; busca por cliente nos pedidos; aviso de pré-venda nova (sininho, push, e-mail); item adicionado no crediário soma na conta |
 | v1.79.1 | 29/10 | **Pix da pré-venda vencido**: não reaproveita mais o QR depois da 1h (o banco recusava "QR Code não é válido"); gera um novo com o total (derrubando o antigo antes); Vigia ganha o alerta "Pix vencido sem pagamento" |
 | v1.79.0 | 27/10 | **Campeonatos em camadas**: inscrição e Pix da entrada no `CampeonatoInscricaoService`; `RegraException` + `RespostaDeRegra` comuns; 9 testes novos |

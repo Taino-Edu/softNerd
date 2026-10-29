@@ -498,16 +498,33 @@ public class InterSyncService
             : null;
 
     // ── HttpClient com certificado mTLS do Inter ──────────────────────────────
+    // Um handler só, com as conexões guardadas: antes cada chamada lia o certificado do disco e abria
+    // conexão nova, com o aperto de mão TLS com certificado inteiro — a tela de pedidos fazia isso uma
+    // vez por pedido com Pix aberto. O HttpClient de cada chamada continua próprio (cada um põe o seu
+    // token no cabeçalho) e não descarta o handler. Certificado trocado no disco monta outro.
+    private static readonly object _mtlsGate = new();
+    private static (string Chave, HttpClientHandler Handler)? _mtls;
+
     private HttpClient BuildMtlsClient()
     {
         var certPath = _config["Inter:CertificatePath"]!;
         var keyPath  = _config["Inter:KeyPath"]!;
+        var chave    = $"{certPath}|{keyPath}|{File.GetLastWriteTimeUtc(certPath).Ticks}|{File.GetLastWriteTimeUtc(keyPath).Ticks}";
 
-        var cert    = X509Certificate2.CreateFromPemFile(certPath, keyPath);
-        var handler = new HttpClientHandler();
-        handler.ClientCertificates.Add(cert);
+        HttpClientHandler handler;
+        lock (_mtlsGate)
+        {
+            if (_mtls is not { } atual || atual.Chave != chave)
+            {
+                var novo = new HttpClientHandler();
+                novo.ClientCertificates.Add(X509Certificate2.CreateFromPemFile(certPath, keyPath));
+                // O anterior não é descartado: uma chamada em andamento ainda pode estar usando
+                _mtls = (chave, novo);
+            }
+            handler = _mtls.Value.Handler;
+        }
 
-        return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
+        return new HttpClient(handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(30) };
     }
 }
 

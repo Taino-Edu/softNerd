@@ -594,17 +594,26 @@ export default function ReservasPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Busca status de pagamento Pix por grupo (uma vez por grupo, não por item) — só pra grupos
-  // que ainda não temos em cache, evita refetch a cada re-render.
+  // O status do Pix já vem na listagem. Só o Pix ainda no prazo vai ao Inter pra ver se
+  // acabou de ser pago — antes era uma chamada por pedido, ~150 ms de rede cada.
   useEffect(() => {
-    const groupIds = [...new Set(items.map(r => r.reservationGroupId))].filter(id => !(id in pixByGroup))
-    if (groupIds.length === 0) return
-    Promise.all(groupIds.map(id =>
-      reservationApi.getPix(id).then(r => [id, r.data] as const).catch(() => [id, { hasPix: false }] as const)
+    const daLista: Record<string, ReservationPixStatus> = {}
+    const aoVivo: string[] = []
+    for (const r of items) {
+      const id = r.reservationGroupId
+      if (id in pixByGroup || id in daLista) continue
+      daLista[id] = r.pixStatus ? { hasPix: true, status: r.pixStatus } : { hasPix: false }
+      if (r.pixStatus === 'ATIVA' && r.pixExpiraEm && new Date(r.pixExpiraEm).getTime() > Date.now()) aoVivo.push(id)
+    }
+    if (Object.keys(daLista).length > 0) setPixByGroup(prev => ({ ...prev, ...daLista }))
+    if (aoVivo.length === 0) return
+    Promise.all(aoVivo.map(id =>
+      // Falhou a conferência: fica o status que veio na lista
+      reservationApi.getPix(id).then(r => [id, r.data] as const).catch(() => null)
     )).then(results => {
       setPixByGroup(prev => {
         const next = { ...prev }
-        for (const [id, status] of results) next[id] = status
+        for (const res of results) if (res) next[res[0]] = res[1]
         return next
       })
     })

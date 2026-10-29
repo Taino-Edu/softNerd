@@ -1,5 +1,17 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.3] — 2026-10-29
+
+### Pedidos — tela mais rápida (relato de lentidão)
+- Ao abrir a tela de pedidos, o sistema conferia **no Inter, ao vivo, o Pix de cada pedido aberto** — inclusive os já vencidos, que no Inter seguem "ativos" pra sempre. Com vários pedidos, a tela ficava esperando o banco responder um por um
+- Agora o Pix **vencido** mostra o status gravado (o banco do cliente já não aceita aquele QR, e o robô continua conferindo os das últimas 24 h a cada 5 minutos). O que ainda está no prazo é conferido no máximo uma vez a cada 30 segundos
+- A conexão com o Inter passa a ser **reaproveitada**: antes cada consulta lia o certificado do disco e abria uma conexão segura nova (o aperto de mão com certificado é a parte mais lenta). Vale pra tudo que fala com o Inter: Pix de pedido, comanda, crediário e campeonato, saldo e extrato
+- A lista de pedidos já traz o **status do Pix de cada pedido**. Antes a tela fazia uma chamada a mais para cada pedido aberto (eram 15+ chamadas ao abrir). Agora só o Pix ainda no prazo é conferido à parte
+
+### Por que cada chamada demora (medido em 29/10)
+- Dentro do servidor, a API responde em **4 a 19 ms** e o banco roda a lista de produtos em **6,6 ms**. O tempo que o painel sente é o caminho: o servidor fica em **Boston (EUA)** e cada chamada sai do Brasil, passa pela Cloudflare e volta, **150 a 700 ms** por chamada. Por isso juntar chamadas é o que mais acelera a tela
+- Script `deploy/logs.sh`: a busca com `--dias` voltava sempre vazia (o Docker não aceita "3d"); agora conta em horas
+
 ## [v1.79.2] — 2026-10-29
 
 ### Pré-venda — um pedido só por cliente (relato do Maikon, caso da Priscila)
