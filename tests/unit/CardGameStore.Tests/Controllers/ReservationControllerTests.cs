@@ -1269,4 +1269,30 @@ public class ReservationControllerTests
         reconciliacao.Verify(x => x.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()),
             consultaInter ? Times.Once() : Times.Never());
     }
+
+    [Fact]
+    public async Task Listagem_TrazOStatusDoPixDeCadaPedido_SemChamadaAParte()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (reserva, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        // Pix antigo do mesmo pedido: vale o mais novo
+        db.PixCobrancas.Add(new PixCobranca
+        {
+            Id = Guid.NewGuid(), Origem = PixCobrancaOrigem.Reserva, ReservationGroupId = reserva.ReservationGroupId,
+            TxId = Guid.NewGuid().ToString("N"), ValorEmCentavos = 1500, Status = "REMOVIDA_PELO_USUARIO_RECEBEDOR",
+            CriadoEm = DateTime.UtcNow.AddHours(-2), CriadoPorAdminId = cliente.Id,
+        });
+        await db.SaveChangesAsync();
+        var reconciliacao = PixAindaAberto();
+        var controller = CreateController(db, loggedUserId: cliente.Id, pixReconciliation: reconciliacao.Object);
+
+        var r = await controller.GetAll(kind: "pre_venda", status: "active");
+
+        var pagina = (PedidosPaginaDto)((OkObjectResult)r).Value!;
+        var item = pagina.Items.Single();
+        item.PixStatus.Should().Be("ATIVA");
+        item.PixExpiraEm.Should().NotBeNull();
+        reconciliacao.Verify(x => x.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()), Times.Never(),
+            "a listagem lê o que está gravado; quem confere no Inter é o robô ou a tela do pedido");
+    }
 }

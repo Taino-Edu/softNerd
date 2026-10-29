@@ -40,7 +40,8 @@ echo "== procurando \"$TEXTO\" em $SERVICO (últimos $DIAS dias)"
 DESDE=$(date -u -d "$DIAS days ago" +%Y-%m-%dT%H:%M:%S 2>/dev/null || echo "0000")
 
 for id in $("${COMPOSE[@]}" ps -q "$SERVICO" 2>/dev/null); do
-  docker logs --timestamps --since "${DIAS}d" "$id" 2>&1 | grep -E -i -- "$TEXTO" | sed "s/^/[no ar ${id:0:12}] /"
+  # Em horas: o docker não aceita "3d" (dava erro calado e a busca voltava vazia)
+  docker logs --timestamps --since "$((DIAS * 24))h" "$id" 2>&1 | grep -E -i -- "$TEXTO" | sed "s/^/[no ar ${id:0:12}] /"
 done
 
 if [ -d "$LOGS_DIR" ]; then
