@@ -42,6 +42,8 @@ public class PedidoCobrancaService(
 {
     public async Task<PixPedidoGeradoDto> GerarAsync(Guid groupId, Ator ator)
     {
+        if (await DoAtorAsync(groupId, ator)) await DerrubarVencendoAsync(groupId);
+
         var result = await reservationPix.GerarAsync(groupId, ator.Id, podeGerarParaTerceiros: ator.EhAdmin);
         if (!result.Success || result.Pix is null)
             throw new PedidoException(result.Error, result.StatusCode);
@@ -149,6 +151,27 @@ public class PedidoCobrancaService(
             }
         }
         return true;
+    }
+
+    /// <summary>
+    /// O Pix novo só sai depois de derrubar o vencido ou quase vencido (menos de 5 min): o que
+    /// vence em 3 min ainda é pagável, e um vencido pode ter sido pago no fim do prazo sem o robô
+    /// ter visto — trocar sem conferir deixava dois QRs pagáveis no mesmo pedido (Codex no PR #125).
+    /// Pago agora → 409; sem conseguir conferir ou derrubar um ainda no prazo → 502, sem Pix novo.
+    /// </summary>
+    private async Task DerrubarVencendoAsync(Guid groupId)
+    {
+        using var trava = await ReservationPixService.TravarPedidoAsync(groupId);
+        var limite = DateTime.UtcNow.Add(ReservationPixService.FolgaMinima);
+        var vencendo = await db.PixCobrancas
+            .Where(p => p.ReservationGroupId == groupId && p.Origem == PixCobrancaOrigem.Reserva
+                     && p.Status == "ATIVA" && p.ExpiraEm != null && p.ExpiraEm <= limite)
+            .ToListAsync();
+        foreach (var pix in vencendo)
+            await DerrubarAsync(pix,
+                pagaAgora: "O Pix deste pedido acabou de ser pago — ele está pago agora. Recarregue a tela.",
+                interRecusou: "Não deu pra trocar o Pix vencido agora. Tente de novo em instantes.",
+                motivo: "Pix vencido trocado por um novo");
     }
 
     /// <summary>

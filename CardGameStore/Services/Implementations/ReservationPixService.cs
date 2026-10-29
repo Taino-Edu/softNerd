@@ -16,7 +16,7 @@ public sealed class ReservationPixService : IReservationPixService
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> GroupLocks = new();
 
     /// <summary>Cobrança que vence em menos que isso não é reaproveitada — o cliente não daria tempo de pagar.</summary>
-    private static readonly TimeSpan FolgaMinima = TimeSpan.FromMinutes(5);
+    internal static readonly TimeSpan FolgaMinima = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// A mesma trava por pedido que o GerarAsync usa. Quem soma itens num pedido (carrinho com a
@@ -87,7 +87,8 @@ public sealed class ReservationPixService : IReservationPixService
 
             // Idempotência financeira: pedir PIX de novo devolve a cobrança aberta. Vencida não: no Inter ela segue "ATIVA" depois do prazo, mas o banco do cliente recusa
             // o QR ("O QR Code não é válido") — era o QR morto que voltava pra quem pagava no dia
-            // seguinte. A vencida fica ATIVA aqui pro robô ainda pegar um pagamento de última hora.
+            // seguinte. Antes de chegar aqui, o PedidoCobrancaService já conferiu e derrubou a vencida,
+            // pra não ficarem dois QRs pagáveis.
             var limite = DateTime.UtcNow.Add(FolgaMinima);
             var pixAtivo = await _db.PixCobrancas
                 .Where(p => p.ReservationGroupId == groupId
