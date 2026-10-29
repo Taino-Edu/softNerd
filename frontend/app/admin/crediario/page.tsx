@@ -401,7 +401,12 @@ function EditarCrediarioModal({ crediario, onClose, onSuccess }: EditarModalProp
   }
 
   function removeItem(idx: number) {
-    somarNoValor(-(itens[idx]?.subtotalInReais ?? 0))
+    // Só desconta sozinho o item novo ou do bloco de ajuste: a compra de comanda/balcão continua
+    // valendo o valor cheio, e o estorno dela tira esse valor da conta — com o total já descontado
+    // aqui, o estorno era recusado (Codex no PR #126). Pra esses, o valor se acerta na mão.
+    const item = itens[idx]
+    const origem = crediario.lancamentos.find(l => l.id === item?.lancamentoId)?.origem
+    if (item && (!item.lancamentoId || origem === 'Ajuste')) somarNoValor(-item.subtotalInReais)
     setItens(prev => prev.filter((_, i) => i !== idx))
     setItensEditado(true)
   }

@@ -173,7 +173,8 @@ public class PedidoCriacaoService(
         var juntados = 0;
         foreach (var origem in outros)
         {
-            // As duas travas, sempre na mesma ordem: ninguém gera Pix em nenhum dos dois no meio da troca
+            // As duas travas, sempre na mesma ordem: ninguém gera Pix nem registra pagamento ou homologa
+            // (PedidoAndamentoService pega a mesma trava) em nenhum dos dois no meio da troca
             var primeiro = groupId.CompareTo(origem) < 0 ? groupId : origem;
             var segundo  = primeiro == groupId ? origem : groupId;
             using var trava1 = await ReservationPixService.TravarPedidoAsync(primeiro);
@@ -185,11 +186,7 @@ public class PedidoCriacaoService(
             if (!aindaAbertos.Contains(origem)) continue;
             if (!await cobranca.DerrubarParaJuntarAsync(origem) || !await cobranca.DerrubarParaJuntarAsync(groupId)) continue;
 
-            await db.ProductReservations.Where(r => r.ReservationGroupId == origem)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(r => r.ReservationGroupId, groupId)
-                    .SetProperty(r => r.PaymentMethod, forma));
-            juntados++;
+            if (await MoverSeAindaAbertoAsync(origem, groupId, forma)) juntados++;
         }
 
         if (juntados > 0)
@@ -197,6 +194,34 @@ public class PedidoCriacaoService(
                 details: $"{{\"pedidos\":{juntados}}}");
 
         return new PedidosJuntadosDto(groupId, juntados, outros.Count - juntados);
+    }
+
+    /// <summary>
+    /// Move os itens de um pedido pro outro só se os dois seguem sem pagar, numa transação: a
+    /// condição vai no próprio UPDATE (segunda barreira além das travas — outra instância da API na
+    /// troca do deploy não enxerga a trava em memória). Algum item mudou? Nada se move.
+    /// </summary>
+    private async Task<bool> MoverSeAindaAbertoAsync(Guid origem, Guid destino, string? forma)
+    {
+        var moveu = false;
+        var strategy = db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            moveu = false;
+            await using var tx = await db.Database.BeginTransactionAsync();
+            var grupos = new[] { origem, destino };
+            var total = await db.ProductReservations.CountAsync(r => grupos.Contains(r.ReservationGroupId) && r.Status != "cancelled");
+            var abertos = await db.ProductReservations
+                .Where(r => grupos.Contains(r.ReservationGroupId) && r.Status == "active" && r.Kind == "pre_venda"
+                            && r.ExpiresAt != null && r.VendaAvulsaId == null)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.ReservationGroupId, destino)
+                    .SetProperty(r => r.PaymentMethod, forma));
+            if (abertos != total) return; // sem Commit: rollback no Dispose
+            await tx.CommitAsync();
+            moveu = true;
+        });
+        return moveu;
     }
 
     /// <summary>
