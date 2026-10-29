@@ -1229,6 +1229,59 @@ public class ReservationControllerTests
         r.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(409);
     }
 
+    // ── O próprio cliente junta os pedidos sem pagar: um Pix só (Maikon 29/10, "está tudo separado") ──
+
+    [Fact]
+    public async Task JuntarMeus_PedidosSeparadosDoCliente_ViramUm_SemMexerNoDeOutroCliente()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var outro = await SeedProductAsync(db, stock: 5);
+        await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (outro.Id, 2));
+        var vizinho = await SeedUserAsync(db, "Vizinho");
+        var grupoVizinho = Guid.NewGuid();
+        await SeedCarrinhoAsync(db, vizinho.Id, grupoVizinho, (outro.Id, 1));
+        var controller = CreateController(db, loggedUserId: cliente.Id,
+            pixReconciliation: PixAindaAberto().Object, inter: InterQueRemove().Object);
+
+        var corpo = Corpo(await controller.JuntarMeus());
+
+        Campo<int>(corpo, "juntados").Should().Be(1);
+        var grupos = await db.ProductReservations.AsNoTracking()
+            .Where(r => r.UserId == cliente.Id).Select(r => r.ReservationGroupId).Distinct().ToListAsync();
+        grupos.Should().ContainSingle("os dois pedidos sem pagar viram um só");
+        (await db.ProductReservations.CountAsync(r => r.ReservationGroupId == grupoVizinho)).Should().Be(1);
+        (await db.PixCobrancas.AsNoTracking().ToListAsync()).Should().OnlyContain(p => p.Status == "REMOVIDA_PELO_USUARIO_RECEBEDOR",
+            "o QR antigo cobrava só uma parte");
+    }
+
+    [Fact]
+    public async Task JuntarMeus_UmPedidoSo_DevolveEle()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (antiga, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var controller = CreateController(db, loggedUserId: cliente.Id);
+
+        var corpo = Corpo(await controller.JuntarMeus());
+
+        Campo<Guid>(corpo, "groupId").Should().Be(antiga.ReservationGroupId);
+        Campo<int>(corpo, "juntados").Should().Be(0);
+    }
+
+    [Fact]
+    public async Task JuntarMeus_ChaveDesligada_Recusa()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var (_, _, cliente) = await SeedPedidoNaoPagoComPixAsync(db);
+        var chaves = Chaves(db);
+        await chaves.DefinirAsync(Funcionalidades.PedidoPixJunto, false, Guid.NewGuid());
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: chaves);
+
+        var r = await controller.JuntarMeus();
+
+        r.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(409);
+    }
+
     [Fact]
     public async Task Carrinho_DoCliente_AvisaOsAdminsNoSininho()
     {

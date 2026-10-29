@@ -76,6 +76,9 @@ export const reservationApi = {
   /** Os outros pedidos sem pagar do cliente entram neste (um Pix e um pagamento só). */
   juntar:    (groupId: string)                     =>
                api.post<{ groupId: string; juntados: number; naoJuntados: number }>(`/api/reservations/group/${groupId}/juntar`),
+  /** Cliente junta os pedidos dele ainda sem pagar num só (um Pix com o total). */
+  juntarMeus: ()                                   =>
+               api.post<{ groupId: string; juntados: number; naoJuntados: number }>('/api/reservations/mine/juntar'),
   gerarPix:  (groupId: string)                     =>
                api.post<{ txId: string; status: string; pixCopiaCola?: string; imagemQrCode?: string; expiraEm?: string; valorEmReais: number }>(
                  `/api/reservations/group/${groupId}/pix`),

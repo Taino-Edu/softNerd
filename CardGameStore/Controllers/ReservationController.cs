@@ -48,6 +48,12 @@ public class ReservationController(
     public Task<IActionResult> CreateCart([FromBody] CreateReservationCartRequest req) =>
         this.Responder(() => criacao.CriarCarrinhoAsync(Ator().Id, req));
 
+    // POST /api/reservations/mine/juntar — o cliente junta os pedidos dele sem pagar num Pix só
+    [HttpPost("mine/juntar")]
+    [Authorize]
+    public Task<IActionResult> JuntarMeus() =>
+        this.Responder(() => criacao.JuntarMeusPedidosAsync(Ator().Id));
+
     // POST /api/reservations/admin-create — admin registra o pedido em nome do cliente
     [HttpPost("admin-create")]
     [Authorize(Policy = "AdminOnly")]
