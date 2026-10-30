@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.79.5 | 30/10 | **Liga Mensal**: tirada a etiqueta "Brinde" atrás do nome dos 4 primeiros no ranking de `/liga` (pedido do Maikon) |
 | v1.79.4 | 29/10 | **Pix da pré-venda por pedido**: "Minhas reservas" agrupa por pedido (um botão de Pix com o total, antes era um por item); cliente junta os próprios pedidos sem pagar ("Pagar tudo num Pix só", `POST /api/reservations/mine/juntar`) |
 | v1.79.3 | 29/10 | **Tela de pedidos mais rápida**: status do Pix não vai mais ao Inter pra Pix vencido (e no máx. 1×/30 s no prazo); conexão mTLS com o Inter reaproveitada; lista de pedidos já traz o status do Pix (sem 1 chamada por pedido); `logs.sh --dias` consertado |
 | v1.79.2 | 29/10 | **Pedidos do Maikon**: pré-venda lançada pelo admin soma no pedido sem pagar (um Pix, um pagamento); botão "Juntar num pedido só"; busca por cliente nos pedidos; aviso de pré-venda nova (sininho, push, e-mail); item adicionado no crediário soma na conta |

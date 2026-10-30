@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { pixel } from '@/lib/fontePixel'
-import { ArrowLeft, Trophy, Loader2, Swords, Gift } from 'lucide-react'
+import { ArrowLeft, Trophy, Loader2, Swords } from 'lucide-react'
 import { ligaMensalApi, siteConfigApi, LigaMensalDto, LigaMensalMesDto, LigaEstatisticasDto } from '@/lib/api'
 import { mixHex } from '@/lib/colors'
 import SpriteDeck from '@/components/liga/SpriteDeck'
@@ -223,15 +223,8 @@ export default function LigaMensalPage() {
                         {/* Largura fixa: deck com dois sprites não empurra o nome */}
                         <span className="w-14 shrink-0 flex justify-center"><AvatarJogador pokemon={r.pokemon} shiny={r.shiny} deck={r.decks[0]} tamanho={40} /></span>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-white truncate">{r.playerName}</p>
-                            {i < 4 && (
-                              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0"
-                                style={{ backgroundColor: PODIO[i].fundo, color: PODIO[i].texto }}>
-                                <Gift className="w-3 h-3" /> Brinde
-                              </span>
-                            )}
-                          </div>
+                          {/* Sem a etiqueta "Brinde" atrás do nome (Maikon, 29/10) */}
+                          <p className="font-bold text-white truncate">{r.playerName}</p>
                           {r.decks.length > 0 && (
                             <p className="text-xs text-gray-500 truncate mt-0.5">
                               {r.decks.join(' · ')}

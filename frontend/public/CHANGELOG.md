@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.5] — 2026-10-30
+
+### Liga Mensal — sem a etiqueta "Brinde" no ranking (pedido do Maikon)
+- No ranking de `/liga`, os 4 primeiros tinham a etiqueta **"Brinde"** atrás do nome. Saiu: fica só o nome, a posição colorida e os pontos
+
 ## [v1.79.4] — 2026-10-29
 
 ### Pré-venda — o cliente vê um Pix por pedido, não por item (relato do Maikon, 29/10)
