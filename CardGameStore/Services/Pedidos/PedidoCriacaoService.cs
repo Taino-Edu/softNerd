@@ -38,6 +38,9 @@ public interface IPedidoCriacaoService
 
     /// <summary>Admin junta no pedido os outros pedidos de pré-venda sem pagar do mesmo cliente.</summary>
     Task<PedidosJuntadosDto> JuntarPedidosAbertosAsync(Guid groupId);
+
+    /// <summary>Cliente junta os pedidos dele sem pagar no mais recente (um Pix só).</summary>
+    Task<PedidosJuntadosDto> JuntarMeusPedidosAsync(Guid userId);
 }
 
 public class PedidoCriacaoService(
@@ -194,6 +197,25 @@ public class PedidoCriacaoService(
                 details: $"{{\"pedidos\":{juntados}}}");
 
         return new PedidosJuntadosDto(groupId, juntados, outros.Count - juntados);
+    }
+
+    /// <summary>
+    /// O carrinho só soma no pedido aberto da mesma forma de pagamento, e o que foi feito antes da
+    /// chave ficou separado: o cliente via um Pix por pedido ("está tudo separado", Maikon 29/10).
+    /// Aqui ele mesmo junta tudo no pedido mais recente — mesmas regras do botão do admin.
+    /// </summary>
+    public async Task<PedidosJuntadosDto> JuntarMeusPedidosAsync(Guid userId)
+    {
+        if (!await LigadaAsync(Funcionalidades.PedidoPixJunto))
+            throw new PedidoException("Juntar pedidos está desligado na loja.", 409);
+
+        var abertos = await PedidosAbertosAsync(userId, qualquerForma: true);
+        if (abertos.Count == 0)
+            throw new PedidoException("Você não tem pré-venda sem pagar.", 404);
+        if (abertos.Count == 1)
+            return new PedidosJuntadosDto(abertos[0], 0, 0);
+
+        return await JuntarPedidosAbertosAsync(abertos[0]);
     }
 
     /// <summary>

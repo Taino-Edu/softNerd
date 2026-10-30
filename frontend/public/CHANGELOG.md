@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.4] — 2026-10-29
+
+### Pré-venda — o cliente vê um Pix por pedido, não por item (relato do Maikon, 29/10)
+- Em **Minhas reservas**, cada item aparecia num cartão com o seu próprio botão de Pix — parecia um Pix pra cada item, mesmo com tudo no mesmo pedido. Agora é **um cartão por pedido**, com os itens dentro e um botão "Pagar no Pix" com o total
+- Quem ainda tem **mais de um pedido sem pagar** (feitos em dias diferentes, ou antes do "um Pix só") ganha o botão **"Pagar tudo num Pix só"**: junta tudo no pedido mais recente e abre o QR com o total. Mesmas regras do "Juntar" do admin: o Pix antigo é cancelado no banco conferindo se não foi pago, e pedido que acabou de ser pago fica separado
+- Na mesma chave "Pré-venda: itens novos entram no pedido sem pagar"; desligada, o botão some
+
 ## [v1.79.3] — 2026-10-29
 
 ### Pedidos — tela mais rápida (relato de lentidão)

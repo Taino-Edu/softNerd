@@ -341,6 +341,35 @@ export default function PerfilPage() {
     } catch { toast.error('Erro ao cancelar pré-venda.') }
   }
 
+  // Pré-vendas agrupadas por pedido (a lista vem por item, do mais recente pro mais antigo)
+  const pedidos = Object.values(reservations.reduce<Record<string, { groupId: string; itens: MyReservation[]; semPagar: boolean }>>(
+    (acc, r) => {
+      const p = acc[r.reservationGroupId] ??= { groupId: r.reservationGroupId, itens: [], semPagar: false }
+      p.itens.push(r)
+      if (r.expiresAt) p.semPagar = true
+      return acc
+    }, {}))
+  const pedidosSemPagar = pedidos.filter(p => p.semPagar)
+  const pixJuntoLigado = useFuncionalidade('pedido-pix-junto') === true
+  const [juntando, setJuntando] = useState(false)
+
+  // Pedidos feitos em momentos diferentes viram um só e o Pix sai com o total
+  async function handlePagarTudoJunto() {
+    setJuntando(true)
+    try {
+      const { data } = await reservationApi.juntarMeus()
+      await refetchReservas()
+      if (data.naoJuntados > 0)
+        toast(`${data.naoJuntados === 1 ? 'Um pedido não pôde' : `${data.naoJuntados} pedidos não puderam`} entrar agora — o Pix sai com o resto.`)
+      setPixGroupId(data.groupId)
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Não deu pra juntar os pedidos agora. Tente de novo.')
+    } finally {
+      setJuntando(false)
+    }
+  }
+
   // O cliente pode ter várias contas abertas, cada uma com seu prazo — mostra todas.
   const dividasAbertas = crediarios
     .filter(c => c.status !== 'Pago')
@@ -942,47 +971,64 @@ export default function PerfilPage() {
                     {reservations.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Pré-vendas</p>
-                        {reservations.map(r => (
-                          <div key={r.id} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 overflow-hidden">
-                              {r.productImageUrl
-                                ? <img src={fotoLeve(r.productImageUrl, 160)} alt={r.productName} className="w-full h-full object-cover" loading="lazy" />
-                                : <Package className="w-5 h-5 text-amber-400" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate">
-                                <span className="text-amber-500">{r.quantity}×</span> {r.productName}
-                              </p>
-                              {r.variantLabel && <p className="text-[11px] text-gray-400">{r.variantLabel}</p>}
-                              {r.expiresAt ? (
-                                <p className="text-[11px] text-amber-500 font-bold flex items-center gap-1 mt-0.5">
+                        {/* Mais de um pedido sem pagar: um Pix só com tudo (chave pedido-pix-junto) */}
+                        {pixJuntoLigado && pedidosSemPagar.length > 1 && (
+                          <button onClick={handlePagarTudoJunto} disabled={juntando}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-sm text-white bg-[#1E4FD6] shadow-sm transition-all active:scale-95 disabled:opacity-60">
+                            {juntando ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                            Pagar tudo num Pix só ({pedidosSemPagar.length} pedidos)
+                          </button>
+                        )}
+                        {/* Um cartão por PEDIDO, não por item: o Pix é do pedido inteiro (antes cada item
+                            tinha o seu botão de Pix e parecia um Pix por item) */}
+                        {pedidos.map(({ groupId, itens, semPagar }) => (
+                          <div key={groupId} className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              {semPagar ? (
+                                <p className="text-[11px] text-amber-500 font-bold flex items-center gap-1">
                                   <Hourglass className="w-3 h-3" /> Aguardando pagamento
                                 </p>
                               ) : (
-                                <p className="text-[11px] text-emerald-500 font-black uppercase tracking-wide mt-0.5">
+                                <p className="text-[11px] text-emerald-500 font-black uppercase tracking-wide">
                                   Paga ✓ — aguardando retirada
                                 </p>
                               )}
-                              {r.preVendaReleaseDate && (
-                                <p className="text-[11px] text-gray-400 mt-0.5">
-                                  Retirada a partir de {new Date(r.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
-                                </p>
-                              )}
+                              <p className="text-[11px] text-gray-400 font-semibold">
+                                {itens.length} {itens.length === 1 ? 'item' : 'itens'}
+                              </p>
                             </div>
-                            <div className="flex flex-col gap-1 shrink-0">
-                              {r.expiresAt && (
-                                <button onClick={() => setPixGroupId(r.reservationGroupId)}
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#1E4FD6] hover:bg-[#EAF0FD] transition-colors"
-                                  title="Pagar via Pix">
-                                  <QrCode className="w-4 h-4" />
+                            {itens.map(r => (
+                              <div key={r.id} className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 overflow-hidden">
+                                  {r.productImageUrl
+                                    ? <img src={fotoLeve(r.productImageUrl, 160)} alt={r.productName} className="w-full h-full object-cover" loading="lazy" />
+                                    : <Package className="w-5 h-5 text-amber-400" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-gray-900 truncate">
+                                    <span className="text-amber-500">{r.quantity}×</span> {r.productName}
+                                  </p>
+                                  {r.variantLabel && <p className="text-[11px] text-gray-400">{r.variantLabel}</p>}
+                                  {r.preVendaReleaseDate && (
+                                    <p className="text-[11px] text-gray-400 mt-0.5">
+                                      Retirada a partir de {new Date(r.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                                    </p>
+                                  )}
+                                </div>
+                                <button onClick={() => handleCancelReservation(r)}
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                                  title="Cancelar este item">
+                                  <X className="w-4 h-4" />
                                 </button>
-                              )}
-                              <button onClick={() => handleCancelReservation(r)}
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                                title="Cancelar pré-venda">
-                                <X className="w-4 h-4" />
+                              </div>
+                            ))}
+                            {semPagar && (
+                              <button onClick={() => setPixGroupId(groupId)}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border border-[#D5E1FB] text-[#1E4FD6] hover:bg-[#EAF0FD] transition-colors">
+                                <QrCode className="w-4 h-4" />
+                                {itens.length === 1 ? 'Pagar no Pix' : `Pagar no Pix (${itens.length} itens juntos)`}
                               </button>
-                            </div>
+                            )}
                           </div>
                         ))}
                       </div>
