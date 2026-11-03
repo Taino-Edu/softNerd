@@ -20,7 +20,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Quem | O que falta |
 |---|---|---|
-| **"Sistema cai com comanda aberta durante o campeonato"** | Maikon | Logs de 5 dias sem queda do servidor; não reproduz no local. Com o Vigia no ar, a próxima vez vira alerta com a tela e o erro. Pedir ao Maikon: **qual tela, o que aparece, hora** (print ou vídeo) |
+| **"Sistema cai com comanda aberta durante o campeonato"** | Maikon | Logs de 5 dias sem queda do servidor; não reproduz no local. Com o Vigia no ar, a próxima vez vira alerta com a tela e o erro. Pedir ao Maikon: **qual tela, o que aparece, hora** (print ou vídeo). **03/11:** relato novo ("não consegue voltar pro campeonato") — abrir a comanda pelo QR da mesa leva pra `/cliente`, que mostrava o campeonato sem caminho de volta pra mesa; v1.79.7 pôs o botão "Abrir o torneio". Confirmar com ele se era isso |
 | Regras da Liga: prêmios por posição, desempate, mínimo de etapas, fechamento do mês | Maikon | Decisão dele; sem isso o ranking não define prêmio. **Decidido em 22/10: premiação só por mês, sem temporada anual** (o ranking recomeça sozinho todo mês e os meses anteriores ficam consultáveis) |
 | Prazo de pagamento dos pedidos (Pix 1h / balcão 3 dias) | Maikon | Ele pediu antes pra tirar o robô que cancelava; confirmar. Enquanto isso o Vigia mostra os pedidos parados |
 | Check-in por QR Code (igual Bandai) | Maikon | Prints do app da Bandai |
@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.79.7 | 03/11 | **Liguinha**: relógio da rodada conta na hora do servidor (celular fora da hora atrasava o timer); botão "Abrir o torneio" em Meus Campeonatos e na aba Torneios (quem saía da tela do jogo não voltava) |
 | v1.79.6 | 03/11 | **Liga Mensal**: tirada a frase "Top 4 do mês ganha brinde" do topo de `/liga` (pedido do Maikon) |
 | v1.79.5 | 30/10 | **Liga Mensal**: tirada a etiqueta "Brinde" atrás do nome dos 4 primeiros no ranking de `/liga` (pedido do Maikon) |
 | v1.79.4 | 29/10 | **Pix da pré-venda por pedido**: "Minhas reservas" agrupa por pedido (um botão de Pix com o total, antes era um por item); cliente junta os próprios pedidos sem pagar ("Pagar tudo num Pix só", `POST /api/reservations/mine/juntar`) |
