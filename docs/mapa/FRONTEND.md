@@ -74,6 +74,7 @@ Mudou um componente? Confira as telas da última coluna.
 
 | Componente | Exporta | Usado em |
 |---|---|---|
+| `AvisoAlarme` | `AvisoAlarme` | `app/admin/layout.tsx` |
 | `CameraScanner` | `CameraScanner` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
 | `ClientProviders` | `ClientProviders` | `app/layout.tsx` |
 | `CompleteProfileGuard` | `CompleteProfileGuard` | `app/cliente/layout.tsx` |

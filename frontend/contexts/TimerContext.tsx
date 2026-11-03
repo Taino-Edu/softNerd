@@ -124,7 +124,16 @@ interface TimerContextValue {
   criar:       (t: NovoTimerRequest) => Promise<void>
   remover:     (id: string) => Promise<void>
   silenciar:   (id: string) => void
+  /** O navegador já deixa tocar som? Até alguém clicar ou teclar na página, o alarme sai mudo. */
+  somLiberado: boolean
+  /** Tem rodada correndo (ou alarme tocando) — é quando o som e a tela acordada importam. */
+  emRodada:    boolean
+  /** A tela do PC está travada acordada pelo navegador (Screen Wake Lock), ou por que não. */
+  telaAcordada: TelaAcordada
 }
+
+/** sim · aba-escondida (o navegador só segura com a aba na frente) · negado · sem-suporte */
+export type TelaAcordada = 'sim' | 'aba-escondida' | 'negado' | 'sem-suporte'
 
 const TimerContext = createContext<TimerContextValue | null>(null)
 
@@ -138,6 +147,23 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const [loading,    setLoading]    = useState(true)
   const [disponivel, setDisponivel] = useState(false)
   const [alarmando,  setAlarmando]  = useState<Set<string>>(new Set())
+
+  // ── Som liberado ────────────────────────────────────────────────────────────
+  // O Chrome não deixa a página tocar som antes de alguém clicar ou teclar nela: aberto ou
+  // recarregado (F5, queda de energia) e sem ninguém mexer, o alarme do fim da rodada saía MUDO,
+  // sem nenhum aviso. O AvisoAlarme mostra isso; qualquer clique na página libera.
+  const [somLiberado, setSomLiberado] = useState(true)
+  useEffect(() => {
+    const ua = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation
+    setSomLiberado(ua?.hasBeenActive ?? false)
+    const liberar = () => setSomLiberado(true)
+    window.addEventListener('pointerdown', liberar)
+    window.addEventListener('keydown', liberar)
+    return () => {
+      window.removeEventListener('pointerdown', liberar)
+      window.removeEventListener('keydown', liberar)
+    }
+  }, [])
 
   const timersRef    = useRef<TimerDto[]>([])
   const pararRef     = useRef<Map<string, () => void>>(new Map())
@@ -282,10 +308,41 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setTimers(prev => prev.filter(t => t.id !== id))
   }, [pararAlarme])
 
+  // ── Tela acordada ───────────────────────────────────────────────────────────
+  // Com rodada correndo, o PC do balcão não pode apagar a tela nem dormir (dormindo, nada roda e
+  // o alarme não toca). O navegador só segura a tela com a aba visível: ao voltar pra ela, pede de novo.
+  const emRodada = alarmando.size > 0 || timers.some(t => t.state === 'running')
+  const [telaAcordada, setTelaAcordada] = useState<TelaAcordada>('aba-escondida')
+  useEffect(() => {
+    if (!emRodada) return
+    if (!('wakeLock' in navigator)) { setTelaAcordada('sem-suporte'); return }
+    let trava: WakeLockSentinel | null = null
+    let parado = false
+    const pedir = async () => {
+      if (parado || (trava && !trava.released)) return
+      if (document.visibilityState !== 'visible') { setTelaAcordada('aba-escondida'); return }
+      try {
+        trava = await navigator.wakeLock.request('screen')
+        if (parado) { trava.release().catch(() => {}); return }
+        setTelaAcordada('sim')
+        // Solta sozinha quando a aba some (minimizou, trocou de aba)
+        trava.addEventListener('release', () => setTelaAcordada('aba-escondida'))
+      } catch { setTelaAcordada('negado') }
+    }
+    pedir()
+    document.addEventListener('visibilitychange', pedir)
+    return () => {
+      parado = true
+      document.removeEventListener('visibilitychange', pedir)
+      trava?.release().catch(() => {})
+    }
+  }, [emRodada])
+
   return (
     <TimerContext.Provider value={{
       timers, restantes, loading, disponivel, alarmando,
       recarregar, acao, criar, remover, silenciar: pararAlarme,
+      somLiberado, emRodada, telaAcordada,
     }}>
       {children}
     </TimerContext.Provider>
