@@ -251,7 +251,7 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
 | PR, main e toda segunda | varredura de segurança do código (C# e TS) | `.github/workflows/codeql.yml` |
 | Toda semana | PRs de atualização de dependências (agrupados) | `.github/dependabot.yml` |
 | `main` | só entra por PR com o CI verde; sem push direto nem `--force` (vale pro admin também) | proteção de branch |
-| Deploy | **abre sozinho** quando o CI do `main` passa e espera a aprovação (aprovar = escolher a hora; também dá pra rodar à mão); só sobe a última versão do `main` com CI verde; `update.sh` faz **backup dos bancos antes** (sem backup, sem deploy), troca sem queda, e o vigia mede pedido a pedido; depois `/health` e smoke | `.github/workflows/deploy.yml`, `deploy/update.sh`, `deploy/rollout.sh` |
+| Deploy | **sobe sozinho** quando o CI do `main` passa, sem aprovação desde 03/11 (merge = produção; também dá pra rodar à mão; deploy novo cancela os antigos na fila); só sobe a última versão do `main` com CI verde; `update.sh` faz **backup dos bancos antes** (sem backup, sem deploy), troca sem queda, e o vigia mede pedido a pedido; depois `/health` e smoke | `.github/workflows/deploy.yml`, `deploy/update.sh`, `deploy/rollout.sh` |
 | Produção | **robô de smoke a cada 30 min**; se cair, abre alerta (issue `smoke`, chega por e-mail) e fecha quando volta | `.github/workflows/smoke.yml`, `scripts/smoke.py` |
 | Repositório | varredura de segredos com bloqueio do push; alertas e correções automáticas de dependências | configuração do GitHub |
 
