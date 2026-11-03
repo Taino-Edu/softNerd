@@ -449,10 +449,10 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/timers` | papéis Admin,Operator | `List` (20) | `timerApi.list` | `contexts/TimerContext.tsx` |
-| POST | `/api/timers` | papéis Admin,Operator | `Create` (24) | `timerApi.create` | `contexts/TimerContext.tsx` |
-| DELETE | `/api/timers/{id:guid}` | papéis Admin,Operator | `Delete` (133) | `timerApi.remove` | `contexts/TimerContext.tsx` |
-| PUT | `/api/timers/{id:guid}` | papéis Admin,Operator | `Update` (74) | `timerApi.update` | `contexts/TimerContext.tsx` |
+| GET | `/api/timers` | papéis Admin,Operator | `List` (22) | `timerApi.list` | `contexts/TimerContext.tsx` |
+| POST | `/api/timers` | papéis Admin,Operator | `Create` (29) | `timerApi.create` | `contexts/TimerContext.tsx` |
+| DELETE | `/api/timers/{id:guid}` | papéis Admin,Operator | `Delete` (143) | `timerApi.remove` | `contexts/TimerContext.tsx` |
+| PUT | `/api/timers/{id:guid}` | papéis Admin,Operator | `Update` (79) | `timerApi.update` | `contexts/TimerContext.tsx` |
 
 ## Torneio
 
