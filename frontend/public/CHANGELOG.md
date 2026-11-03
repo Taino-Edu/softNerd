@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.7] — 2026-11-03
+
+### Liguinha e Campeonato — relógio certo e volta pro torneio (pedidos do Maikon)
+- **Relógio da rodada sem atraso:** cada celular contava o tempo com o próprio relógio. Aparelho com a hora alguns segundos (ou minutos) fora mostrava outro tempo que o telão e os outros jogadores. Agora o servidor manda a hora dele junto e todas as telas — celular do jogador, telão e o timer do balcão — contam pela mesma hora
+- **Voltar pro torneio:** quem saía da tela do jogo (abrindo a comanda pelo QR da mesa, fechando o navegador) via o campeonato em "Meus Campeonatos", mas não tinha como voltar pra mesa. O cartão do campeonato (na conta e na aba Torneios do perfil) ganhou o botão **"Abrir o torneio"**, que leva direto pra mesa, resultado e relógio
+
 ## [v1.79.6] — 2026-11-03
 
 ### Liga Mensal — sem brinde no topo também (pedido do Maikon)

@@ -15,7 +15,7 @@ import {
   Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
   ShoppingBag, XCircle, Trophy, Coins, ShieldCheck, Mail, Settings, BookOpen,
   Bell, Package, X, Hourglass, Pencil, Check, Loader2 as Loader2Icon,
-  QrCode, ShoppingCart, ChevronRight,
+  QrCode, ShoppingCart, ChevronRight, Swords,
 } from 'lucide-react'
 import PixReservaModal from '@/components/PixReservaModal'
 import MinhaLiga from '@/components/cliente/MinhaLiga'
@@ -28,6 +28,7 @@ import { fotoLeve } from '@/lib/fotoLeve'
 import EscolherPokemon from '@/components/pokemon/EscolherPokemon'
 import ParceiroDaConta from '@/components/pokemon/ParceiroDaConta'
 import { nomeDoId } from '@/lib/pokemonPreferido'
+import { rotasDoEvento } from '@/lib/caminhosTorneio'
 
 /** Data com hora — "12/08/2026 às 14:32". Sem a hora, duas compras no mesmo dia
  *  ficam indistinguíveis pra quem quer conferir o que pagou e quando. */
@@ -268,6 +269,7 @@ export default function PerfilPage() {
   // "Qual o seu Pokémon preferido?" (chave pokemon-preferido): 'boas-vindas' = acabou de criar a conta
   const [escolhendoPokemon, setEscolhendoPokemon] = useState<false | 'boas-vindas' | 'trocar'>(false)
   const pokemonLigado = useFuncionalidade('pokemon-preferido') === true
+  const campeonatoSeparado = useFuncionalidade('campeonato-separado') === true
 
   // Link do lembrete de vencimento abre direto na aba da dívida (/cliente/perfil?tab=crediario).
   // Lido do window em vez de useSearchParams pra não precisar de Suspense na página inteira.
@@ -952,6 +954,13 @@ export default function PerfilPage() {
                           {brl(p.entryFeeInReais)}
                         </div>
                       </div>
+                      {/* Volta pra tela do jogo (mesa, resultado, relógio) — antes só dizia "Inscrito" */}
+                      {p.formato === 'Suico' && (p.status === 'Inscricoes' || p.status === 'EmAndamento') && (
+                        <Link href={`${rotasDoEvento(p.modalidade, campeonatoSeparado).jogar}?t=${p.championshipId}`}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white bg-[#1E4FD6] transition-all active:scale-95">
+                          <Swords className="w-4 h-4" /> Abrir o torneio
+                        </Link>
+                      )}
                     </div>
                   ))
                 )}

@@ -810,10 +810,14 @@ public sealed record MesaDto(
     ResultadoPartida? ReportA, ResultadoPartida? ReportB, ResultadoPartida? Resultado, bool Divergente,
     bool AguardandoMesa = false, bool ProntoA = false, bool ProntoB = false);
 
-public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada)
+/// <summary>Agora: a hora do servidor na resposta. O celular conta o tempo pela diferença entre ela e o
+/// próprio relógio — contar só pelo relógio do aparelho atrasava ou adiantava o timer (Maikon, 03/11).</summary>
+public sealed record TimerDto(Guid Id, string State, int DurationSeconds, int? PausedRemaining, DateTime? StartedAt, int? Rodada,
+    DateTime Agora)
 {
     public static TimerDto? De(TimerEntity? t) => t is null ? null
-        : new TimerDto(t.Id, t.State.ToString().ToLowerInvariant(), t.DurationSeconds, t.PausedRemaining, t.StartedAt, t.Rodada);
+        : new TimerDto(t.Id, t.State.ToString().ToLowerInvariant(), t.DurationSeconds, t.PausedRemaining, t.StartedAt, t.Rodada,
+            DateTime.UtcNow);
 }
 
 public sealed record TorneioPublicoDto(

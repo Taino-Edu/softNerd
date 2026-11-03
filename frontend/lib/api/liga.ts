@@ -1,6 +1,7 @@
 // lib/api/liga.ts — Liguinha: torneio suíço em cima do campeonato (docs/liguinha.md)
 // Importe sempre de "@/lib/api" (lib/api/index.ts junta todos).
 import { api } from './client'
+import { acertarPeloServidor, agoraNoServidor } from '../relogioServidor'
 
 /** Do ponto de vista do jogador A da mesa. */
 export type ResultadoPartida = 'VitoriaA' | 'VitoriaB' | 'Empate'
@@ -42,6 +43,8 @@ export function mesasDeSetup(mesas: MesaDto[]) {
 export interface TimerTorneioDto {
   id: string; state: 'stopped' | 'running' | 'paused' | 'finished'
   durationSeconds: number; pausedRemaining: number | null; startedAt: string | null; rodada: number | null
+  /** Hora do servidor na resposta: acerta o relógio do aparelho (lib/relogioServidor). */
+  agora?: string
 }
 
 export interface TorneioPublicoDto {
@@ -158,8 +161,11 @@ export function rodadaComecou(t: TimerTorneioDto | null, rodadaAtual: number, ma
 }
 
 /** Segundos que faltam no timer da rodada (mesma conta do servidor). */
-export function segundosRestantes(t: TimerTorneioDto | null, agora = Date.now()): number | null {
+export function segundosRestantes(t: TimerTorneioDto | null, agora?: number): number | null {
   if (!t) return null
+  // Conta na hora do servidor: o relógio do celular fora da hora atrasava ou adiantava o timer
+  acertarPeloServidor(t)
+  agora ??= agoraNoServidor()
   if (t.state === 'paused') return t.pausedRemaining ?? t.durationSeconds
   if (t.state === 'finished') return 0
   if (t.state === 'running' && t.startedAt) {
