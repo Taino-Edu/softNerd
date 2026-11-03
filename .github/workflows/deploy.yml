@@ -4,6 +4,8 @@
 # Fluxo: merge no main → CI verde → este workflow abre e fica "Waiting" no ambiente
 # "producao" → o GitHub avisa (e-mail/app) → Aprovar → sobe. Aprovar é escolher a
 # hora: não aprovou, não sobe. Também dá pra rodar à mão (Actions → Run workflow).
+# Cada deploy novo cancela os antigos que ainda esperavam aprovação (job limpar-fila):
+# fica sempre um só esperando, o mais novo — e ele sobe a última versão do main.
 #
 # Roda deploy/update.sh na VPS (backup dos bancos → git pull → build com o site no
 # ar → troca sem queda, deploy/rollout.sh). Enquanto isso o vigia mede se algum
@@ -32,20 +34,54 @@ on:
   # À mão, pelo botão Run workflow
   workflow_dispatch:
 
-concurrency:
-  group: deploy-producao
-  cancel-in-progress: false
-
+# Um deploy por vez — a trava fica no job "deploy", não no workflow inteiro: o "Limpar a fila"
+# de um run novo precisa rodar mesmo com um deploy antigo parado esperando aprovação.
 permissions:
   contents: read
   actions: read
 
 jobs:
+  # Deploy esperando aprovação segurava a fila: os seguintes ficavam "pending" atrás dele e nada
+  # subia até alguém achar e aprovar o velho (30/10 e 03/11). Como todo deploy sobe a ÚLTIMA
+  # versão do main, o mais novo basta — os antigos que ainda esperam (ou estão na fila) saem.
+  # Deploy já aprovado e rodando ("in_progress") não é tocado.
+  limpar-fila:
+    name: Cancelar deploys antigos parados
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    # Mesma condição do deploy: CI que falhou não derruba o deploy que está esperando
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
+    steps:
+      - name: Cancelar os anteriores que esperam aprovação ou estão na fila
+        # Falhou a limpeza (API do GitHub fora)? O deploy segue assim mesmo, como antes
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ESTE: ${{ github.run_id }}
+        run: |
+          antigos=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy.yml --limit 50 \
+            --json databaseId,status \
+            -q ".[] | select(.databaseId < $ESTE and (.status == \"waiting\" or .status == \"pending\" or .status == \"queued\")) | .databaseId")
+          if [ -z "$antigos" ]; then echo "Nenhum deploy antigo parado."; exit 0; fi
+          for id in $antigos; do
+            echo "Cancelando o deploy $id (este, $ESTE, sobe a mesma versão do main ou uma mais nova)"
+            gh run cancel "$id" --repo "$GITHUB_REPOSITORY" || echo "::warning::Não deu pra cancelar o $id"
+          done
+
   deploy:
     name: Subir pra produção
+    needs: limpar-fila
     runs-on: ubuntu-latest
     environment: producao
     timeout-minutes: 30
+    concurrency:
+      group: deploy-producao
+      cancel-in-progress: false
     # Automático só quando o CI foi de um push no main e passou; à mão, só do main
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
