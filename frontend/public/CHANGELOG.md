@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.81.0] — 2026-11-03
+
+### Alarme da rodada — nunca mais mudo sem ninguém saber
+- **Aviso "Alarme sem som":** o navegador não deixa a página tocar som antes de alguém clicar ou teclar nela. Painel aberto ou recarregado (F5, queda de energia) e sem ninguém mexer, o alarme do fim da rodada saía mudo e nada avisava. Agora aparece um selo **vermelho** "Alarme sem som — clique aqui pra ativar" (com um pontinho piscando se tiver rodada correndo); o clique libera o som e toca um bipe de confirmação
+- Com o som liberado e rodada correndo, o selo fica discreto: **"Alarme pronto · tela acordada"**. Sem rodada, some
+- O selo é pequeno e **dá pra arrastar** pela alça (⠿) pra onde não atrapalhe; o lugar fica guardado no computador
+- **Tela do PC acordada:** com rodada correndo, o painel pede pro navegador não deixar a tela apagar nem o PC dormir (dormindo, nada roda e o alarme não toca). O navegador só segura isso com a aba do painel na frente — o selo avisa "deixe esta aba na frente" quando não está, e "a tela pode apagar — ver energia do PC" se o navegador não permitir
+
 ## [v1.80.1] — 2026-11-03
 
 ### Timer da rodada — o fim é do servidor (relato do Maikon)
