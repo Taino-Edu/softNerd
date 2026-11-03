@@ -54,7 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
-| v1.80.1 | 03/11 | **Timer**: "finish" só vale com ≤ 3 s no relógio do servidor (PC fora da hora encerrava a rodada de todos); widget esconde timers de campeonato encerrado/cancelado |
+| v1.80.1 | 03/11 | **Timer**: "finish" só vale com ≤ 3 s no relógio do servidor (PC fora da hora encerrava a rodada de todos); widget só lista timer de campeonato de hoje/ontem ainda aberto e o alarme só toca até 10 min depois do fim (liguinhas esquecidas tocavam todas) |
 | v1.80.0 | 03/11 | **Crediário em camadas**: `CrediariosController` só HTTP; contas no `CrediarioContaService`, config dos lembretes no `CrediarioAvisoService`; 13 testes das contas; tirar item da edição zera o bloco de ajuste |
 | v1.79.7 | 03/11 | **Liguinha**: relógio da rodada conta na hora do servidor (celular fora da hora atrasava o timer); botão "Abrir o torneio" em Meus Campeonatos e na aba Torneios (quem saía da tela do jogo não voltava) |
 | v1.79.6 | 03/11 | **Liga Mensal**: tirada a frase "Top 4 do mês ganha brinde" do topo de `/liga` (pedido do Maikon) |

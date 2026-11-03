@@ -70,18 +70,22 @@ public class TimerControllerTests
     }
 
     [Fact]
-    public async Task Lista_EscondeTimerDeCampeonatoEncerradoOuCancelado()
+    public async Task Lista_SoMostraTimerDeCampeonatoDeHojeAindaAberto()
     {
         var db = CreateDb();
-        Championship Ch(ChampionshipStatus s) => new() { Name = s.ToString(), Game = "Pokemon", StartDate = DateTime.UtcNow, Status = s };
+        Championship Ch(ChampionshipStatus s, int diasAtras = 0) =>
+            new() { Name = s.ToString(), Game = "Pokemon", StartDate = DateTime.UtcNow.AddDays(-diasAtras), Status = s };
         var andamento = Ch(ChampionshipStatus.EmAndamento);
         var encerrado = Ch(ChampionshipStatus.Finalizado);
         var cancelado = Ch(ChampionshipStatus.Cancelado);
-        db.Championships.AddRange(andamento, encerrado, cancelado);
+        // O caso que tocava o alarme: liguinha de semanas atrás que ninguém encerrou, relógio em "finished"
+        var esquecida = Ch(ChampionshipStatus.EmAndamento, diasAtras: 15);
+        db.Championships.AddRange(andamento, encerrado, cancelado, esquecida);
         db.Timers.AddRange(
             new TimerEntity { Name = "Rodada de hoje", ChampionshipId = andamento.Id },
             new TimerEntity { Name = "Liguinha passada", ChampionshipId = encerrado.Id },
             new TimerEntity { Name = "Cancelado", ChampionshipId = cancelado.Id },
+            new TimerEntity { Name = "Esquecida", ChampionshipId = esquecida.Id, State = TimerState.Finished },
             new TimerEntity { Name = "Avulso" });
         await db.SaveChangesAsync();
 

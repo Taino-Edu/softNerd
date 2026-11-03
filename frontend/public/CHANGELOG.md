@@ -4,7 +4,7 @@
 
 ### Timer da rodada — o fim é do servidor (relato do Maikon)
 - "O alarme está com delay de 2 minutos no PC, aí ele começa a apitar e para o restante": quando a conta de uma tela zerava, ela avisava o servidor que o tempo tinha acabado, e o servidor encerrava a rodada pra todo mundo. Com o relógio do PC fora da hora, era ele quem decidia o fim. Agora o servidor só encerra quando, pela conta dele, faltam no máximo 3 segundos — aparelho fora da hora não mexe mais na rodada de ninguém (somado à v1.79.7, que já faz as telas contarem pela hora do servidor)
-- O widget de timers do balcão deixa de listar os relógios de campeonatos já encerrados ou cancelados — cada torneio deixava o seu, e eles se acumulavam ao lado do da rodada
+- **"Liga 5 timers ao mesmo tempo… começa a apitar":** liguinha que ninguém encerrou ficava com o relógio em "acabou" pra sempre, e o widget do balcão tocava o alarme de cada uma ao abrir o painel. Agora o widget só mostra o relógio de campeonato de hoje (ou de ontem) ainda aberto, e o alarme só toca sozinho até 10 minutos depois do fim
 
 ## [v1.80.0] — 2026-11-03
 

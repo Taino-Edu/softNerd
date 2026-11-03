@@ -106,6 +106,8 @@ interface TimerContextValue {
 const TimerContext = createContext<TimerContextValue | null>(null)
 
 const POLL_MS = 5000
+/** Até quanto tempo depois do fim o alarme ainda toca sozinho (quem abre o painel depois não ouve). */
+const ALARME_ATE_MS = 10 * 60_000
 
 export function TimerProvider({ children }: { children: ReactNode }) {
   const [timers,     setTimers]     = useState<TimerDto[]>([])
@@ -188,7 +190,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         }
         if (r > t.warnAtSeconds) avisadosRef.current.delete(t.id)
 
-        const acabou = t.state === 'finished' || (rodando && r <= 0)
+        // "Acabou" de dias atrás (liguinha que ninguém encerrou) não apita: só o que acabou há pouco.
+        // Antes cada timer velho tocava em loop ao abrir o painel (Maikon, 03/11: "liga 5 timers").
+        const acabouHaPouco = t.state === 'finished'
+          && (!t.updatedAt || agoraNoServidor() - new Date(t.updatedAt).getTime() < ALARME_ATE_MS)
+        const acabou = acabouHaPouco || (rodando && r <= 0)
         if (acabou) {
           iniciarAlarme(t.id, t.soundPreset)
           // Avisa o servidor uma única vez — a marca só sai quando o timer voltar a andar.

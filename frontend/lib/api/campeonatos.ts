@@ -37,6 +37,8 @@ export interface TimerDto {
   championshipId?: string | null; rodada?: number | null
   /** Hora do servidor na resposta: acerta o relógio do aparelho (lib/relogioServidor). */
   agora?: string
+  /** Última mudança: "finished" antigo (torneio esquecido) não toca alarme. */
+  updatedAt?: string
 }
 
 export interface NovoTimerRequest {

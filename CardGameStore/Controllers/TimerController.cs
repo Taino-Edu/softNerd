@@ -16,14 +16,21 @@ public class TimerController : ControllerBase
     private readonly AppDbContext _db;
     public TimerController(AppDbContext db) => _db = db;
 
-    // Timer de campeonato já encerrado ou cancelado sai da lista: cada torneio deixava o seu, e o
-    // widget do balcão acumulava relógios velhos ao lado do da rodada (Maikon, 03/11: "liga 5 timers")
+    // Timer de campeonato só aparece enquanto o campeonato é de hoje (ou de ontem, pra rodada que passa
+    // da meia-noite) e não foi encerrado nem cancelado. Cada torneio deixa o seu — e liguinha que nunca
+    // foi encerrada ficava com o relógio "acabou" pra sempre: o widget do balcão listava todos e tocava
+    // o alarme de cada um (Maikon, 03/11: "liga 5 timers ao mesmo tempo… começa a apitar")
     [HttpGet]
-    public async Task<IActionResult> List() =>
-        Ok(await _db.Timers
-            .Where(t => t.ChampionshipId == null || !_db.Championships.Any(c => c.Id == t.ChampionshipId
-                && (c.Status == ChampionshipStatus.Finalizado || c.Status == ChampionshipStatus.Cancelado)))
+    public async Task<IActionResult> List()
+    {
+        var (hoje, _) = Common.Brasilia.DiaUtc();
+        var desde = hoje.AddDays(-1);
+        return Ok(await _db.Timers
+            .Where(t => t.ChampionshipId == null || _db.Championships.Any(c => c.Id == t.ChampionshipId
+                && c.StartDate >= desde
+                && c.Status != ChampionshipStatus.Finalizado && c.Status != ChampionshipStatus.Cancelado))
             .OrderBy(t => t.CreatedAt).Select(t => ToDto(t)).ToListAsync());
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] TimerCreateRequest req)
@@ -175,6 +182,8 @@ public class TimerController : ControllerBase
         soundPreset     = t.SoundPreset,
         warnAtSeconds   = t.WarnAtSeconds,
         createdAt       = t.CreatedAt,
+        // Quando mudou por último: o widget só toca o alarme de quem acabou há pouco
+        updatedAt       = t.UpdatedAt,
         championshipId  = t.ChampionshipId,
         rodada          = t.Rodada,
         // Hora do servidor: a tela conta pela diferença entre ela e o relógio do aparelho
