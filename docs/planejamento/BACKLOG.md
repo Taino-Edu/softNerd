@@ -55,6 +55,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 | Versão | Data | O quê |
 |---|---|---|
 | v1.80.0 | 03/11 | **Crediário em camadas**: `CrediariosController` só HTTP; contas no `CrediarioContaService`, config dos lembretes no `CrediarioAvisoService`; 13 testes das contas; tirar item da edição zera o bloco de ajuste |
+| v1.79.6 | 03/11 | **Liga Mensal**: tirada a frase "Top 4 do mês ganha brinde" do topo de `/liga` (pedido do Maikon) |
 | v1.79.5 | 30/10 | **Liga Mensal**: tirada a etiqueta "Brinde" atrás do nome dos 4 primeiros no ranking de `/liga` (pedido do Maikon) |
 | v1.79.4 | 29/10 | **Pix da pré-venda por pedido**: "Minhas reservas" agrupa por pedido (um botão de Pix com o total, antes era um por item); cliente junta os próprios pedidos sem pagar ("Pagar tudo num Pix só", `POST /api/reservations/mine/juntar`) |
 | v1.79.3 | 29/10 | **Tela de pedidos mais rápida**: status do Pix não vai mais ao Inter pra Pix vencido (e no máx. 1×/30 s no prazo); conexão mTLS com o Inter reaproveitada; lista de pedidos já traz o status do Pix (sem 1 chamada por pedido); `logs.sh --dias` consertado |
