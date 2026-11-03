@@ -8,6 +8,7 @@
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using CardGameStore.Services.Campeonatos;
+using CardGameStore.Services.Crediarios;
 using CardGameStore.Services.Pedidos;
 
 namespace CardGameStore.Configuration;
@@ -128,6 +129,8 @@ public static class ServicosDaLoja
         services.AddScoped<IPedidoConsultaService,  PedidoConsultaService>();
         // Inscrição em campeonato e Pix da entrada (Services/Campeonatos)
         services.AddScoped<ICampeonatoInscricaoService, CampeonatoInscricaoService>();
+        // Contas do crediário (Services/Crediarios)
+        services.AddScoped<ICrediarioContaService, CrediarioContaService>();
         services.AddScoped<IAiChatService,       GeminiChatService>();
         services.AddSingleton<ITcgApiClient,     TcgApiClient>();
         services.AddSingleton<ITcgService,       TcgService>();
