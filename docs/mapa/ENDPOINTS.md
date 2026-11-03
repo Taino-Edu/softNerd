@@ -195,20 +195,20 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/crediarios` | AdminOnly | `GetAll` (168) | `crediarioApi.list` | `app/admin/crediario/page.tsx`<br>`app/admin/usuarios/page.tsx` |
-| POST | `/api/crediarios` | AdminOnly | `CriarManual` (61) | `crediarioApi.criarManual` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (510) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
-| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (518) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
-| GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (211) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/crediarios/por-cliente` | AdminOnly | `GetPorCliente` (125) | `crediarioApi.porCliente` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (193) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
-| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (603) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
-| PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (234) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (572) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
-| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (550) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
-| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (323) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
-| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (467) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (492) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios` | AdminOnly | `GetAll` (50) | `crediarioApi.list` | `app/admin/crediario/page.tsx`<br>`app/admin/usuarios/page.tsx` |
+| POST | `/api/crediarios` | AdminOnly | `CriarManual` (37) | `crediarioApi.criarManual` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/avisos/config` | AdminOnly | `GetAvisoConfig` (117) | `crediarioApi.avisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (122) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (58) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
+| GET | `/api/crediarios/por-cliente` | AdminOnly | `GetPorCliente` (45) | `crediarioApi.porCliente` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (54) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
+| DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (81) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
+| PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (66) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (144) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
+| GET | `/api/crediarios/{id:guid}/aviso/previa` | AdminOnly | `PreviaAviso` (129) | `crediarioApi.previaAviso` | `components/admin/CrediarioAvisos.tsx` |
+| POST | `/api/crediarios/{id:guid}/pagamento` | AdminOnly | `RegistrarPagamento` (71) | `crediarioApi.registrarPagamento` | `app/admin/crediario/page.tsx` |
+| POST | `/api/crediarios/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (92) | `crediarioApi.gerarPix` | `app/admin/crediario/page.tsx` |
+| GET | `/api/crediarios/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (104) | `crediarioApi.statusPix` | `app/admin/crediario/page.tsx` |
 
 ## Deck
 

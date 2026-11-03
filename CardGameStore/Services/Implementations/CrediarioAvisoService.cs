@@ -15,7 +15,9 @@
 
 using System.Text;
 using System.Text.Json;
+using CardGameStore.Common;
 using CardGameStore.Data;
+using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
 using CardGameStore.Validation;
@@ -40,11 +42,13 @@ public class CrediarioAvisoService
     private readonly IPushService     _push;
     private readonly IConfiguration   _config;
     private readonly ILogger<CrediarioAvisoService> _logger;
+    private readonly IAuditService?   _audit;
 
     public CrediarioAvisoService(
         AppDbContext db, IEmailService email, IPushService push,
-        IConfiguration config, ILogger<CrediarioAvisoService> logger)
+        IConfiguration config, ILogger<CrediarioAvisoService> logger, IAuditService? audit = null)
     {
+        _audit    = audit;
         _config   = config;
         _db       = db;
         _email    = email;
@@ -64,6 +68,44 @@ public class CrediarioAvisoService
         await _db.SaveChangesAsync();
         return cfg;
     }
+
+    /// <summary>Salva a config dos lembretes (tela Crediário → Avisos).</summary>
+    public async Task<CrediarioAvisoConfigDto> SalvarConfigAsync(CrediarioAvisoConfigDto req, CancellationToken ct = default)
+    {
+        var marcos = req.Marcos.Where(m => m is >= -30 and <= 90).Distinct().OrderBy(m => m).ToList();
+        if (req.Ativo && marcos.Count == 0)
+            throw new RegraException("Escolha pelo menos um dia de aviso.");
+        if (req.Ativo && !req.CanalApp && !req.CanalEmail)
+            throw new RegraException("Ligue pelo menos um canal de aviso.");
+
+        var cfg = await ObterConfigAsync();
+        cfg.Ativo         = req.Ativo;
+        cfg.HoraEnvio     = req.HoraEnvio;
+        cfg.MarcosJson    = JsonSerializer.Serialize(marcos);
+        cfg.CanalApp      = req.CanalApp;
+        cfg.CanalEmail    = req.CanalEmail;
+        cfg.ResumoAdmin   = req.ResumoAdmin;
+        cfg.MensagemExtra = string.IsNullOrWhiteSpace(req.MensagemExtra) ? null : req.MensagemExtra.Trim();
+        cfg.UpdatedAt     = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        if (_audit is not null)
+            await _audit.LogAsync("ConfigurouAvisosCrediario", "CrediarioAvisoConfig", cfg.Id.ToString(),
+                details: JsonSerializer.Serialize(new { cfg.Ativo, cfg.HoraEnvio, marcos, cfg.CanalApp, cfg.CanalEmail }));
+
+        return ParaConfigDto(cfg);
+    }
+
+    public static CrediarioAvisoConfigDto ParaConfigDto(CrediarioAvisoConfig cfg) => new()
+    {
+        Ativo         = cfg.Ativo,
+        HoraEnvio     = cfg.HoraEnvio,
+        Marcos        = LerMarcos(cfg.MarcosJson),
+        CanalApp      = cfg.CanalApp,
+        CanalEmail    = cfg.CanalEmail,
+        ResumoAdmin   = cfg.ResumoAdmin,
+        MensagemExtra = cfg.MensagemExtra,
+    };
 
     public static List<int> LerMarcos(string? json)
     {

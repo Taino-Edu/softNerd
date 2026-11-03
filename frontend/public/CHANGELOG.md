@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.80.0] — 2026-11-03
+
+### Por dentro — crediário em camadas
+- O controller do crediário (710 linhas que falavam direto com o banco em 24 pontos) ficou só com o HTTP (164 linhas). As contas — abrir à mão, listar, editar, receber pagamento e excluir — foram pro `CrediarioContaService` (com interface, em `Services/Crediarios/`), e salvar a configuração dos lembretes foi pro `CrediarioAvisoService`, que já cuidava deles
+- A correção da v1.79.2 (item adicionado na edição soma na conta) foi junto pro serviço, e agora tirar o item também zera o bloco "Itens adicionados na edição"
+- 13 testes das contas (pagamento parcial e total, split que passa do saldo, forma que não quita dívida, conta quitada, edição com item novo e com item tirado, exclusão) — antes só havia o da edição
+- Nada muda pra quem usa: mesmas rotas, permissões, respostas e mensagens
+
 ## [v1.79.7] — 2026-11-03
 
 ### Liguinha e Campeonato — relógio certo e volta pro torneio (pedidos do Maikon)

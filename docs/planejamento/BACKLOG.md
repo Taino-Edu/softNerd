@@ -38,8 +38,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 1. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
 2. **Código mais limpo pra banca** (pedido do Taino, 27/10), um PR por etapa:
    - ✅ Limpeza das chaves (v1.75.0–v1.77.0).
-   - Clean Architecture no back: ✅ pedidos (v1.78.0), ✅ campeonatos (v1.79.0); faltam os controllers que falam
-     com o banco direto — `CrediariosController` (24 acessos), `AnalyticsController` (18),
+   - Clean Architecture no back: ✅ pedidos (v1.78.0), ✅ campeonatos (v1.79.0), ✅ crediário (v1.80.0); faltam os controllers
+     que falam com o banco direto — `AnalyticsController` (18),
      `ContasReceberController`, `UserController`, `MarketplaceController`, `LgpdController` e os menores.
    - Boas práticas no front: configurar o ESLint, tirar os 81 `any`, as 6 telas que chamam a API fora do `lib/api`.
    - Segurança: revisão completa (CodeQL aberto, cookies `Secure`, e-mail nos logs, permissões, dependências).
@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.80.0 | 03/11 | **Crediário em camadas**: `CrediariosController` só HTTP; contas no `CrediarioContaService`, config dos lembretes no `CrediarioAvisoService`; 13 testes das contas; tirar item da edição zera o bloco de ajuste |
 | v1.79.7 | 03/11 | **Liguinha**: relógio da rodada conta na hora do servidor (celular fora da hora atrasava o timer); botão "Abrir o torneio" em Meus Campeonatos e na aba Torneios (quem saía da tela do jogo não voltava) |
 | v1.79.6 | 03/11 | **Liga Mensal**: tirada a frase "Top 4 do mês ganha brinde" do topo de `/liga` (pedido do Maikon) |
 | v1.79.5 | 30/10 | **Liga Mensal**: tirada a etiqueta "Brinde" atrás do nome dos 4 primeiros no ranking de `/liga` (pedido do Maikon) |
