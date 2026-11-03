@@ -164,6 +164,8 @@ public class TimerController : ControllerBase
         createdAt       = t.CreatedAt,
         championshipId  = t.ChampionshipId,
         rodada          = t.Rodada,
+        // Hora do servidor: a tela conta pela diferença entre ela e o relógio do aparelho
+        agora           = DateTime.UtcNow,
     };
 }
 

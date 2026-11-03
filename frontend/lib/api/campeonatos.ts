@@ -35,6 +35,8 @@ export interface TimerDto {
   startedAt: string | null; soundPreset: string; warnAtSeconds: number
   /** Timer de campeonato (liguinha): reinicia sozinho a cada rodada gerada. */
   championshipId?: string | null; rodada?: number | null
+  /** Hora do servidor na resposta: acerta o relógio do aparelho (lib/relogioServidor). */
+  agora?: string
 }
 
 export interface NovoTimerRequest {
@@ -65,6 +67,9 @@ export interface MyParticipation {
   entryFeePaidAt?: string | null; entryFeePaymentMethod?: string | null
   /** Prazo pra pagar e não perder a vaga. Null = vaga firme (grátis, paga ou antiga). */
   inscricaoExpiraEm?: string | null
+  /** "Suico" tem tela do jogador; com a modalidade, dá o caminho dela (lib/caminhosTorneio). */
+  formato?: string
+  modalidade?: string
 }
 
 export const championshipApi = {

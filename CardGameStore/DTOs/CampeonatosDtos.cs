@@ -89,6 +89,9 @@ public class MyParticipationDto
     public string?   EntryFeePaymentMethod { get; init; }
     /// <summary>Até quando a vaga fica segurada esperando pagamento. Null = vaga firme.</summary>
     public DateTime? InscricaoExpiraEm     { get; init; }
+    /// <summary>"Suico" tem tela do jogador (/liga/jogar ou /campeonato/jogar): a conta mostra o botão de voltar pra ela.</summary>
+    public string    Formato               { get; init; } = string.Empty;
+    public string    Modalidade            { get; init; } = string.Empty;
 }
 
 /// <summary>DTO de participante em um campeonato.</summary>
@@ -298,6 +301,8 @@ public static class CampeonatoMapeamento
         EntryFeePaidAt        = p.EntryFeePaidAt,
         EntryFeePaymentMethod = p.EntryFeePaymentMethod,
         InscricaoExpiraEm     = p.InscricaoExpiraEm,
+        Formato               = p.Championship?.Formato.ToString() ?? string.Empty,
+        Modalidade            = p.Championship?.Modalidade.ToString() ?? string.Empty,
     };
 
     /// <summary>Pré-inscrições em ordem de chegada; Numero conta separado confirmados e lista de espera.</summary>

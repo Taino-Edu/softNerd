@@ -20,6 +20,8 @@ import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
 import { useSiteConfig } from '@/lib/useSiteConfig'
 import { useReservationCart } from '@/hooks/useReservationCart'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { rotasDoEvento } from '@/lib/caminhosTorneio'
 
 interface MyParticipation {
   participationId: string
@@ -37,6 +39,9 @@ interface MyParticipation {
   entryFeePaymentMethod?: string | null
   /** Prazo pra pagar sem perder a vaga. Null = vaga firme (grátis, paga, ou antiga). */
   inscricaoExpiraEm?: string | null
+  /** "Suico" tem tela do jogador (mesa, resultado, relógio) — o botão "Abrir o torneio" leva pra ela. */
+  formato?: string
+  modalidade?: string
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
@@ -147,6 +152,7 @@ function MeusCampeonatos() {
   const [loading, setLoading] = useState(true)
   const [pixInscricao, setPixInscricao] = useState<{ championshipId: string; pix: PixCobrancaDto } | null>(null)
   const [gerandoPix, setGerandoPix] = useState<string | null>(null)
+  const separado = useFuncionalidade('campeonato-separado') === true
 
   const load = useCallback(() => {
     fetch(`${BASE}/api/championship/my-participations`, { credentials: 'include' })
@@ -212,6 +218,16 @@ function MeusCampeonatos() {
                 <p className="text-lg font-black leading-tight" style={{ color: C.blue2 }}>#{p.playerNumber}</p>
               </div>
             </div>
+
+            {/* Volta pra tela do jogo: quem saiu (abriu a comanda pelo QR da mesa, fechou o navegador)
+                via o campeonato aqui e não tinha como voltar pra mesa (Maikon, 03/11) */}
+            {p.formato === 'Suico' && (p.status === 'Inscricoes' || p.status === 'EmAndamento') && (
+              <Link href={`${rotasDoEvento(p.modalidade, separado).jogar}?t=${p.championshipId}`}
+                className="mt-2 w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                style={{ backgroundColor: C.blue2, color: '#FFFFFF' }}>
+                <Swords className="w-3.5 h-3.5" /> Abrir o torneio
+              </Link>
+            )}
 
             {/* Taxa de inscrição: paga (chip) ou botão de Pix */}
             {p.entryFeeInReais > 0 && (

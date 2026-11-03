@@ -17,6 +17,7 @@ import {
 } from 'react'
 import { timerApi, TimerDto, NovoTimerRequest } from '@/lib/api'
 import { isLoggedIn, getRole } from '@/lib/auth'
+import { acertarPeloServidor, agoraNoServidor } from '@/lib/relogioServidor'
 
 // ── Áudio ─────────────────────────────────────────────────────────────────────
 const freqMap: Record<string, Record<string, number>> = {
@@ -66,7 +67,9 @@ export function calcRestante(t: TimerDto): number {
   if (t.state === 'paused')   return t.pausedRemaining ?? t.durationSeconds
   if (t.state === 'finished') return 0
   if (t.state === 'running' && t.startedAt) {
-    const passado = (Date.now() - new Date(t.startedAt).getTime()) / 1000
+    // Na hora do servidor: o tablet do balcão fora da hora mostrava outro tempo que os celulares
+    acertarPeloServidor(t)
+    const passado = (agoraNoServidor() - new Date(t.startedAt).getTime()) / 1000
     return Math.max(0, t.durationSeconds - passado)
   }
   return t.durationSeconds
