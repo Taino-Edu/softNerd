@@ -87,6 +87,29 @@ export function podeUsarTimers(): boolean {
   return role === 'Admin' || role === 'Operator'
 }
 
+/**
+ * Chama `fn` a cada 250 ms pelo Web Worker (public/tique-worker.js): o Chrome freia os relógios da
+ * aba em segundo plano (uma vez por minuto depois de 5 min escondida) e o alarme do fim da rodada
+ * atrasava com o painel atrás de outra aba. Sem Worker, cai no setInterval de antes.
+ */
+function tiqueDoRelogio(fn: () => void): () => void {
+  let intervalo: ReturnType<typeof setInterval> | null = null
+  const semWorker = () => { if (!intervalo) intervalo = setInterval(fn, 250) }
+  let w: Worker | null = null
+  try {
+    w = new Worker('/tique-worker.js')
+    w.onmessage = () => fn()
+    // Arquivo não carregou: o erro não vira exceção — sem isto o alarme ficaria mudo
+    w.onerror = () => { w?.terminate(); w = null; semWorker() }
+  } catch {
+    semWorker()
+  }
+  return () => {
+    w?.terminate()
+    if (intervalo) clearInterval(intervalo)
+  }
+}
+
 // ── Contexto ──────────────────────────────────────────────────────────────────
 interface TimerContextValue {
   timers:      TimerDto[]
@@ -218,12 +241,17 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         if (!atuais.some(t => t.id === id)) finalizadosRef.current.delete(id)
       })
 
-      setRestantes(mapa)
+      // O tique é de 250 ms, mas a tela mostra segundos: só redesenha quando um segundo muda
+      setRestantes(prev => {
+        const ids = Object.keys(mapa)
+        const igual = ids.length === Object.keys(prev).length
+          && ids.every(id => prev[id] !== undefined && Math.ceil(prev[id]) === Math.ceil(mapa[id]))
+        return igual ? prev : mapa
+      })
     }
 
     tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
+    return tiqueDoRelogio(tick)
   }, [iniciarAlarme, pararAlarme])
 
   // Desmontou (logout, troca de app): não deixa alarme órfão tocando.

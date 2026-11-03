@@ -7,6 +7,7 @@
 // =============================================================================
 import axios from 'axios'
 import { clearAuth } from '../auth'
+import { acertarComIdaEVolta } from '../relogioServidor'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
@@ -17,6 +18,25 @@ export const api = axios.create({
   // (accessToken, refreshToken) em todas as requisições cross-origin.
   withCredentials: true,
 })
+
+// Relógio da rodada: respostas com `agora` (hora do servidor) acertam o relógio do aparelho
+// descontando a demora da rede — lib/relogioServidor. Só olha onde o timer costuma vir.
+type ComSaida = { __saiu?: number }
+api.interceptors.request.use(cfg => { (cfg as ComSaida).__saiu = Date.now(); return cfg })
+api.interceptors.response.use(res => {
+  const saiu = (res.config as ComSaida).__saiu
+  const agora = agoraDaResposta(res.data)
+  if (saiu !== undefined && agora) acertarComIdaEVolta(agora, saiu, Date.now())
+  return res
+})
+
+function agoraDaResposta(d: unknown): string | undefined {
+  type T = { agora?: unknown; timer?: T | null; torneio?: T | null }
+  const o = d as T | T[] | null
+  const lido = Array.isArray(o) ? o.find(x => typeof x?.agora === 'string')?.agora
+    : o?.agora ?? o?.timer?.agora ?? o?.torneio?.timer?.agora
+  return typeof lido === 'string' ? lido : undefined
+}
 
 // Mutex de refresh: evita múltiplas requisições simultâneas disparando vários refreshes
 // quando o token expira com várias chamadas em paralelo na mesma página.
