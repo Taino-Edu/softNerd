@@ -121,7 +121,8 @@ export default function LigaMensalPage() {
             LIGA MENSAL
           </h1>
           <p className="mt-4 text-sm md:text-base max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.88)' }}>
-            Pontuação dos campeonatos da semana. <strong style={{ color: '#FFFFFF' }}>Top 4 do mês ganha brinde.</strong>
+            {/* Sem "Top 4 do mês ganha brinde" (Maikon, 29/10: nada de brinde na Liguinha) */}
+            Pontuação dos campeonatos da semana.
           </p>
           <p className={`${pixel.className} mt-4 text-[9px] sm:text-[10px] leading-relaxed`} style={{ color: 'rgba(255,255,255,0.75)' }}>
             1º 10 PTS · 2º 7 · 3º 5 · 4º 3 · DEMAIS 1

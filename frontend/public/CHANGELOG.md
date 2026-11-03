@@ -1,5 +1,10 @@
 # Changelog — Santuário Nerd
 
+## [v1.79.6] — 2026-11-03
+
+### Liga Mensal — sem brinde no topo também (pedido do Maikon)
+- Saiu a frase **"Top 4 do mês ganha brinde."** do topo de `/liga`. Fica "Pontuação dos campeonatos da semana." — junto com a etiqueta tirada na v1.79.5, a página não fala mais em brinde
+
 ## [v1.79.5] — 2026-10-30
 
 ### Liga Mensal — sem a etiqueta "Brinde" no ranking (pedido do Maikon)
