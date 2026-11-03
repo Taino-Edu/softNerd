@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.80.1] — 2026-11-03
+
+### Timer da rodada — o fim é do servidor (relato do Maikon)
+- "O alarme está com delay de 2 minutos no PC, aí ele começa a apitar e para o restante": quando a conta de uma tela zerava, ela avisava o servidor que o tempo tinha acabado, e o servidor encerrava a rodada pra todo mundo. Com o relógio do PC fora da hora, era ele quem decidia o fim. Agora o servidor só encerra quando, pela conta dele, faltam no máximo 3 segundos — aparelho fora da hora não mexe mais na rodada de ninguém (somado à v1.79.7, que já faz as telas contarem pela hora do servidor)
+- **Alarme no segundo certo, com o painel atrás de outra aba:** o Chrome freia os relógios da aba em segundo plano (depois de 5 min escondida, uma conferida por minuto), e o alarme do fim podia tocar até 1 min atrasado com o painel minimizado. A contagem agora roda num *Web Worker*, que o navegador não freia, e confere a cada 0,25 s (antes 1 s)
+- **Hora do servidor sem o atraso da rede:** cada resposta com o relógio mede a ida e volta e desconta a metade (a mesma conta que os relógios de computador usam pra se acertar). Se o relógio do aparelho pular no meio da rodada (o Windows acertando a hora), a correção vale na hora
+- **"Liga 5 timers ao mesmo tempo… começa a apitar":** liguinha que ninguém encerrou ficava com o relógio em "acabou" pra sempre, e o widget do balcão tocava o alarme de cada uma ao abrir o painel. Agora o widget só mostra o relógio de campeonato de hoje (ou de ontem) ainda aberto, e o alarme só toca sozinho até 10 minutos depois do fim
+
 ## [v1.80.0] — 2026-11-03
 
 ### Por dentro — crediário em camadas

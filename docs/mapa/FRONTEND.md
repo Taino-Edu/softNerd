@@ -172,7 +172,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/relatorio-admin.ts` | `gerarRelatorioClientes`, `gerarRelatorioPDV`, `gerarRelatorioComandas`, `gerarRelatorioCrediario` |
 | `lib/relatorio-estoque.ts` | `gerarRelatorioOperacional`, `gerarRelatorioGerencial` |
 | `lib/relatorio.ts` | `gerarRelatorioPDF` |
-| `lib/relogioServidor.ts` | `acertarPeloServidor`, `agoraNoServidor` |
+| `lib/relogioServidor.ts` | `acertarComIdaEVolta`, `acertarPeloServidor`, `agoraNoServidor` |
 | `lib/reportarErro.ts` | `reportarErro` |
 | `lib/sessionKeepAlive.ts` | `renovarSessao`, `iniciarKeepAlive` |
 | `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
