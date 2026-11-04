@@ -221,10 +221,6 @@ export default function ProductPage() {
         style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="w-full max-w-5xl mx-auto px-4 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink hover:opacity-90">
-            {siteCfg?.logoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={fotoLeve(siteCfg.logoUrl, 160) ?? siteCfg.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
-            )}
             <span className="font-black text-lg leading-none truncate" style={{ color: '#FFFFFF' }}>{siteCfg?.siteName ?? 'Santuário Nerd'}</span>
           </Link>
           <div className="ml-auto flex items-center gap-1 shrink-0">

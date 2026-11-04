@@ -10,7 +10,6 @@ import {
   ShoppingBag,
   Sun, Moon, Search, Tag,
 } from 'lucide-react'
-import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import CartaoProduto from '@/components/loja/CartaoProduto'
@@ -98,10 +97,6 @@ export default function ProdutosPage() {
         style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), backdropFilter: 'blur(16px)' }}>
         <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink hover:opacity-90">
-            {siteCfg?.logoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={fotoLeve(siteCfg.logoUrl, 160) ?? siteCfg.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
-            )}
             <span className="font-black text-xl leading-none truncate" style={{ color: '#FFFFFF' }}>{siteCfg?.siteName ?? 'Santuário Nerd'}</span>
           </Link>
           <div className="flex items-center gap-2 shrink-0">
