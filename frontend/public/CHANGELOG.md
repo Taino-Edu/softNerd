@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.82.0] — 2026-11-04
+
+### Página principal — topo num azul só, sem o mascote de IA, Libras no menu (pedido do Taino)
+- **Um azul só:** a faixa de cima, o menu e o fundo do topo agora usam o mesmo azul escuro do menu (antes eram três tons)
+- **Sem o mascote de IA:** o topo mostra fixa a arte "Santuário Nerd" (a nuvem com o patinho, que já está na pasta de imagens do site). Antes a página abria com ela e trocava pro mascote quando a configuração chegava. O mascote também saiu da barra de menu da página principal, de Produtos, da página do produto e da Sacola — fica só o nome
+- **Menu preso no topo de novo:** a barra tinha duas posições ao mesmo tempo e ocupava espaço na página, sobrando um vão azul entre o menu e o texto (64 px). Agora ela fica fixa no topo, some ao rolar pra baixo e volta ao rolar pra cima, como foi desenhada
+- **Libras no menu, sem a mão flutuante:** na página principal o botão do VLibras saiu do canto e ficou no menu (ícone ao lado da lua no computador, botão "Libras" no menu do celular). Os botões "Libras" do menu não abriam nada — procuravam o botão antigo do plugin — e agora abrem o painel. O plugin carrega sempre na página principal, mesmo pra quem desligou a mão nas preferências
+- Menu do celular: os botões de baixo em duas colunas ("Minha Conta" quebrava e "Eventos" desalinhava) e o botão do menu ganhou nome pra leitor de tela
+
 ## [v1.81.0] — 2026-11-03
 
 ### Alarme da rodada — nunca mais mudo sem ninguém saber

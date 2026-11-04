@@ -19,6 +19,7 @@ import { fotoLeve } from '@/lib/fotoLeve'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import CartaoProduto from '@/components/loja/CartaoProduto'
+import { abrirVLibras } from '@/components/VLibrasController'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
 // pra não piscar/mudar nada enquanto o admin nunca tiver personalizado o site.
@@ -180,7 +181,13 @@ export default function LandingPage() {
   // Topo (pedido do Maikon, 14/10): azul do topo, etiqueta e ilustração próprias de Personalizar Site
   const heroGradient = `linear-gradient(135deg, ${mixHex(site.colorHero, '#FFFFFF', 0.10)} 0%, ${site.colorHero} 45%, ${mixHex(site.colorHero, '#000000', 0.38)} 100%)`
   const navBg = mixHex(site.colorHero, '#000000', 0.32)
-  const heroImagem = site.heroImageUrl || site.logoUrl || '/logo-santuario.webp'
+  // Pedido do Taino (04/11): topo sem o mascote de IA. A logo enviada em Personalizar Site (o mascote)
+  // entrava depois que a configuração chegava — a página abria com a nuvem "Santuário Nerd" e trocava.
+  // Agora a ilustração do topo é a nuvem fixa (public/logo-santuario.webp), a não ser que se escolha
+  // uma "Imagem do topo" própria; a logo enviada continua só no menu.
+  const heroImagem = uniforme
+    ? site.heroImageUrl || '/logo-santuario.webp'
+    : site.heroImageUrl || site.logoUrl || '/logo-santuario.webp'
 
   // Detalhes do modelo do Maikon (14/10): faixa acima do menu, topo arredondado, 3 cartões, chamada
   // "Quero jogar", rodapé no azul e parcelamento no cartão de produto. Vitrine em grade com o botão
@@ -304,7 +311,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      <nav className="fixed inset-x-0 top-0 z-50 h-16 flex items-center relative transition-transform duration-300"
+      <nav className="fixed inset-x-0 top-0 z-50 h-16 flex items-center transition-transform duration-300"
         style={{ top: faixa, backgroundColor: navBg, backdropFilter: 'blur(16px)', transform: (navVisible || navHover) ? 'translateY(0)' : `translateY(calc(-100% - ${faixa}px))` }}
         onMouseEnter={() => setNavHover(true)}
         onMouseLeave={() => setNavHover(false)}>
@@ -312,12 +319,8 @@ export default function LandingPage() {
         {/* Menu numa linha só: nada quebra em duas (era "Mercado de / Cartas" entre 1280 e 1440px) */}
         <div className="w-full max-w-7xl mx-auto px-5 flex items-center justify-between gap-4 2xl:gap-6">
 
-          {/* Marca no começo, como nas lojas grandes — pedido do Maikon (cabeça do mascote + nome) */}
+          {/* Marca no começo, como nas lojas grandes. Só o nome: o mascote de IA saiu do menu (Taino, 04/11) */}
           <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink">
-            {site.logoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={fotoLeve(site.logoUrl, 160) ?? site.logoUrl} alt="" className="h-10 w-10 object-contain shrink-0" />
-            )}
             <span className="font-black text-xl leading-none truncate" style={{ color: '#ffffff' }}>{site.siteName}</span>
           </Link>
 
@@ -333,7 +336,7 @@ export default function LandingPage() {
           {/* Ações direita */}
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => (document.querySelector('[vw-access-button]') as HTMLElement | null)?.click()}
+              onClick={abrirVLibras} aria-label="Abrir Libras (VLibras)"
               title="Acessibilidade em Libras"
               className="hidden xl:block p-2 rounded-xl transition-colors hover:bg-white/10"
               style={{ color: '#ffffff' }}>
@@ -365,7 +368,7 @@ export default function LandingPage() {
               style={{ backgroundColor: C.yellow, color: site.colorNavy }}>
               {site.ctaVerEventosLabel}
             </a>
-            <button onClick={() => setMobileMenu(v => !v)} className="xl:hidden p-2" style={{ color: '#ffffff' }}>
+            <button onClick={() => setMobileMenu(v => !v)} aria-label={mobileMenu ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileMenu} className="xl:hidden p-2" style={{ color: '#ffffff' }}>
               <div className="space-y-1.5">
                 <span className={`block w-5 h-0.5 bg-current transition-transform ${mobileMenu ? 'rotate-45 translate-y-2' : ''}`} />
                 <span className={`block w-5 h-0.5 bg-current transition-opacity ${mobileMenu ? 'opacity-0' : ''}`} />
@@ -400,26 +403,27 @@ export default function LandingPage() {
             className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
             {site.navPontosLabel}
           </a>
-          <div className="flex gap-2 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
+          {/* Duas colunas: em quatro numa linha, "Minha Conta" quebrava e "Eventos" desalinhava */}
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
             <Link href="/entrar" onClick={() => setMobileMenu(false)}
-              className="flex-1 text-center py-2.5 text-sm rounded-xl border font-medium hover:text-white transition-colors"
+              className="flex items-center justify-center py-2.5 text-sm rounded-xl border font-medium hover:text-white transition-colors"
               style={{ color: 'rgba(255,255,255,0.70)', borderColor: 'rgba(255,255,255,0.25)' }}>
               Minha Conta
             </Link>
             <button onClick={() => { toggleDark(); setMobileMenu(false) }}
-              className="px-4 py-2.5 text-sm rounded-xl border font-medium hover:text-white transition-colors flex items-center gap-1.5"
+              className="flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl border font-medium hover:text-white transition-colors"
               style={{ color: 'rgba(255,255,255,0.70)', borderColor: 'rgba(255,255,255,0.25)' }}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               {isDark ? 'Claro' : 'Escuro'}
             </button>
             <button
-              onClick={() => { (document.querySelector('[vw-access-button]') as HTMLElement | null)?.click(); setMobileMenu(false) }}
-              className="px-4 py-2.5 text-sm rounded-xl border font-bold hover:text-white transition-colors"
+              onClick={() => { abrirVLibras(); setMobileMenu(false) }}
+              className="flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl border font-bold hover:text-white transition-colors"
               style={{ color: 'rgba(255,255,255,0.70)', borderColor: 'rgba(255,255,255,0.25)' }}>
-              Libras
+              <Accessibility className="w-4 h-4" /> Libras
             </button>
             <a href="#eventos" onClick={() => setMobileMenu(false)}
-              className="flex-1 text-center py-2.5 text-sm rounded-xl font-black"
+              className="flex items-center justify-center py-2.5 text-sm rounded-xl font-black"
               style={{ backgroundColor: C.blue, color: '#fff' }}>
               Eventos
             </a>
@@ -454,7 +458,8 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/10" />
           </>
         ) : (
-          <div className="absolute inset-0" style={{ background: heroGradient }}>
+          // Topo inteiro no azul da barra do menu (pedido do Taino, 04/11): sem degradê mais claro embaixo dela
+          <div className="absolute inset-0" style={{ background: uniforme ? navBg : heroGradient }}>
             {!uniforme && (
               // Anéis de fundo do mockup: só decoração, não pegam clique
               <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>

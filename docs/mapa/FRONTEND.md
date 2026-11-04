@@ -59,7 +59,7 @@
 | `/login` | `app/login/page.tsx` | `auth/Moldura` |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
-| `/` | `app/page.tsx` | `loja/CartaoProduto` |
+| `/` | `app/page.tsx` | `VLibrasController`, `loja/CartaoProduto` |
 | `/perfil/[id]` | `app/perfil/[id]/page.tsx` | `pokemon/ParceiroDaConta` |
 | `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | `auth/Moldura` |
 | `/privacidade` | `app/privacidade/page.tsx` | `LegalActions`, `ThemeToggle` |
@@ -88,7 +88,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `RelatorDeErros` | `RelatorDeErros` | `components/ClientProviders.tsx` |
 | `ThemeToggle` | `ThemeToggle` | `app/lgpd/page.tsx`<br>`app/privacidade/page.tsx`<br>`app/termos/page.tsx`<br>`components/admin/Sidebar.tsx` |
 | `TimerWidget` | `TimerWidget` | `app/admin/layout.tsx` |
-| `VLibrasController` | `VLibrasController` | `app/layout.tsx` |
+| `VLibrasController` | `abrirVLibras`, `VLibrasController` | `app/layout.tsx`<br>`app/page.tsx` |
 | `admin/AiChatWidget` | `AiChatWidget` | `app/admin/layout.tsx` |
 | `admin/CobrancaPixModal` | `CobrancaPixModal` | `app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/ConferenciaButton` | `ConferenciaButton` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
