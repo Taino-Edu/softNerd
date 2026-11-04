@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.82.1] — 2026-11-04
+
+### Site da loja — o mesmo menu em todas as páginas (pedido do Taino)
+- **Produtos, página do produto e Sacola** ganharam o menu da página principal: faixa de aviso, Torneios, Produtos, Mercado de Cartas, Liga Mensal, Pontos, Minha Conta, Sacola e o menu do celular. Antes cada uma tinha a sua barra, só com o nome — no celular, quem entrava em Produtos não chegava em Torneios, Liga ou Minha Conta
+- **Libras no menu em todas elas:** a mão flutuante do VLibras saiu também dessas páginas; o "Libras" do menu abre o painel
+- A Sacola ganhou o botão de modo escuro, como as outras; na página do produto, o "Compartilhar" foi pra linha do caminho (Início › Produtos › categoria) — na barra, cortava o nome da loja
+- Por dentro: o menu virou um componente só (`components/loja/MenuLoja.tsx`), usado pelas quatro páginas
+
 ## [v1.82.0] — 2026-11-04
 
 ### Página principal — topo num azul só, sem o mascote de IA, Libras no menu (pedido do Taino)

@@ -3,12 +3,14 @@
 // estoque, resumo ao lado com o total no Pix, e quem não está logado vê "Entre pra ver sua sacola".
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import MenuLoja from '@/components/loja/MenuLoja'
+import { setOptionalItem } from '@/lib/cookieConsent'
 import { reservationApi, productApi, siteConfigApi, categoryApi, ReservationPixStatus, Product, ProductCategory, SiteConfigDto } from '@/lib/api'
 import { isLoggedIn } from '@/lib/auth'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import {
-  ChevronLeft, Trash2, Minus, Plus, BookmarkPlus, QrCode, Copy, CheckCircle,
+  Trash2, Minus, Plus, BookmarkPlus, QrCode, Copy, CheckCircle,
   Loader2, RefreshCw, Package, ShoppingBag, PackageCheck, Wallet, Store, LogIn, ChevronRight,
 } from 'lucide-react'
 import { mixHex } from '@/lib/colors'
@@ -157,19 +159,14 @@ export default function ReservationCartPage() {
   const qtdItens  = items.reduce((n, i) => n + i.quantity, 0)
   const voltar    = '/cliente/reserva/carrinho'
 
+  // Menu do site, igual ao da página principal (components/loja/MenuLoja); antes era só o nome e
+  // "Continuar comprando" — dali não se chegava em Torneios, Liga nem Minha Conta
   const barra = (
-    <nav className="sticky top-0 z-40 h-16 flex items-center border-b"
-      style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), borderColor: 'rgba(255,255,255,0.08)' }}>
-      <div className="w-full max-w-5xl mx-auto px-4 flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink hover:opacity-90">
-          <span className="font-black text-lg leading-none truncate" style={{ color: '#FFFFFF' }}>{siteCfg?.siteName ?? 'Santuário Nerd'}</span>
-        </Link>
-        <Link href="/produtos" className="ml-auto inline-flex items-center gap-1 text-sm font-semibold px-3 py-2 rounded-xl hover:bg-white/10 shrink-0"
-          style={{ color: '#FFFFFF' }}>
-          <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Continuar comprando</span><span className="sm:hidden">Loja</span>
-        </Link>
-      </div>
-    </nav>
+    <MenuLoja site={siteCfg} isDark={isDark} espaco onToggleDark={() => {
+      const next = !isDark
+      setIsDark(next)
+      setOptionalItem('landing-theme', next ? 'dark' : 'light')
+    }} />
   )
 
   // Passos: 1 Sacola → 2 Reserva → 3 Retirada

@@ -1,17 +1,16 @@
 'use client'
 // Loja (/produtos): barra com a marca e a Sacola (carrinho de reserva), título "Todos os produtos" e
 // o cartão de produto (components/loja/CartaoProduto). ?categoria=X abre já filtrado (atalhos da home).
+import MenuLoja from '@/components/loja/MenuLoja'
 import { useEffect, useState, useMemo } from 'react'
 import { productApi, siteConfigApi, categoryApi, Product, ProductCategory, SiteConfigDto } from '@/lib/api'
 import { resolvePixPercent, calcPrecoVitrine } from '@/lib/precoVitrine'
 import { setOptionalItem } from '@/lib/cookieConsent'
-import Link from 'next/link'
 import {
   ShoppingBag,
-  Sun, Moon, Search, Tag,
+  Search, Tag,
 } from 'lucide-react'
 import { mixHex } from '@/lib/colors'
-import { useReservationCart } from '@/hooks/useReservationCart'
 import CartaoProduto from '@/components/loja/CartaoProduto'
 
 type Theme = { bg: string; card: string; border: string; blue: string; yellow: string; text: string; navy: string; muted: string; pix: string }
@@ -24,7 +23,6 @@ export default function ProdutosPage() {
   const [isDark,   setIsDark]   = useState(false)
   const [siteCfg,    setSiteCfg]    = useState<SiteConfigDto | null>(null)
   const [categorias, setCategorias] = useState<ProductCategory[]>([])
-  const { totalItems: itensSacola } = useReservationCart()
 
   // pix: tom fechado no claro e aberto no escuro, pra manter contraste nos dois temas
   const C: Theme = isDark ? {
@@ -92,36 +90,14 @@ export default function ProdutosPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 
-      {/* Navbar */}
-      <nav className="fixed inset-x-0 top-0 z-50 h-16 flex items-center"
-        style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), backdropFilter: 'blur(16px)' }}>
-        <div className="w-full max-w-6xl mx-auto px-5 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink hover:opacity-90">
-            <span className="font-black text-xl leading-none truncate" style={{ color: '#FFFFFF' }}>{siteCfg?.siteName ?? 'Santuário Nerd'}</span>
-          </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href="/" className="hidden sm:inline text-sm font-semibold px-3 py-2 rounded-xl hover:bg-white/10" style={{ color: '#FFFFFF' }}>Início</Link>
-            <button onClick={() => {
-              const next = !isDark
-              setIsDark(next)
-              setOptionalItem('landing-theme', next ? 'dark' : 'light')
-            }} className="p-2 rounded-xl hover:bg-white/10 transition-colors" style={{ color: '#ffffff' }}
-              title={isDark ? 'Modo claro' : 'Modo escuro'}>
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
-              className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-white/10"
-              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">Sacola</span>
-              <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
-                style={{ backgroundColor: '#FFE45E', color: '#3D2E00' }}>{itensSacola}</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      {/* Menu do site, igual ao da página principal (components/loja/MenuLoja) */}
+      <MenuLoja site={siteCfg} isDark={isDark} espaco onToggleDark={() => {
+        const next = !isDark
+        setIsDark(next)
+        setOptionalItem('landing-theme', next ? 'dark' : 'light')
+      }} />
 
-      <div className={`max-w-6xl mx-auto px-5 pb-16 pt-24`}>
+      <div className={`max-w-6xl mx-auto px-5 pb-16 pt-8`}>
 
         <div className="mb-6">
           <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: CN.blue }}>Catálogo completo</p>

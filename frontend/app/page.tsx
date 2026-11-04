@@ -12,14 +12,13 @@ import {
   Trophy, ShoppingBag, Star, Calendar, Users,
   X, MessageCircle, CheckCircle, Package,
   CreditCard, Award, QrCode, Shield, ChevronRight, ChevronLeft,
-  Sun, Moon, Mail, Accessibility, Sparkles, Heart,
+  Mail, Heart,
 } from 'lucide-react'
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
-import { useReservationCart } from '@/hooks/useReservationCart'
 import CartaoProduto from '@/components/loja/CartaoProduto'
-import { abrirVLibras } from '@/components/VLibrasController'
+import MenuLoja from '@/components/loja/MenuLoja'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
 // pra não piscar/mudar nada enquanto o admin nunca tiver personalizado o site.
@@ -106,10 +105,7 @@ export default function LandingPage() {
   const [registerModal, setRegisterModal] = useState<Championship | null>(null)
   const [productModal,  setProductModal]  = useState<Product | null>(null)
   const [annModal,      setAnnModal]      = useState<AnnouncementDto | null>(null)
-  const [mobileMenu,    setMobileMenu]    = useState(false)
   const [isDark,        setIsDark]        = useState(false)
-  const [navVisible,    setNavVisible]    = useState(true)
-  const [navHover,      setNavHover]      = useState(false)
   const [bannerIdx,    setBannerIdx]  = useState(0)
   const [annIdx,       setAnnIdx]     = useState(0)
   const [site,         setSite]       = useState<SiteConfigDto>(DEFAULT_SITE)
@@ -192,14 +188,11 @@ export default function LandingPage() {
   // Detalhes do modelo do Maikon (14/10): faixa acima do menu, topo arredondado, 3 cartões, chamada
   // "Quero jogar", rodapé no azul e parcelamento no cartão de produto. Vitrine em grade com o botão
   // Sacola. O copyright fica no rodapé geral (components/Footer.tsx).
-  const { totalItems: itensSacola } = useReservationCart()
   const categoriasVitrine = Object.entries(
     vitrine.reduce<Record<string, number>>((acc, p) => { acc[p.category] = (acc[p.category] ?? 0) + 1; return acc }, {}),
   ).sort((a, b) => b[1] - a[1]).slice(0, 6)
   const avisoTopo = (site.avisoTopo ?? '').trim()
   const faixa     = avisoTopo ? 32 : 0          // altura da faixa (px): empurra menu e topo pra baixo
-  // "Jogue, evolua e divirta-se — encontre tudo…": o trecho antes do travessão sai em amarelo
-  const [avisoDestaque, ...avisoResto] = avisoTopo.split(' — ')
   const corRodape = uniforme ? navBg : mixHex(site.colorHero, '#000000', 0.45)
   const F = { navy: '#FFFFFF', text: 'rgba(255,255,255,0.72)', blue: '#FFFFFF', border: 'rgba(255,255,255,0.14)' }
 
@@ -208,17 +201,6 @@ export default function LandingPage() {
     setIsDark(next)
     setOptionalItem('landing-theme', next ? 'dark' : 'light')
   }
-
-  useEffect(() => {
-    let lastY = window.scrollY
-    const onScroll = () => {
-      const y = window.scrollY
-      setNavVisible(y < 80 || y < lastY)
-      lastY = y
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   useEffect(() => {
     if (heroBanners.length <= 1) return
@@ -293,143 +275,9 @@ export default function LandingPage() {
         .site-shell [class~="rounded-2xl"] { border-radius: ${radius.twoXl} !important; }
       ` }} />
 
-      {/* ── NAVBAR ─────────────────────────────────────────────────────── */}
-      {/* Trigger zone: permite hover revelar o nav mesmo quando escondido */}
-      <div className="fixed top-0 inset-x-0 h-3 z-[51]"
-        onMouseEnter={() => setNavHover(true)} />
-
-      {avisoTopo && (
-        <div className="fixed inset-x-0 top-0 z-[52] h-8 flex items-center justify-center gap-1.5 px-4 text-[11px] sm:text-xs font-bold transition-transform duration-300"
-          style={{ backgroundColor: uniforme ? navBg : mixHex(site.colorHero, '#000000', 0.5), color: '#FFFFFF', transform: (navVisible || navHover) ? 'translateY(0)' : 'translateY(-100%)' }}
-          onMouseEnter={() => setNavHover(true)}>
-          <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: C.yellow }} />
-          <span className="truncate">
-            {avisoResto.length > 0
-              ? <><span style={{ color: C.yellow }}>{avisoDestaque}</span> — {avisoResto.join(' — ')}</>
-              : avisoTopo}
-          </span>
-        </div>
-      )}
-
-      <nav className="fixed inset-x-0 top-0 z-50 h-16 flex items-center transition-transform duration-300"
-        style={{ top: faixa, backgroundColor: navBg, backdropFilter: 'blur(16px)', transform: (navVisible || navHover) ? 'translateY(0)' : `translateY(calc(-100% - ${faixa}px))` }}
-        onMouseEnter={() => setNavHover(true)}
-        onMouseLeave={() => setNavHover(false)}>
-
-        {/* Menu numa linha só: nada quebra em duas (era "Mercado de / Cartas" entre 1280 e 1440px) */}
-        <div className="w-full max-w-7xl mx-auto px-5 flex items-center justify-between gap-4 2xl:gap-6">
-
-          {/* Marca no começo, como nas lojas grandes. Só o nome: o mascote de IA saiu do menu (Taino, 04/11) */}
-          <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink">
-            <span className="font-black text-xl leading-none truncate" style={{ color: '#ffffff' }}>{site.siteName}</span>
-          </Link>
-
-          {/* Links desktop — esquerda */}
-          <div className={`hidden xl:flex items-center gap-3 2xl:gap-5 text-sm font-medium whitespace-nowrap flex-1 justify-center`}>
-            <a href="#eventos"  style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navTorneiosLabel}</a>
-            <Link href="/produtos" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navProdutosLabel}</Link>
-            <Link href="/cliente/mercado" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navMercadoLabel}</Link>
-            <Link href="/liga" style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navLigaLabel}</Link>
-            <a href="#pontos"   style={{ color: '#ffffff' }} className="hover:opacity-80 transition-opacity">{site.navPontosLabel}</a>
-          </div>
-
-          {/* Ações direita */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={abrirVLibras} aria-label="Abrir Libras (VLibras)"
-              title="Acessibilidade em Libras"
-              className="hidden xl:block p-2 rounded-xl transition-colors hover:bg-white/10"
-              style={{ color: '#ffffff' }}>
-              <Accessibility className="w-4 h-4" />
-            </button>
-            <button onClick={toggleDark} title={isDark ? 'Modo claro' : 'Modo escuro'}
-              className="p-2 rounded-xl transition-colors hover:bg-white/10"
-              style={{ color: '#ffffff' }}>
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <Link href="/entrar"
-              className="hidden xl:block text-sm px-4 py-2 rounded-xl border transition-colors hover:bg-white/10 whitespace-nowrap"
-              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
-              Minha Conta
-            </Link>
-            {/* Sacola = carrinho de reserva (/cliente/reserva/carrinho); no celular vira só o ícone */}
-            <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
-              className="flex items-center gap-2 text-sm px-2.5 xl:px-4 py-2 rounded-xl xl:border transition-colors hover:bg-white/10 whitespace-nowrap"
-              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden xl:inline">Sacola</span>
-              <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
-                style={{ backgroundColor: C.yellow, color: '#3D2E00' }}>{itensSacola}</span>
-            </Link>
-            
-            {/* "Ver Eventos" repete o link Torneios: só aparece quando sobra espaço (2xl) */}
-            <a href="#eventos"
-              className="hidden 2xl:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95 whitespace-nowrap"
-              style={{ backgroundColor: C.yellow, color: site.colorNavy }}>
-              {site.ctaVerEventosLabel}
-            </a>
-            <button onClick={() => setMobileMenu(v => !v)} aria-label={mobileMenu ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileMenu} className="xl:hidden p-2" style={{ color: '#ffffff' }}>
-              <div className="space-y-1.5">
-                <span className={`block w-5 h-0.5 bg-current transition-transform ${mobileMenu ? 'rotate-45 translate-y-2' : ''}`} />
-                <span className={`block w-5 h-0.5 bg-current transition-opacity ${mobileMenu ? 'opacity-0' : ''}`} />
-                <span className={`block w-5 h-0.5 bg-current transition-transform ${mobileMenu ? '-rotate-45 -translate-y-2' : ''}`} />
-              </div>
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Menu mobile */}
-      {mobileMenu && (
-        <div className="fixed inset-x-0 top-16 z-40 border-b xl:hidden px-5 py-4 space-y-1"
-          style={{ top: 64 + faixa, backgroundColor: navBg, borderColor: 'rgba(255,255,255,0.10)' }}>
-          <a href="#eventos" onClick={() => setMobileMenu(false)}
-            className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
-            {site.navTorneiosLabel}
-          </a>
-          <Link href="/produtos" onClick={() => setMobileMenu(false)}
-            className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
-            {site.navProdutosLabel}
-          </Link>
-          <Link href="/cliente/mercado" onClick={() => setMobileMenu(false)}
-            className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
-            {site.navMercadoLabel}
-          </Link>
-          <Link href="/liga" onClick={() => setMobileMenu(false)}
-            className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
-            {site.navLigaLabel}
-          </Link>
-          <a href="#pontos" onClick={() => setMobileMenu(false)}
-            className="block py-2.5 text-sm hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.70)' }}>
-            {site.navPontosLabel}
-          </a>
-          {/* Duas colunas: em quatro numa linha, "Minha Conta" quebrava e "Eventos" desalinhava */}
-          <div className="grid grid-cols-2 gap-2 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
-            <Link href="/entrar" onClick={() => setMobileMenu(false)}
-              className="flex items-center justify-center py-2.5 text-sm rounded-xl border font-medium hover:text-white transition-colors"
-              style={{ color: 'rgba(255,255,255,0.70)', borderColor: 'rgba(255,255,255,0.25)' }}>
-              Minha Conta
-            </Link>
-            <button onClick={() => { toggleDark(); setMobileMenu(false) }}
-              className="flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl border font-medium hover:text-white transition-colors"
-              style={{ color: 'rgba(255,255,255,0.70)', borderColor: 'rgba(255,255,255,0.25)' }}>
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              {isDark ? 'Claro' : 'Escuro'}
-            </button>
-            <button
-              onClick={() => { abrirVLibras(); setMobileMenu(false) }}
-              className="flex items-center justify-center gap-1.5 py-2.5 text-sm rounded-xl border font-bold hover:text-white transition-colors"
-              style={{ color: 'rgba(255,255,255,0.70)', borderColor: 'rgba(255,255,255,0.25)' }}>
-              <Accessibility className="w-4 h-4" /> Libras
-            </button>
-            <a href="#eventos" onClick={() => setMobileMenu(false)}
-              className="flex items-center justify-center py-2.5 text-sm rounded-xl font-black"
-              style={{ backgroundColor: C.blue, color: '#fff' }}>
-              Eventos
-            </a>
-          </div>
-        </div>
-      )}
+      {/* ── MENU (o mesmo de Produtos, produto e Sacola — components/loja/MenuLoja) ── */}
+      <MenuLoja site={site} isDark={isDark} onToggleDark={toggleDark} naHome
+        corFaixa={uniforme ? undefined : mixHex(site.colorHero, '#000000', 0.5)} />
 
       {/* ── HERO + CAROUSEL DE FUNDO ───────────────────────────────────── */}
       <section
