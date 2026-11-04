@@ -88,21 +88,21 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/auth/client-login` | público | `ClientLogin` (327) | `authApi.clientLogin` | `app/entrar/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/produtos/[id]/page.tsx` |
-| POST | `/api/auth/completar-cadastro` | logado | `CompletarCadastroGoogle` (408) | `authApi.completarCadastroGoogle` | `components/CompleteProfileGuard.tsx` |
-| POST | `/api/auth/complete-profile` | logado | `CompleteProfile` (428) | `authApi.completeProfile` | `components/CompleteProfileGuard.tsx` |
-| POST | `/api/auth/cpf-lookup` | público | `CpfLookup` (297) | `authApi.cpfLookup` | `app/primeiro-acesso/page.tsx` |
-| POST | `/api/auth/forgot-password` | público | `ForgotPassword` (459) | `authApi.forgotPassword` | `app/reset-password/page.tsx` |
-| POST | `/api/auth/google` | público | `LoginGoogle` (388) | `authApi.google` | `components/GoogleLoginButton.tsx` |
-| GET | `/api/auth/google/config` | público | `GoogleConfig` (383) | `authApi.googleConfig` | `components/GoogleLoginButton.tsx` |
+| POST | `/api/auth/client-login` | público | `ClientLogin` (329) | `authApi.clientLogin` | `app/entrar/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/produtos/[id]/page.tsx` |
+| POST | `/api/auth/completar-cadastro` | logado | `CompletarCadastroGoogle` (410) | `authApi.completarCadastroGoogle` | `components/CompleteProfileGuard.tsx` |
+| POST | `/api/auth/complete-profile` | logado | `CompleteProfile` (430) | `authApi.completeProfile` | `components/CompleteProfileGuard.tsx` |
+| POST | `/api/auth/cpf-lookup` | público | `CpfLookup` (299) | `authApi.cpfLookup` | `app/primeiro-acesso/page.tsx` |
+| POST | `/api/auth/forgot-password` | público | `ForgotPassword` (461) | `authApi.forgotPassword` | `app/reset-password/page.tsx` |
+| POST | `/api/auth/google` | público | `LoginGoogle` (390) | `authApi.google` | `components/GoogleLoginButton.tsx` |
+| GET | `/api/auth/google/config` | público | `GoogleConfig` (385) | `authApi.googleConfig` | `components/GoogleLoginButton.tsx` |
 | POST | `/api/auth/login` | público | `Login` (145) | `authApi.login` | `app/login/page.tsx` |
-| POST | `/api/auth/logout` | logado | `Logout` (505) | `authApi.logout` | `app/cliente/perfil/page.tsx`<br>`app/mesa/[mesa]/page.tsx`<br>`components/admin/Sidebar.tsx` |
-| POST | `/api/auth/quick-login` | público | `QuickLogin` (200) | `authApi.quickLogin` | `app/mesa/[mesa]/page.tsx` |
-| POST | `/api/auth/refresh` | público | `Refresh` (260) | — | `lib/sessionKeepAlive.ts` |
-| POST | `/api/auth/register` | público | `Register` (350) | `authApi.register` | `app/cadastro/page.tsx` |
-| POST | `/api/auth/reset-password` | público | `ResetPassword` (479) | `authApi.resetPassword` | `app/reset-password/page.tsx` |
-| POST | `/api/auth/setup-account` | público | `SetupAccount` (311) | `authApi.setupAccount` | `app/primeiro-acesso/page.tsx` |
-| POST | `/api/auth/test-email` | AdminOnly | `TestEmail` (527) | — | — |
+| POST | `/api/auth/logout` | logado | `Logout` (507) | `authApi.logout` | `app/cliente/perfil/page.tsx`<br>`app/mesa/[mesa]/page.tsx`<br>`components/admin/Sidebar.tsx` |
+| POST | `/api/auth/quick-login` | público | `QuickLogin` (202) | `authApi.quickLogin` | `app/mesa/[mesa]/page.tsx` |
+| POST | `/api/auth/refresh` | público | `Refresh` (262) | — | `lib/sessionKeepAlive.ts` |
+| POST | `/api/auth/register` | público | `Register` (352) | `authApi.register` | `app/cadastro/page.tsx` |
+| POST | `/api/auth/reset-password` | público | `ResetPassword` (481) | `authApi.resetPassword` | `app/reset-password/page.tsx` |
+| POST | `/api/auth/setup-account` | público | `SetupAccount` (313) | `authApi.setupAccount` | `app/primeiro-acesso/page.tsx` |
+| POST | `/api/auth/test-email` | AdminOnly | `TestEmail` (529) | — | — |
 
 ## Category
 
