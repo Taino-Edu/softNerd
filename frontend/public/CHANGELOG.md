@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.82.2] — 2026-11-04
+
+### Segurança — teste de vazamento de dados
+- Testado no ambiente local com dois clientes de teste (A e B), tentando com o B ver ou mexer no que é do A, sem login e em rotas de admin. Seguro: decks, pedidos e Pix, cancelamento de pedido, notificações, anúncios e interessados do Mercado, comanda, crediário, perfil público, consulta de pedido LGPD, rotas de admin (403) e rotas de cliente sem login (401)
+- **Corrigido — lista de inscritos de campeonato:** qualquer cliente logado conseguia ver, de cada inscrito de qualquer campeonato, se pagou, quando, como e quanto (e se tinha cobrança em aberto). Agora só o admin e o operador com permissão de Campeonatos, que são os únicos que usam essa lista
+- **Corrigido — e-mail nos logs:** login (certo, errado e com erro), cadastro pelo site e falha de envio de e-mail gravavam o e-mail inteiro no log do servidor; agora sai mascarado ("m***@gmail.com"). O cadastro também deixou de gravar o nome
+
 ## [v1.82.1] — 2026-11-04
 
 ### Site da loja — o mesmo menu em todas as páginas (pedido do Taino)

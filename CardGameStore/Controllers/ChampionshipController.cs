@@ -53,9 +53,11 @@ public class ChampionshipController(
     public async Task<IActionResult> GetMyParticipations() =>
         Ok((await campeonatos.GetUserParticipationsAsync(UsuarioId())).Select(p => p.ParaMinhaParticipacao()));
 
-    /// <summary>Participantes de um campeonato, com o valor da cobrança de cada um.</summary>
+    /// <summary>Participantes de um campeonato, com o valor da cobrança de cada um. Só admin/operador:
+    /// com [Authorize] qualquer cliente logado via quem pagou, como e quanto (teste de vazamentos, 04/11).
+    /// Só as telas do admin usam (Campeonatos, Liga Mensal, Central da Liguinha).</summary>
     [HttpGet("{id:guid}/participants")]
-    [Authorize]
+    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(IEnumerable<ParticipantDto>), 200)]
     public async Task<IActionResult> GetParticipants(Guid id) => Ok(await inscricoes.ParticipantesAsync(id));
 

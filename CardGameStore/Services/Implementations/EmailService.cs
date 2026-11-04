@@ -286,7 +286,7 @@ public class EmailService : IEmailService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao enviar anúncio '{Titulo}' para {To}", titulo, email);
+                _logger.LogError(ex, "Falha ao enviar anúncio '{Titulo}' para {To}", titulo, Common.Mascara.Email(email));
             }
         }
 
@@ -446,7 +446,7 @@ public class EmailService : IEmailService
         catch (Exception ex)
         {
             // Falha de email não derruba o fluxo principal
-            _logger.LogError(ex, "Falha ao enviar email '{Subject}' para {To}", subject, toEmail);
+            _logger.LogError(ex, "Falha ao enviar email '{Subject}' para {To}", subject, Common.Mascara.Email(toEmail));
         }
     }
 }

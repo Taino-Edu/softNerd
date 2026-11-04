@@ -152,7 +152,7 @@ public class AuthService : IAuthService
                 IsActive  = true,
             };
             _db.Users.Add(user);
-            _logger.LogInformation("Nova conta criada pelo Google: {Email}", MaskEmail(email));
+            _logger.LogInformation("Nova conta criada pelo Google: {Email}", Common.Mascara.Email(email));
         }
         else
         {
@@ -695,7 +695,7 @@ public class AuthService : IAuthService
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Nova conta criada via cadastro público: {Name} ({Email})", user.Name, user.Email);
+        _logger.LogInformation("Nova conta {UserId} criada via cadastro público ({Email})", user.Id, Common.Mascara.Email(user.Email));
         return await GenerateAuthResponseAsync(user);
     }
 
@@ -771,7 +771,7 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
 
         await _email.SendPasswordResetAsync(user.Email!, user.Name, token);
-        _logger.LogInformation("Solicitação de reset de senha para {Email}", MaskEmail(request.Email));
+        _logger.LogInformation("Solicitação de reset de senha para {Email}", Common.Mascara.Email(request.Email));
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request)
@@ -801,12 +801,4 @@ public class AuthService : IAuthService
         _logger.LogInformation("Senha redefinida para usuário {UserId}", user.Id);
     }
 
-    private static string MaskEmail(string email)
-    {
-        var at = email.IndexOf('@');
-        if (at <= 0) return "***";
-        var local = email[..at];
-        var visible = local.Length > 1 ? local[0] + new string('*', Math.Min(local.Length - 1, 3)) : "*";
-        return visible + email[at..];
-    }
 }
