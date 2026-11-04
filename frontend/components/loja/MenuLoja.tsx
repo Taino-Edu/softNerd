@@ -22,11 +22,10 @@ import { useSiteConfig } from '@/lib/useSiteConfig'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import { abrirVLibras } from '@/components/VLibrasController'
 
-const AMARELO = '#FFE45E'
-
 /** Rótulos e cores do menu enquanto Personalizar Site não chega (o mesmo padrão da página principal). */
 const PADRAO = {
-  siteName: 'Santuário Nerd', colorHero: '#1E4FD6', colorNavy: '#0C3D5A',
+  // colorAccent: a cor de destaque de Personalizar Site (amarelo por padrão), a mesma da página principal
+  siteName: 'Santuário Nerd', colorHero: '#1E4FD6', colorNavy: '#0C3D5A', colorAccent: '#FFE45E',
   avisoTopo: 'Jogue, evolua e divirta-se — encontre tudo para sua próxima partida!',
   navTorneiosLabel: 'Torneios', navProdutosLabel: 'Produtos', navMercadoLabel: 'Mercado de Cartas',
   navLigaLabel: 'Liga Mensal', navPontosLabel: 'Pontos', ctaVerEventosLabel: 'Ver Eventos',
@@ -108,10 +107,10 @@ export default function MenuLoja({
         <div className="fixed inset-x-0 top-0 z-[52] h-8 flex items-center justify-center gap-1.5 px-4 text-[11px] sm:text-xs font-bold transition-transform duration-300"
           style={{ backgroundColor: corFaixa ?? azul, color: '#FFFFFF', transform: mostra ? 'translateY(0)' : 'translateY(-100%)' }}
           onMouseEnter={() => setHover(true)}>
-          <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: AMARELO }} />
+          <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: site.colorAccent }} />
           <span className="truncate">
             {avisoResto.length > 0
-              ? <><span style={{ color: AMARELO }}>{avisoDestaque}</span> — {avisoResto.join(' — ')}</>
+              ? <><span style={{ color: site.colorAccent }}>{avisoDestaque}</span> — {avisoResto.join(' — ')}</>
               : aviso}
           </span>
         </div>
@@ -159,13 +158,13 @@ export default function MenuLoja({
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden xl:inline">Sacola</span>
               <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
-                style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>{itensSacola}</span>
+                style={{ backgroundColor: site.colorAccent, color: '#3D2E00' }}>{itensSacola}</span>
             </Link>
             {extras}
             {/* "Ver Eventos" repete o link Torneios: só aparece quando sobra espaço (2xl) */}
             <a href={secao('eventos')}
               className="hidden 2xl:block text-sm font-black px-5 py-2 rounded-xl transition-all active:scale-95 whitespace-nowrap"
-              style={{ backgroundColor: AMARELO, color: site.colorNavy }}>
+              style={{ backgroundColor: site.colorAccent, color: site.colorNavy }}>
               {site.ctaVerEventosLabel}
             </a>
             <button onClick={() => setAberto(v => !v)} aria-label={aberto ? 'Fechar menu' : 'Abrir menu'} aria-expanded={aberto}
