@@ -152,7 +152,7 @@ public class AuthService : IAuthService
                 IsActive  = true,
             };
             _db.Users.Add(user);
-            _logger.LogInformation("Nova conta criada pelo Google: {Email}", Common.Mascara.Email(email));
+            _logger.LogInformation("Nova conta {UserId} criada pelo Google", user.Id);
         }
         else
         {
@@ -695,7 +695,7 @@ public class AuthService : IAuthService
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Nova conta {UserId} criada via cadastro público ({Email})", user.Id, Common.Mascara.Email(user.Email));
+        _logger.LogInformation("Nova conta {UserId} criada via cadastro público", user.Id);
         return await GenerateAuthResponseAsync(user);
     }
 
@@ -771,7 +771,7 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
 
         await _email.SendPasswordResetAsync(user.Email!, user.Name, token);
-        _logger.LogInformation("Solicitação de reset de senha para {Email}", Common.Mascara.Email(request.Email));
+        _logger.LogInformation("Solicitação de reset de senha para a conta {UserId}", user.Id);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request)
