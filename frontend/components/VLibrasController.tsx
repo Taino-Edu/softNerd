@@ -21,7 +21,12 @@ declare global {
  * carrega sempre (acessibilidade não depende da preferência do botão) e o item do menu abre o
  * painel com abrirVLibras(). Página nova entra aqui quando o menu dela ganhar o item "Libras".
  */
-const LIBRAS_NO_MENU = ['/']
+// As páginas com o menu da loja (components/loja/MenuLoja): principal, Produtos, produto e Sacola.
+const LIBRAS_NO_MENU = ['/', '/produtos', '/cliente/reserva/carrinho']
+
+function temLibrasNoMenu(caminho: string) {
+  return LIBRAS_NO_MENU.includes(caminho) || caminho.startsWith('/produtos/')
+}
 
 /**
  * Abre o painel do VLibras. O botão mora dentro do Shadow DOM do plugin — o seletor antigo
@@ -66,7 +71,7 @@ function applyPreferences(flutuante: boolean, carregado: boolean, corner: string
 
 export default function VLibrasController() {
   const { prefs, loading } = usePreferences()
-  const noMenu = LIBRAS_NO_MENU.includes(usePathname() ?? '')
+  const noMenu = temLibrasNoMenu(usePathname() ?? '')
   const carregado = prefs.vlibras.enabled || noMenu
   const flutuante = prefs.vlibras.enabled && !noMenu
 

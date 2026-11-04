@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.82.1 | 04/11 | **Menu único da loja** (`MenuLoja`): principal, Produtos, produto e Sacola com o mesmo menu e Libras no menu (sem a mão flutuante); compartilhar do produto na linha do caminho |
 | v1.82.0 | 04/11 | **Home**: topo num azul só (faixa+menu+fundo), arte fixa sem o mascote de IA (também fora dos menus), menu fixo de volta (`fixed`+`relative` deixava um vão de 64 px), VLibras no menu com `abrirVLibras()` (o seletor antigo não abria nada) |
 | v1.81.0 | 03/11 | **Alarme**: selo arrastável "Alarme sem som — clique pra ativar" (o Chrome bloqueia som até o 1º clique) / "Alarme pronto · tela acordada"; Screen Wake Lock com rodada correndo |
 | v1.80.1 | 03/11 | **Timer**: "finish" só vale com ≤ 3 s no relógio do servidor (PC fora da hora encerrava a rodada de todos); widget só lista timer de campeonato de hoje/ontem ainda aberto e o alarme só toca até 10 min depois do fim (liguinhas esquecidas tocavam todas); tique do alarme num Web Worker a cada 250 ms (aba em segundo plano atrasava até 1 min); hora do servidor descontando a ida e volta |

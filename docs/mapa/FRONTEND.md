@@ -50,7 +50,7 @@
 | `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente` | `app/cliente/page.tsx` | `cliente/NotificationBell` |
 | `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga`, `pokemon/EscolherPokemon`, `pokemon/ParceiroDaConta` |
-| `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | — |
+| `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | `loja/MenuLoja` |
 | `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
 | `/liga/jogar` | `app/liga/jogar/page.tsx` | `liga/AnimacaoResultado`, `liga/AvatarJogador`, `liga/Relogio`, `liga/SpriteDeck`, `liga/TabelaTorneio` |
@@ -59,12 +59,12 @@
 | `/login` | `app/login/page.tsx` | `auth/Moldura` |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
-| `/` | `app/page.tsx` | `VLibrasController`, `loja/CartaoProduto` |
+| `/` | `app/page.tsx` | `loja/CartaoProduto`, `loja/MenuLoja` |
 | `/perfil/[id]` | `app/perfil/[id]/page.tsx` | `pokemon/ParceiroDaConta` |
 | `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | `auth/Moldura` |
 | `/privacidade` | `app/privacidade/page.tsx` | `LegalActions`, `ThemeToggle` |
-| `/produtos/[id]` | `app/produtos/[id]/page.tsx` | `loja/CartaoProduto` |
-| `/produtos` | `app/produtos/page.tsx` | `loja/CartaoProduto` |
+| `/produtos/[id]` | `app/produtos/[id]/page.tsx` | `loja/CartaoProduto`, `loja/MenuLoja` |
+| `/produtos` | `app/produtos/page.tsx` | `loja/CartaoProduto`, `loja/MenuLoja` |
 | `/reset-password` | `app/reset-password/page.tsx` | `auth/Moldura` |
 | `/termos` | `app/termos/page.tsx` | `LegalActions`, `ThemeToggle` |
 
@@ -88,7 +88,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `RelatorDeErros` | `RelatorDeErros` | `components/ClientProviders.tsx` |
 | `ThemeToggle` | `ThemeToggle` | `app/lgpd/page.tsx`<br>`app/privacidade/page.tsx`<br>`app/termos/page.tsx`<br>`components/admin/Sidebar.tsx` |
 | `TimerWidget` | `TimerWidget` | `app/admin/layout.tsx` |
-| `VLibrasController` | `abrirVLibras`, `VLibrasController` | `app/layout.tsx`<br>`app/page.tsx` |
+| `VLibrasController` | `abrirVLibras`, `VLibrasController` | `app/layout.tsx`<br>`components/loja/MenuLoja.tsx` |
 | `admin/AiChatWidget` | `AiChatWidget` | `app/admin/layout.tsx` |
 | `admin/CobrancaPixModal` | `CobrancaPixModal` | `app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/ConferenciaButton` | `ConferenciaButton` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
@@ -123,6 +123,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/admin/JogadoresTorneio` | `JogadoresTorneio` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/LancarEtapa` | `LancarEtapa` | `app/admin/liguinha/page.tsx` |
 | `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
+| `loja/MenuLoja` | `alturaFaixa`, `azulDoMenu`, `MenuLoja` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
 | `pokemon/EscolherPokemon` | `EscolherPokemon` | `app/cliente/perfil/page.tsx` |
 | `pokemon/ParceiroDaConta` | `ParceiroDaConta` | `app/cliente/perfil/page.tsx`<br>`app/perfil/[id]/page.tsx` |
 | `pokemon/PokemonParceiro` | `PokemonParceiro` | `components/liga/AvatarJogador.tsx` |

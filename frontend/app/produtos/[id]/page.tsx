@@ -1,6 +1,7 @@
 'use client'
 // Página do produto: barra com a marca e a Sacola, caminho Início › Produtos › Categoria, preço com
 // contraste, "Últimas N", garantias da loja e "Você também pode gostar".
+import MenuLoja from '@/components/loja/MenuLoja'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { productApi, authApi, userApi, siteConfigApi, categoryApi, Product, UserProfile, SiteConfigDto, ProductCategory } from '@/lib/api'
@@ -9,7 +10,7 @@ import { useReservationCart } from '@/hooks/useReservationCart'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
-import { ChevronRight, Package, ShoppingBag, MessageCircle, Sun, Moon, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
+import { ChevronRight, Package, ShoppingBag, MessageCircle, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
@@ -216,37 +217,10 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 
-      {/* Nav */}
-      <nav className="sticky top-0 z-40 h-16 flex items-center border-b"
-        style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32), borderColor: 'rgba(255,255,255,0.08)' }}>
-        <div className="w-full max-w-5xl mx-auto px-4 flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2.5 min-w-0 shrink hover:opacity-90">
-            <span className="font-black text-lg leading-none truncate" style={{ color: '#FFFFFF' }}>{siteCfg?.siteName ?? 'Santuário Nerd'}</span>
-          </Link>
-          <div className="ml-auto flex items-center gap-1 shrink-0">
-            <button onClick={() => { const n = !isDark; setIsDark(n); setOptionalItem('landing-theme', n ? 'dark' : 'light') }}
-              title={isDark ? 'Modo claro' : 'Modo escuro'}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors" style={{ color: '#fff' }}>
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <button title="Compartilhar"
-              onClick={() => navigator.share?.({ title: product.name, url: window.location.href }).catch(() => navigator.clipboard?.writeText(window.location.href))}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors" style={{ color: '#fff' }}>
-              <Share2 className="w-4 h-4" />
-            </button>
-            <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${cartCount} ${cartCount === 1 ? 'item' : 'itens'}`}
-              className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-white/10 mr-1"
-              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">Sacola</span>
-              <span className="min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-black flex items-center justify-center"
-                style={{ backgroundColor: '#FFE45E', color: '#3D2E00' }}>{cartCount}</span>
-            </Link>
-            {avatar}
-          </div>
-        </div>
-      </nav>
-      
+      {/* Menu do site, igual ao da página principal (components/loja/MenuLoja); a foto da conta
+          continua na barra. O compartilhar foi pra linha do caminho: na barra cortava o nome da loja */}
+      <MenuLoja site={siteCfg} isDark={isDark} espaco extras={avatar}
+        onToggleDark={() => { const n = !isDark; setIsDark(n); setOptionalItem('landing-theme', n ? 'dark' : 'light') }} />
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         <nav aria-label="Caminho" className="flex items-center flex-wrap gap-1 text-xs mb-4" style={{ color: C.muted }}>
@@ -256,6 +230,11 @@ export default function ProductPage() {
           <ChevronRight className="w-3 h-3" />
           <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`} className="hover:underline font-semibold"
             style={{ color: destaque }}>{product.category}</Link>
+          <button title="Compartilhar" aria-label="Compartilhar produto"
+            onClick={() => navigator.share?.({ title: product.name, url: window.location.href }).catch(() => navigator.clipboard?.writeText(window.location.href))}
+            className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold hover:underline" style={{ color: destaque }}>
+            <Share2 className="w-3.5 h-3.5" /> Compartilhar
+          </button>
         </nav>
         
         <div className="flex flex-col lg:flex-row gap-6">
