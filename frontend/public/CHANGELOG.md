@@ -5,6 +5,7 @@
 ### Comanda — QR Pix com o desconto (relato do Maikon)
 - **Corrigido:** ao fechar a comanda, dar desconto (ex.: 5%) e clicar em "Gerar QR Pix", o QR saía com o valor cheio. Agora o QR e o valor da cobrança já levam o desconto
 - Quando o Pix cai e a comanda fecha sozinha, ela fecha com o mesmo desconto (antes iria fechar sem ele, bagunçando o relatório)
+- Se a comanda mudar depois do QR (item a mais, pontos tirados), o Pix pago não fecha ela sozinho: a comanda fica aberta e o admin recebe um aviso no sininho com quanto falta, pra fechar registrando o Pix já recebido e o restante
 
 ## [v1.82.1] — 2026-11-04
 

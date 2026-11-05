@@ -279,7 +279,7 @@ public class PixReconciliationServiceTests
         var db   = CreateDb(nameof(Reconciliar_ComandaPaga_FechaComandaViaServico));
         var user = await SeedBaseAsync(db);
 
-        var comanda = new Comanda { UserId = user.Id, Status = ComandaStatus.Aberta };
+        var comanda = new Comanda { UserId = user.Id, Status = ComandaStatus.Aberta, TotalInCents = 10000 };
         db.Comandas.Add(comanda);
         var pix = NovaCobranca(PixCobrancaOrigem.Comanda);
         pix.ComandaId = comanda.Id;
@@ -329,6 +329,67 @@ public class PixReconciliationServiceTests
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int>(),
             It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<DateTime?>()), Times.Never,
             "comanda já fechada por outro caminho não pode ser fechada de novo (pontos duplicados)");
+    }
+
+    [Fact]
+    public async Task Reconciliar_ComandaComDesconto_FechaComODescontoGravado()
+    {
+        var db   = CreateDb(nameof(Reconciliar_ComandaComDesconto_FechaComODescontoGravado));
+        var user = await SeedBaseAsync(db);
+
+        // Comanda de R$ 100, QR de R$ 90 com R$ 10 de desconto dado no fechamento.
+        var comanda = new Comanda { UserId = user.Id, Status = ComandaStatus.Aberta, TotalInCents = 10000 };
+        db.Comandas.Add(comanda);
+        var pix = NovaCobranca(PixCobrancaOrigem.Comanda, 9000);
+        pix.ComandaId = comanda.Id;
+        pix.DescontoEmCentavos = 1000;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+
+        var comandaSvc = new Mock<IComandaService>();
+        comandaSvc.Setup(c => c.CloseComandaAsync(
+                comanda.Id, It.IsAny<Guid>(), "Pix",
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<DateTime?>()))
+            .ReturnsAsync(new ComandaDto { Id = comanda.Id });
+
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, comandaSvc.Object);
+        await service.ReconciliarAsync(pix);
+
+        comandaSvc.Verify(c => c.CloseComandaAsync(
+            comanda.Id, It.IsAny<Guid>(), "Pix",
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int>(),
+            It.IsAny<Guid?>(), 1000, It.IsAny<DateTime?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Reconciliar_ComandaMudouDepoisDoQr_NaoFechaNemInventaDescontoEAvisaAdmin()
+    {
+        var db   = CreateDb(nameof(Reconciliar_ComandaMudouDepoisDoQr_NaoFechaNemInventaDescontoEAvisaAdmin));
+        var user = await SeedBaseAsync(db);
+        db.Users.Add(new User { Id = Guid.NewGuid(), Name = "Dono", Email = "dono@teste.local", PasswordHash = "hash", Role = UserRole.Admin, IsActive = true });
+
+        // QR de R$ 90 (R$ 100 com R$ 10 de desconto); depois entrou um item de R$ 20.
+        var comanda = new Comanda { UserId = user.Id, Status = ComandaStatus.Aberta, TotalInCents = 12000 };
+        db.Comandas.Add(comanda);
+        var pix = NovaCobranca(PixCobrancaOrigem.Comanda, 9000);
+        pix.ComandaId = comanda.Id;
+        pix.DescontoEmCentavos = 1000;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+
+        var comandaSvc = new Mock<IComandaService>();
+        var service    = CreateService(db, CreateInterMock("CONCLUIDA").Object, comandaSvc.Object);
+        var result     = await service.ReconciliarAsync(pix);
+
+        result.BaixaEfetuada.Should().BeTrue("o dinheiro caiu: a cobrança é baixada");
+        result.ComandaFechada.Should().BeNull();
+        comandaSvc.Verify(c => c.CloseComandaAsync(
+            It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(),
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int>(),
+            It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<DateTime?>()), Times.Never,
+            "o item novo sairia de graça (R$ 30 de desconto que ninguém deu)");
+        (await db.Notifications.CountAsync(n => n.Title == "Pix de comanda: conferir o fechamento")).Should().BeGreaterThan(0);
     }
 
     // ── Campeonato ────────────────────────────────────────────────────────────

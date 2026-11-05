@@ -84,6 +84,14 @@ public class PixCobranca
     [Column("valor_em_centavos")]
     public int ValorEmCentavos { get; set; }
 
+    /// <summary>
+    /// Origem = Comanda: desconto dado no fechamento e já tirado do valor do QR. A baixa fecha a
+    /// comanda com ESTE desconto (o autorizado), nunca com a diferença calculada na hora do pagamento.
+    /// Null em cobranças antigas = sem desconto.
+    /// </summary>
+    [Column("desconto_em_centavos")]
+    public int? DescontoEmCentavos { get; set; }
+
     /// <summary>ATIVA | CONCLUIDA | REMOVIDA_PELO_USUARIO_RECEBEDOR | REMOVIDA_PELO_PSP</summary>
     [Required, MaxLength(40)]
     [Column("status")]
