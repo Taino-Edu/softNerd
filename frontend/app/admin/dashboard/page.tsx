@@ -473,7 +473,7 @@ function CloseComandaModal({
   comanda:   ComandaDto
   onConfirm: (paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number) => void
   onCancel:  () => void
-  onGerarPix: () => void
+  onGerarPix: (discountInCents: number) => void
 }) {
   const [method,        setMethod]        = useState('Dinheiro')
   const [splitEnabled,  setSplitEnabled]  = useState(false)
@@ -758,7 +758,7 @@ function CloseComandaModal({
                 <CheckCircle className="w-4 h-4" /> Confirmar
               </button>
               <button
-                onClick={onGerarPix}
+                onClick={() => onGerarPix(descontoCents)}
                 className="btn-success flex-1 justify-center"
               >
                 <QrCode className="w-4 h-4" /> Gerar QR Pix
@@ -823,6 +823,7 @@ function ComandaCard({
   const [addOpen, setAddOpen]     = useState(false)
   const [closeOpen, setCloseOpen] = useState(false)
   const [pixOpen, setPixOpen]     = useState(false)
+  const [pixDesconto, setPixDesconto] = useState(0)
   const [confirm, setConfirm]     = useState<'cancel' | null>(null)
   const [removingItem, setRemovingItem]   = useState<string | null>(null)
   const [updatingItem, setUpdatingItem]   = useState<string | null>(null)
@@ -911,13 +912,13 @@ function ComandaCard({
           comanda={comanda}
           onConfirm={handleClose}
           onCancel={() => setCloseOpen(false)}
-          onGerarPix={() => { setCloseOpen(false); setPixOpen(true) }}
+          onGerarPix={desc => { setPixDesconto(desc); setCloseOpen(false); setPixOpen(true) }}
         />
       )}
       {pixOpen && (
         <CobrancaPixModal
           clienteNome={comanda.userName}
-          gerar={() => comandaApi.gerarPix(comanda.id)}
+          gerar={() => comandaApi.gerarPix(comanda.id, pixDesconto)}
           verificar={txid => comandaApi.statusPix(comanda.id, txid)}
           onClose={() => setPixOpen(false)}
           onSuccess={onClosedExternally}

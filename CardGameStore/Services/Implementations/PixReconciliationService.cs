@@ -168,16 +168,20 @@ public class PixReconciliationService : IPixReconciliationService
         // Guarda extra (o claim do PagoEm já impede execução concorrente): se a
         // comanda foi fechada por outro caminho (dinheiro no balcão) enquanto a
         // cobrança estava ativa, não reabre nem duplica pontos/notificações.
-        var status = await _db.Comandas
+        var info = await _db.Comandas
             .Where(c => c.Id == pix.ComandaId)
-            .Select(c => (ComandaStatus?)c.Status)
+            .Select(c => new { Status = (ComandaStatus?)c.Status, c.TotalInCents, c.PointsApplied })
             .FirstOrDefaultAsync();
 
-        if (status is null or ComandaStatus.Fechada or ComandaStatus.Cancelada or ComandaStatus.Estornada) return null;
+        if (info?.Status is null or ComandaStatus.Fechada or ComandaStatus.Cancelada or ComandaStatus.Estornada) return null;
+
+        // Cobrança gerada com desconto: o que o cliente pagou é menor que o total da
+        // comanda, e a diferença é o desconto — sem isso a comanda fecharia sem ele.
+        var desconto = Math.Max(0, info.TotalInCents - info.PointsApplied - pix.ValorEmCentavos);
 
         try
         {
-            return await _comanda.CloseComandaAsync(pix.ComandaId.Value, fechadoPor, "Pix");
+            return await _comanda.CloseComandaAsync(pix.ComandaId.Value, fechadoPor, "Pix", discountInCents: desconto);
         }
         catch (InvalidOperationException)
         {
