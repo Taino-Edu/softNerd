@@ -55,9 +55,11 @@ function printReceiptPDF(receipt: VendaAvulsaDto, payLabel: string) {
     </tr>
   `).join('')
 
-  const discountRow = receipt.discountPercent > 0 ? `
+  // Desconto em R$ grava discountPercent = 0: a linha sumia do recibo e parecia que o desconto não
+  // tinha entrado (relato do Maikon, 05/11). Vale o valor; o % só aparece quando foi em %.
+  const discountRow = receipt.discountInReais > 0 ? `
     <tr style="color:#16a34a;">
-      <td>Desconto (${receipt.discountPercent}%)</td>
+      <td>Desconto${receipt.discountPercent > 0 ? ` (${receipt.discountPercent}%)` : ''}</td>
       <td align="right">−R$&nbsp;${receipt.discountInReais.toFixed(2).replace('.', ',')}</td>
     </tr>
   ` : ''
@@ -298,7 +300,7 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
         </div>
 
         <div className="border-t border-surface-500 px-5 py-4 space-y-2">
-          {venda.discountPercent > 0 && (
+          {venda.discountInReais > 0 && (
             <>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Subtotal</span>
@@ -307,7 +309,7 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-accent-green">Desconto ({venda.discountPercent}%)</span>
+                <span className="text-accent-green">Desconto{venda.discountPercent > 0 ? ` (${venda.discountPercent}%)` : ''}</span>
                 <span className="text-accent-green font-mono">−{fmt(venda.discountInReais)}</span>
               </div>
             </>
@@ -1464,9 +1466,9 @@ export default function VendaAvulsaPage() {
                 <span className="text-gray-400 font-mono">{fmt(item.subtotalInReais)}</span>
               </div>
             ))}
-            {receipt.discountPercent > 0 && (
+            {receipt.discountInReais > 0 && (
               <div className="flex justify-between items-center px-4 py-3 text-sm">
-                <span className="text-accent-green">Desconto ({receipt.discountPercent}%)</span>
+                <span className="text-accent-green">Desconto{receipt.discountPercent > 0 ? ` (${receipt.discountPercent}%)` : ''}</span>
                 <span className="text-accent-green font-mono">−{fmt(receipt.discountInReais)}</span>
               </div>
             )}
@@ -1728,8 +1730,8 @@ export default function VendaAvulsaPage() {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-bold text-accent-gold">{fmt(v.totalInReais)}</p>
-                        {v.discountPercent > 0 && (
-                          <p className="text-[10px] text-accent-green">−{v.discountPercent}%</p>
+                        {v.discountInReais > 0 && (
+                          <p className="text-[10px] text-accent-green">−{v.discountPercent > 0 ? `${v.discountPercent}%` : fmt(v.discountInReais)}</p>
                         )}
                       </div>
                     </div>
@@ -1913,8 +1915,8 @@ function HistoricoTab({ history, loading, date, onDateChange, onVendaUpdate }: {
                       </div>
                       <div className="text-right shrink-0 ml-3">
                         <p className="text-accent-gold font-bold">{fmt(v.totalInReais)}</p>
-                        {v.discountPercent > 0 && (
-                          <p className="text-xs text-accent-green">−{v.discountPercent}% desc.</p>
+                        {v.discountInReais > 0 && (
+                          <p className="text-xs text-accent-green">−{v.discountPercent > 0 ? `${v.discountPercent}%` : fmt(v.discountInReais)} desc.</p>
                         )}
                       </div>
                     </div>

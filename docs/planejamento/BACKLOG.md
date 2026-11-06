@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.82.5 | 06/11 | **PDV: desconto em R$ visível** — recibo (impresso e tela), detalhe e histórico usavam `discountPercent > 0`; desconto em R$ grava % = 0 e sumia. Agora `discountInReais > 0` |
 | v1.82.4 | 06/11 | **Fluxo do cliente no celular** (teste de ponta a ponta, 15 achados): `lib/rotulos.ts` (status/mesa/telefone), `AvatarCliente` (foto → Pokémon → inicial), `?tab=` genérico na Minha Conta, valor do Pix e erro fixo na reserva confirmada, pedidos com total e preço por item, inscrição com data/valor/vagas e volta pra `/cliente`, `GetUpcomingAsync` sem campeonato de dia passado, mascote fora do topo do cliente e do rodapé, "Entrar / Cadastrar" no menu, Libras à esquerda nas telas de entrada |
 | v1.82.3 | 05/11 | **QR Pix da comanda com desconto**: `POST /api/comanda/{id}/pix` aceita `discountInCents`; baixa do Pix fecha a comanda com o mesmo desconto (desconto gravado na cobrança, `pix_cobrancas.desconto_em_centavos`); comanda que mudou depois do QR fica aberta e avisa os admins |
 | v1.82.2 | 04/11 | **Teste de vazamentos**: inscritos de campeonato só admin (cliente via pagamento dos outros); e-mail fora do log do servidor (só código da conta; e-mail só na auditoria); demais rotas de cliente conferidas com 2 clientes (ok) |

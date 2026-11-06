@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+
+## [v1.82.5] — 2026-11-06
+
+### Balcão — desconto em R$ não aparecia (relato do Maikon)
+- **Corrigido:** no PDV, desconto dado em **R$** entrava na conta (o total já saía com ele), mas não aparecia no recibo impresso, no recibo da tela, no detalhe da venda nem no histórico — só desconto em % era mostrado, e parecia que o desconto não tinha funcionado. Agora mostra "Desconto −R$ 5,00" (ou "Desconto (10%)" quando é em %)
+- Conferido na API: comanda, balcão em R$ e balcão em % aplicam o desconto certo; o QR Pix da comanda com desconto já tinha sido corrigido na v1.82.3
+- **Comanda aberta mostrando "-1min":** o tempo desde a abertura era contado pelo relógio do computador da loja, que está atrasado em relação ao servidor. Agora conta pela hora do servidor (a mesma correção do alarme da liga) e nunca fica negativo
+
 ## [v1.82.4] — 2026-11-06
 
 ### Fluxo do cliente no celular — o que apareceu no teste de ponta a ponta
@@ -16,12 +24,14 @@
 - **Libras** nas telas de entrar e cadastrar fica no canto esquerdo (a mão cobria o "Mostrar" da senha)
 - Cartão de produto: "10% OFF" não quebra mais no meio da linha
 
+
 ## [v1.82.3] — 2026-11-05
 
 ### Comanda — QR Pix com o desconto (relato do Maikon)
 - **Corrigido:** ao fechar a comanda, dar desconto (ex.: 5%) e clicar em "Gerar QR Pix", o QR saía com o valor cheio. Agora o QR e o valor da cobrança já levam o desconto
 - Quando o Pix cai e a comanda fecha sozinha, ela fecha com o mesmo desconto (antes iria fechar sem ele, bagunçando o relatório)
 - Se a comanda mudar depois do QR (item a mais, pontos tirados), o Pix pago não fecha ela sozinho: a comanda fica aberta e o admin recebe um aviso no sininho com quanto falta, pra fechar registrando o Pix já recebido e o restante
+
 
 ## [v1.82.2] — 2026-11-04
 
@@ -30,6 +40,7 @@
 - **Corrigido — lista de inscritos de campeonato:** qualquer cliente logado conseguia ver, de cada inscrito de qualquer campeonato, se pagou, quando, como e quanto (e se tinha cobrança em aberto). Agora só o admin e o operador com permissão de Campeonatos, que são os únicos que usam essa lista
 - **Corrigido — e-mail nos logs:** login (certo, errado e com erro), cadastro pelo site, pedido de nova senha e falha de envio de e-mail gravavam o e-mail no log do servidor. Agora o log grava só o código da conta (e nada, quando a pessoa ainda não é conhecida); o e-mail completo fica só na auditoria do banco, que é onde o admin consulta. O cadastro também deixou de gravar o nome. Fecha os alertas do CodeQL de "dado privado no log" e "log forjado com texto de fora" nessas linhas
 
+
 ## [v1.82.1] — 2026-11-04
 
 ### Site da loja — o mesmo menu em todas as páginas (pedido do Taino)
@@ -37,6 +48,7 @@
 - **Libras no menu em todas elas:** a mão flutuante do VLibras saiu também dessas páginas; o "Libras" do menu abre o painel
 - A Sacola ganhou o botão de modo escuro, como as outras; na página do produto, o "Compartilhar" foi pra linha do caminho (Início › Produtos › categoria) — na barra, cortava o nome da loja
 - Por dentro: o menu virou um componente só (`components/loja/MenuLoja.tsx`), usado pelas quatro páginas
+
 
 ## [v1.82.0] — 2026-11-04
 
@@ -47,6 +59,7 @@
 - **Libras no menu, sem a mão flutuante:** na página principal o botão do VLibras saiu do canto e ficou no menu (ícone ao lado da lua no computador, botão "Libras" no menu do celular). Os botões "Libras" do menu não abriam nada — procuravam o botão antigo do plugin — e agora abrem o painel. O plugin carrega sempre na página principal, mesmo pra quem desligou a mão nas preferências
 - Menu do celular: os botões de baixo em duas colunas ("Minha Conta" quebrava e "Eventos" desalinhava) e o botão do menu ganhou nome pra leitor de tela
 
+
 ## [v1.81.0] — 2026-11-03
 
 ### Alarme da rodada — nunca mais mudo sem ninguém saber
@@ -54,6 +67,7 @@
 - Com o som liberado e rodada correndo, o selo fica discreto: **"Alarme pronto · tela acordada"**. Sem rodada, some
 - O selo é pequeno e **dá pra arrastar** pela alça (⠿) pra onde não atrapalhe; o lugar fica guardado no computador
 - **Tela do PC acordada:** com rodada correndo, o painel pede pro navegador não deixar a tela apagar nem o PC dormir (dormindo, nada roda e o alarme não toca). O navegador só segura isso com a aba do painel na frente — o selo avisa "deixe esta aba na frente" quando não está, e "a tela pode apagar — ver energia do PC" se o navegador não permitir
+
 
 ## [v1.80.1] — 2026-11-03
 
@@ -63,6 +77,7 @@
 - **Hora do servidor sem o atraso da rede:** cada resposta com o relógio mede a ida e volta e desconta a metade (a mesma conta que os relógios de computador usam pra se acertar). Se o relógio do aparelho pular no meio da rodada (o Windows acertando a hora), a correção vale na hora
 - **"Liga 5 timers ao mesmo tempo… começa a apitar":** liguinha que ninguém encerrou ficava com o relógio em "acabou" pra sempre, e o widget do balcão tocava o alarme de cada uma ao abrir o painel. Agora o widget só mostra o relógio de campeonato de hoje (ou de ontem) ainda aberto, e o alarme só toca sozinho até 10 minutos depois do fim
 
+
 ## [v1.80.0] — 2026-11-03
 
 ### Por dentro — crediário em camadas
@@ -71,21 +86,25 @@
 - 13 testes das contas (pagamento parcial e total, split que passa do saldo, forma que não quita dívida, conta quitada, edição com item novo e com item tirado, exclusão) — antes só havia o da edição
 - Nada muda pra quem usa: mesmas rotas, permissões, respostas e mensagens
 
+
 ## [v1.79.7] — 2026-11-03
 
 ### Liguinha e Campeonato — relógio certo e volta pro torneio (pedidos do Maikon)
 - **Relógio da rodada sem atraso:** cada celular contava o tempo com o próprio relógio. Aparelho com a hora alguns segundos (ou minutos) fora mostrava outro tempo que o telão e os outros jogadores. Agora o servidor manda a hora dele junto e todas as telas — celular do jogador, telão e o timer do balcão — contam pela mesma hora
 - **Voltar pro torneio:** quem saía da tela do jogo (abrindo a comanda pelo QR da mesa, fechando o navegador) via o campeonato em "Meus Campeonatos", mas não tinha como voltar pra mesa. O cartão do campeonato (na conta e na aba Torneios do perfil) ganhou o botão **"Abrir o torneio"**, que leva direto pra mesa, resultado e relógio
 
+
 ## [v1.79.6] — 2026-11-03
 
 ### Liga Mensal — sem brinde no topo também (pedido do Maikon)
 - Saiu a frase **"Top 4 do mês ganha brinde."** do topo de `/liga`. Fica "Pontuação dos campeonatos da semana." — junto com a etiqueta tirada na v1.79.5, a página não fala mais em brinde
 
+
 ## [v1.79.5] — 2026-10-30
 
 ### Liga Mensal — sem a etiqueta "Brinde" no ranking (pedido do Maikon)
 - No ranking de `/liga`, os 4 primeiros tinham a etiqueta **"Brinde"** atrás do nome. Saiu: fica só o nome, a posição colorida e os pontos
+
 
 ## [v1.79.4] — 2026-10-29
 
@@ -93,6 +112,7 @@
 - Em **Minhas reservas**, cada item aparecia num cartão com o seu próprio botão de Pix — parecia um Pix pra cada item, mesmo com tudo no mesmo pedido. Agora é **um cartão por pedido**, com os itens dentro e um botão "Pagar no Pix" com o total
 - Quem ainda tem **mais de um pedido sem pagar** (feitos em dias diferentes, ou antes do "um Pix só") ganha o botão **"Pagar tudo num Pix só"**: junta tudo no pedido mais recente e abre o QR com o total. Mesmas regras do "Juntar" do admin: o Pix antigo é cancelado no banco conferindo se não foi pago, e pedido que acabou de ser pago fica separado
 - Na mesma chave "Pré-venda: itens novos entram no pedido sem pagar"; desligada, o botão some
+
 
 ## [v1.79.3] — 2026-10-29
 
@@ -105,6 +125,7 @@
 ### Por que cada chamada demora (medido em 29/10)
 - Dentro do servidor, a API responde em **4 a 19 ms** e o banco roda a lista de produtos em **6,6 ms**. O tempo que o painel sente é o caminho: o servidor fica em **Boston (EUA)** e cada chamada sai do Brasil, passa pela Cloudflare e volta, **150 a 700 ms** por chamada. Por isso juntar chamadas é o que mais acelera a tela
 - Script `deploy/logs.sh`: a busca com `--dias` voltava sempre vazia (o Docker não aceita "3d"); agora conta em horas
+
 
 ## [v1.79.2] — 2026-10-29
 
@@ -125,6 +146,7 @@
 - O bloco "Itens adicionados na edição" passa a valer o que tem dentro: antes ficava R$ 0, e a lista mostrava o item sem a conta somar (conta do Pietro: R$ 248,50 em vez de R$ 298,00)
 - Conta **vencida** volta a poder ser editada: a tela mandava o vencimento junto mesmo sem mudar, e o sistema recusava com "A data de vencimento não pode ser no passado"
 
+
 ## [v1.79.1] — 2026-10-29
 
 ### Pix da pré-venda — "O QR Code não é válido" (relato do Maikon)
@@ -137,6 +159,7 @@
 - O Vigia não acusou esse caso porque nenhuma tela deu erro: o site entregou o código, e a recusa aconteceu no app do banco do cliente
 - Novo alerta (aviso): **"Pix vencido sem pagamento"** quando o Pix de um pedido aberto venceu e o pedido não tem outro código válido. Mostra o valor e a hora em que venceu. Some sozinho quando o cliente paga, o Pix é trocado ou o pedido é cancelado; depois de 3 dias, o pedido aparece como "pedido parado"
 
+
 ## [v1.79.0] — 2026-10-27
 
 ### Por dentro — campeonatos em camadas
@@ -144,6 +167,7 @@
 - A recusa de regra virou uma base comum (`RegraException`) com a tradução pra HTTP num lugar só (`RespostaDeRegra`), usada por pedidos e campeonatos
 - 9 testes novos da inscrição (gratuito, pago, Pix reaproveitado, Inter fora do ar, lotado, inscrições fechadas, balcão desativado) — antes não havia nenhum
 - Nada muda pra quem usa: mesmas rotas, respostas e mensagens
+
 
 ## [v1.78.0] — 2026-10-27
 
@@ -153,6 +177,7 @@
 - Recusa de regra virou exceção com status (`PedidoException`), no mesmo padrão da Liga e da Liguinha; quem pede (`Ator`) vai como parâmetro, sem `HttpContext` dentro do serviço
 - Nada muda pra quem usa: mesmas rotas, mesmas respostas, mesmas mensagens. Os 38 testes de pedidos passam sem mudar o que verificam
 
+
 ## [v1.77.0] — 2026-10-27
 
 ### Limpeza — site, loja e área do cliente sem o "jeito antigo" guardado
@@ -160,6 +185,7 @@
 - Saem as telas antigas de login, cadastro, primeiro acesso e recuperar senha, a sacola antiga, o carrossel e o cartão de produto antigos da home e da loja
 - Nada muda pra quem usa. Tudo guardado na tag `arquivo/chaves-antes-da-limpeza`
 - Ficam por enquanto: `pokemon-preferido` e `home-visual-uniforme` (v1.65+, ainda em observação)
+
 
 ## [v1.76.0] — 2026-10-27
 
@@ -169,12 +195,14 @@
 - Nada muda pra quem usa. Tudo guardado na tag `arquivo/chaves-antes-da-limpeza`
 - Fica por enquanto: `campeonato-separado` (v1.68.0, ainda em observação)
 
+
 ## [v1.75.0] — 2026-10-27
 
 ### Limpeza — pedidos e painel sem o "jeito antigo" guardado
 - Cinco mudanças que estavam atrás de chave desde setembro/outubro viram o jeito único (nenhuma foi desligada em produção): **acesso do operador pelo menu**, **menu lateral no azul**, **telas do painel no azul**, **Pix do pedido consistente** e **pedido vira venda no pagamento**
 - Nada muda pra quem usa: o código que sai é o caminho de volta que nunca rodou. Tudo guardado na tag `arquivo/chaves-antes-da-limpeza`
 - A tela "Mudanças com volta" continua, com as chaves que ainda estão em observação
+
 
 ## [v1.74.0] — 2026-10-26
 
@@ -183,6 +211,7 @@
 - Subcategoria com o mesmo nome em duas famílias fica no próprio grupo, pra não somar no pai errado
 - Correção: venda avulsa **estornada** não entra mais no relatório de vendas (o resto do financeiro já tirava)
 - Chave `relatorio-por-subcategoria` em Funcionalidades: desligada, volta a lista de antes
+
 
 ## [v1.73.0] — 2026-10-26
 
@@ -193,6 +222,7 @@
 - No servidor, os containers da Evolution, do n8n e o Redis deixam de fazer parte do deploy. Nada é apagado do banco: as tabelas do WhatsApp continuam lá, sem uso. Tudo guardado na tag `arquivo/whatsapp-v1.72.0`
 - Ficam: Mensageria (é ela que o "Avisar fila" usa), fila de espera, Assistente IA do painel e Cartas TCG
 
+
 ## [v1.72.0] — 2026-10-26
 
 ### Pedidos — pagamento por fora sem dar como retirado (pedido do Maikon)
@@ -201,6 +231,7 @@
 - Se o pedido tem um Pix aberto, o sistema avisa e oferece cancelar o Pix antes — sem isso o cliente poderia pagar duas vezes
 - A coluna **Vendas** da tela de Pedidos passa a se chamar **Reservas**
 - Chave `pagamento-sem-retirada` em Funcionalidades: desligada, volta só o Homologar de antes
+
 
 ## [v1.71.0] — 2026-10-26
 
@@ -211,11 +242,13 @@
 - A imagem da API fica mais enxuta: sem a biblioteca de nota (Zeus/DFe), sem o BouncyCastle e sem o modo legado do OpenSSL, que só servia pra abrir o certificado A1. O certificado do Inter (Pix) é outro formato e segue igual
 - Estorno de comanda e de venda avulsa não depende mais de cancelar nota antes
 
+
 ## [v1.70.1] — 2026-10-26
 
 ### Segurança — fora a autoridade certificadora eMudhra (emSign)
 - A eMudhra teve as chaves privadas vazadas em 21/10/2026: com elas dá pra emitir certificado falso em nome do Inter, da SEFAZ ou de qualquer site. As raízes **emSign** saem da lista de confiança da **imagem da API** (o mesmo foi feito no servidor em 26/10). O build da imagem falha se sobrar alguma
 - Conferido: Inter e demais sites com certificado comum seguem conectando igual
+
 
 ## [v1.70.0] — 2026-10-23
 
@@ -225,6 +258,7 @@
 - Leitura do certificado A1 (NFC-e/SEFAZ) no carregador novo do .NET, com o caminho de reserva de antes; testes novos com certificado moderno, no formato antigo dos A1 e com senha errada
 - A imagem da API passa a ser Ubuntu 24.04 (padrão do .NET 10); o ajuste do OpenSSL pros A1 antigos continua
 
+
 ## [v1.69.0] — 2026-10-23
 
 ### Pré-venda — um Pix só pro que ainda não foi pago (pedido do Maikon)
@@ -232,6 +266,7 @@
 - Se o pedido antigo já tinha um Pix gerado, ele é cancelado no Inter antes — **conferindo se não acabou de ser pago**. Pago, ou Inter fora do ar, os itens novos viram um pedido separado (nunca cobra duas vezes)
 - Só junta pedido na mesma forma de pagamento (Pix com Pix, retirada com retirada) e que ainda não virou venda; o carrinho avisa quando somou
 - Chave `pedido-pix-junto` em Funcionalidades: desligada, cada carrinho é um pedido com o seu Pix, como antes
+
 
 ## [v1.68.0] — 2026-10-23
 
@@ -242,6 +277,7 @@
 - A pontuação já era separada: campeonato não soma na Liga Mensal
 - Chave `campeonato-separado` em Funcionalidades: desligada, volta tudo junto como antes
 
+
 ## [v1.67.0] — 2026-10-23
 
 ### Liguinha — a "fotinha" do jogador é o Pokémon preferido (pedido do Maikon)
@@ -249,15 +285,18 @@
 - O **nome do deck** continua embaixo do nome — deck com nome livre não vira figura, o Pokémon sempre vira
 - Quem não escolheu Pokémon continua com a figura do deck, como antes; desligar a chave `pokemon-preferido` também volta tudo pro deck
 
+
 ## [v1.66.2] — 2026-10-23
 
 ### Liguinha — lançar o resultado depois que o tempo acaba (pedido do Maikon)
 - Quando o tempo da rodada acabava e alguém apertava **"Parar alarme"**, o relógio era zerado e a tela do jogador voltava pro "monte o setup": **sumiam os botões Venci/Perdi** e o organizador precisava dar "Iniciar" de novo. Agora a rodada guarda quando começou — parar o alarme ou zerar o relógio não tira mais a rodada de jogo (tela do jogador, Central, telão e "Estou pronto")
 
+
 ## [v1.66.1] — 2026-10-22
 
 ### Página inicial
 - O "Nerd" do título volta pro **azul padrão da loja** (Cor principal em Personalizar Site — o mesmo azul do "NERD" da logo); o resto da home segue num azul só
+
 
 ## [v1.66.0] — 2026-10-22
 
@@ -267,10 +306,12 @@
 - **Letras**: o título do topo um degrau menor, a chamada "Partidas, amizades…" no tamanho dos outros títulos e nenhum texto da home abaixo de 12px
 - Chave `home-visual-uniforme` em Funcionalidades: desligada, volta a home de antes
 
+
 ## [v1.65.1] — 2026-10-22
 
 ### Operação
 - **Mudança no script de atualização vale no mesmo deploy.** O `update.sh` baixa a versão nova de si mesmo no meio do deploy, mas continuava rodando a antiga — por isso a troca do nginx (v1.64.3) só aconteceu numa segunda passada. Agora, se o script mudou, ele recomeça com o novo (uma vez só, sem repetir o backup). Na volta pra uma versão antiga (`update.sh <commit>`) continua como antes, pra não cair num script velho que desfaria a volta
+
 
 ## [v1.65.0] — 2026-10-22
 
@@ -282,11 +323,13 @@
 - Não é o deck do torneio: o deck continua sendo escolhido na tela do torneio
 - Chave `pokemon-preferido` em Funcionalidades: desligada, some a escolha e o Pokémon do perfil, sem apagar o que o cliente já escolheu
 
+
 ## [v1.64.3] — 2026-10-22
 
 ### Segurança
 - **nginx 1.27.5 → 1.30.6** (a porta de entrada do site). Em 14/10 saíram correções de falhas graves no nginx (estouro de memória em `map`/`alias`/`rewrite`, falha de TLS); a linha 1.27 não recebe mais correção. Versão presa no número exato
 - O deploy agora **troca o nginx de verdade** quando a versão muda no compose: antes ele só recarregava a configuração e o programa velho continuava no ar. Baixa a imagem antes, valida a nossa config com a versão nova e só então troca — cerca de 1 segundo em que conexão nova é recusada (medido: 1 pedido em ~250). Nos deploys seguintes volta a ser só recarga, sem nenhuma pausa
+
 
 ## [v1.64.2] — 2026-10-22
 
@@ -294,12 +337,14 @@
 - **Node.js 20 → 24.22.1 (LTS)** no site em produção e no CI. Em 21/10 o Node.js corrigiu 10 falhas, entre elas uma que permite rodar código no servidor pelo descompactador Brotli (CVE-2026-111497) e duas que deixam passar certificado TLS de outro site. O Node 20 saiu de suporte em 30/04/2026 e **não recebe essa correção**. A imagem fica presa na versão corrigida (`node:24.22.1-alpine`), não numa "24" qualquer
 - `frontend/.nvmrc` (24.22.1) e `engines` no package.json: mínimo 22.23.4 / 24.22.1 (as versões já corrigidas)
 
+
 ## [v1.64.1] — 2026-10-21
 
 ### Vigia do sistema — os últimos gatilhos da fila
 - **Crediário sem lembrete**: um dos dias de aviso configurados (ex.: 3 dias antes, no dia, 3 dias de atraso) passou há 1 a 7 dias e o lembrete não chegou ao cliente — o robô não mandou, ou tentou e nenhum canal entregou
 - **Rodada da liguinha parada**: o tempo da rodada acabou há mais de 30 minutos e ainda tem mesa sem resultado
 - **Backup atrasado** (crítico): o backup diário não registra execução há mais de 26 horas. O `deploy/backup.sh` agora deixa um registro no banco quando termina (a API não enxerga os arquivos da VPS); falhar nesse registro nunca derruba o backup. A cópia no Google Drive (`backup-drive.sh`) tem registro próprio, gravado só depois do upload — se um dia ela for ligada e parar, o alerta é separado
+
 
 ## [v1.64.0] — 2026-10-21
 
@@ -316,12 +361,14 @@
 ### Segurança
 - Biblioteca `follow-redirects` (usada pelo axios) atualizada pra 1.16.1 — alerta alto publicado hoje (cabeçalhos de login vazando em redirecionamento)
 
+
 ## [v1.63.1] — 2026-10-21
 
 ### Operação — o log não some mais no deploy
 - Antes de apagar o container antigo na troca sem queda, o log dele é guardado na VPS (`/var/log/santuarionerd`, compactado, só o root lê, 30 dias). Até agora cada deploy levava o log embora — quando algo dava errado, não havia o que ler
 - Busca: `bash deploy/logs.sh "texto"` procura no que está no ar e em todos os guardados (`--dias 30`, `--servico frontend`, `--erros`)
 - Se guardar o log falhar (disco, permissão), o deploy segue normalmente
+
 ## [v1.63.0] — 2026-10-21
 
 ### Novo — Vigia do sistema (Configuração → Alertas do sistema)
@@ -337,12 +384,14 @@
 ### Processo
 - `docs/planejamento/BACKLOG.md` voltou a ser o backlog vivo, atualizado a cada versão (em andamento, esperando alguém, na fila, feito)
 
+
 ## [v1.62.1] — 2026-10-21
 
 ### Corrigido — telão e pódio no celular (Maikon)
 - **Pódio cortava no celular**: os 3 cartões não encolhiam e a página ficava mais larga que a tela (cortava ao mexer no zoom). Agora dividem a largura, o sprite fica num tamanho que cabe no cartão (deck com dois Pokémon não invade o vizinho) e os textos diminuem no celular
 - Classificação e mesas do telão também não passam mais da tela em celular estreito (320px); o selo PRONTO fica ao lado do nome sem empurrar a linha, e o relógio diminui um pouco em telas bem pequenas
 - Na TV e no computador nada muda
+
 
 ## [v1.62.0] — 2026-10-21
 
@@ -355,6 +404,7 @@
 - "Retirado" sem venda é recusado (era um jeito de o faturamento sumir); se o registro da venda falhar no pagamento, os admins recebem aviso no sininho e o "Homologar" resolve
 - Proteção contra venda em dobro quando o Pix e o "Homologar" acontecem no mesmo instante
 - Chave `pedido-venda-no-pagamento` em Funcionalidades: desligada, volta a vender só no "Homologar" (sem nunca vender de novo o que já virou venda)
+
 ## [v1.61.1] — 2026-10-20
 
 ### Corrigido — entrada na liguinha pelo celular (teste do Maikon)
@@ -363,6 +413,7 @@
 - **Deck (o Pokémon que aparece no telão e na Liga) na tela do torneio**: quem entrou pelo "Estou aqui" ou foi adicionado pelo organizador agora escolhe ali, com o sprite de prévia; dá pra trocar até a 1ª rodada sair (depois, só quem ainda está sem deck)
 - "Liguinha" no topo da tela do jogador agora é um link (parecia botão e não fazia nada)
 - Chave `liguinha-entrada-simples` em Funcionalidades: desligada, volta a tela de antes
+
 
 ## [v1.61.0] — 2026-10-20
 
@@ -375,6 +426,7 @@
 - O lançamento do resultado continua igual (cada um marca Venci/Perdi no celular e fecha quando os dois batem)
 - Chave `liguinha-pronto-na-mesa` em Funcionalidades: desligada, volta a ser só "Começar rodada"
 
+
 ## [v1.60.0] — 2026-10-20
 
 ### Novo — métricas na Liga pública e na conta do jogador
@@ -386,6 +438,7 @@
 ### Corrigido
 - **Pokémon do deck**: Ogerpon com máscara ("Cornerstone Ogerpon", "Ogerpon Wellspring", "Hearthflame") agora mostra a forma certa da máscara
 - **/liga no celular** não rola mais pro lado
+
 ## [v1.59.2] — 2026-10-20
 
 ### Corrigido — compra do site paga depois de cancelada
@@ -395,11 +448,13 @@
 - Todo cancelamento de pedido fica registrado na auditoria (quem cancelou e se foi a loja)
 - Chave `pedido-pix-consistente` em Funcionalidades: desligada, volta tudo como era
 
+
 ## [v1.59.1] — 2026-10-20
 
 ### Segurança
 - **Chaves da API do Pokémon TCG e da Riot fora do código**: estavam escritas no `appsettings.json`, que vai pro repositório público. Agora ficam vazias no arquivo e vêm só do `.env` da VPS (`POKEMON_API_KEY` e o novo `RIOT_API_KEY`). Em produção nada muda — a chave do Pokémon já vinha do `.env` (vazia) e a da Riot não é usada pelo código
 - **`deploy/configurar-chave.sh`**: grava a chave nova no `.env` da VPS sem ela aparecer na tela nem no histórico (`bash deploy/configurar-chave.sh POKEMON_API_KEY`, cola a chave, depois o `update.sh` de sempre)
+
 
 ## [v1.59.0] — 2026-10-19
 
@@ -407,6 +462,7 @@
 - Ao adicionar um cliente na aba **Jogadores**, aparecem os **decks salvos em "Meus decks"** dele (os do jogo do torneio primeiro, depois os mais recentes), com o Pokémon do deck — o mesmo deck que ele escolheria entrando pelo código no celular
 - Dá pra escolher "Outro deck" e digitar; quem não tem deck salvo continua só digitando
 - O deck escolhido fica ligado à conta do jogador e vai pro telão, pras mesas, pra Liga e pras métricas por deck
+
 
 ## [v1.58.0] — 2026-10-19
 
@@ -418,6 +474,7 @@
 - **Decks**: mais usados, quantos jogadores, títulos, V-E-D e % de vitória de cada um
 - **Copiar pro WhatsApp**: o top 10 e os campeões das etapas num texto pronto pra colar no grupo
 - Etapa lançada de fora entra nos pontos, nos campeões e nos decks; V-E-D e % só das jogadas no sistema (a de fora tem só a colocação)
+
 
 ## [v1.57.0] — 2026-10-19
 
@@ -435,12 +492,14 @@
 ### Mudança com volta
 - Chave **"Entrada: todas as telas no mesmo visual"** em `/admin/funcionalidades`. Desligada, cadastro, primeiro acesso, recuperar senha e login do painel voltam ao cartão de antes
 
+
 ## [v1.56.1] — 2026-10-19
 
 ### Corrigido — Central da Liguinha
 - **Liguinha paga: só joga quem pagou.** Jogador adicionado pelo painel entrava como presente com a cobrança Pix ainda pendente e era pareado sem pagar. Agora quem está devendo a inscrição não entra no pareamento (vale também pro check-in pelo celular), e quem entra pelo painel numa liguinha paga não vem marcado presente. Quem tem vaga firme (inscrito quando era grátis) segue jogando, com ou sem check-in
 - **Vendas do campeonato pelo valor de cada inscrição**: "Arrecadado" e "A receber" somavam todo mundo pelo preço atual; se a entrada mudava depois das primeiras inscrições, o total saía errado. Agora soma o valor da cobrança de cada um, e cobrança em aberto conta como "a receber" mesmo pra quem tinha vaga firme
 - **Etapa de fora não pode ser de amanhã**: dava pra lançar a etapa de amanhã e adiantar os pontos da Liga
+
 
 ## [v1.56.0] — 2026-10-19
 
@@ -464,6 +523,7 @@
 - Chave **"Liga × Campeonato"**: desligada, a Liga Mensal volta a somar todo evento com colocação, como antes
 - Chave **"Painel: Central da Liguinha"** em `/admin/funcionalidades`. Desligada, o item some do menu e ficam as telas de antes (Campeonatos, Liga Mensal, Timers)
 
+
 ## [v1.55.0] — 2026-10-19
 
 ### Novo — animação de vitória e derrota na liguinha
@@ -478,6 +538,7 @@
 
 ### Mudança com volta
 - Chave **"Liguinha: animação de vitória e derrota"** em `/admin/funcionalidades`. Desligada, a tela do jogador volta a mostrar só o texto do resultado
+
 
 ## [v1.54.0] — 2026-10-19
 
@@ -495,10 +556,12 @@
 ### Corrigido
 - **Rodapé (Política de Privacidade, Termos de Uso, Seus Direitos, cookies, contato) quase invisível**: o texto era cinza-claro fraco no azul-marinho e, no tema claro, virava cinza-escuro — sumia. Agora é branco bem legível nos dois temas e, no celular, os links ficam em duas colunas fáceis de tocar em vez de uma linha quebrada com "|" soltos
 
+
 ## [v1.53.1] — 2026-10-19
 
 ### Ferramenta interna (não muda nada no site)
 - **Ensaio geral do campeonato** (`scripts/ensaio-campeonato.py`): roda no computador de desenvolvimento um dia de liguinha inteiro e confere cada regra — inscrição pelo site, check-in com um toque e pelo código, quem falta, loja com menos mesas que jogadores, pareamentos sem ligar o relógio, bye, sem revanche, resultado divergente resolvido pela loja, desistência, classificação (3/1/0 e OWP), telão e os pontos 10/7/5/3/1 na Liga Mensal. Rodar antes de cada evento: `python scripts/ensaio-campeonato.py --limpar`
+
 
 ## [v1.53.0] — 2026-10-16
 
@@ -510,6 +573,7 @@
 
 ### Mudança com volta
 - Chave **"Painel: telas no azul da loja"** em `/admin/funcionalidades`. Desligada, o painel volta ao azul-claro e ao roxo de status de antes
+
 
 ## [v1.52.0] — 2026-10-15
 
@@ -526,6 +590,7 @@
 ### Mudança com volta
 - Chave **"Cliente: Minha conta organizada"** em `/admin/funcionalidades`. Desligada, volta a grade de abas antiga e o saldo repetido
 
+
 ## [v1.51.0] — 2026-10-15
 
 ### Mudado — painel (primeira parte: o "esqueleto")
@@ -535,6 +600,7 @@
 
 ### Mudança com volta
 - Chave **"Painel: menu lateral novo"** em `/admin/funcionalidades`. Desligada, volta o menu branco/preto de antes
+
 
 ## [v1.50.0] — 2026-10-15
 
@@ -560,6 +626,7 @@
 - Chave **"Loja: sacola nova"** em `/admin/funcionalidades`. Desligada, volta o carrinho de antes
 - Chave **"Cliente: área do cliente nova"**. Desligada, volta a barra azul-petróleo, o cartão de pontos simples e os 2 atalhos
 
+
 ## [v1.49.0] — 2026-10-15
 
 ### Mudado — página do produto e rodapé
@@ -571,6 +638,7 @@
 ### Mudança com volta
 - Chave **"Loja: página do produto nova e rodapé no azul"** em `/admin/funcionalidades`. Desligada, volta a página do produto e o rodapé de antes
 
+
 ## [v1.48.0] — 2026-10-15
 
 ### Mudado — vitrine mais vendedora
@@ -581,6 +649,7 @@
 
 ### Mudança com volta
 - Chave **"Loja: vitrine nova"** em `/admin/funcionalidades`. Desligada, volta o carrossel na página inicial e a loja de antes
+
 
 ## [v1.47.0] — 2026-10-14
 
@@ -600,6 +669,7 @@
 ### Mudança com volta
 - Chave **"Página inicial: detalhes do modelo do Maikon"** em `/admin/funcionalidades`. Desligada, a página inicial volta a ser a da v1.46.1
 
+
 ## [v1.46.1] — 2026-10-14
 
 ### Mudado (pedido do Maikon)
@@ -609,6 +679,7 @@
 
 ### Mudança com volta
 - Tudo segue a chave **"Site: topo novo e login dos clientes novo"**. Desligada, volta a barra com a marca no meio e o login antigo
+
 
 ## [v1.46.0] — 2026-10-14
 
@@ -621,6 +692,7 @@
 
 ### Mudança com volta
 - Chave **"Liga Mensal: página nova"** em `/admin/funcionalidades`. Desligada, volta a lista simples
+
 
 ## [v1.45.0] — 2026-10-14
 
@@ -636,6 +708,7 @@
 ### Mudança com volta
 - Chave **"Site: topo novo e login dos clientes novo"** em `/admin/funcionalidades`. Desligada, volta o topo azul-petróleo e o login antigo
 
+
 ## [v1.44.2] — 2026-10-14
 
 ### Mudado (bastidores)
@@ -644,10 +717,12 @@
 - Falha de envio de WhatsApp grava só o final do telefone (…2890), não o número inteiro
 - Pra investigar um problema e ver todo pedido de novo: `LOG_ASPNETCORE=Information` no `.env` da VPS e `bash rollout.sh api` (troca sem queda)
 
+
 ## [v1.44.1] — 2026-10-14
 
 ### Segurança
 - **postcss-selector-parser 6.1.2 → 7.1.6** (usado só na montagem do visual do site, pelo Tailwind): fecha 2 alertas do Dependabot (1 médio, 1 baixo) de travamento ao ler seletores CSS malformados. Conferido gerando o CSS do site antes e depois: saiu **idêntico, byte a byte**
+
 
 ## [v1.44.0] — 2026-10-13
 
@@ -659,6 +734,7 @@
 ### Mudança com volta
 - Chave **"Site: fotos leves"** em `/admin/funcionalidades`. Desligada, o site volta a mandar a foto original — na hora pra foto nova; quem já tinha visto a miniatura volta pra original em até 1 dia (ou na hora, limpando o cache da Cloudflare)
 
+
 ## [v1.43.0] — 2026-10-13
 
 ### Liguinha (pedidos do Maikon)
@@ -666,6 +742,7 @@
 - **Lugares da loja** (padrão 24) na configuração do torneio: quem passar disso aparece como **aguardando mesa** e joga quando uma liberar — ninguém fica de fora da inscrição
 - **Status do resultado** na tela do organizador: aguardando resultado → aguardando confirmação de Fulano → **Aprovado** / divergente
 - **Check-in com um toque**: quem já está inscrito toca em **Estou aqui**, sem digitar código (o código continua valendo)
+
 
 ## [v1.42.1] — 2026-10-13
 
@@ -678,6 +755,7 @@
 ### Mudança com volta
 - O "Agora não" fica atrás da chave **"Cliente: Complete seu cadastro com Agora não"** em `/admin/funcionalidades`. Desligada, o aviso volta a ser obrigatório
 
+
 ## [v1.42.0] — 2026-10-13
 
 ### Segurança
@@ -687,10 +765,12 @@
 ### Mudado
 - Nada muda pra quem usa: as telas foram conferidas uma a uma depois da atualização
 
+
 ## [v1.41.4] — 2026-10-13
 
 ### Segurança
 - **Gerador de PDF atualizado (jsPDF 2 → 4)**: fecha 2 falhas críticas e 8 altas. Súmula e extrato do crediário e os relatórios financeiro, de clientes, PDV, comandas, crediário e estoque saem iguais — conferido gerando cada um nas duas versões e comparando página por página
+
 
 ## [v1.41.3] — 2026-10-09
 
@@ -702,11 +782,13 @@
 ### Mudado
 - Mudança de configuração do servidor web (nginx) não pausa mais os pedidos: é aplicada com o site rodando, sem reiniciar. Configuração com erro é recusada e a anterior continua no ar
 
+
 ## [v1.41.2] — 2026-10-09
 
 ### Mudado
 - **Backup antes de toda atualização**: antes de mexer em qualquer coisa, a atualização copia os bancos (clientes, comandas, pré-vendas, vendas do site, crediário). Se a cópia falhar, a atualização nem começa. Além do backup diário que já existia
 - **Atualizar ficou mais simples**: quando uma mudança é aprovada no GitHub, a atualização se prepara sozinha e espera um "Aprovar" — dá pra aprovar pelo celular, na hora mais tranquila da loja. Cada atualização mede, pedido a pedido, se o site ficou fora do ar em algum momento
+
 
 ## [v1.41.1] — 2026-10-09
 
@@ -717,6 +799,7 @@
 ### Corrigido
 - **"Voltar pra versão anterior" não voltava**: a instrução de emergência do deploy trocava a versão, mas o script de atualização puxava a última de novo e desfazia a volta sem avisar. Agora é um comando só: `bash deploy/update.sh <versão>`
 - Ao desligar, a API tinha só 10 segundos pra terminar o que estava fazendo (o padrão do Docker) e podia cortar uma venda no meio; agora tem 35
+
 
 ## [v1.41.0] — 2026-10-09
 
@@ -734,6 +817,7 @@
 - Liga Mensal reorganizada: a regra saiu da porta de entrada da API pra um serviço próprio, com 26 testes novos (pontuação, mês de Brasília na virada das 21h, desempate, homônimos, lançamentos manuais e o caminho antigo). Um teste novo confere que o torneio da liguinha, ao encerrar, soma certo na Liga Mensal
 - Teste novo que falha se uma rota de admin for criada sem dizer qual permissão do operador abre ela
 - O robô que vigia o site a cada 30 min passa a conferir também a página de um campeonato e as chaves de funcionalidade
+
 
 ## [v1.40.0] — 2026-10-09
 
@@ -764,6 +848,7 @@
 ### Removido
 - Código sem uso: a lista de espera antiga (8 rotas — o contador de fila de pré-venda do painel continua no mesmo endereço), a consulta antiga de crediário do cliente (`/api/crediarios/meu`), 26 chamadas do site que nenhuma tela usava e 14 migrations do banco (18 arquivos) que nunca rodavam (o banco é preparado pelos arquivos de SQL de inicialização)
 
+
 ## [v1.39.5] — 2026-10-07
 
 ### Mudado
@@ -771,15 +856,18 @@
 - **Fim de uma armadilha antiga**: um `{` ou `}` nesse SQL (até num comentário) impedia o servidor de subir. Agora o SQL roda direto no banco e as chaves não quebram mais nada
 - Teste novo: a preparação do banco roda duas vezes seguidas sem erro e cria o admin uma vez só
 
+
 ## [v1.39.4] — 2026-10-07
 
 ### Mudado
 - **Chamadas à API organizadas por assunto**: o arquivo com todas as chamadas do front ao servidor tinha 1.826 linhas. Agora é uma pasta com um arquivo por assunto (crediário, comandas, vendas, fiscal, relatórios etc.). Nenhuma tela muda — só fica mais fácil achar e mexer
 
+
 ## [v1.39.3] — 2026-10-07
 
 ### Mudado
 - **Fuso de Brasília num lugar só no servidor**: a regra de "que dia é hoje em Brasília" estava copiada em 11 arquivos (relatórios, financeiro, comanda, PDV, fiscal, liga mensal, crediário, e-mail). Agora é uma só. Sem mudança visível — evita que uma cópia fique diferente das outras. A emissão de NFC-e passou a usar a mesma regra, que também funciona se o servidor rodar em Windows
+
 
 ## [v1.39.2] — 2026-10-07
 
@@ -788,6 +876,7 @@
 
 ### Mudado
 - **Dinheiro com separador de milhar em todo o sistema**: valores a partir de mil aparecem como "R$ 1.234,56" (antes "R$ 1234,56"), igual aos PDFs. Toda formatação de dinheiro e de "hoje" passa por um lugar só — eram 17 cópias da mesma função e cerca de 100 formatações escritas à mão
+
 
 ## [v1.39.1] — 2026-10-07
 
@@ -799,6 +888,7 @@
 ### Removido
 - Imagens sem uso: `maikon-avatar.png`, `logo-sidebar.svg`, `icon-maskable.svg` e as versões pesadas do logo
 
+
 ## [v1.39.0] — 2026-10-07
 
 ### Corrigido
@@ -807,15 +897,18 @@
 ### Mudado
 - **Formas de pagamento num catálogo único**: a lista de formas (e as regras de cada uma — precisa de cliente, gera pontos, quita crediário) estava copiada em vários lugares do sistema. Agora vem de um catálogo só, no servidor e no painel, com um teste que impede os dois de divergirem. Os nomes ficaram padronizados: "Crediário (30 dias)" virou "Crediário" (o prazo é escolhido na hora), "Pontos de Fidelidade" virou "Pontos" e "Cashback (Saldo)" virou "Cashback"
 
+
 ## [v1.38.2] — 2026-10-06
 
 ### Corrigido
 - **Botões de liga/desliga quebrados pelo sistema**: cada tela tinha o seu feito à mão. No Fiscal a bolinha escapava do trilho quando ligada; em Configurações e no formulário de produto do Estoque, desligado no tema claro o trilho ficava quase branco, igual à bolinha, e parecia que o botão tinha sumido. Agora todos (Configurações, Estoque, Fiscal e avisos do Crediário) usam o mesmo componente, com medidas fixas e cinza visível nos dois temas, e são lidos corretamente pelo leitor de tela
 
+
 ## [v1.38.1] — 2026-10-06
 
 ### Corrigido
 - **Histórico de vendas do PDV depois das 21h**: o "hoje" do histórico era calculado no horário de Londres — das 21h à meia-noite virava o dia seguinte. O rótulo "hoje" sumia, o botão "Hoje" levava pra um dia sem vendas e o calendário deixava escolher amanhã. Agora segue o calendário de Brasília
+
 
 ## [v1.38.0] — 2026-10-06
 
@@ -823,12 +916,14 @@
 - **Pagar uma parte pelo link**: na página de pagamento do crediário o cliente escolhe "Pagar outro valor" e digita quanto quer pagar agora (mínimo R$ 1,00, até o que falta na conta). A baixa é automática e a conta continua aberta com o restante
 - **Pagar todas as contas num Pix só**: quem tem mais de uma conta aberta vê a opção "Pagar todas as contas" com o total. Um Pix só, e a baixa distribui o valor quitando primeiro a conta que vence antes. No perfil, o botão "Pagar tudo com Pix" aparece embaixo do total devido
 
+
 ## [v1.37.0] — 2026-10-06
 
 ### Adicionado
 - **O cliente confere a própria dívida no perfil**: na aba Dívida, cada conta mostra quanto falta pagar, o total e quanto já foi pago, o vencimento, e "O que você levou" com tudo somado ("3× Coca Cola Lata"). Em "Ver histórico" aparece cada compra e cada pagamento, do mais recente pro mais antigo, com data e hora, de onde veio (comanda, compra no balcão), os produtos de cada compra, compras canceladas riscadas e ajustes de valor feitos pela loja
 - **Extrato em PDF pro cliente**: botão "Extrato PDF" em cada conta baixa o mesmo documento da súmula da loja, sem as observações internas e sem a lista de lembretes
 - **Contas já quitadas** ficam guardadas no perfil ("Ver contas já quitadas"), com o histórico e o extrato de cada uma
+
 
 ## [v1.36.1] — 2026-10-06
 
@@ -839,6 +934,7 @@
 - **Texto do "Avisos automáticos" dizia "Desligado…" mesmo ligado** — agora acompanha o botão
 - Avisos em amarelo e o aviso de "pago a mais" com contraste nos dois temas
 
+
 ## [v1.36.0] — 2026-10-06
 
 ### Mudado
@@ -847,11 +943,13 @@
 ### Adicionado
 - **Súmula do crediário em PDF**: botão "Súmula (PDF)" em cada conta gera o documento completo — dados da conta, totais (total, pago, saldo, situação), resumo dos itens somados, extrato com data e hora de cada compra, estorno e pagamento (de onde veio cada compra — comanda, venda no balcão, lançamento manual — e a forma de cada pagamento) com o saldo correndo, os itens de cada compra, os lembretes de vencimento enviados e espaço pra assinatura do cliente e da loja. Substitui o antigo "Imprimir", que só listava os itens
 
+
 ## [v1.35.1] — 2026-10-06
 
 ### Corrigido
 - **Vencimento da conta nova vinha com um dia a mais à noite**: na janela "Conta de Crediário" (fechamento de comanda e PDV), a data sugerida de 30 dias e o limite mínimo do calendário eram calculados no horário de Londres — das 21h à meia-noite já pulavam pro dia seguinte. Agora seguem o calendário de Brasília
 - **Rótulo da conta nova**: dizia "prazo 30 dias" mesmo depois de escolher outra data. Agora mostra a data escolhida ("Nova conta — vence 20/11/2026")
+
 
 ## [v1.35.0] — 2026-10-06
 
@@ -863,6 +961,7 @@
 
 ### Mudado
 - **Cobrança Pix reaproveitada**: abrir o link de novo, clicar duas vezes ou o admin usar "Cobrar via Pix" devolve a cobrança que ainda está valendo pro mesmo saldo, em vez de abrir outra no banco a cada clique
+
 
 ## [v1.34.0] — 2026-10-02
 
@@ -878,6 +977,7 @@
 - **E-mail de crediário aberto**: dizia que novas comandas ficariam bloqueadas enquanto houvesse dívida (não é verdade há tempos) e mostrava o vencimento no fuso do servidor. Agora aponta pra aba Dívida do perfil e mostra a data certa
 - **Manual do crediário**: atualizado — falava em "um crediário por vez", em "Marcar como Pago" e em prazo renovado a cada pagamento, nada disso vale mais
 
+
 ## [v1.33.1] — 2026-10-01
 
 ### Corrigido
@@ -891,6 +991,7 @@
 ### Adicionado
 - **Histórico de alterações do crediário**: editar o valor, o vencimento ou os itens de uma conta, e excluir uma conta, agora fica registrado na auditoria — quem fez, quando e qual era o valor antes
 
+
 ## [v1.33.0] — 2026-09-30
 
 ### Mudado
@@ -901,6 +1002,7 @@
 - **Pix pago depois do acerto sumia**: se a conta era acertada por outro meio com uma cobrança Pix ainda aberta e o cliente pagasse o Pix depois, o dinheiro caía no banco sem aparecer em lugar nenhum. Agora, ao lançar pagamento ou excluir a conta, as cobranças Pix abertas dela são canceladas no Inter (se o cliente tiver acabado de pagar, o sistema avisa e não lança duas vezes). E se mesmo assim um Pix for pago além do saldo, o pagamento é registrado inteiro e o que passou vira crédito no saldo do cliente
 - **Estorno de compra acumulada não baixava a dívida**: estornar uma comanda que tinha sido somada numa conta já aberta devolvia o estoque mas deixava a dívida cobrando — o estorno só achava a comanda que abriu a conta. Agora cada compra é encontrada e só o valor dela sai da conta. Junto disso, o estorno deixou de ser travado por qualquer pagamento anterior na conta: só é recusado quando o que o cliente já pagou fica maior que o que sobra (aí tem devolução a acertar). E o valor baixado é o que de fato foi pro crediário, sem contar pontos, desconto e a parte paga em outro método
 
+
 ## [v1.32.1] — 2026-09-14
 
 ### Adicionado
@@ -908,6 +1010,7 @@
 
 ### Corrigido
 - **Timer de torneio ainda rodava fora do painel**: a v1.29.1 tirou o botão do timer da vitrine, mas o relógio por trás dele continuava ligado — com o dono logado no mesmo navegador, a consulta e o alarme seguiam rodando na loja e na tela da mesa. Agora o timer inteiro vive só no painel do admin
+
 
 ## [v1.32.0] — 2026-09-08
 
@@ -919,12 +1022,14 @@
 ### Mudado
 - **"Ver deck" no lugar do olhinho**: na lista de participantes o acesso ao deck era um ícone de 14 pixels que ninguém achava. Agora é um botão escrito, e quem **não** registrou deck aparece marcado com "Sem deck" em vez de simplesmente não ter botão — antes não dava pra diferenciar quem não informou de quem não tinha onde clicar
 
+
 ## [v1.31.0] — 2026-09-08
 
 ### Adicionado
 - **A cobrança da inscrição agora diz de quem ela é**: em cima do QR aparece "Inscrição de **Fulano** · jogador **#7**". Antes o jogador via só um QR e um valor — pagava sem nenhuma pista de que aquilo estava amarrado à conta dele, e ficava a dúvida de como a loja saberia quem pagou
 - **Confirmação com identificação e caminho**: a tela de "Pagamento confirmado!" repete o nome e o número do jogador e aponta para **Meus Campeonatos**, onde a inscrição fica registrada com o selo de paga
 - **Aviso quando o pagamento é confirmado**: quem pagou e fechou a tela não ficava sabendo de nada — a confirmação acontecia calada no servidor. Agora chega notificação no sininho e push: "Inscrição confirmada — pagamento recebido, sua vaga está garantida e você é o jogador #7". Vale também quando quem confirma é o robô, minutos depois
+
 
 ## [v1.30.0] — 2026-09-08
 
@@ -933,10 +1038,12 @@
 - **Botão "Já paguei"**: pergunta na hora ao banco se a taxa caiu, em vez de esperar o robô de conciliação, que só roda de 5 em 5 minutos. Se ainda não caiu, avisa sem drama e continua esperando
 - **Confirmação automática na própria tela da inscrição**: enquanto o QR está aberto, a tela confere sozinha a cada 6 segundos e troca para "Pagamento confirmado!" assim que o Pix cai — antes a pessoa ficava olhando um QR sem retorno nenhum. O painel do cliente já fazia isso; agora a inscrição feita direto da vitrine também faz
 
+
 ## [v1.29.2] — 2026-09-08
 
 ### Corrigido
 - **Balão do WhatsApp continuava no painel mesmo com o atendimento desligado**: a correção da v1.29.1 escondia o botão só quando a integração não estava "configurada" — e ela conta como configurada assim que o servidor sobe, porque a chave e o nome da instância vêm da configuração do próprio servidor, mesmo numa loja que nunca leu o QR Code. Agora o botão exige **celular pareado**: aparece quando o WhatsApp está de fato conectado e some quando não está, seja porque nunca foi ligado, porque a sessão caiu ou porque o serviço está fora do ar. O estado é reconferido a cada minuto, então ler o QR Code faz o botão aparecer sozinho, sem recarregar o painel. O atendimento completo continua no menu lateral, em Atendimento → WhatsApp
+
 
 ## [v1.29.1] — 2026-09-08
 
@@ -945,6 +1052,7 @@
 - **Timer aparecia na vitrine do cliente**: a aba lateral do timer de torneio estava montada na base do site inteiro, então quando o dono estava logado no mesmo navegador ela aparecia por cima da loja e da tela de mesa do cliente. Voltou a ser coisa do painel — segue em todas as telas do admin, some do que o cliente vê
 - **Botão de WhatsApp no painel sem a integração ligada**: o balão verde de atendimento ficava na tela mesmo sem o WhatsApp configurado, piscando contador de não-lidas que nunca ia chegar, e ainda consultava o servidor a cada 15 segundos. Agora ele só existe quando a integração está configurada, e aparece sozinho assim que ela for ligada
 - **Botão "Falar com..." da vitrine sem número cadastrado**: se a loja apagasse o WhatsApp nas configurações do site, o botão flutuante continuava lá e levava pra um link vazio. Sem número, ele e o contato do rodapé simplesmente não aparecem
+
 
 ## [v1.29.0] — 2026-09-08
 
@@ -958,6 +1066,7 @@
 - **Banner não aparece mais no painel e no login**: ali é ferramenta de trabalho autenticada, e o card ficava por cima da frente de caixa. Segue aparecendo em toda a parte pública, inclusive na tela de mesa do cliente
 - **Regra de modal padronizada**: janela com campo pra preencher fecha só no X ou no cancelar; janela só de leitura (gráfico, resumo do dia, atalhos de teclado) continua fechando com clique fora
 
+
 ## [v1.28.0] — 2026-08-24
 
 ### Adicionado
@@ -969,16 +1078,19 @@
 ### Mudado
 - **"Gasto no Mês" do cliente agora soma comanda + balcão**: antes contava só comanda, então o total não batia com o que a própria tela mostrava
 
+
 ## [v1.27.4] — 2026-08-18
 
 ### Corrigido
 - **Não dava pra digitar o preço no Mercado de Cartas**: o campo se reescrevia sozinho a cada tecla, então digitar "129,90" terminava em R$ 0,02 e só as setinhas funcionavam — de um centavo em um centavo. Agora o valor é digitado normalmente, aceita vírgula ou ponto, corta na segunda casa decimal e ignora letra. Vale pra anunciar carta nova e pra editar anúncio existente, que já abre com o preço preenchido
 - **Preço alto ficava difícil de ler**: a carta de R$ 12.345,67 aparecia como "R$ 12345,67", sem separador de milhar, tanto no painel quanto na vitrine do cliente
 
+
 ## [v1.27.3] — 2026-08-17
 
 ### Corrigido
 - **Cliente não via quantas unidades tinha reservado**: na aba "Pré-vendas" do painel do cliente, o card mostrava só o nome do produto — quem reservou duas ou três unidades via a mesma coisa de quem reservou uma, e ficava sem confirmação do que pediu. A quantidade aparecia no carrinho na hora de reservar e some depois de confirmar. Agora o card mostra **"2× Nome do Produto"**, tanto na pré-venda quanto na fila de espera. Do lado do admin a quantidade sempre apareceu — era só a tela do cliente que omitia
+
 
 ## [v1.27.2] — 2026-08-12
 
@@ -992,6 +1104,7 @@
 - **Extrato parecia brigar com a Receita**: o total do extrato aparecia maior que a Receita do topo (ex.: R$ 38.040,70 contra R$ 28.395,47) porque ele soma **entrada de caixa**, e recebimento de crediário entra no caixa sem ser receita nova — a venda fiada já tinha virado receita no dia em que foi feita. Nenhum dos dois números estava errado, faltava dizer isso: agora o painel mostra a conta separada — vendas do período, recebimento de crediário e o total que entrou no caixa
 - **Compra nova renovava o prazo da dívida antiga**: ao acumular no crediário pelo PDV, o vencimento da conta inteira era jogado 30 dias pra frente, então dívida velha ganhava prazo novo a cada compra. Agora o vencimento da conta não é alterado ao acumular — o fechamento de comanda já se comportava assim
 
+
 ## [v1.27.1] — 2026-08-12
 
 ### Corrigido
@@ -1002,6 +1115,7 @@
 
 ### Segurança
 - Índices únicos de e-mail e CPF no banco, criados no deploy **apenas se não houver duplicados** — a checagem da aplicação continua valendo de qualquer forma
+
 
 ## [v1.27.0] — 2026-08-12
 
@@ -1014,10 +1128,12 @@
 - **Excluir crediário não desfazia a venda**: o produto não voltava pro estoque e o valor continuava no faturamento, porque a receita pertence à venda e o crediário é só o registro da dívida — e venda de balcão nem tinha vínculo com o crediário que gerava. Agora a venda guarda esse vínculo e o estorno resolve os dois lados de uma vez
 - Estorno é recusado quando a venda tem **NFC-e autorizada** (o cancelamento da nota tem prazo legal e vai à SEFAZ) ou quando o **crediário já recebeu pagamento**
 
+
 ## [v1.26.1] — 2026-08-11
 
 ### Mudado
 - **Desconto em % agora aceita qualquer valor digitado**: o seletor só oferecia 5%, 10%, 15% e 20% — qualquer outro percentual obrigava a fazer a conta na mão e lançar em reais. Os atalhos continuam, e ao lado deles tem um campo pra escrever a % que quiser (0 a 100). Vale na **frente de caixa**, no **fechamento da comanda**, na **edição de comanda já fechada**, na **homologação de pré-venda** e no **desconto padrão** das Configurações. É tudo tela de admin — o cliente não escolhe desconto em lugar nenhum
+
 
 ## [v1.26.0] — 2026-08-11
 
@@ -1029,20 +1145,24 @@
 - **Carrinho do PDV mais largo**: com a coluna estreita o nome do produto ficava cortado no meio e pedido grande não dava pra conferir. A coluna cresceu, o nome aparece inteiro e a barra de rolagem ficou visível
 - **Resumo antes de fechar a venda**: a caixinha dos itens na etapa de pagamento mostrava poucas linhas e cortava o nome. Agora é maior, mostra o nome completo, a variante e o total de produtos/unidades
 
+
 ## [v1.25.5] — 2026-08-11
 
 ### Corrigido
 - **Proteção contra bloqueio do SEFAZ (cStat 656)**: o sistema agora conserva no banco um intervalo seguro de 1h05 entre sincronizações, inclusive após reiniciar; impede que o job automático e o botão manual consultem ao mesmo tempo; desabilita o botão com contagem regressiva; e não mostra mais o falso aviso verde de sucesso quando o SEFAZ bloquear a consulta
+
 
 ## [v1.25.4] — 2026-08-11
 
 ### Mudado
 - **"Receita hoje" saiu da barra do Dashboard**, a pedido do Maikon. É só a retirada da tira do topo — o número continua sendo calculado normalmente e segue disponível na tab **Análises** e no **Financeiro**
 
+
 ## [v1.25.3] — 2026-08-11
 
 ### Corrigido
 - **Fundo acinzentado no tema claro**: várias caixas do sistema (as opções de vitrine no cadastro de produto, os blocos de "Dica", os painéis do Financeiro, do Fiscal, do LGPD e das Integrações) apareciam com um cinza escuro chapado por cima do branco. Era o fundo do tema escuro vazando: quando a caixa tem transparência, o tema claro não estava trocando a cor. Agora essas caixas ficam no mesmo tom claro do resto da tela. O tema escuro não mudou em nada
+
 
 ## [v1.25.2] — 2026-08-10
 
@@ -1055,12 +1175,14 @@
 - Seções novas de **Categorias, Vitrine (parcelamento e Pix), Análises de Clientes, Contas a Pagar/Receber, Liga Mensal e LGPD**, que não estavam documentadas
 - A seção de reservas ainda ensinava o botão Homologar antigo, item a item — foi reescrita com o kanban, o carrinho saindo inteiro, o Pix do pedido e a correção de quantidade
 
+
 ## [v1.25.1] — 2026-08-10
 
 ### Adicionado
 - **Desconto do Pix também item a item**: além do percentual por categoria, cada produto pode ter o seu no cadastro (campo "Desconto no Pix deste item"). Vazio herda da categoria — e da categoria pai, se for subcategoria — e cai no padrão da loja se ninguém tiver definido. **Zero** é decisão de verdade: aquele item não anuncia desconto no Pix, mesmo que a categoria dele tenha
 - **O aviso do Pix agora aparece enquanto o cliente navega**, não só depois de abrir o produto: nos cards da vitrine da home, na listagem de Produtos ("R$ 189,14 no Pix · 3% OFF") e no modal de produto da home
 - **Total no Pix na hora de fechar a reserva**: o carrinho mostra "Pagando no Pix R$ 260,96 — economia de R$ 13,83", com a conta feita item a item (um produto com 3% e outro com 10% no mesmo carrinho somam certo)
+
 
 ## [v1.25.0] — 2026-08-10
 
@@ -1075,6 +1197,7 @@
 - **"Reservei 2 itens, só retirou um"**: quando o cliente reservava vários produtos de uma vez, o botão Homologar resolvia só a linha clicada e o resto do carrinho ficava em aberto pra sempre, sem aviso nenhum. Agora um clique homologa o pedido inteiro: o modal lista tudo que vai sair, o desconto é calculado sobre o total do carrinho e o caixa recebe **uma venda só**, com todos os itens. Se algum item for cancelado enquanto você preenche a tela, nada é homologado e o sistema avisa pra reabrir
 - **Carrinho de reserva vazava entre contas**: o carrinho ficava salvo no navegador e não era apagado no logout — quem entrasse depois na mesma máquina via itens que nunca tinha escolhido (a bolinha roxa com produto de outra pessoa)
 - **Risco de reserva duplicada**: quando o banco pedia pra repetir a operação (falha momentânea de conexão), a reserva da tentativa anterior podia ser gravada de novo junto com a nova, baixando o estoque duas vezes pelo mesmo pedido
+
 
 ## [v1.24.0] — 2026-07-30
 
@@ -1098,6 +1221,7 @@
 - **Top Clientes ficava ilegível no Painel Geral**: em tela de notebook menor os nomes sumiam ("Pa...", "Ar...") e o texto quebrava no meio da palavra por cima do valor. Agora as informações ficam empilhadas e legíveis em qualquer largura
 - Os botões de forma de pagamento do filtro deixaram de ficar escondidos quando não cabiam na largura
 
+
 ## [v1.23.0] — 2026-07-30
 
 ### Corrigido
@@ -1116,12 +1240,14 @@
 ### Mudado
 - **Tela de Clientes deixou de quebrar em tablet**: o painel de pontos/cashback da direita agora só aparece depois de escolher um cliente. Antes ele ficava sempre lá ocupando espaço, e em telas médias espremia a lista e desalinhava as linhas
 
+
 ## [v1.22.0] — 2026-07-27
 
 ### Mudado
 - **O site agora é `santuarionerd.com.br`**: o endereço antigo (`santuarionerd.tech`) continua funcionando e leva pro novo automaticamente — link antigo salvo, QR Code impresso, link no Instagram, tudo continua abrindo normal e cai na página certa. Vale trocar o endereço nos materiais aos poucos, sem pressa
 - **Você vai precisar entrar de novo**: por causa da troca de endereço, quem estava logado (admin e clientes) cai na tela de login uma única vez. Depois disso volta ao normal
 - E-mails do sistema (recuperação de senha, aviso de fila de espera) agora levam pro endereço novo
+
 
 ## [v1.21.0] — 2026-07-08
 
@@ -1132,15 +1258,18 @@
 ### Corrigido
 - Botão "Emitir nota fiscal" manual (histórico de comandas/vendas) também abre o cupom sozinho quando autoriza, igual o fluxo automático
 
+
 ## [v1.20.1] — 2026-07-08
 
 ### Adicionado
 - **Personalizar Site** ganhou mais 2 cores (fundo da página e fundo dos cards, modo claro) e um **preview ao vivo** — o formulário mostra uma miniatura da navbar/hero/card atualizando em tempo real conforme você digita ou muda uma cor, antes de salvar
 
+
 ## [v1.20.0] — 2026-07-08
 
 ### Adicionado
 - **Personalização do site** (Admin → Personalizar Site): nome da loja, WhatsApp, e-mail, endereço, nome de quem atende, textos da navbar/botões, títulos das seções (Torneios/Produtos/Pontos) e cores (primária, destaque, navbar) agora são editáveis pelo admin num formulário — sem precisar mexer em código. Enquanto ninguém edita nada, o site continua exatamente igual a antes (todo campo tem o valor atual como padrão). Primeiro passo pra virar base de um sistema white-label/multi-tenant
+
 
 ## [v1.19.0] — 2026-07-08
 
@@ -1157,11 +1286,13 @@
 ### Corrigido
 - Pontos aplicados numa comanda aberta não refletiam no total mostrado pro cliente nem no card do admin — o abatimento sempre foi real no fechamento, mas a tela deixava parecer que "usar pontos" não tinha feito nada
 
+
 ## [v1.18.0] — 2026-07-08
 
 ### Mudado
 - **Mercado de Cartas deixou de ser C2C**: agora é uma vitrine só do Maikon — só o Admin anuncia carta (`/admin/marketplace`, botão "Novo anúncio"), clientes só navegam e marcam interesse, como sempre funcionou. O botão "Anunciar carta" que existia pro cliente (bloqueado desde antes, mostrava só um aviso) foi removido, junto com a aba "Meus anúncios" — ninguém além do Maikon nunca vai ter anúncio próprio agora
 - Interessados numa carta agora aparecem direto na tabela do admin (clique no número de interesses) — WhatsApp de quem autorizou contato, mensagem e data, sem precisar ir na página pública
+
 
 ## [v1.17.0] — 2026-07-08
 
@@ -1169,11 +1300,13 @@
 - **Mensageria redesenhada**: passos numerados (Mensagem → Canal → Destinatários), preview ao vivo mostrando exatamente como a notificação vai aparecer pro cliente conforme você digita, e resumo do envio (canal, destinatários, se está pronto pra mandar) sempre visível ao lado
 - **Pré-vendas redesenhada**: faixa com Aguardando/Em fila/Pré-vendas no topo, abas com contador de badge, lista de espera virou grade de cards de produto (com contagem já carregada, sem precisar abrir um por um), e reservas ganharam barra de progresso visual até o vencimento das 48h (fica vermelha quando está acabando o prazo)
 
+
 ## [v1.16.1] — 2026-07-08
 
 ### Corrigido
 - **Preço promocional não aparecia pro admin ao adicionar item numa comanda**: o valor cobrado já saía certo (o backend nunca confiou no preço vindo do frontend), mas a lista de produtos mostrava o preço cheio — agora mostra o preço promocional com o de tabela riscado, igual já acontecia no PDV
 - Mesmo ajuste no seletor de produto ao editar uma comanda já fechada
+
 
 ## [v1.16.0] — 2026-07-08
 
@@ -1183,6 +1316,7 @@
 
 ### Corrigido
 - **Relatório "Formas de Pagamento" (Financeiro e Histórico) subestimava a receita** de qualquer comanda em que o cliente usou pontos de fidelidade — o valor já vinha líquido de pontos ao fechar a comanda, mas o relatório descontava os pontos de novo por cima
+
 
 ## [v1.15.0] — 2026-07-07
 
@@ -1195,6 +1329,7 @@
 ### Corrigido
 - Extrato do Inter importava toda transação como despesa (inclusive Pix recebido) e pulava a maioria por falta de identificador único — a integração usava nomes de campo que não existem na API real do banco. Corrigido usando o schema real e o endpoint `/extrato/completo`, que traz o identificador necessário para não duplicar/perder lançamentos
 
+
 ## [v1.14.0] — 2026-07-07
 
 ### Adicionado
@@ -1205,11 +1340,13 @@
 ### Corrigido
 - "Verificar pagamento" mostrava erro genérico — agora exibe a mensagem real retornada pelo Inter quando a consulta falha
 
+
 ## [v1.13.1] — 2026-07-07
 
 ### Corrigido
 - **Upload do certificado A1 rejeitado em produção ("senha incorreta")**: certificados ICP-Brasil mais antigos usam criptografia legada (RC2/3DES) que o OpenSSL do Linux desativa por padrão desde a versão 3 — e o .NET não confiava de forma consistente na configuração de ambiente pra reativar isso. A leitura do `.pfx` agora usa BouncyCastle (biblioteca própria, sem depender do OpenSSL do sistema) sempre que o carregamento nativo falhar — mesmo caminho usado no upload, na emissão de NFC-e e na Manifestação do Destinatário
 - Testado com um certificado sintético gerado com o mesmo algoritmo legado antes de ir pra produção, incluindo assinatura digital real (o mesmo passo que a emissão de NFC-e faz) e rejeição correta de senha errada
+
 
 ## [v1.13.0] — 2026-07-06
 
@@ -1232,6 +1369,7 @@
 - Deduplicação de contas por chave de acesso + número da duplicata (índice único existente em `external_transactions`)
 
 ---
+
 
 ## [v1.12.0] — 2026-07-06
 
@@ -1260,6 +1398,7 @@
 
 ---
 
+
 ## [v1.11.0] — 2026-06-29
 
 ### Adicionado
@@ -1280,6 +1419,7 @@
 
 ---
 
+
 ## [v1.10.1] — 2026-06-28
 
 ### Adicionado
@@ -1294,6 +1434,7 @@
 - **Fallback de imagem no deck builder**: `onError` nas tags `<img>` exibe o nome da carta se a URL falhar ao carregar
 
 ---
+
 
 ## [v1.10.0] — 2026-06-28
 
@@ -1316,6 +1457,7 @@
 - `lib/api.ts`: tipos `CardMarketPrices`, `TcgSearchParams`; `tcgApi.searchAdvanced(params)`
 
 ---
+
 
 ## [v1.9.0] — 2026-06-27
 
@@ -1345,6 +1487,7 @@
 
 ---
 
+
 ## [v1.8.1] — 2026-06-26
 
 ### Adicionado
@@ -1371,6 +1514,7 @@
 
 ---
 
+
 ## [v1.8.0] — 2026-06-25
 
 ### Adicionado
@@ -1391,6 +1535,7 @@
 
 ---
 
+
 ## [v1.7.5] — 2026-06-23
 
 ### Adicionado
@@ -1405,6 +1550,7 @@
 
 ---
 
+
 ## [v1.7.4] — 2026-06-22
 
 ### Adicionado
@@ -1413,6 +1559,7 @@
 
 ---
 
+
 ## [v1.7.3] — 2026-06-22
 
 ### Adicionado
@@ -1420,6 +1567,7 @@
 - **Relatório PDF de Crediário**: novo PDF disponível na tela de Relatórios — mostra situação atual de todos os devedores (saldo, dias em atraso, vencimento, WhatsApp) e tabela completa de pagamentos recebidos no mês com subtotal ao final
 
 ---
+
 
 ## [v1.7.2] — 2026-06-22
 
@@ -1430,6 +1578,7 @@
 - **Relatório de vendas e crediário sem fuso horário**: RelatoriosController usava UTC puro — vendas após 21h no Brasil (00h UTC do dia seguinte) podiam cair no mês errado; corrigido para horário de Brasília igual ao AnalyticsController
 
 ---
+
 
 ## [v1.7.1] — 2026-06-22
 
@@ -1453,6 +1602,7 @@
 
 ---
 
+
 ## [v1.7.0] — 2026-06-16
 
 ### Adicionado
@@ -1468,6 +1618,7 @@
 
 ---
 
+
 ## [v1.6.0] — 2026-06-15
 
 ### Adicionado
@@ -1481,6 +1632,7 @@
 - **Crediário**: overflow de DateTime ao calcular período de itens de crediário aberto (erro 500 no servidor)
 
 ---
+
 
 ## [v1.5.0] — 2026-06-12
 
@@ -1497,6 +1649,7 @@
 
 ---
 
+
 ## [v1.4.0] — 2026-05-20
 
 ### Adicionado
@@ -1509,6 +1662,7 @@
 - Card do gráfico não esticava mais com o grid
 
 ---
+
 
 ## [v1.3.0] — 2026-05-10
 
@@ -1523,6 +1677,7 @@
 
 ---
 
+
 ## [v1.2.0] — 2026-04-15
 
 ### Adicionado
@@ -1532,6 +1687,7 @@
 
 ---
 
+
 ## [v1.1.0] — 2026-03-20
 
 ### Adicionado
@@ -1540,6 +1696,7 @@
 - Anúncios e banners configuráveis pelo admin
 
 ---
+
 
 ## [v1.0.0] — 2026-03-01
 
