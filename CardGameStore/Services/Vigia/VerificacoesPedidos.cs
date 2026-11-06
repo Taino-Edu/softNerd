@@ -141,7 +141,8 @@ public class VerificacaoValorPixDiferente(AppDbContext db) : IVerificacaoVigia
             // Sem preço congelado (pedido antigo) não dá pra comparar; cancelado é outro gatilho
             if (doPix.Count != snap.Count || doPix.Any(r => r.UnitPriceInCents is null || r.Status == "cancelled")) continue;
             var total = doPix.Sum(r => r.UnitPriceInCents!.Value * r.Quantity);
-            if (total == pix.ValorEmCentavos) continue;
+            // Pix com o desconto da loja (chave pix-pedido-com-desconto): cobrou o pedido menos o desconto gravado
+            if (total == pix.ValorEmCentavos + (pix.DescontoEmCentavos ?? 0)) continue;
             achados.Add(new Achado(pix.TxId, VigiaGravidade.Aviso,
                 $"Pix com valor diferente do pedido: {doPix[0].User?.Name ?? "cliente"}",
                 $"O cliente pagou {VigiaPedidos.Reais(pix.ValorEmCentavos)} e o pedido soma {VigiaPedidos.Reais(total)} " +

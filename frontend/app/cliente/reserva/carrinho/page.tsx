@@ -17,6 +17,7 @@ import { mixHex } from '@/lib/colors'
 import toast, { Toaster } from 'react-hot-toast'
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 const NAVY = '#0C3D5A'
 
@@ -81,6 +82,15 @@ export default function ReservationCartPage() {
     : null
   const pixEconomiaCents = pixTotalCents != null ? totalCents - pixTotalCents : 0
 
+  // Chave pix-pedido-com-desconto: o QR do pedido cobra o preço congelado menos o desconto do Pix
+  // da loja (mesma conta da API, Services/Pedidos/DescontoPixPedido.cs). Desligada: preço cheio.
+  const pixComDesconto = useFuncionalidade('pix-pedido-com-desconto') === true
+  function valorNoPixDoItem(productId: string, unitarioCents: number) {
+    if (!pixComDesconto || !siteCfg) return unitarioCents
+    const pct = Math.min(100, Math.max(0, resolvePixPercent(catalogo.find(p => p.id === productId), categorias, siteCfg.pixDiscountPercent)))
+    return Math.floor(unitarioCents * (100 - pct) / 100)
+  }
+
   // allowFila=true só vem do diálogo de "acabou o estoque" — nunca por padrão,
   // pra reserva (estoque na hora) e fila (ainda não chegou) não se misturarem sozinhas.
   async function handleConfirm(allowFila = false) {
@@ -97,9 +107,9 @@ export default function ReservationCartPage() {
       // O que o QR vai cobrar: o preço congelado dos itens separados (os de fila não entram no Pix).
       // Não é a estimativa "no Pix" da sacola — a cobrança da reserva usa o preço congelado (Codex, #147).
       const separados = data.items.filter(i => i.kind === 'pre_venda')
-      setPixPedidoCents(data.juntou || separados.length === 0 || separados.some(i => i.subtotalEmReais == null)
+      setPixPedidoCents(data.juntou || separados.length === 0 || separados.some(i => i.precoUnitarioEmReais == null)
         ? null
-        : Math.round(separados.reduce((s, i) => s + (i.subtotalEmReais ?? 0), 0) * 100))
+        : separados.reduce((s, i) => s + valorNoPixDoItem(i.productId, Math.round((i.precoUnitarioEmReais ?? 0) * 100)) * i.quantity, 0))
       setTemFila(data.items.some(i => i.kind === 'fila'))
       clear()
       // Chave pedido-pix-junto: somou no pedido sem pagar que ele já tinha — um Pix só com o total

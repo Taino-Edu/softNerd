@@ -101,6 +101,8 @@ public class PedidoVendaService
                 ReservationId      = primeiro.Id,
                 ReservationGroupId = groupId,
                 ProductIsPreVenda  = itens.All(r => r.Product?.IsPreVenda ?? false),
+                // Pix com o desconto da loja (chave pix-pedido-com-desconto): a venda sai com o valor pago
+                DiscountInCents    = pix.DescontoEmCentavos is > 0 ? pix.DescontoEmCentavos : null,
                 Items = itens.Select(r => new VendaAvulsaItemRequest
                 {
                     ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity,

@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.83.0] — 2026-11-06
+
+### Pix do pedido do site com o desconto que a loja anuncia (chave nova)
+- **Corrigido:** a loja mostra "R$ 35,91 no Pix · 10% OFF" e a sacola "No Pix R$ 225,05", mas o Pix gerado pelo site cobrava o preço cheio. Agora o QR do pedido sai com o desconto do Pix, pela mesma regra da vitrine: o percentual do produto, senão o da categoria, senão o da categoria pai, senão o padrão da loja (centavo pra baixo, a favor do cliente)
+- A venda registrada quando o Pix cai sai com esse desconto, e o Vigia do sistema não acusa o Pix como "valor diferente do pedido"
+- A tela de reserva confirmada mostra o valor que o QR vai cobrar
+- **Chave em Funcionalidades:** "Pix do pedido do site com o desconto da loja" (ligada). Desligar volta o Pix do pedido pro preço cheio; QR já gerado continua com o valor que tinha. O "Homologar" (admin confirmando à mão) não muda: o desconto ali continua sendo o que o admin digita
+
 ## [v1.82.4] — 2026-11-06
 
 ### Fluxo do cliente no celular — o que apareceu no teste de ponta a ponta

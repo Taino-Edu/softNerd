@@ -85,9 +85,11 @@ public class PixCobranca
     public int ValorEmCentavos { get; set; }
 
     /// <summary>
-    /// Origem = Comanda: desconto dado no fechamento e já tirado do valor do QR. A baixa fecha a
-    /// comanda com ESTE desconto (o autorizado), nunca com a diferença calculada na hora do pagamento.
-    /// Null em cobranças antigas = sem desconto.
+    /// Desconto já tirado do valor do QR. Null em cobranças antigas = sem desconto.
+    /// Origem = Comanda: o dado no fechamento; a baixa fecha a comanda com ESTE desconto (o autorizado),
+    /// nunca com a diferença calculada na hora do pagamento.
+    /// Origem = Reserva: o desconto do Pix da loja (chave pix-pedido-com-desconto); a venda registrada
+    /// quando o Pix cai sai com ele, e o Vigia soma ele antes de comparar o Pix com o pedido.
     /// </summary>
     [Column("desconto_em_centavos")]
     public int? DescontoEmCentavos { get; set; }
