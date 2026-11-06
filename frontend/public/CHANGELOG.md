@@ -8,6 +8,13 @@
 - A tela de reserva confirmada mostra o valor que o QR vai cobrar
 - **Chave em Funcionalidades:** "Pix do pedido do site com o desconto da loja" (ligada). Desligar volta o Pix do pedido pro preço cheio; QR já gerado continua com o valor que tinha. O "Homologar" (admin confirmando à mão) não muda: o desconto ali continua sendo o que o admin digita
 
+## [v1.82.5] — 2026-11-06
+
+### Balcão — desconto em R$ não aparecia (relato do Maikon)
+- **Corrigido:** no PDV, desconto dado em **R$** entrava na conta (o total já saía com ele), mas não aparecia no recibo impresso, no recibo da tela, no detalhe da venda nem no histórico — só desconto em % era mostrado, e parecia que o desconto não tinha funcionado. Agora mostra "Desconto −R$ 5,00" (ou "Desconto (10%)" quando é em %)
+- Conferido na API: comanda, balcão em R$ e balcão em % aplicam o desconto certo; o QR Pix da comanda com desconto já tinha sido corrigido na v1.82.3
+- **Comanda aberta mostrando "-1min":** o tempo desde a abertura era contado pelo relógio do computador da loja, que está atrasado em relação ao servidor. Agora conta pela hora do servidor (a mesma correção do alarme da liga) e nunca fica negativo
+
 ## [v1.82.4] — 2026-11-06
 
 ### Fluxo do cliente no celular — o que apareceu no teste de ponta a ponta
@@ -330,6 +337,7 @@
 - Antes de apagar o container antigo na troca sem queda, o log dele é guardado na VPS (`/var/log/santuarionerd`, compactado, só o root lê, 30 dias). Até agora cada deploy levava o log embora — quando algo dava errado, não havia o que ler
 - Busca: `bash deploy/logs.sh "texto"` procura no que está no ar e em todos os guardados (`--dias 30`, `--servico frontend`, `--erros`)
 - Se guardar o log falhar (disco, permissão), o deploy segue normalmente
+
 ## [v1.63.0] — 2026-10-21
 
 ### Novo — Vigia do sistema (Configuração → Alertas do sistema)
@@ -363,6 +371,7 @@
 - "Retirado" sem venda é recusado (era um jeito de o faturamento sumir); se o registro da venda falhar no pagamento, os admins recebem aviso no sininho e o "Homologar" resolve
 - Proteção contra venda em dobro quando o Pix e o "Homologar" acontecem no mesmo instante
 - Chave `pedido-venda-no-pagamento` em Funcionalidades: desligada, volta a vender só no "Homologar" (sem nunca vender de novo o que já virou venda)
+
 ## [v1.61.1] — 2026-10-20
 
 ### Corrigido — entrada na liguinha pelo celular (teste do Maikon)
@@ -394,6 +403,7 @@
 ### Corrigido
 - **Pokémon do deck**: Ogerpon com máscara ("Cornerstone Ogerpon", "Ogerpon Wellspring", "Hearthflame") agora mostra a forma certa da máscara
 - **/liga no celular** não rola mais pro lado
+
 ## [v1.59.2] — 2026-10-20
 
 ### Corrigido — compra do site paga depois de cancelada
