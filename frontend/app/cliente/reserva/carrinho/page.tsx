@@ -17,6 +17,7 @@ import { mixHex } from '@/lib/colors'
 import toast, { Toaster } from 'react-hot-toast'
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 const NAVY = '#0C3D5A'
 
@@ -36,6 +37,11 @@ export default function ReservationCartPage() {
   const [pixLoading, setPixLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [semLogin, setSemLogin] = useState(false)
+  // Depois de confirmar: quanto dá o Pix (a tela não dizia) e o erro do Pix fixo no cartão
+  // (o aviso sumia em 3 s, rápido demais no celular). Teste do fluxo do cliente, 06/11.
+  const [pixPedidoCents, setPixPedidoCents] = useState<number | null>(null)
+  const [juntou, setJuntou] = useState(false)
+  const [pixErro, setPixErro] = useState<string | null>(null)
 
   const C = isDark ? {
     bg: '#121215', card: '#1A1A1F', border: 'rgba(255,255,255,0.07)',
@@ -76,6 +82,15 @@ export default function ReservationCartPage() {
     : null
   const pixEconomiaCents = pixTotalCents != null ? totalCents - pixTotalCents : 0
 
+  // Chave pix-pedido-com-desconto: o QR do pedido cobra o preço congelado menos o desconto do Pix
+  // da loja (mesma conta da API, Services/Pedidos/DescontoPixPedido.cs). Desligada: preço cheio.
+  const pixComDesconto = useFuncionalidade('pix-pedido-com-desconto') === true
+  function valorNoPixDoItem(productId: string, unitarioCents: number) {
+    if (!pixComDesconto || !siteCfg) return unitarioCents
+    const pct = Math.min(100, Math.max(0, resolvePixPercent(catalogo.find(p => p.id === productId), categorias, siteCfg.pixDiscountPercent)))
+    return Math.floor(unitarioCents * (100 - pct) / 100)
+  }
+
   // allowFila=true só vem do diálogo de "acabou o estoque" — nunca por padrão,
   // pra reserva (estoque na hora) e fila (ainda não chegou) não se misturarem sozinhas.
   async function handleConfirm(allowFila = false) {
@@ -87,6 +102,14 @@ export default function ReservationCartPage() {
         allowFila
       )
       setGroupId(data.groupId)
+      // Somou num pedido anterior sem pagar: o valor do Pix é o do pedido inteiro, que só o QR sabe
+      setJuntou(!!data.juntou)
+      // O que o QR vai cobrar: o preço congelado dos itens separados (os de fila não entram no Pix).
+      // Não é a estimativa "no Pix" da sacola — a cobrança da reserva usa o preço congelado (Codex, #147).
+      const separados = data.items.filter(i => i.kind === 'pre_venda')
+      setPixPedidoCents(data.juntou || separados.length === 0 || separados.some(i => i.precoUnitarioEmReais == null)
+        ? null
+        : separados.reduce((s, i) => s + valorNoPixDoItem(i.productId, Math.round((i.precoUnitarioEmReais ?? 0) * 100)) * i.quantity, 0))
       setTemFila(data.items.some(i => i.kind === 'fila'))
       clear()
       // Chave pedido-pix-junto: somou no pedido sem pagar que ele já tinha — um Pix só com o total
@@ -119,12 +142,13 @@ export default function ReservationCartPage() {
   async function handleGerarPix() {
     if (!groupId) return
     setPixLoading(true)
+    setPixErro(null)
     try {
       const { data } = await reservationApi.gerarPix(groupId)
       setPix({ hasPix: true, ...data })
     } catch (e) {
       const msg = (e as { response?: { data?: { message?: string; Message?: string } } })?.response?.data
-      toast.error(msg?.message ?? msg?.Message ?? 'Pix indisponível no momento — pague na retirada.')
+      setPixErro(msg?.message ?? msg?.Message ?? 'Pix indisponível no momento — pague na retirada.')
     } finally {
       setPixLoading(false)
     }
@@ -262,6 +286,19 @@ export default function ReservationCartPage() {
               <QrCode className="w-4 h-4" style={{ color: C.pix }} /> Quer adiantar? Pague no Pix
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${C.pix}1A`, color: C.pix }}>opcional</span>
             </h2>
+            {!pix?.hasPix && !pix?.pixCopiaCola && (
+              <p className="text-sm" style={{ color: C.text }}>
+                {pixPedidoCents != null && pixPedidoCents > 0
+                  ? <>O Pix sai com <strong style={{ color: C.pix }}>{fmt(pixPedidoCents)}</strong>.</>
+                  : juntou ? 'O Pix sai com o total do pedido, somado ao que você já tinha.' : null}
+              </p>
+            )}
+            {pixErro && (
+              <p role="alert" className="text-sm font-semibold px-3 py-2.5 rounded-xl"
+                style={{ color: '#B91C1C', backgroundColor: 'rgba(185,28,28,0.08)' }}>
+                {pixErro}
+              </p>
+            )}
             {!pix?.hasPix && !pix?.pixCopiaCola ? (
               <button onClick={handleGerarPix} disabled={pixLoading}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-sm transition-all active:scale-95 disabled:opacity-60"
@@ -303,7 +340,7 @@ export default function ReservationCartPage() {
           <div className="mt-4">{garantias}</div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Link href="/cliente/perfil"
+            <Link href="/cliente/perfil?tab=reservas"
               className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm border transition-all hover:opacity-80"
               style={{ borderColor: C.border, color: C.navy, backgroundColor: C.card }}>
               Minhas reservas

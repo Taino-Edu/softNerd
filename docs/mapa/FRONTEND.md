@@ -48,7 +48,7 @@
 | `/cliente/decks/[id]` | `app/cliente/decks/[id]/page.tsx` | — |
 | `/cliente/decks` | `app/cliente/decks/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente` |
-| `/cliente` | `app/cliente/page.tsx` | `cliente/NotificationBell` |
+| `/cliente` | `app/cliente/page.tsx` | `cliente/AvatarCliente`, `cliente/NotificationBell` |
 | `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga`, `pokemon/EscolherPokemon`, `pokemon/ParceiroDaConta` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | `loja/MenuLoja` |
 | `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
@@ -63,7 +63,7 @@
 | `/perfil/[id]` | `app/perfil/[id]/page.tsx` | `pokemon/ParceiroDaConta` |
 | `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | `auth/Moldura` |
 | `/privacidade` | `app/privacidade/page.tsx` | `LegalActions`, `ThemeToggle` |
-| `/produtos/[id]` | `app/produtos/[id]/page.tsx` | `loja/CartaoProduto`, `loja/MenuLoja` |
+| `/produtos/[id]` | `app/produtos/[id]/page.tsx` | `cliente/AvatarCliente`, `loja/CartaoProduto`, `loja/MenuLoja` |
 | `/produtos` | `app/produtos/page.tsx` | `loja/CartaoProduto`, `loja/MenuLoja` |
 | `/reset-password` | `app/reset-password/page.tsx` | `auth/Moldura` |
 | `/termos` | `app/termos/page.tsx` | `LegalActions`, `ThemeToggle` |
@@ -103,6 +103,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/TopClientes` | `toDateInput`, `getRangeClientes`, `useTopClientes`, `TopClientesFilterBar`, `TopClientesList` | `app/admin/clientes/analises/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/VariantPicker` | `VariantPicker` | `app/admin/venda-avulsa/page.tsx` |
 | `auth/Moldura` | `useMarca`, `MolduraEntrada`, `TituloEntrada`, `AbasEntrada`, `CampoEntrada`, `BotaoEntrada`, `LinhaEntrada`, `LinkEntrada` | `app/cadastro/page.tsx`<br>`app/entrar/page.tsx`<br>`app/login/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/reset-password/page.tsx` |
+| `cliente/AvatarCliente` | `AvatarCliente` | `app/cliente/page.tsx`<br>`app/produtos/[id]/page.tsx` |
 | `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/MinhaLiga` | `MinhaLiga` | `app/cliente/perfil/page.tsx` |
@@ -176,6 +177,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/relatorio.ts` | `gerarRelatorioPDF` |
 | `lib/relogioServidor.ts` | `acertarComIdaEVolta`, `acertarPeloServidor`, `agoraNoServidor` |
 | `lib/reportarErro.ts` | `reportarErro` |
+| `lib/rotulos.ts` | `rotuloStatusComanda`, `rotuloMesa`, `soDigitosTelefone`, `telefoneBR` |
 | `lib/sessionKeepAlive.ts` | `renovarSessao`, `iniciarKeepAlive` |
 | `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |

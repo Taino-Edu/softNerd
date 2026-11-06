@@ -14,7 +14,7 @@ import {
   CreditCard, Award, QrCode, Shield, ChevronRight, ChevronLeft,
   Mail, Heart,
 } from 'lucide-react'
-import { brl } from '@/lib/format'
+import { brl, dataHoraBR } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import CartaoProduto from '@/components/loja/CartaoProduto'
@@ -103,6 +103,9 @@ export default function LandingPage() {
   const [announcements, setAnnouncements] = useState<AnnouncementDto[]>([])
   const [loading,       setLoading]       = useState(true)
   const [registerModal, setRegisterModal] = useState<Championship | null>(null)
+  // Cliente que veio da área dele (/cliente → "Inscrever-se") volta pra lá ao fechar a inscrição;
+  // antes ficava na página pública, longe da comanda e dos campeonatos (teste do fluxo, 06/11).
+  const [voltarProCliente, setVoltarProCliente] = useState(false)
   const [productModal,  setProductModal]  = useState<Product | null>(null)
   const [annModal,      setAnnModal]      = useState<AnnouncementDto | null>(null)
   const [isDark,        setIsDark]        = useState(false)
@@ -255,6 +258,7 @@ export default function LandingPage() {
     if (!championshipId) return
     const championship = championships.find(c => c.id === championshipId)
     if (championship) setRegisterModal(championship)
+    if (getRole() === 'Customer') setVoltarProCliente(true)
     params.delete('campeonato')
     const query = params.toString()
     window.history.replaceState(null, '', query ? `/?${query}` : '/')
@@ -710,7 +714,8 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
             {/* Logo */}
             <div className="flex items-center gap-2.5">
-              <img src={site.logoUrl || '/logo-maikon-128.png'} alt={site.siteName} className="h-8 w-auto object-contain" />
+              {/* Visual novo: sem o logo (é o mascote de IA), igual ao menu */}
+              {!uniforme && <img src={site.logoUrl || '/logo-maikon-128.png'} alt={site.siteName} className="h-8 w-auto object-contain" />}
               <div>
                 <p className="font-black text-sm leading-tight" style={{ color: F.navy }}>{site.siteName}</p>
                 <p className="text-[10px]" style={{ color: F.text }}>{site.addressLine}</p>
@@ -777,7 +782,7 @@ export default function LandingPage() {
       {/* ── MODAIS ──────────────────────────────────────────────────────── */}
       {annModal      && <AnnouncementModal ann={annModal}               onClose={() => setAnnModal(null)}      C={C} />}
       {productModal  && <ProductModal      product={productModal}       onClose={() => setProductModal(null)}  C={C} pix={pixDoProduto(productModal)} />}
-      {registerModal && <RegisterModal     championship={registerModal} onClose={() => setRegisterModal(null)} C={C} whatsapp={site.whatsappNumber} contactPersonName={site.contactPersonName} />}
+      {registerModal && <RegisterModal     championship={registerModal} onClose={() => { setRegisterModal(null); if (voltarProCliente) router.replace('/cliente') }} C={C} whatsapp={site.whatsappNumber} contactPersonName={site.contactPersonName} />}
     </div>
   )
 }
@@ -1295,6 +1300,17 @@ function RegisterModal({ championship, onClose, C, whatsapp, contactPersonName }
           <div>
             <h3 className="font-black text-lg" style={{ color: C.navy }}>Inscrição</h3>
             <p className="text-sm mt-0.5" style={{ color: C.text }}>{championship.name}</p>
+            {/* Quando, quanto e quantas vagas: a janela só mostrava o nome (teste do fluxo, 06/11) */}
+            <p className="text-xs font-bold mt-1.5" style={{ color: C.navy }}>
+              {dataHoraBR(championship.startDate)}
+              {' · '}{temTaxa ? taxaFmt : 'Grátis'}
+              {championship.maxParticipants
+                ? (() => {
+                    const livres = Math.max(0, championship.maxParticipants - (championship.participantCount ?? 0))
+                    return ` · ${livres} ${livres === 1 ? 'vaga livre' : 'vagas livres'} de ${championship.maxParticipants}`
+                  })()
+                : ''}
+            </p>
           </div>
           <button onClick={onClose} className="p-1 transition-colors" style={{ color: C.text }}>
             <X className="w-5 h-5" />

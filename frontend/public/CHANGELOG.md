@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.83.0] — 2026-11-06
+
+### Pix do pedido do site com o desconto que a loja anuncia (chave nova)
+- **Corrigido:** a loja mostra "R$ 35,91 no Pix · 10% OFF" e a sacola "No Pix R$ 225,05", mas o Pix gerado pelo site cobrava o preço cheio. Agora o QR do pedido sai com o desconto do Pix, pela mesma regra da vitrine: o percentual do produto, senão o da categoria, senão o da categoria pai, senão o padrão da loja (centavo pra baixo, a favor do cliente)
+- A venda registrada quando o Pix cai sai com esse desconto, e o Vigia do sistema não acusa o Pix como "valor diferente do pedido"
+- A tela de reserva confirmada mostra o valor que o QR vai cobrar
+- **Chave em Funcionalidades:** "Pix do pedido do site com o desconto da loja" (ligada). Desligar volta o Pix do pedido pro preço cheio; QR já gerado continua com o valor que tinha. O "Homologar" (admin confirmando à mão) não muda: o desconto ali continua sendo o que o admin digita
+
 ## [v1.82.5] — 2026-11-06
 
 ### Balcão — desconto em R$ não aparecia (relato do Maikon)
@@ -7,12 +15,29 @@
 - Conferido na API: comanda, balcão em R$ e balcão em % aplicam o desconto certo; o QR Pix da comanda com desconto já tinha sido corrigido na v1.82.3
 - **Comanda aberta mostrando "-1min":** o tempo desde a abertura era contado pelo relógio do computador da loja, que está atrasado em relação ao servidor. Agora conta pela hora do servidor (a mesma correção do alarme da liga) e nunca fica negativo
 
+## [v1.82.4] — 2026-11-06
+
+### Fluxo do cliente no celular — o que apareceu no teste de ponta a ponta
+- **Comanda:** o status saía "EMANDAMENTO" (agora "Em andamento") e a mesa "Mesa Mesa 3" quando o atendente digitava "Mesa 3"
+- **Depois da reserva, "Minhas reservas"** abre direto na aba Reservas (abria em Pontos)
+- **Tela de reserva confirmada:** mostra quanto fica o Pix; se o Pix não puder ser gerado, o aviso fica no cartão do Pix (antes sumia em 3 segundos)
+- **Minha Conta › Reservas:** título "Pedidos" (era "Pré-vendas" mesmo pra produto com estoque), o total do pedido e o preço de cada item; "Separado · pague no Pix ou na retirada" no lugar de "Aguardando pagamento"
+- **Inscrição em campeonato:** a janela mostra data, hora, valor (ou "Grátis") e vagas livres; quem veio da área do cliente volta pra ela ao fechar (ficava na página pública). Em Meus Campeonatos, torneio sem taxa aparece como "Grátis" (era "R$ 0,00")
+- **Próximos Torneios:** campeonato de dia que já passou e ficou com as inscrições abertas não aparece mais como próximo
+- **Mascote de IA** saiu também do topo da área do cliente e do rodapé da página principal (já tinha saído dos menus)
+- **Avatar da conta** mostra o Pokémon escolhido no cadastro (era só a inicial do nome); na página do produto o nome da loja não fica mais cortado ("Santuário …")
+- **Menu da loja:** visitante vê "Entrar / Cadastrar"; logado vê "Minha Conta" e vai direto pra área dele
+- **WhatsApp** formatado "(17) 99999-9999" no cadastro, na edição dos dados e na Minha Conta
+- **Libras** nas telas de entrar e cadastrar fica no canto esquerdo (a mão cobria o "Mostrar" da senha)
+- Cartão de produto: "10% OFF" não quebra mais no meio da linha
+
 ## [v1.82.3] — 2026-11-05
 
 ### Comanda — QR Pix com o desconto (relato do Maikon)
 - **Corrigido:** ao fechar a comanda, dar desconto (ex.: 5%) e clicar em "Gerar QR Pix", o QR saía com o valor cheio. Agora o QR e o valor da cobrança já levam o desconto
 - Quando o Pix cai e a comanda fecha sozinha, ela fecha com o mesmo desconto (antes iria fechar sem ele, bagunçando o relatório)
 - Se a comanda mudar depois do QR (item a mais, pontos tirados), o Pix pago não fecha ela sozinho: a comanda fica aberta e o admin recebe um aviso no sininho com quanto falta, pra fechar registrando o Pix já recebido e o restante
+
 ## [v1.82.2] — 2026-11-04
 
 ### Segurança — teste de vazamento de dados
@@ -312,6 +337,7 @@
 - Antes de apagar o container antigo na troca sem queda, o log dele é guardado na VPS (`/var/log/santuarionerd`, compactado, só o root lê, 30 dias). Até agora cada deploy levava o log embora — quando algo dava errado, não havia o que ler
 - Busca: `bash deploy/logs.sh "texto"` procura no que está no ar e em todos os guardados (`--dias 30`, `--servico frontend`, `--erros`)
 - Se guardar o log falhar (disco, permissão), o deploy segue normalmente
+
 ## [v1.63.0] — 2026-10-21
 
 ### Novo — Vigia do sistema (Configuração → Alertas do sistema)
@@ -345,6 +371,7 @@
 - "Retirado" sem venda é recusado (era um jeito de o faturamento sumir); se o registro da venda falhar no pagamento, os admins recebem aviso no sininho e o "Homologar" resolve
 - Proteção contra venda em dobro quando o Pix e o "Homologar" acontecem no mesmo instante
 - Chave `pedido-venda-no-pagamento` em Funcionalidades: desligada, volta a vender só no "Homologar" (sem nunca vender de novo o que já virou venda)
+
 ## [v1.61.1] — 2026-10-20
 
 ### Corrigido — entrada na liguinha pelo celular (teste do Maikon)
@@ -376,6 +403,7 @@
 ### Corrigido
 - **Pokémon do deck**: Ogerpon com máscara ("Cornerstone Ogerpon", "Ogerpon Wellspring", "Hearthflame") agora mostra a forma certa da máscara
 - **/liga no celular** não rola mais pro lado
+
 ## [v1.59.2] — 2026-10-20
 
 ### Corrigido — compra do site paga depois de cancelada

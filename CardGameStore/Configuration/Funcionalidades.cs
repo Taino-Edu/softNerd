@@ -42,6 +42,7 @@ public static class Funcionalidades
     public const string CampeonatoSeparado = "campeonato-separado";
     public const string PagamentoSemRetirada = "pagamento-sem-retirada";
     public const string RelatorioPorSubcategoria = "relatorio-por-subcategoria";
+    public const string PixPedidoComDesconto = "pix-pedido-com-desconto";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -112,6 +113,17 @@ public static class Funcionalidades
             SeDesligar: "Volta a lista de antes: uma linha por subcategoria, sem o total da categoria-pai.",
             Padrao:     true,
             Desde:      "v1.74.0",
+            RevisarEm:  new DateOnly(2027, 5, 1)),
+
+        new(PixPedidoComDesconto,
+            Nome:       "Pix do pedido do site com o desconto da loja",
+            OQueMuda:   "O Pix gerado pelo site pro pedido cobra o preço com o desconto do Pix que a loja anuncia " +
+                        "(o do produto, senão o da categoria, senão o padrão da loja) — o mesmo \"R$ X no Pix\" da vitrine e da sacola. " +
+                        "A venda registrada quando o Pix cai sai com esse desconto.",
+            SeDesligar: "O Pix do pedido volta a cobrar o preço cheio (o desconto do Pix fica só como texto da vitrine). " +
+                        "QR já gerado continua com o valor que tinha.",
+            Padrao:     true,
+            Desde:      "v1.83.0",
             RevisarEm:  new DateOnly(2027, 5, 1)),
     ];
 

@@ -29,6 +29,7 @@ import EscolherPokemon from '@/components/pokemon/EscolherPokemon'
 import ParceiroDaConta from '@/components/pokemon/ParceiroDaConta'
 import { nomeDoId } from '@/lib/pokemonPreferido'
 import { rotasDoEvento } from '@/lib/caminhosTorneio'
+import { rotuloMesa, soDigitosTelefone, telefoneBR } from '@/lib/rotulos'
 
 /** Data com hora — "12/08/2026 às 14:32". Sem a hora, duas compras no mesmo dia
  *  ficam indistinguíveis pra quem quer conferir o que pagou e quando. */
@@ -161,7 +162,7 @@ function EditProfileModal({ profile, onClose, onSaved }: {
 }) {
   const [name, setName]         = useState(profile.name)
   const [email, setEmail]       = useState(profile.email ?? '')
-  const [whatsApp, setWhatsApp] = useState(profile.whatsApp ?? '')
+  const [whatsApp, setWhatsApp] = useState(telefoneBR(profile.whatsApp))
   const [saving, setSaving]     = useState(false)
 
   async function handleSave(e: React.FormEvent) {
@@ -177,7 +178,7 @@ function EditProfileModal({ profile, onClose, onSaved }: {
       const { data } = await userApi.updateMe({
         name: name.trim(),
         email: email.trim(),
-        whatsApp: whatsApp.trim(),
+        whatsApp: soDigitosTelefone(whatsApp),
       })
       toast.success('Dados atualizados!')
       onSaved(data)
@@ -226,9 +227,9 @@ function EditProfileModal({ profile, onClose, onSaved }: {
         <div>
           <label className="text-xs font-black text-gray-400 uppercase tracking-wider">WhatsApp</label>
           <input
-            value={whatsApp} onChange={e => setWhatsApp(e.target.value)}
+            type="tel" inputMode="tel" value={whatsApp} onChange={e => setWhatsApp(telefoneBR(e.target.value))}
             className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#1E4FD6]"
-            placeholder="11999999999"
+            placeholder="(17) 99999-9999"
           />
         </div>
 
@@ -271,10 +272,13 @@ export default function PerfilPage() {
   const pokemonLigado = useFuncionalidade('pokemon-preferido') === true
   const campeonatoSeparado = useFuncionalidade('campeonato-separado') === true
 
-  // Link do lembrete de vencimento abre direto na aba da dívida (/cliente/perfil?tab=crediario).
+  // ?tab= abre direto numa aba: o lembrete de vencimento usa ?tab=crediario e o "Minhas reservas"
+  // da sacola usa ?tab=reservas (abria em Pontos — teste do fluxo, 06/11).
   // Lido do window em vez de useSearchParams pra não precisar de Suspense na página inteira.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('tab') === 'crediario') setTab('crediario')
+    const pedida = new URLSearchParams(window.location.search).get('tab')
+    const aba = pedida === 'reservas' ? 'filas' : pedida
+    if (aba === 'pontos' || aba === 'historico' || aba === 'torneios' || aba === 'crediario' || aba === 'filas') setTab(aba)
   }, [])
 
   // Conta nova pergunta o Pokémon preferido UMA vez: cadastro e primeiro acesso chegam com
@@ -571,7 +575,7 @@ export default function PerfilPage() {
                 )}
                 {profile?.whatsApp && (
                   <span className="flex items-center gap-1.5 text-[11px] text-white/70 font-medium">
-                    <Phone className="w-3 h-3" /> {profile.whatsApp}
+                    <Phone className="w-3 h-3" /> {telefoneBR(profile.whatsApp)}
                   </span>
                 )}
               </div>
@@ -649,7 +653,7 @@ export default function PerfilPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black text-[#1E4FD6] uppercase tracking-wider">Comanda aberta</p>
                   <p className="text-sm font-black text-gray-900 leading-tight">
-                    {comandaAberta.tableIdentifier ? `Mesa ${comandaAberta.tableIdentifier}` : 'Sua comanda'}
+                    {rotuloMesa(comandaAberta.tableIdentifier)}
                     {' · '}
                     {comandaAberta.items.length} {comandaAberta.items.length === 1 ? 'item' : 'itens'}
                   </p>
@@ -951,7 +955,7 @@ export default function PerfilPage() {
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
                           <Coins className="w-3.5 h-3.5 text-[#1E4FD6]" />
-                          {brl(p.entryFeeInReais)}
+                          {p.entryFeeInReais > 0 ? brl(p.entryFeeInReais) : 'Grátis'}
                         </div>
                       </div>
                       {/* Volta pra tela do jogo (mesa, resultado, relógio) — antes só dizia "Inscrito" */}
@@ -967,19 +971,22 @@ export default function PerfilPage() {
               </div>
             )}
 
-            {/* ── TAB: PRÉ-VENDAS & FILA ── */}
+            {/* ── TAB: PEDIDOS (reservas/pré-vendas) & FILA ── */}
             {tab === 'filas' && (
               <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {fila.length === 0 && reservations.length === 0 ? (
                   <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center shadow-sm">
                     <Bell className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-                    <p className="text-sm text-gray-400 italic">Você não tem pré-vendas ativas nem está em nenhuma fila.</p>
+                    <p className="text-sm text-gray-400 italic">Você não tem pedidos em aberto nem está em nenhuma fila.</p>
                   </div>
                 ) : (
                   <>
                     {reservations.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Pré-vendas</p>
+                        {/* "Pré-vendas" só quando todos são de produto de pré-venda; pedido de produto com estoque é "Pedidos" */}
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+                          {reservations.every(r => r.productIsPreVenda) ? 'Pré-vendas' : 'Pedidos'}
+                        </p>
                         {/* Mais de um pedido sem pagar: um Pix só com tudo (chave pedido-pix-junto) */}
                         {pixJuntoLigado && pedidosSemPagar.length > 1 && (
                           <button onClick={handlePagarTudoJunto} disabled={juntando}
@@ -995,15 +1002,18 @@ export default function PerfilPage() {
                             <div className="flex items-center justify-between gap-2">
                               {semPagar ? (
                                 <p className="text-[11px] text-amber-500 font-bold flex items-center gap-1">
-                                  <Hourglass className="w-3 h-3" /> Aguardando pagamento
+                                  <Hourglass className="w-3 h-3" /> Separado · pague no Pix ou na retirada
                                 </p>
                               ) : (
                                 <p className="text-[11px] text-emerald-500 font-black uppercase tracking-wide">
                                   Paga ✓ — aguardando retirada
                                 </p>
                               )}
-                              <p className="text-[11px] text-gray-400 font-semibold">
+                              <p className="text-[11px] text-gray-400 font-semibold whitespace-nowrap shrink-0">
                                 {itens.length} {itens.length === 1 ? 'item' : 'itens'}
+                                {itens.every(r => r.subtotalEmReais != null) && (
+                                  <> · <span className="text-gray-900 font-black">{brl(itens.reduce((s, r) => s + (r.subtotalEmReais ?? 0), 0))}</span></>
+                                )}
                               </p>
                             </div>
                             {itens.map(r => (
@@ -1018,6 +1028,11 @@ export default function PerfilPage() {
                                     <span className="text-amber-500">{r.quantity}×</span> {r.productName}
                                   </p>
                                   {r.variantLabel && <p className="text-[11px] text-gray-400">{r.variantLabel}</p>}
+                                  {r.subtotalEmReais != null && (
+                                    <p className="text-[11px] text-gray-500 font-semibold">
+                                      {r.quantity > 1 && r.precoUnitarioEmReais != null ? `${brl(r.precoUnitarioEmReais)} cada · ` : ''}{brl(r.subtotalEmReais)}
+                                    </p>
+                                  )}
                                   {r.preVendaReleaseDate && (
                                     <p className="text-[11px] text-gray-400 mt-0.5">
                                       Retirada a partir de {new Date(r.preVendaReleaseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}

@@ -22,6 +22,8 @@ import { useSiteConfig } from '@/lib/useSiteConfig'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { rotasDoEvento } from '@/lib/caminhosTorneio'
+import { rotuloMesa, rotuloStatusComanda } from '@/lib/rotulos'
+import AvatarCliente from '@/components/cliente/AvatarCliente'
 
 interface MyParticipation {
   participationId: string
@@ -865,10 +867,8 @@ export default function ClientePage() {
       {/* ── HEADER ──────────────────────────────────────────────────── */}
       <header style={{ backgroundColor: mixHex(corTopo, '#000000', 0.32) }}>
         <div className="max-w-lg mx-auto px-5 pt-10 pb-6 flex items-center justify-between">
+          {/* Só o nome, sem o logo: o logo cadastrado é o mascote de IA, que já saiu dos menus da loja (v1.82.0) */}
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={site?.logoUrl ? (fotoLeve(site.logoUrl, 160) ?? site.logoUrl) : '/logo-maikon-128.png'}
-              alt={site?.siteName ?? 'Santuário Nerd'} className="w-10 h-10 object-contain drop-shadow-md" />
             <div>
               {/* Cor no style: o tema claro do site força .text-white pra escuro e o nome sumia no fundo */}
               <p className="font-black text-base leading-tight" style={{ color: '#FFFFFF' }}>{site?.siteName ?? 'Santuário Nerd'}</p>
@@ -881,15 +881,9 @@ export default function ClientePage() {
           </div>
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <Link href="/cliente/perfil">
-              {profile?.profileImageUrl
-                ? <img src={profile.profileImageUrl} alt={profile.name}
-                    className="w-10 h-10 rounded-full object-cover ring-2 ring-white/40" />
-                : <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm"
-                    style={{ backgroundColor: C.yellow, color: C.navy }}>
-                    {profile?.name?.charAt(0).toUpperCase() ?? <UserIcon className="w-5 h-5" />}
-                  </div>
-              }
+            <Link href="/cliente/perfil" aria-label="Minha conta">
+              <AvatarCliente nome={profile?.name} fotoUrl={profile?.profileImageUrl} pokemon={profile?.pokemonFavorito}
+                shiny={!!profile?.pokemonFavoritoShiny} corFundo={C.yellow} corTexto={C.navy} className="ring-2 ring-white/40" />
             </Link>
           </div>
         </div>
@@ -998,24 +992,11 @@ export default function ClientePage() {
               <div className="flex items-center justify-between px-5 py-4 border-b"
                 style={{ borderColor: C.border }}>
                 <div className="flex items-center gap-3">
-                  {profile?.profileImageUrl ? (
-                    <img
-                      src={profile.profileImageUrl}
-                      alt={profile.name}
-                      className="w-10 h-10 rounded-full object-cover shrink-0"
-                      style={{ border: `2px solid ${C.border}` }}
-                    />
-                  ) : (
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0"
-                      style={{ backgroundColor: C.yellow, color: C.navy }}
-                    >
-                      {profile?.name?.charAt(0).toUpperCase() ?? <UserIcon className="w-4 h-4" />}
-                    </div>
-                  )}
+                  <AvatarCliente nome={profile?.name} fotoUrl={profile?.profileImageUrl} pokemon={profile?.pokemonFavorito}
+                    shiny={!!profile?.pokemonFavoritoShiny} corFundo={C.yellow} corTexto={C.navy} className="shrink-0" />
                   <div>
                     <span className="font-black text-sm block" style={{ color: C.navy }}>
-                      Mesa {comanda.tableIdentifier || 'N/A'}
+                      {rotuloMesa(comanda.tableIdentifier)}
                     </span>
                     {profile && (
                       <span className="text-[11px] font-semibold block" style={{ color: C.muted }}>
@@ -1026,7 +1007,7 @@ export default function ClientePage() {
                 </div>
                 <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full"
                   style={{ backgroundColor: `${C.blue}15`, color: C.blue2 }}>
-                  {comanda.status}
+                  {rotuloStatusComanda(comanda.status)}
                 </span>
               </div>
 

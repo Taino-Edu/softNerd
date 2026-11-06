@@ -1,8 +1,10 @@
 using System.Text.Json;
 using System.Collections.Concurrent;
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
+using CardGameStore.Services.Pedidos;
 using Microsoft.EntityFrameworkCore;
 
 namespace CardGameStore.Services.Implementations;
@@ -38,11 +40,14 @@ public sealed class ReservationPixService : IReservationPixService
 
     private readonly AppDbContext _db;
     private readonly InterSyncService _inter;
+    private readonly FuncionalidadesService? _funcionalidades;
 
-    public ReservationPixService(AppDbContext db, InterSyncService inter)
+    /// <param name="funcionalidades">Sem ele (testes antigos), o Pix cobra o preço cheio — o jeito antigo.</param>
+    public ReservationPixService(AppDbContext db, InterSyncService inter, FuncionalidadesService? funcionalidades = null)
     {
         _db = db;
         _inter = inter;
+        _funcionalidades = funcionalidades;
     }
 
     public async Task<ReservationPixResult> GerarAsync(
@@ -82,8 +87,20 @@ public sealed class ReservationPixService : IReservationPixService
             if (preVendas.Count == 0)
                 return ReservationPixResult.Fail(StatusCodes.Status400BadRequest, "Este pedido já está pago.");
 
-            // Cobra o preço congelado no pedido
+            // Cobra o preço congelado no pedido; com a chave pix-pedido-com-desconto, menos o desconto do
+            // Pix que a loja anuncia (a mesma conta da vitrine). O desconto fica gravado na cobrança.
             var valorEmCentavos = preVendas.Sum(r => PedidoVendaService.PrecoDoPedido(r) * r.Quantity);
+            int? descontoPix = null;
+            if (_funcionalidades is not null && await _funcionalidades.LigadaAsync(Funcionalidades.PixPedidoComDesconto))
+            {
+                var (cobrar, desconto) = await DescontoPixPedido.CalcularAsync(_db, preVendas, cancellationToken);
+                // Desconto de 100% (ou item barato arredondado a zero): não existe Pix de R$ 0 — e voltar
+                // pro preço cheio cobraria o que a loja disse que era de graça (Codex, #148).
+                if (desconto > 0 && cobrar <= 0)
+                    return ReservationPixResult.Fail(StatusCodes.Status400BadRequest,
+                        "Com o desconto do Pix este pedido sai sem custo — combine a retirada na loja.");
+                if (desconto > 0) { valorEmCentavos = cobrar; descontoPix = desconto; }
+            }
 
             // Idempotência financeira: pedir PIX de novo devolve a cobrança aberta. Vencida não: no Inter ela segue "ATIVA" depois do prazo, mas o banco do cliente recusa
             // o QR ("O QR Code não é válido") — era o QR morto que voltava pra quem pagava no dia
@@ -121,6 +138,7 @@ public sealed class ReservationPixService : IReservationPixService
                 ReservationItemIdsJson = JsonSerializer.Serialize(preVendas.Select(r => r.Id)),
                 TxId = result.TxId!,
                 ValorEmCentavos = valorEmCentavos,
+                DescontoEmCentavos = descontoPix,
                 Status = result.Status ?? "ATIVA",
                 PixCopiaCola = result.PixCopiaCola,
                 ImagemQrCode = result.ImagemQrCode,

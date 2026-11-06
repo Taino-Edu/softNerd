@@ -83,7 +83,8 @@ export default function CartaoProduto({ p, C, pix, cartao, href, onClick }: {
           )}
           {pix && (
             <span className="block text-[11px] font-bold" style={{ color: C.pix }}>
-              {brl(pix.precoPix)} no Pix · {pct(pix.pixPercent)} OFF
+              {/* nowrap em cada pedaço: no celular "10%" ficava numa linha e "OFF" na outra */}
+              <span className="whitespace-nowrap">{brl(pix.precoPix)} no Pix</span> · <span className="whitespace-nowrap">{pct(pix.pixPercent)} OFF</span>
             </span>
           )}
         </div>

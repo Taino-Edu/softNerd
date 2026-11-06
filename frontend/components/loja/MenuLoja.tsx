@@ -21,6 +21,7 @@ import { mixHex } from '@/lib/colors'
 import { useSiteConfig } from '@/lib/useSiteConfig'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import { abrirVLibras } from '@/components/VLibrasController'
+import { isLoggedIn } from '@/lib/auth'
 
 /** Rótulos e cores do menu enquanto Personalizar Site não chega (o mesmo padrão da página principal). */
 const PADRAO = {
@@ -73,6 +74,10 @@ export default function MenuLoja({
   const [aberto, setAberto] = useState(false)
   const [visivel, setVisivel] = useState(true)
   const [hover, setHover] = useState(false)
+  // Visitante vê "Entrar / Cadastrar"; logado vê "Minha Conta" e vai direto pra área dele.
+  // Lido depois de montar (cookie) pra não divergir do HTML do servidor.
+  const [logado, setLogado] = useState(false)
+  useEffect(() => { setLogado(isLoggedIn()) }, [])
 
   useEffect(() => {
     let ultimo = window.scrollY
@@ -142,14 +147,16 @@ export default function MenuLoja({
               className="hidden xl:block p-2 rounded-xl transition-colors hover:bg-white/10" style={{ color: '#ffffff' }}>
               <Accessibility className="w-4 h-4" />
             </button>
+            {/* Com a bolinha da conta (extras), no celular o tema fica só dentro do menu ("Escuro"):
+                os dois juntos cortavam o nome da loja em "Santuário …" (teste do fluxo, 06/11) */}
             <button onClick={onToggleDark} title={isDark ? 'Modo claro' : 'Modo escuro'} aria-label={isDark ? 'Modo claro' : 'Modo escuro'}
-              className="p-2 rounded-xl transition-colors hover:bg-white/10" style={{ color: '#ffffff' }}>
+              className={`${extras ? 'hidden sm:block' : ''} p-2 rounded-xl transition-colors hover:bg-white/10`} style={{ color: '#ffffff' }}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <Link href="/entrar"
+            <Link href={logado ? '/cliente' : '/entrar'}
               className="hidden xl:block text-sm px-4 py-2 rounded-xl border transition-colors hover:bg-white/10 whitespace-nowrap"
               style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
-              Minha Conta
+              {logado ? 'Minha Conta' : 'Entrar / Cadastrar'}
             </Link>
             {/* Sacola = carrinho de reserva (/cliente/reserva/carrinho); no celular vira só o ícone */}
             <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
@@ -190,7 +197,9 @@ export default function MenuLoja({
           <a href={secao('pontos')} onClick={fechar} className={linkCelular} style={{ color: 'rgba(255,255,255,0.70)' }}>{site.navPontosLabel}</a>
           {/* Duas colunas: em quatro numa linha, "Minha Conta" quebrava e "Eventos" desalinhava */}
           <div className="grid grid-cols-2 gap-2 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
-            <Link href="/entrar" onClick={fechar} className={`${botaoCelular} font-medium`} style={corCelular}>Minha Conta</Link>
+            <Link href={logado ? '/cliente' : '/entrar'} onClick={fechar} className={`${botaoCelular} font-medium`} style={corCelular}>
+              {logado ? 'Minha Conta' : 'Entrar / Cadastrar'}
+            </Link>
             <button onClick={() => { onToggleDark(); fechar() }} className={`${botaoCelular} font-medium`} style={corCelular}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               {isDark ? 'Claro' : 'Escuro'}

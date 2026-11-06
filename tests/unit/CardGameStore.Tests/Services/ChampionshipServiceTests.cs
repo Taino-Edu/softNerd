@@ -101,6 +101,26 @@ public class ChampionshipServiceTests
         result[1].Name.Should().Be("Longe");
     }
 
+    [Fact]
+    public async Task GetUpcoming_NaoMostraCampeonatoDeDiaQueJaPassou()
+    {
+        var db      = CreateDb(nameof(GetUpcoming_NaoMostraCampeonatoDeDiaQueJaPassou));
+        var service = CreateService(db);
+
+        var ontem = MakeChampionship("Ontem");
+        ontem.StartDate = CardGameStore.Common.Brasilia.DiaUtc().InicioUtc.AddHours(-2);
+        var hoje = MakeChampionship("Hoje cedo");
+        hoje.StartDate = CardGameStore.Common.Brasilia.DiaUtc().InicioUtc.AddMinutes(1);
+
+        db.Championships.AddRange(ontem, hoje, MakeChampionship("Semana que vem"));
+        await db.SaveChangesAsync();
+
+        var result = (await service.GetUpcomingAsync()).Select(c => c.Name).ToList();
+
+        result.Should().BeEquivalentTo(new[] { "Hoje cedo", "Semana que vem" },
+            "o de ontem ficou com inscrições abertas por esquecimento — não é mais 'próximo'");
+    }
+
     // ── Atualizar status ──────────────────────────────────────────────────────
 
     [Fact]

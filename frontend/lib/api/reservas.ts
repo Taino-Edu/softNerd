@@ -20,6 +20,11 @@ export interface MyReservation {
   preVendaReleaseDate?: string | null
   /** Intenção de pagamento declarada na criação: "pix" | "retirada" | null (não declarado). */
   paymentMethod?: string | null
+  /** Produto marcado como pré-venda (o resto é pedido de produto com estoque). */
+  productIsPreVenda?: boolean
+  /** Preço congelado no pedido (pedido antigo cai no preço atual). */
+  precoUnitarioEmReais?: number | null
+  subtotalEmReais?: number | null
 }
 
 export interface ReservationPixStatus {
