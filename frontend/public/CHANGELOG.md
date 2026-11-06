@@ -9,6 +9,13 @@
 - Imagem de prévia da loja (marca no azul do topo) e descrição nova da principal e de Produtos
 - Fotos da prévia em JPEG leve com fundo branco (`?w=960&f=jpg`), que o WhatsApp aceita
 
+## [v1.83.1] — 2026-11-06
+
+### Manutenção — pacotes do .NET 10 em dia
+- Correções da Microsoft de novembro: EF Core, autenticação e SignalR 10.0.13 → **10.0.14**
+- Google Auth 1.78.0, QRCoder 1.8.1, WebPush 1.0.13 e SharpCompress 0.50.8 (versões menores)
+- Conferência do .NET 10 em produção (só leitura): bancos, leituras públicas, fotos redimensionadas, tempo real, sessão, relógio e Swagger fechado — 20 de 20 ok; nenhum pacote com falha de segurança conhecida
+
 ## [v1.83.0] — 2026-11-06
 
 ### Pix do pedido do site com o desconto que a loja anuncia (chave nova)
