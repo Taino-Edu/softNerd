@@ -1,11 +1,28 @@
 # Changelog — Santuário Nerd
 
+## [v1.82.4] — 2026-11-06
+
+### Fluxo do cliente no celular — o que apareceu no teste de ponta a ponta
+- **Comanda:** o status saía "EMANDAMENTO" (agora "Em andamento") e a mesa "Mesa Mesa 3" quando o atendente digitava "Mesa 3"
+- **Depois da reserva, "Minhas reservas"** abre direto na aba Reservas (abria em Pontos)
+- **Tela de reserva confirmada:** mostra quanto fica o Pix; se o Pix não puder ser gerado, o aviso fica no cartão do Pix (antes sumia em 3 segundos)
+- **Minha Conta › Reservas:** título "Pedidos" (era "Pré-vendas" mesmo pra produto com estoque), o total do pedido e o preço de cada item; "Separado · pague no Pix ou na retirada" no lugar de "Aguardando pagamento"
+- **Inscrição em campeonato:** a janela mostra data, hora, valor (ou "Grátis") e vagas livres; quem veio da área do cliente volta pra ela ao fechar (ficava na página pública). Em Meus Campeonatos, torneio sem taxa aparece como "Grátis" (era "R$ 0,00")
+- **Próximos Torneios:** campeonato de dia que já passou e ficou com as inscrições abertas não aparece mais como próximo
+- **Mascote de IA** saiu também do topo da área do cliente e do rodapé da página principal (já tinha saído dos menus)
+- **Avatar da conta** mostra o Pokémon escolhido no cadastro (era só a inicial do nome); na página do produto o nome da loja não fica mais cortado ("Santuário …")
+- **Menu da loja:** visitante vê "Entrar / Cadastrar"; logado vê "Minha Conta" e vai direto pra área dele
+- **WhatsApp** formatado "(17) 99999-9999" no cadastro, na edição dos dados e na Minha Conta
+- **Libras** nas telas de entrar e cadastrar fica no canto esquerdo (a mão cobria o "Mostrar" da senha)
+- Cartão de produto: "10% OFF" não quebra mais no meio da linha
+
 ## [v1.82.3] — 2026-11-05
 
 ### Comanda — QR Pix com o desconto (relato do Maikon)
 - **Corrigido:** ao fechar a comanda, dar desconto (ex.: 5%) e clicar em "Gerar QR Pix", o QR saía com o valor cheio. Agora o QR e o valor da cobrança já levam o desconto
 - Quando o Pix cai e a comanda fecha sozinha, ela fecha com o mesmo desconto (antes iria fechar sem ele, bagunçando o relatório)
 - Se a comanda mudar depois do QR (item a mais, pontos tirados), o Pix pago não fecha ela sozinho: a comanda fica aberta e o admin recebe um aviso no sininho com quanto falta, pra fechar registrando o Pix já recebido e o restante
+
 ## [v1.82.2] — 2026-11-04
 
 ### Segurança — teste de vazamento de dados

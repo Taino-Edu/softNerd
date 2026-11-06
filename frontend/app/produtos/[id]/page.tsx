@@ -2,6 +2,7 @@
 // Página do produto: barra com a marca e a Sacola, caminho Início › Produtos › Categoria, preço com
 // contraste, "Últimas N", garantias da loja e "Você também pode gostar".
 import MenuLoja from '@/components/loja/MenuLoja'
+import AvatarCliente from '@/components/cliente/AvatarCliente'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { productApi, authApi, userApi, siteConfigApi, categoryApi, Product, UserProfile, SiteConfigDto, ProductCategory } from '@/lib/api'
@@ -10,7 +11,7 @@ import { useReservationCart } from '@/hooks/useReservationCart'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
-import { ChevronRight, Package, ShoppingBag, MessageCircle, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, User as UserIcon, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
+import { ChevronRight, Package, ShoppingBag, MessageCircle, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
@@ -202,15 +203,9 @@ export default function ProductPage() {
 
   const avatar = authed && (
     <Link href="/cliente" title="Minha conta">
-      {profile?.profileImageUrl ? (
-        <img src={profile.profileImageUrl} alt={userName}
-          className="w-8 h-8 rounded-full object-cover border-2 border-white/30 hover:border-white/70 transition-all" />
-      ) : (
-        <div className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white/30 hover:border-white/70 transition-all text-xs font-black"
-          style={{ backgroundColor: '#3EC2F2', color: '#0C3D5A' }}>
-          {userName.charAt(0).toUpperCase() || <UserIcon className="w-4 h-4" />}
-        </div>
-      )}
+      <AvatarCliente nome={userName} fotoUrl={profile?.profileImageUrl} pokemon={profile?.pokemonFavorito}
+        shiny={!!profile?.pokemonFavoritoShiny} tamanho={32} corFundo="#3EC2F2" corTexto="#0C3D5A"
+        className="border-2 border-white/30 hover:border-white/70 transition-all" />
     </Link>
   )
 

@@ -28,6 +28,12 @@ function temLibrasNoMenu(caminho: string) {
   return LIBRAS_NO_MENU.includes(caminho) || caminho.startsWith('/produtos/')
 }
 
+// Telas de entrar/cadastrar: no canto direito a mão ficava em cima do "Mostrar" da senha (teste do
+// fluxo no celular, 06/11). Lá ela vai pro canto esquerdo, onde os campos só têm o ícone decorativo.
+const TELAS_DE_ENTRADA = ['/entrar', '/cadastro', '/login', '/primeiro-acesso', '/reset-password']
+const cantoDaTela = (caminho: string, corner: string) =>
+  TELAS_DE_ENTRADA.includes(caminho) && corner.endsWith('right') ? corner.replace('right', 'left') : corner
+
 /**
  * Abre o painel do VLibras. O botão mora dentro do Shadow DOM do plugin — o seletor antigo
  * `[vw-access-button]` não existe mais e o "Libras" do menu não abria nada.
@@ -71,7 +77,9 @@ function applyPreferences(flutuante: boolean, carregado: boolean, corner: string
 
 export default function VLibrasController() {
   const { prefs, loading } = usePreferences()
-  const noMenu = temLibrasNoMenu(usePathname() ?? '')
+  const caminho = usePathname() ?? ''
+  const noMenu = temLibrasNoMenu(caminho)
+  const canto = cantoDaTela(caminho, prefs.vlibras.corner)
   const carregado = prefs.vlibras.enabled || noMenu
   const flutuante = prefs.vlibras.enabled && !noMenu
 
@@ -81,7 +89,7 @@ export default function VLibrasController() {
     let timer: ReturnType<typeof setInterval> | undefined
 
     const waitAndApply = () => {
-      if (applyPreferences(flutuante, carregado, prefs.vlibras.corner)) {
+      if (applyPreferences(flutuante, carregado, canto)) {
         if (timer) clearInterval(timer)
         timer = undefined
       }
@@ -98,7 +106,7 @@ export default function VLibrasController() {
 
     const initialize = () => {
       if (!document.getElementById(WRAPPER_ID) && window.VLibras?.Widget) {
-        const horizontal = prefs.vlibras.corner.endsWith('left') ? 'L' : 'R'
+        const horizontal = canto.endsWith('left') ? 'L' : 'R'
         new window.VLibras.Widget({ rootPath: ROOT_URL, position: horizontal })
       }
       waitAndApply()
@@ -121,7 +129,7 @@ export default function VLibrasController() {
       if (timer) clearInterval(timer)
       existingScript?.removeEventListener('load', initialize)
     }
-  }, [loading, carregado, flutuante, prefs.vlibras.corner])
+  }, [loading, carregado, flutuante, canto])
 
   return null
 }

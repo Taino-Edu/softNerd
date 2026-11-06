@@ -33,12 +33,21 @@ public class ChampionshipService : IChampionshipService
         return championship;
     }
 
-    public async Task<IEnumerable<Championship>> GetUpcomingAsync() =>
-        await _db.Championships
+    /// <summary>
+    /// Planejados e com inscrições abertas, de hoje (Brasília) em diante. Campeonato de dia que já
+    /// passou e ficou com as inscrições abertas (ninguém mudou o status) saía em "Próximos Torneios"
+    /// com "Inscrições abertas" (teste do fluxo do cliente, 06/11). O de hoje continua, mesmo já começado.
+    /// </summary>
+    public async Task<IEnumerable<Championship>> GetUpcomingAsync()
+    {
+        var inicioDeHojeUtc = Common.Brasilia.DiaUtc().InicioUtc;
+        return await _db.Championships
             .Include(c => c.Participants)
             .Include(c => c.PreInscricoes)
             .Where(c => c.Status == ChampionshipStatus.Planejado || c.Status == ChampionshipStatus.Inscricoes)
+            .Where(c => c.StartDate >= inicioDeHojeUtc)
             .OrderBy(c => c.StartDate).ToListAsync();
+    }
 
     public async Task<IEnumerable<Championship>> GetAllAsync(string? search = null)
     {

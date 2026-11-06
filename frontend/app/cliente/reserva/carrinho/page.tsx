@@ -36,6 +36,11 @@ export default function ReservationCartPage() {
   const [pixLoading, setPixLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [semLogin, setSemLogin] = useState(false)
+  // Depois de confirmar: quanto dá o Pix (a tela não dizia) e o erro do Pix fixo no cartão
+  // (o aviso sumia em 3 s, rápido demais no celular). Teste do fluxo do cliente, 06/11.
+  const [pixPedidoCents, setPixPedidoCents] = useState<number | null>(null)
+  const [juntou, setJuntou] = useState(false)
+  const [pixErro, setPixErro] = useState<string | null>(null)
 
   const C = isDark ? {
     bg: '#121215', card: '#1A1A1F', border: 'rgba(255,255,255,0.07)',
@@ -87,6 +92,9 @@ export default function ReservationCartPage() {
         allowFila
       )
       setGroupId(data.groupId)
+      // Somou num pedido anterior sem pagar: o valor do Pix é o do pedido inteiro, que só o QR sabe
+      setJuntou(!!data.juntou)
+      setPixPedidoCents(data.juntou ? null : (pixTotalCents ?? totalCents))
       setTemFila(data.items.some(i => i.kind === 'fila'))
       clear()
       // Chave pedido-pix-junto: somou no pedido sem pagar que ele já tinha — um Pix só com o total
@@ -119,12 +127,13 @@ export default function ReservationCartPage() {
   async function handleGerarPix() {
     if (!groupId) return
     setPixLoading(true)
+    setPixErro(null)
     try {
       const { data } = await reservationApi.gerarPix(groupId)
       setPix({ hasPix: true, ...data })
     } catch (e) {
       const msg = (e as { response?: { data?: { message?: string; Message?: string } } })?.response?.data
-      toast.error(msg?.message ?? msg?.Message ?? 'Pix indisponível no momento — pague na retirada.')
+      setPixErro(msg?.message ?? msg?.Message ?? 'Pix indisponível no momento — pague na retirada.')
     } finally {
       setPixLoading(false)
     }
@@ -262,6 +271,19 @@ export default function ReservationCartPage() {
               <QrCode className="w-4 h-4" style={{ color: C.pix }} /> Quer adiantar? Pague no Pix
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${C.pix}1A`, color: C.pix }}>opcional</span>
             </h2>
+            {!pix?.hasPix && !pix?.pixCopiaCola && (
+              <p className="text-sm" style={{ color: C.text }}>
+                {pixPedidoCents != null
+                  ? <>No Pix fica <strong style={{ color: C.pix }}>{fmt(pixPedidoCents)}</strong>.</>
+                  : juntou ? 'O Pix sai com o total do pedido, somado ao que você já tinha.' : null}
+              </p>
+            )}
+            {pixErro && (
+              <p role="alert" className="text-sm font-semibold px-3 py-2.5 rounded-xl"
+                style={{ color: '#B91C1C', backgroundColor: 'rgba(185,28,28,0.08)' }}>
+                {pixErro}
+              </p>
+            )}
             {!pix?.hasPix && !pix?.pixCopiaCola ? (
               <button onClick={handleGerarPix} disabled={pixLoading}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-sm transition-all active:scale-95 disabled:opacity-60"
@@ -303,7 +325,7 @@ export default function ReservationCartPage() {
           <div className="mt-4">{garantias}</div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Link href="/cliente/perfil"
+            <Link href="/cliente/perfil?tab=reservas"
               className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm border transition-all hover:opacity-80"
               style={{ borderColor: C.border, color: C.navy, backgroundColor: C.card }}>
               Minhas reservas

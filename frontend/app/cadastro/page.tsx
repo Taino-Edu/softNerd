@@ -4,6 +4,7 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { authApi } from '@/lib/api'
+import { soDigitosTelefone, telefoneBR } from '@/lib/rotulos'
 import { saveAuth } from '@/lib/auth'
 import toast from 'react-hot-toast'
 import { Mail, KeyRound, User, Phone } from 'lucide-react'
@@ -45,7 +46,7 @@ function CadastroForm() {
     setLoading(true)
     setErroCampo(null); setErroMensagem(null)
     try {
-      const { data } = await authApi.register(name.trim(), email.trim(), password, whatsApp.trim() || undefined)
+      const { data } = await authApi.register(name.trim(), email.trim(), password, soDigitosTelefone(whatsApp) || undefined)
       saveAuth(data)
       toast.success('Conta criada! Bem-vindo, ' + data.userName)
       // Indo pra Minha Conta, ela já abre perguntando o Pokémon preferido (se a chave estiver ligada);
@@ -75,7 +76,7 @@ function CadastroForm() {
           onChange={e => { setEmail(e.target.value); limpaErro('email') }} placeholder="voce@email.com"
           erro={erroCampo === 'email' ? <>{erroMensagem}{irProLogin}</> : undefined} />
         <CampoEntrada rotulo="WhatsApp" opcional icone={Phone} type="tel" autoComplete="tel" value={whatsApp}
-          onChange={e => { setWhatsApp(e.target.value); limpaErro('whatsapp') }} placeholder="(17) 99999-9999"
+          onChange={e => { setWhatsApp(telefoneBR(e.target.value)); limpaErro('whatsapp') }} placeholder="(17) 99999-9999"
           erro={erroCampo === 'whatsapp' ? <>{erroMensagem}{irProLogin}</> : undefined} />
         <CampoEntrada rotulo="Senha" icone={KeyRound} senha cor={cor} required minLength={8} autoComplete="new-password"
           value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
