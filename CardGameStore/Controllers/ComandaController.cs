@@ -325,7 +325,7 @@ public class ComandaController : ControllerBase
     /// <summary>Gera cobrança Pix pro total em aberto da comanda. Apenas Admin.</summary>
     [HttpPost("{id:guid}/pix")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> GerarCobrancaPix(Guid id)
+    public async Task<IActionResult> GerarCobrancaPix(Guid id, [FromBody] GerarPixComandaRequest? request = null)
     {
         try
         {
@@ -339,7 +339,14 @@ public class ComandaController : ControllerBase
             if (comanda.Status is ComandaStatus.Fechada or ComandaStatus.Cancelada or ComandaStatus.Estornada)
                 return BadRequest(new { Message = "Comanda já está fechada ou cancelada." });
 
-            var valorEmCentavos = Math.Max(0, comanda.TotalInCents - comanda.PointsApplied);
+            var restanteAntesDesconto = Math.Max(0, comanda.TotalInCents - comanda.PointsApplied);
+            var desconto = Math.Max(0, request?.DiscountInCents ?? 0);
+            if (desconto > restanteAntesDesconto)
+                return BadRequest(new { Message = "O desconto não pode ser maior que o total da comanda." });
+
+            // O QR leva o valor já com o desconto dado no fechamento. O desconto fica gravado
+            // na cobrança e é ele que a baixa usa ao fechar a comanda.
+            var valorEmCentavos = restanteAntesDesconto - desconto;
             if (valorEmCentavos <= 0)
                 return BadRequest(new { Message = "Comanda não tem valor restante para cobrar." });
 
@@ -361,6 +368,7 @@ public class ComandaController : ControllerBase
                 ComandaId        = comanda.Id,
                 TxId             = result.TxId!,
                 ValorEmCentavos  = valorEmCentavos,
+                DescontoEmCentavos = desconto > 0 ? desconto : null,
                 Status           = result.Status ?? "ATIVA",
                 PixCopiaCola     = result.PixCopiaCola,
                 ImagemQrCode     = result.ImagemQrCode,

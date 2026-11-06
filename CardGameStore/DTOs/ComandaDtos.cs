@@ -96,6 +96,13 @@ public class AdminOpenComandaRequest
     public string? TableIdentifier { get; set; }
 }
 
+/// <summary>Corpo opcional do POST /api/comanda/{id}/pix.</summary>
+public class GerarPixComandaRequest
+{
+    /// <summary>Desconto em centavos dado no fechamento; o QR sai com o total já descontado.</summary>
+    public int DiscountInCents { get; set; }
+}
+
 /// <summary>Body do endpoint PUT /api/comanda/{id}/close.</summary>
 public class CloseComandaRequest
 {

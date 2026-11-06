@@ -168,16 +168,31 @@ public class PixReconciliationService : IPixReconciliationService
         // Guarda extra (o claim do PagoEm já impede execução concorrente): se a
         // comanda foi fechada por outro caminho (dinheiro no balcão) enquanto a
         // cobrança estava ativa, não reabre nem duplica pontos/notificações.
-        var status = await _db.Comandas
+        var info = await _db.Comandas
             .Where(c => c.Id == pix.ComandaId)
-            .Select(c => (ComandaStatus?)c.Status)
+            .Select(c => new { Status = (ComandaStatus?)c.Status, c.TotalInCents, c.PointsApplied, NomeCliente = (string?)c.User!.Name })
             .FirstOrDefaultAsync();
 
-        if (status is null or ComandaStatus.Fechada or ComandaStatus.Cancelada or ComandaStatus.Estornada) return null;
+        if (info?.Status is null or ComandaStatus.Fechada or ComandaStatus.Cancelada or ComandaStatus.Estornada) return null;
+
+        // Desconto autorizado no fechamento, gravado quando o QR foi gerado.
+        var desconto = pix.DescontoEmCentavos ?? 0;
+
+        // A comanda mudou depois do QR (item a mais, pontos tirados...): o Pix pago não cobre
+        // o que está em aberto. Não fecha — senão o item novo sairia de graça ou a diferença
+        // viraria um desconto que ninguém deu. A comanda fica aberta e o admin acerta o resto.
+        var emAberto = Math.Max(0, info.TotalInCents - info.PointsApplied);
+        if (emAberto != pix.ValorEmCentavos + desconto)
+        {
+            _logger.LogWarning("Pix {TxId} da comanda {ComandaId} pago, mas a comanda mudou depois do QR — fica aberta.",
+                pix.TxId, pix.ComandaId);
+            await AvisarAdminsPixDeComandaAlterada(pix, info.NomeCliente, emAberto - desconto - pix.ValorEmCentavos);
+            return null;
+        }
 
         try
         {
-            return await _comanda.CloseComandaAsync(pix.ComandaId.Value, fechadoPor, "Pix");
+            return await _comanda.CloseComandaAsync(pix.ComandaId.Value, fechadoPor, "Pix", discountInCents: desconto);
         }
         catch (InvalidOperationException)
         {
@@ -457,6 +472,24 @@ public class PixReconciliationService : IPixReconciliationService
                 .Where(p => p.Id == r.ProductId && p.StockQuantity >= r.Quantity)
                 .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity - r.Quantity));
         return baixado > 0;
+    }
+
+    /// <summary>Sininho pros admins: Pix da comanda caiu, mas a comanda mudou depois do QR e ficou aberta.
+    /// Gravado na mesma transação da baixa (o SaveChanges vem depois do switch).</summary>
+    private async Task AvisarAdminsPixDeComandaAlterada(PixCobranca pix, string? cliente, int faltaEmCentavos)
+    {
+        var br    = new System.Globalization.CultureInfo("pt-BR");
+        var quem  = string.IsNullOrWhiteSpace(cliente) ? "um cliente" : cliente;
+        var pago  = (pix.ValorEmCentavos / 100m).ToString("C", br);
+        var resto = faltaEmCentavos >= 0
+            ? $"falta {(faltaEmCentavos / 100m).ToString("C", br)}"
+            : $"o Pix passou {(-faltaEmCentavos / 100m).ToString("C", br)} do total";
+        var corpo = $"A comanda de {quem} recebeu {pago} no Pix, mas mudou depois do QR ({resto}). " +
+                    "Ela continua aberta: feche registrando o Pix já recebido e o restante.";
+
+        var admins = await _db.Users.Where(u => u.Role == UserRole.Admin && u.IsActive).Select(u => u.Id).ToListAsync();
+        foreach (var id in admins)
+            _db.Notifications.Add(new Notification { UserId = id, Title = "Pix de comanda: conferir o fechamento", Body = corpo, Link = "/admin/dashboard" });
     }
 
     /// <summary>Sininho pros admins: Pix caiu num pedido já cancelado (reativado ou reembolso pendente).</summary>

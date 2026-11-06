@@ -153,6 +153,8 @@ ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS unit_price_in_cents IN
 ALTER TABLE product_reservations ADD COLUMN IF NOT EXISTS venda_avulsa_id VARCHAR(80) NULL;
 -- Snapshot JSON dos itens cobrados numa cobrança Pix de reserva (baixa vinculada)
 ALTER TABLE pix_cobrancas ADD COLUMN IF NOT EXISTS reservation_item_ids TEXT NULL;
+-- QR Pix da comanda com desconto (v1.82.3): o desconto autorizado fica gravado na cobrança
+ALTER TABLE pix_cobrancas ADD COLUMN IF NOT EXISTS desconto_em_centavos INTEGER NULL;
 
 -- Registro de migrações únicas de dados (protege updates não-idempotentes)
 CREATE TABLE IF NOT EXISTS app_migrations (
