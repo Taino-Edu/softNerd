@@ -94,7 +94,12 @@ public sealed class ReservationPixService : IReservationPixService
             if (_funcionalidades is not null && await _funcionalidades.LigadaAsync(Funcionalidades.PixPedidoComDesconto))
             {
                 var (cobrar, desconto) = await DescontoPixPedido.CalcularAsync(_db, preVendas, cancellationToken);
-                if (desconto > 0 && cobrar > 0) { valorEmCentavos = cobrar; descontoPix = desconto; }
+                // Desconto de 100% (ou item barato arredondado a zero): não existe Pix de R$ 0 — e voltar
+                // pro preço cheio cobraria o que a loja disse que era de graça (Codex, #148).
+                if (desconto > 0 && cobrar <= 0)
+                    return ReservationPixResult.Fail(StatusCodes.Status400BadRequest,
+                        "Com o desconto do Pix este pedido sai sem custo — combine a retirada na loja.");
+                if (desconto > 0) { valorEmCentavos = cobrar; descontoPix = desconto; }
             }
 
             // Idempotência financeira: pedir PIX de novo devolve a cobrança aberta. Vencida não: no Inter ela segue "ATIVA" depois do prazo, mas o banco do cliente recusa

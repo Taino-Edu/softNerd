@@ -142,6 +142,22 @@ public class DescontoPixPedidoTests
     }
 
     [Fact]
+    public async Task ChaveLigada_DescontoDe100PorCento_NaoGeraPixNemCobraCheio()
+    {
+        var db = CreateDb();
+        var (grupo, cliente) = await SeedPedidoAsync(db);
+        foreach (var p in db.Products) p.PixDiscountPercent = 100m;
+        await db.SaveChangesAsync();
+        var inter = CreateInterMock();
+
+        var r = await new ReservationPixService(db, inter.Object, Chaves(db)).GerarAsync(grupo, cliente.Id);
+
+        r.Success.Should().BeFalse("Pix de R$ 0 não existe e o preço cheio cobraria o que era de graça");
+        inter.Verify(i => i.CriarCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<int>(),
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Vigia_NaoAcusaPixComODescontoGravado()
     {
         var db = CreateDb();

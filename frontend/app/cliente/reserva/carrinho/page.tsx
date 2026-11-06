@@ -288,7 +288,7 @@ export default function ReservationCartPage() {
             </h2>
             {!pix?.hasPix && !pix?.pixCopiaCola && (
               <p className="text-sm" style={{ color: C.text }}>
-                {pixPedidoCents != null
+                {pixPedidoCents != null && pixPedidoCents > 0
                   ? <>O Pix sai com <strong style={{ color: C.pix }}>{fmt(pixPedidoCents)}</strong>.</>
                   : juntou ? 'O Pix sai com o total do pedido, somado ao que você já tinha.' : null}
               </p>
