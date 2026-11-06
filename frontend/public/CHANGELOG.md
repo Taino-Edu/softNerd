@@ -5,6 +5,7 @@
 ### Balcão — desconto em R$ não aparecia (relato do Maikon)
 - **Corrigido:** no PDV, desconto dado em **R$** entrava na conta (o total já saía com ele), mas não aparecia no recibo impresso, no recibo da tela, no detalhe da venda nem no histórico — só desconto em % era mostrado, e parecia que o desconto não tinha funcionado. Agora mostra "Desconto −R$ 5,00" (ou "Desconto (10%)" quando é em %)
 - Conferido na API: comanda, balcão em R$ e balcão em % aplicam o desconto certo; o QR Pix da comanda com desconto já tinha sido corrigido na v1.82.3
+- **Comanda aberta mostrando "-1min":** o tempo desde a abertura era contado pelo relógio do computador da loja, que está atrasado em relação ao servidor. Agora conta pela hora do servidor (a mesma correção do alarme da liga) e nunca fica negativo
 
 ## [v1.82.3] — 2026-11-05
 
