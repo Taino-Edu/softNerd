@@ -31,7 +31,8 @@ export async function generateMetadata({ params }: Omit<Props, 'children'>): Pro
 
   const nome = p.name.trim()
   const preco = reais(precoAtual(p))
-  const disponibilidade = p.stockQuantity > 0 ? 'Em estoque' : p.isPreVenda ? 'Pré-venda' : 'Esgotado'
+  // Mesma regra da vitrine: sem estoque é esgotado (pré-venda inclusive); com estoque, pré-venda ou pronta entrega
+  const disponibilidade = p.stockQuantity <= 0 ? 'Esgotado' : p.isPreVenda ? 'Em pré-venda' : 'Em estoque'
   const descricao = resumo(p.description || p.fullDescription)
     ?? `${nome} por ${preco}. ${p.category}. ${disponibilidade} — retire na loja em José Bonifácio, SP, ou reserve pelo site.`
   const foto = fotoAbsoluta(p.imageUrl, { jpg: true })
@@ -73,8 +74,8 @@ export default async function LayoutDoProduto({ params, children }: Props) {
       url: `${SITE}/produtos/${p.id}`,
       priceCurrency: 'BRL',
       price: (precoAtual(p) / 100).toFixed(2),
-      availability: p.stockQuantity > 0 ? 'https://schema.org/InStock'
-        : p.isPreVenda ? 'https://schema.org/PreOrder' : 'https://schema.org/OutOfStock',
+      availability: p.stockQuantity <= 0 ? 'https://schema.org/OutOfStock'
+        : p.isPreVenda ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Organization', name: 'Santuário Nerd' },
       // Retirada na loja física (sem frete)
