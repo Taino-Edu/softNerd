@@ -286,7 +286,8 @@ public class EmailService : IEmailService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao enviar anúncio '{Titulo}' para {To}", titulo, email);
+                // Sem o destinatário (dado privado) e sem o título cru (texto de fora vira linha falsa no log)
+                _logger.LogError(ex, "Falha ao enviar um anúncio por e-mail");
             }
         }
 
@@ -446,7 +447,7 @@ public class EmailService : IEmailService
         catch (Exception ex)
         {
             // Falha de email não derruba o fluxo principal
-            _logger.LogError(ex, "Falha ao enviar email '{Subject}' para {To}", subject, toEmail);
+            _logger.LogError(ex, "Falha ao enviar email '{Subject}'", subject.Replace("\r", "").Replace("\n", ""));
         }
     }
 }

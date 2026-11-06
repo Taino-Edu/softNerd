@@ -6,6 +6,12 @@
 - **Corrigido:** ao fechar a comanda, dar desconto (ex.: 5%) e clicar em "Gerar QR Pix", o QR saía com o valor cheio. Agora o QR e o valor da cobrança já levam o desconto
 - Quando o Pix cai e a comanda fecha sozinha, ela fecha com o mesmo desconto (antes iria fechar sem ele, bagunçando o relatório)
 - Se a comanda mudar depois do QR (item a mais, pontos tirados), o Pix pago não fecha ela sozinho: a comanda fica aberta e o admin recebe um aviso no sininho com quanto falta, pra fechar registrando o Pix já recebido e o restante
+## [v1.82.2] — 2026-11-04
+
+### Segurança — teste de vazamento de dados
+- Testado no ambiente local com dois clientes de teste (A e B), tentando com o B ver ou mexer no que é do A, sem login e em rotas de admin. Seguro: decks, pedidos e Pix, cancelamento de pedido, notificações, anúncios e interessados do Mercado, comanda, crediário, perfil público, consulta de pedido LGPD, rotas de admin (403) e rotas de cliente sem login (401)
+- **Corrigido — lista de inscritos de campeonato:** qualquer cliente logado conseguia ver, de cada inscrito de qualquer campeonato, se pagou, quando, como e quanto (e se tinha cobrança em aberto). Agora só o admin e o operador com permissão de Campeonatos, que são os únicos que usam essa lista
+- **Corrigido — e-mail nos logs:** login (certo, errado e com erro), cadastro pelo site, pedido de nova senha e falha de envio de e-mail gravavam o e-mail no log do servidor. Agora o log grava só o código da conta (e nada, quando a pessoa ainda não é conhecida); o e-mail completo fica só na auditoria do banco, que é onde o admin consulta. O cadastro também deixou de gravar o nome. Fecha os alertas do CodeQL de "dado privado no log" e "log forjado com texto de fora" nessas linhas
 
 ## [v1.82.1] — 2026-11-04
 

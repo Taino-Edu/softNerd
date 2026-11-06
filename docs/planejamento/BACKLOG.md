@@ -35,7 +35,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 0. **Lentidão nas telas do painel** (Taino, 29/10) — medido: a API responde em 4–19 ms dentro da VPS e o banco em ~7 ms; nenhum pedido ≥ 2 s no log. O tempo é a rede: a VPS fica em **Boston** e cada chamada do Brasil custa 150–700 ms. Feito: Pix junto da lista de pedidos (v1.79.3). Próximos: mover a VPS pra São Paulo (maior ganho, todas as telas), juntar chamadas repetidas nas telas, miniaturas das fotos (148 fotos = 48 MB, 7 acima de 1 MB).
 
-1. **Segurança restante**: e-mail mascarado nos logs, alertas de log forging do CodeQL, cookies sem `Secure`.
+1. **Segurança restante**: ~~e-mail nos logs~~ (v1.82.2), alertas de log forging do CodeQL (os do login/cadastro/e-mail resolvidos na v1.82.2), cookies sem `Secure`.
 2. **Código mais limpo pra banca** (pedido do Taino, 27/10), um PR por etapa:
    - ✅ Limpeza das chaves (v1.75.0–v1.77.0).
    - Clean Architecture no back: ✅ pedidos (v1.78.0), ✅ campeonatos (v1.79.0), ✅ crediário (v1.80.0); faltam os controllers
@@ -55,6 +55,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 | Versão | Data | O quê |
 |---|---|---|
 | v1.82.3 | 05/11 | **QR Pix da comanda com desconto**: `POST /api/comanda/{id}/pix` aceita `discountInCents`; baixa do Pix fecha a comanda com o mesmo desconto (desconto gravado na cobrança, `pix_cobrancas.desconto_em_centavos`); comanda que mudou depois do QR fica aberta e avisa os admins |
+| v1.82.2 | 04/11 | **Teste de vazamentos**: inscritos de campeonato só admin (cliente via pagamento dos outros); e-mail fora do log do servidor (só código da conta; e-mail só na auditoria); demais rotas de cliente conferidas com 2 clientes (ok) |
 | v1.82.1 | 04/11 | **Menu único da loja** (`MenuLoja`): principal, Produtos, produto e Sacola com o mesmo menu e Libras no menu (sem a mão flutuante); compartilhar do produto na linha do caminho |
 | v1.82.0 | 04/11 | **Home**: topo num azul só (faixa+menu+fundo), arte fixa sem o mascote de IA (também fora dos menus), menu fixo de volta (`fixed`+`relative` deixava um vão de 64 px), VLibras no menu com `abrirVLibras()` (o seletor antigo não abria nada) |
 | v1.81.0 | 03/11 | **Alarme**: selo arrastável "Alarme sem som — clique pra ativar" (o Chrome bloqueia som até o 1º clique) / "Alarme pronto · tela acordada"; Screen Wake Lock com rodada correndo |

@@ -151,7 +151,9 @@ public class AuthController : ControllerBase
         {
             var response = await _authService.LoginAsync(request, DispositivoDoPedido());
             SetDispositivoCookie(response.Dispositivo);
-            _logger.LogInformation("Login bem-sucedido para {Email}", request.Email);
+            // E-mail não vai pro log do servidor (nem mascarado — CodeQL: dado privado e log forjado); fica
+            // só na auditoria do banco, que é onde o admin consulta
+            _logger.LogInformation("Login bem-sucedido da conta {UserId}", response.UserId);
             await _audit.LogAsync("LoginSucesso", "Auth", response.UserId.ToString(),
                 details: JsonSerializer.Serialize(new { email = request.Email, role = response.Role }),
                 httpContext: HttpContext);
@@ -160,7 +162,7 @@ public class AuthController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogWarning("Tentativa de login inválida para {Email}: {Msg}", request.Email, ex.Message);
+            _logger.LogWarning("Tentativa de login inválida: {Msg}", ex.Message);
             await _audit.LogAsync("LoginFalhou", "Auth", null,
                 details: JsonSerializer.Serialize(new { email = request.Email, motivo = ex.Message }),
                 httpContext: HttpContext);
@@ -175,7 +177,7 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro inesperado no login para {Email}", request.Email);
+            _logger.LogError(ex, "Erro inesperado no login");
             return StatusCode(500, new { Message = "Erro interno. Tente novamente." });
         }
     }
