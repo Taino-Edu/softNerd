@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.83.2 | 06/11 | **Vazamento: custo/margem do produto** — `GET /api/product`, `/{id}`, `/store` e `/barcode` devolviam a entidade (custo, margem, estoque mínimo) pra visitante/cliente. Agora `ProdutoPublicoDto` pra quem não é Admin/Operator; teste em `VazamentosTests` |
 | v1.83.0 | 06/11 | **Pix do pedido com o desconto da loja** (chave `pix-pedido-com-desconto`): `Services/Pedidos/DescontoPixPedido.cs` espelha `resolvePixPercent`/`calcPrecoVitrine`; `ReservationPixService` cobra com desconto e grava `pix_cobrancas.desconto_em_centavos`; venda do Pix com `DiscountInCents`; Vigia soma o desconto antes de comparar |
 | v1.82.5 | 06/11 | **PDV: desconto em R$ visível** — recibo (impresso e tela), detalhe e histórico usavam `discountPercent > 0`; desconto em R$ grava % = 0 e sumia. Agora `discountInReais > 0` |
 | v1.82.4 | 06/11 | **Fluxo do cliente no celular** (teste de ponta a ponta, 15 achados): `lib/rotulos.ts` (status/mesa/telefone), `AvatarCliente` (foto → Pokémon → inicial), `?tab=` genérico na Minha Conta, valor do Pix e erro fixo na reserva confirmada, pedidos com total e preço por item, inscrição com data/valor/vagas e volta pra `/cliente`, `GetUpcomingAsync` sem campeonato de dia passado, mascote fora do topo do cliente e do rodapé, "Entrar / Cadastrar" no menu, Libras à esquerda nas telas de entrada |
