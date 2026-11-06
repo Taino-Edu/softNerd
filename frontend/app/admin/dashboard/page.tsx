@@ -25,6 +25,7 @@ import {
 import clsx from 'clsx'
 import { rotuloCurtoPagamento } from '@/lib/pagamentos'
 import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
+import { agoraNoServidor } from '@/lib/relogioServidor'
 
 
 /** Data de hoje no fuso de Brasília como YYYY-MM-DD (nunca usa UTC). */
@@ -109,13 +110,19 @@ function MiniBarChart({ dias, open, onToggle, scheme }: { dias: FinanceiroDto['d
   )
 }
 
+// Minutos desde a abertura pela hora do SERVIDOR (lib/relogioServidor): com o relógio do PC da loja
+// atrasado, a comanda recém-aberta aparecia "-1min" (print do Taino, 06/11). Nunca negativo.
+function minutosAberta(openedAt: string) {
+  return Math.max(0, Math.floor((agoraNoServidor() - new Date(openedAt).getTime()) / 60000))
+}
+
 function elapsedLabel(openedAt: string) {
-  const mins = Math.floor((Date.now() - new Date(openedAt).getTime()) / 60000)
+  const mins = minutosAberta(openedAt)
   return mins < 60 ? `${mins}min` : `${Math.floor(mins / 60)}h${mins % 60}min`
 }
 
 function elapsedColor(openedAt: string) {
-  const mins = Math.floor((Date.now() - new Date(openedAt).getTime()) / 60000)
+  const mins = minutosAberta(openedAt)
   if (mins < 20) return 'text-accent-green'
   if (mins < 45) return 'text-amber-400'
   return 'text-red-400'

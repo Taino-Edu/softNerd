@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.82.5 | 06/11 | **PDV: desconto em R$ visível** — recibo (impresso e tela), detalhe e histórico usavam `discountPercent > 0`; desconto em R$ grava % = 0 e sumia. Agora `discountInReais > 0` |
 | v1.82.3 | 05/11 | **QR Pix da comanda com desconto**: `POST /api/comanda/{id}/pix` aceita `discountInCents`; baixa do Pix fecha a comanda com o mesmo desconto (desconto gravado na cobrança, `pix_cobrancas.desconto_em_centavos`); comanda que mudou depois do QR fica aberta e avisa os admins |
 | v1.82.2 | 04/11 | **Teste de vazamentos**: inscritos de campeonato só admin (cliente via pagamento dos outros); e-mail fora do log do servidor (só código da conta; e-mail só na auditoria); demais rotas de cliente conferidas com 2 clientes (ok) |
 | v1.82.1 | 04/11 | **Menu único da loja** (`MenuLoja`): principal, Produtos, produto e Sacola com o mesmo menu e Libras no menu (sem a mão flutuante); compartilhar do produto na linha do caminho |
