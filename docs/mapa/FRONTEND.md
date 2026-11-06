@@ -178,6 +178,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/relogioServidor.ts` | `acertarComIdaEVolta`, `acertarPeloServidor`, `agoraNoServidor` |
 | `lib/reportarErro.ts` | `reportarErro` |
 | `lib/rotulos.ts` | `rotuloStatusComanda`, `rotuloMesa`, `soDigitosTelefone`, `telefoneBR` |
+| `lib/servidor.ts` | `SITE`, `daApi`, `fotoAbsoluta`, `resumo`, `reais` |
 | `lib/sessionKeepAlive.ts` | `renovarSessao`, `iniciarKeepAlive` |
 | `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |
