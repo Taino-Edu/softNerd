@@ -94,7 +94,12 @@ export default function ReservationCartPage() {
       setGroupId(data.groupId)
       // Somou num pedido anterior sem pagar: o valor do Pix é o do pedido inteiro, que só o QR sabe
       setJuntou(!!data.juntou)
-      setPixPedidoCents(data.juntou ? null : (pixTotalCents ?? totalCents))
+      // O que o QR vai cobrar: o preço congelado dos itens separados (os de fila não entram no Pix).
+      // Não é a estimativa "no Pix" da sacola — a cobrança da reserva usa o preço congelado (Codex, #147).
+      const separados = data.items.filter(i => i.kind === 'pre_venda')
+      setPixPedidoCents(data.juntou || separados.length === 0 || separados.some(i => i.subtotalEmReais == null)
+        ? null
+        : Math.round(separados.reduce((s, i) => s + (i.subtotalEmReais ?? 0), 0) * 100))
       setTemFila(data.items.some(i => i.kind === 'fila'))
       clear()
       // Chave pedido-pix-junto: somou no pedido sem pagar que ele já tinha — um Pix só com o total
@@ -274,7 +279,7 @@ export default function ReservationCartPage() {
             {!pix?.hasPix && !pix?.pixCopiaCola && (
               <p className="text-sm" style={{ color: C.text }}>
                 {pixPedidoCents != null
-                  ? <>No Pix fica <strong style={{ color: C.pix }}>{fmt(pixPedidoCents)}</strong>.</>
+                  ? <>O Pix sai com <strong style={{ color: C.pix }}>{fmt(pixPedidoCents)}</strong>.</>
                   : juntou ? 'O Pix sai com o total do pedido, somado ao que você já tinha.' : null}
               </p>
             )}

@@ -26,8 +26,14 @@ export function rotuloMesa(mesa: string | null | undefined, semMesa = 'Sua coman
   return /^mesa\b/i.test(t) ? `Mesa ${t.replace(/^mesa\s*/i, '')}`.trim() : `Mesa ${t}`
 }
 
-/** Só os dígitos, no máximo 11 (DDD + celular). */
-export const soDigitosTelefone = (v: string) => v.replace(/\D/g, '').slice(0, 11)
+/**
+ * Só os dígitos, no máximo 11 (DDD + celular). Número colado com o código do Brasil
+ * ("+55 (17) 99112-2890") perde o 55 antes do corte — senão sumiam os 2 últimos dígitos (Codex, #147).
+ */
+export function soDigitosTelefone(v: string): string {
+  const d = v.replace(/\D/g, '')
+  return (d.length > 11 && d.startsWith('55') ? d.slice(2) : d).slice(0, 11)
+}
 
 /** "17999990611" → "(17) 99999-0611"; fixo "1733334444" → "(17) 3333-4444"; incompleto vai formando enquanto digita. */
 export function telefoneBR(v: string | null | undefined): string {
