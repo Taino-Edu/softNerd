@@ -87,8 +87,8 @@ export const comandaApi = {
     api.post<ComandaDto>(`/api/comanda/${id}/apply-points`, { points }),
   removePoints: (id: string) =>
     api.delete<ComandaDto>(`/api/comanda/${id}/apply-points`),
-  gerarPix: (id: string) =>
-    api.post<PixCobrancaDto>(`/api/comanda/${id}/pix`),
+  gerarPix: (id: string, discountInCents = 0) =>
+    api.post<PixCobrancaDto>(`/api/comanda/${id}/pix`, { discountInCents }),
   statusPix: (id: string, txid: string) =>
     api.get<{ txId: string; status: string; pagoEm: string | null; comanda: ComandaDto | null }>(`/api/comanda/${id}/pix/${txid}/status`),
   // Lado do cliente: cobrança ativa da própria comanda + verificação de pagamento

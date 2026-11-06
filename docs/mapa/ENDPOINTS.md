@@ -156,8 +156,8 @@
 | GET | `/api/comanda/history` | AdminOnly | `GetHistory` (111) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
 | GET | `/api/comanda/my` | logado | `GetMyComanda` (142) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
 | GET | `/api/comanda/my-history` | logado | `GetMyHistory` (131) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (414) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
-| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (427) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
+| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (422) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
+| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (435) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
 | GET | `/api/comanda/{id:guid}` | AdminOnly | `GetById` (122) | — | — |
 | DELETE | `/api/comanda/{id:guid}/apply-points` | logado | `RemovePoints` (307) | `comandaApi.removePoints` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
 | POST | `/api/comanda/{id:guid}/apply-points` | logado | `ApplyPoints` (285) | `comandaApi.applyPoints` | `app/cliente/page.tsx` |
@@ -169,7 +169,7 @@
 | DELETE | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `RemoveItem` (172) | `comandaApi.removeItem` | `app/admin/dashboard/page.tsx` |
 | PATCH | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `UpdateItem` (184) | `comandaApi.updateItem` | `app/admin/dashboard/page.tsx` |
 | POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (328) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (403) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (411) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
 
 ## ContasReceber
 

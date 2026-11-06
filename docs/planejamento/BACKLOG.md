@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.82.3 | 05/11 | **QR Pix da comanda com desconto**: `POST /api/comanda/{id}/pix` aceita `discountInCents`; baixa do Pix fecha a comanda com o mesmo desconto (desconto gravado na cobrança, `pix_cobrancas.desconto_em_centavos`); comanda que mudou depois do QR fica aberta e avisa os admins |
 | v1.82.2 | 04/11 | **Teste de vazamentos**: inscritos de campeonato só admin (cliente via pagamento dos outros); e-mail fora do log do servidor (só código da conta; e-mail só na auditoria); demais rotas de cliente conferidas com 2 clientes (ok) |
 | v1.82.1 | 04/11 | **Menu único da loja** (`MenuLoja`): principal, Produtos, produto e Sacola com o mesmo menu e Libras no menu (sem a mão flutuante); compartilhar do produto na linha do caminho |
 | v1.82.0 | 04/11 | **Home**: topo num azul só (faixa+menu+fundo), arte fixa sem o mascote de IA (também fora dos menus), menu fixo de volta (`fixed`+`relative` deixava um vão de 64 px), VLibras no menu com `abrirVLibras()` (o seletor antigo não abria nada) |
