@@ -55,6 +55,37 @@ public sealed class FotosLevesTests : IDisposable
         new FileInfo(mini).Length.Should().BeLessThan(new FileInfo(Path.Combine(_uploads, "produto.png")).Length);
     }
 
+    [Fact]
+    public async Task PraPreviaDeLink_SaiJpegComFundoBranco_NaoPreto()
+    {
+        // PNG recortado: metade transparente, metade vermelha
+        using (var bmp = new SKBitmap(new SKImageInfo(800, 400, SKColorType.Rgba8888, SKAlphaType.Premul)))
+        {
+            using (var tela = new SKCanvas(bmp))
+            {
+                tela.Clear(SKColors.Transparent);
+                using var tinta = new SKPaint { Color = SKColors.Red };
+                tela.DrawRect(400, 0, 400, 400, tinta);
+            }
+            using var img = SKImage.FromBitmap(bmp);
+            using var dados = img.Encode(SKEncodedImageFormat.Png, 100);
+            using var f = File.Create(Path.Combine(_uploads, "recortado.png"));
+            dados.SaveTo(f);
+        }
+
+        var mini = await _fotos.MiniaturaAsync("/uploads/recortado.png", 640, jpeg: true);
+
+        mini.Should().NotBeNull().And.EndWith(".w640.jpg");
+        using var codec = SKCodec.Create(mini!);
+        codec.EncodedFormat.Should().Be(SKEncodedImageFormat.Jpeg);
+        using var lida = SKBitmap.Decode(mini!);
+        var transparenteVirou = lida.GetPixel(50, 200);
+        transparenteVirou.Red.Should().BeGreaterThan(240, "a parte transparente vira branco, não preto");
+        transparenteVirou.Green.Should().BeGreaterThan(240);
+        lida.GetPixel(600, 200).Red.Should().BeGreaterThan(200);
+        (await _fotos.MiniaturaAsync("/uploads/recortado.png", 640)).Should().EndWith(".w640.webp", "o WebP do site continua separado");
+    }
+
     [Theory]
     [InlineData(1, 160)]
     [InlineData(300, 320)]

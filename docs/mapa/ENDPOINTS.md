@@ -344,15 +344,15 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/product` | público | `GetAll` (42) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
-| POST | `/api/product` | AdminOnly | `Create` (105) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx` |
+| GET | `/api/product` | público | `GetAll` (42) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`app/sitemap.ts` |
+| POST | `/api/product` | AdminOnly | `Create` (105) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts` |
 | GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (64) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
 | GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (86) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
 | GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (95) | — | — |
 | GET | `/api/product/store` | logado | `GetAllStore` (54) | `productApi.listStore` | `app/cliente/page.tsx` |
-| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (133) | `productApi.deactivate` | `app/admin/estoque/page.tsx` |
-| GET | `/api/product/{id:guid}` | público | `GetById` (75) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/page.tsx` |
-| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (122) | `productApi.update` | `app/admin/estoque/page.tsx` |
+| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (133) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
+| GET | `/api/product/{id:guid}` | público | `GetById` (75) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
+| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (122) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
 | PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (145) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
 ## ProductVariant
@@ -425,8 +425,8 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/site-config` | público | `Get` (27) | `siteConfigApi.get` | `app/admin/estoque/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/liga/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`lib/useSiteConfig.ts` |
-| PUT | `/api/site-config` | AdminOnly | `Save` (35) | `siteConfigApi.save` | `app/admin/site/page.tsx` |
+| GET | `/api/site-config` | público | `Get` (27) | `siteConfigApi.get` | `app/admin/estoque/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/layout.tsx`<br>`app/liga/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`lib/useSiteConfig.ts` |
+| PUT | `/api/site-config` | AdminOnly | `Save` (35) | `siteConfigApi.save` | `app/admin/site/page.tsx`<br>`app/layout.tsx` |
 
 ## Tcg
 

@@ -6,6 +6,7 @@ import CookieBanner from '@/components/CookieBanner'
 import Footer from '@/components/Footer'
 import VLibrasController from '@/components/VLibrasController'
 import ClientProviders from '@/components/ClientProviders'
+import { daApi, SITE } from '@/lib/servidor'
 
 // Nunito do pacote @fontsource (npm), não do Google na hora do build: o download do Google
 // falhava de vez em quando e derrubava o build do CI e do deploy (v1.64.0). Mesmos arquivos.
@@ -29,9 +30,27 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+// O que aparece no Google e na prévia do link (WhatsApp, Instagram). Antes a descrição era
+// "Sistema de gestão da loja de Card Games" em TODAS as páginas (revisão de SEO, 06/11).
+const DESCRICAO = 'Loja de card games em José Bonifácio, SP: Pokémon TCG, One Piece, Magic, action figures, acessórios e pré-vendas. ' +
+  'Torneios toda semana, Liga Mensal e pontos a cada compra. Reserve pelo site e retire na loja.'
+
 export const metadata: Metadata = {
-  title: { default: 'Santuário Nerd', template: '%s — Santuário Nerd' },
-  description: 'Sistema de gestão da loja de Card Games',
+  metadataBase: new URL(SITE),
+  title: { default: 'Santuário Nerd — Card games, TCG e colecionáveis em José Bonifácio', template: '%s — Santuário Nerd' },
+  description: DESCRICAO,
+  applicationName: 'Santuário Nerd',
+  keywords: ['card games', 'TCG', 'Pokémon TCG', 'One Piece card game', 'Magic', 'booster', 'action figure', 'loja nerd', 'José Bonifácio', 'torneio Pokémon'],
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'Santuário Nerd',
+    url: SITE,
+    title: 'Santuário Nerd — Card games, TCG e colecionáveis',
+    description: DESCRICAO,
+    images: [{ url: '/og-santuario.jpg', width: 1200, height: 630, alt: 'Santuário Nerd — card games, TCG e colecionáveis' }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/og-santuario.jpg'] },
   manifest: '/manifest.json',
   // Ícones no tamanho certo (o logo-maikon.png original tinha 428 KB e era baixado em toda página)
   icons: {
@@ -47,6 +66,24 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Santuário Nerd',
   },
+}
+
+/** A loja física pro Google (pesquisa local e Maps): nome, cidade, contato. Dados do Personalizar Site. */
+async function DadosDaLoja() {
+  const cfg = await daApi<{ siteName?: string; addressLine?: string; whatsappNumber?: string }>('/api/site-config', 3600)
+  const [cidade, uf] = (cfg?.addressLine ?? 'José Bonifácio — SP').split(/[—-]/).map(s => s.trim())
+  const dados = {
+    '@context': 'https://schema.org',
+    '@type': 'Store',
+    name: cfg?.siteName || 'Santuário Nerd',
+    url: SITE,
+    image: `${SITE}/og-santuario.jpg`,
+    description: DESCRICAO,
+    address: { '@type': 'PostalAddress', addressLocality: cidade || 'José Bonifácio', addressRegion: uf || 'SP', addressCountry: 'BR' },
+    ...(cfg?.whatsappNumber ? { telephone: `+${cfg.whatsappNumber.replace(/\D/g, '')}` } : {}),
+  }
+  // JSON gerado aqui; "<" vira < pra nenhum texto fechar a tag
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(dados).replace(/</g, '\\u003c') }} />
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -66,6 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <DadosDaLoja />
         <ClientProviders>
         {/* Carrega e controla o widget somente depois de conhecer as preferências do usuário. */}
         <VLibrasController />

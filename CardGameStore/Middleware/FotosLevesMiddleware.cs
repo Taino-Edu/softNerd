@@ -3,7 +3,8 @@ using CardGameStore.Services.Implementations;
 namespace CardGameStore.Middleware;
 
 /// <summary>
-/// "/uploads/foto.png?w=480" devolve a miniatura WebP da foto (Services/Implementations/FotosLeves.cs).
+/// "/uploads/foto.png?w=480" devolve a miniatura WebP da foto (Services/Implementations/FotosLeves.cs);
+/// com "&f=jpg", JPEG de fundo branco (prévia de link no WhatsApp/Instagram e Google).
 /// Sem "?w", ou com a foto que não dá pra reduzir, segue pro UseStaticFiles e sai a original.
 /// </summary>
 public class FotosLevesMiddleware
@@ -19,10 +20,11 @@ public class FotosLevesMiddleware
             && req.Path.StartsWithSegments("/uploads")
             && int.TryParse(req.Query["w"], out var largura) && largura > 0)
         {
-            var miniatura = await fotos.MiniaturaAsync(req.Path.Value!, largura, context.RequestAborted);
+            var jpeg = string.Equals(req.Query["f"], "jpg", StringComparison.OrdinalIgnoreCase);
+            var miniatura = await fotos.MiniaturaAsync(req.Path.Value!, largura, context.RequestAborted, jpeg);
             if (miniatura is not null)
             {
-                context.Response.ContentType = "image/webp";
+                context.Response.ContentType = jpeg ? "image/jpeg" : "image/webp";
                 // 1 h no navegador / 1 dia na Cloudflare: foto trocada no mesmo nome aparece logo
                 context.Response.Headers.CacheControl = "public, max-age=3600, s-maxage=86400";
                 context.Response.Headers["X-Foto-Leve"] = FotosLeves.LarguraServida(largura).ToString();

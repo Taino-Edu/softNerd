@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.84.0] — 2026-11-06
+
+### Site no Google e na prévia do WhatsApp/Instagram
+- Cada produto agora sai com título (nome e preço), descrição e foto próprios no HTML: o link mandado no WhatsApp mostra foto, nome e preço (antes: "Sistema de gestão da loja de Card Games" em todas as páginas)
+- Dados de produto no padrão do Google (preço, estoque, foto, retirada na loja) e da loja física em José Bonifácio
+- `sitemap.xml` com todos os produtos da vitrine e `robots.txt` apontando pra ele (painel e área do cliente fora da pesquisa)
+- Imagem de prévia da loja (marca no azul do topo) e descrição nova da principal e de Produtos
+- Fotos da prévia em JPEG leve com fundo branco (`?w=960&f=jpg`), que o WhatsApp aceita
+
 ## [v1.83.2] — 2026-11-06
 
 ### Segurança — custo e margem dos produtos fechados
