@@ -344,16 +344,16 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/product` | público | `GetAll` (34) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
-| POST | `/api/product` | AdminOnly | `Create` (97) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx` |
-| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (56) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
-| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (78) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
-| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (87) | — | — |
-| GET | `/api/product/store` | logado | `GetAllStore` (46) | `productApi.listStore` | `app/cliente/page.tsx` |
-| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (125) | `productApi.deactivate` | `app/admin/estoque/page.tsx` |
-| GET | `/api/product/{id:guid}` | público | `GetById` (67) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/page.tsx` |
-| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (114) | `productApi.update` | `app/admin/estoque/page.tsx` |
-| PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (137) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
+| GET | `/api/product` | público | `GetAll` (42) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
+| POST | `/api/product` | AdminOnly | `Create` (105) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx` |
+| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (64) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
+| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (86) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
+| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (95) | — | — |
+| GET | `/api/product/store` | logado | `GetAllStore` (54) | `productApi.listStore` | `app/cliente/page.tsx` |
+| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (133) | `productApi.deactivate` | `app/admin/estoque/page.tsx` |
+| GET | `/api/product/{id:guid}` | público | `GetById` (75) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/page.tsx` |
+| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (122) | `productApi.update` | `app/admin/estoque/page.tsx` |
+| PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (145) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
 ## ProductVariant
 
