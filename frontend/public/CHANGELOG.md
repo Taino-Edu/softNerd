@@ -9,6 +9,12 @@
 - Imagem de prévia da loja (marca no azul do topo) e descrição nova da principal e de Produtos
 - Fotos da prévia em JPEG leve com fundo branco (`?w=960&f=jpg`), que o WhatsApp aceita
 
+## [v1.83.2] — 2026-11-06
+
+### Segurança — custo e margem dos produtos fechados
+- **Corrigido:** a vitrine pública (lista e página de produto) mandava junto o **preço de custo**, a **margem** e o estoque mínimo de cada produto — 97 de 105 produtos com custo preenchido, visíveis pra qualquer pessoa que abrisse o endereço da API. Agora visitante e cliente recebem só o que a loja mostra (preço, foto, estoque, promoção, "últimas unidades"); admin e operador continuam vendo o custo no PDV e no estoque
+- Achado na revisão de como o site aparece no Google
+
 ## [v1.83.1] — 2026-11-06
 
 ### Manutenção — pacotes do .NET 10 em dia

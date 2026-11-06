@@ -8,6 +8,7 @@
 // PATCH  /api/product/{id}/stock → ajusta estoque (Admin)
 // =============================================================================
 
+using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +28,13 @@ public class ProductController : ControllerBase
         _service = service;
     }
 
+    // Custo e margem só pra admin/operador (PDV e estoque usam). Cliente e visitante recebem o
+    // ProdutoPublicoDto — antes o custo de cada produto saía aberto no site (06/11).
+    private bool VeCusto => User.IsInRole("Admin") || User.IsInRole("Operator");
+    private object ParaQuemPede(Product p) => VeCusto ? p : ProdutoPublicoDto.De(p);
+    private object ParaQuemPede(IEnumerable<Product> lista) =>
+        VeCusto ? lista : lista.Select(ProdutoPublicoDto.De).ToList();
+
     /// <summary>Lista todos os produtos ativos. Acessível por todos.</summary>
     [HttpGet]
     [AllowAnonymous]
@@ -36,7 +44,7 @@ public class ProductController : ControllerBase
         var products = category != null
             ? await _service.GetByCategoryAsync(category)
             : await _service.GetAllActiveAsync();
-        return Ok(products);
+        return Ok(ParaQuemPede(products));
     }
 
     /// <summary>Lista todos os produtos ativos para comanda do cliente (sem filtro de marketplace).</summary>
@@ -46,7 +54,7 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> GetAllStore()
     {
         var products = await _service.GetAllForAdminAsync();
-        return Ok(products);
+        return Ok(ParaQuemPede(products));
     }
 
     /// <summary>Lista TODOS os produtos ativos (incluindo ocultos do site). Só Admin/Operator.</summary>
@@ -67,7 +75,7 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var product = await _service.GetByIdAsync(id);
-        return product == null ? NotFound() : Ok(product);
+        return product == null ? NotFound() : Ok(ParaQuemPede(product));
     }
 
     /// <summary>Busca produto por código de barras. Acessível por todos autenticados.</summary>
@@ -78,7 +86,7 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> GetByBarcode(string code)
     {
         var product = await _service.GetByBarcodeAsync(code);
-        return product == null ? NotFound(new { Message = "Produto não encontrado para este código de barras." }) : Ok(product);
+        return product == null ? NotFound(new { Message = "Produto não encontrado para este código de barras." }) : Ok(ParaQuemPede(product));
     }
 
     /// <summary>Produtos com estoque abaixo do mínimo. Apenas Admin.</summary>

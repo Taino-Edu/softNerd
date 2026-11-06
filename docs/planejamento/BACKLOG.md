@@ -55,6 +55,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 | Versão | Data | O quê |
 |---|---|---|
 | v1.84.0 | 06/11 | **SEO e prévia de link (fase 1)**: produto com título/preço/foto no HTML (`app/produtos/[id]/layout.tsx`, dados `schema.org/Product`), `/sitemap.xml`, `/robots.txt`, dados da loja (`Store`) e imagem padrão `og-santuario.jpg`; foto em JPEG com fundo branco pra prévia (`/uploads/x?w=N&f=jpg`). Próximo: fase 2 (home que vende, atrás de chave) |
+| v1.83.2 | 06/11 | **Vazamento: custo/margem do produto** — `GET /api/product`, `/{id}`, `/store` e `/barcode` devolviam a entidade (custo, margem, estoque mínimo) pra visitante/cliente. Agora `ProdutoPublicoDto` pra quem não é Admin/Operator; teste em `VazamentosTests` |
 | v1.83.1 | 06/11 | **Pacotes**: Microsoft 10.0.14 (EF Core, JwtBearer, SignalR.Client, testes), Google.Apis.Auth 1.78, QRCoder 1.8.1, WebPush 1.0.13, SharpCompress 0.50.8. Fora de propósito: FluentAssertions 8 (licença paga), SkiaSharp 4 e MongoDB.Driver 3 (troca grande) |
 | v1.83.0 | 06/11 | **Pix do pedido com o desconto da loja** (chave `pix-pedido-com-desconto`): `Services/Pedidos/DescontoPixPedido.cs` espelha `resolvePixPercent`/`calcPrecoVitrine`; `ReservationPixService` cobra com desconto e grava `pix_cobrancas.desconto_em_centavos`; venda do Pix com `DiscountInCents`; Vigia soma o desconto antes de comparar |
 | v1.82.5 | 06/11 | **PDV: desconto em R$ visível** — recibo (impresso e tela), detalhe e histórico usavam `discountPercent > 0`; desconto em R$ grava % = 0 e sumia. Agora `discountInReais > 0` |
