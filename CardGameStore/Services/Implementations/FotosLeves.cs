@@ -23,6 +23,7 @@ public sealed class FotosLeves
     private const long MaxPixels = 40_000_000;
 
     private const int QualidadeWebp = 80;
+    private const int QualidadeJpeg = 82;
 
     private static readonly HashSet<string> Extensoes = new(StringComparer.OrdinalIgnoreCase)
         { ".png", ".jpg", ".jpeg", ".webp" };
@@ -59,21 +60,25 @@ public sealed class FotosLeves
     /// Com null, quem chama serve a foto original — nunca quebra a imagem.
     /// </summary>
     /// <param name="caminhoUrl">O caminho da URL, ex.: "/uploads/abc.png".</param>
-    public async Task<string?> MiniaturaAsync(string caminhoUrl, int larguraPedida, CancellationToken ct = default)
+    /// <param name="jpeg">
+    /// JPEG com fundo branco em vez de WebP: pra prévia de link (WhatsApp, Instagram) e Google, que
+    /// nem sempre aceitam WebP e cortam imagem pesada. Transparência vira branco, não preto.
+    /// </param>
+    public async Task<string?> MiniaturaAsync(string caminhoUrl, int larguraPedida, CancellationToken ct = default, bool jpeg = false)
     {
         var original = ArquivoOriginal(caminhoUrl);
         if (original is null) return null;
 
         var largura = LarguraServida(larguraPedida);
         var relativo = Path.GetRelativePath(_uploads, original);
-        var destino = Path.Combine(_cache, $"{relativo}.w{largura}.webp");
+        var destino = Path.Combine(_cache, $"{relativo}.w{largura}.{(jpeg ? "jpg" : "webp")}");
         if (Pronta(destino, original)) return destino;
 
         await UmaPorVez.WaitAsync(ct);
         try
         {
             if (Pronta(destino, original)) return destino; // outro pedido fez enquanto esperava
-            return Gerar(original, destino, largura) ? destino : null;
+            return Gerar(original, destino, largura, jpeg) ? destino : null;
         }
         finally
         {
@@ -100,7 +105,7 @@ public sealed class FotosLeves
     private static bool Pronta(string destino, string original) =>
         File.Exists(destino) && File.GetLastWriteTimeUtc(destino) >= File.GetLastWriteTimeUtc(original);
 
-    private bool Gerar(string original, string destino, int largura)
+    private bool Gerar(string original, string destino, int largura, bool jpeg = false)
     {
         try
         {
@@ -124,8 +129,11 @@ public sealed class FotosLeves
             }
 
             using (reduzida)
-            using (var imagem = SKImage.FromBitmap(reduzida ?? foto))
-            using (var dados = imagem.Encode(SKEncodedImageFormat.Webp, QualidadeWebp))
+            using (var fundoBranco = jpeg ? NoBranco(reduzida ?? foto) : null)
+            using (var imagem = SKImage.FromBitmap(fundoBranco ?? reduzida ?? foto))
+            using (var dados = jpeg
+                ? imagem.Encode(SKEncodedImageFormat.Jpeg, QualidadeJpeg)
+                : imagem.Encode(SKEncodedImageFormat.Webp, QualidadeWebp))
             {
                 if (dados is null) return false;
                 Directory.CreateDirectory(Path.GetDirectoryName(destino)!);
@@ -142,6 +150,16 @@ public sealed class FotosLeves
             _logger.LogWarning(ex, "Não deu pra reduzir a foto {Foto}; vai a original.", original);
             return false;
         }
+    }
+
+    /// <summary>JPEG não tem transparência: sem pintar o fundo, o PNG recortado sairia com fundo preto.</summary>
+    private static SKBitmap NoBranco(SKBitmap foto)
+    {
+        var opaca = new SKBitmap(new SKImageInfo(foto.Width, foto.Height, SKColorType.Rgba8888, SKAlphaType.Opaque));
+        using var tela = new SKCanvas(opaca);
+        tela.Clear(SKColors.White);
+        tela.DrawBitmap(foto, 0, 0);
+        return opaca;
     }
 
     /// <summary>
