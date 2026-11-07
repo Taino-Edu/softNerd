@@ -53,7 +53,16 @@ Login, sessão após fechar o app, entrar com código (e código inválido), che
 resultado com confirmação, resultado divergente (aviso para chamar o organizador) e corrigido, folga (bye),
 classificação ao vivo, erro de rede com "Tentar de novo", sair da conta.
 
+## Identidade visual
+
+Mesma do site: azul da loja em degradê, amarelo de destaque, fundo azul-claro e a fonte **Nunito** (embarcada em
+`assets/fonts`, licença OFL em `assets/fonts/OFL-Nunito.txt`). A logo da nuvem vem de `assets/images`. A foto do jogador é o
+**Pokémon preferido** dele (sprites do Pokémon Showdown, igual ao site); sem Pokémon ou sem internet vira a inicial.
+Componentes de marca em `lib/widgets/marca.dart` (cabeçalho em degradê, cartão, botão amarelo, pílula, avatar, título de seção).
+O toque tem vibração leve (confirmar, check-in, resultado). Ícone e tela de abertura em azul da marca
+(`dart run flutter_launcher_icons` regenera o ícone a partir de `assets/images/icone.png`).
+
 ## Ainda não tem
 
-Tempo real por SignalR (hoje atualiza por consulta a cada 8 s), notificação, identidade visual própria (mascote,
-fonte), cache offline além do que já está na memória, versão iOS.
+Tempo real por SignalR (hoje atualiza por consulta a cada 8 s), notificação, cache offline além do que já está na
+memória, tema escuro, versão iOS (o código Dart é o mesmo; falta Mac/conta Apple para compilar e distribuir).

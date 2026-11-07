@@ -14,7 +14,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **App Android da Liga (Flutter)** — PIM IV, entrega em 14/11 | — | `mobile/`: login, meus torneios, mesa, ranking da Liga. Testado em aparelho real. Falta: identidade visual, SignalR, notificação, página de download do APK |
+| **App Android da Liga (Flutter)** — PIM IV, entrega em 14/11 | — | `mobile/`: login, meus torneios, mesa, ranking da Liga. Testado em aparelho real; identidade visual da loja aplicada (fonte, cores, logo, Pokémon como foto). Falta: SignalR, notificação, iPhone (Flutter Web/iOS), página de download do APK |
 | Ajustes visuais da home (cores, linhas, responsividade) | v1.66.0 | Esperando o print do Maikon pra comparar com o que ele pediu |
 
 ## ⏳ Esperando alguém
