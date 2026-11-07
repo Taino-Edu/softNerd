@@ -11,15 +11,19 @@ List<Map<String, dynamic>> _lista(dynamic v) =>
     v is List ? v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : [];
 
 class Usuario {
-  Usuario({required this.id, required this.nome, required this.papel});
+  Usuario({required this.id, required this.nome, required this.papel, this.pokemon, this.shiny = false});
   final String id;
   final String nome;
   final String papel;
+  final String? pokemon;
+  final bool shiny;
 
   factory Usuario.json(Map<String, dynamic> j) => Usuario(
         id: _s(j['id'] ?? j['userId']),
         nome: _s(j['name'] ?? j['userName'], 'Jogador'),
         papel: _s(j['role'], 'Customer'),
+        pokemon: _sn(j['pokemonFavorito']),
+        shiny: _b(j['pokemonFavoritoShiny']),
       );
 }
 
@@ -45,12 +49,13 @@ class TorneioResumo {
 }
 
 class JogadorMesa {
-  JogadorMesa({required this.participanteId, required this.userId, required this.nome, this.deck, this.pokemon});
+  JogadorMesa({required this.participanteId, required this.userId, required this.nome, this.deck, this.pokemon, this.shiny = false});
   final String participanteId;
   final String userId;
   final String nome;
   final String? deck;
   final String? pokemon;
+  final bool shiny;
 
   factory JogadorMesa.json(Map<String, dynamic> j) => JogadorMesa(
         participanteId: _s(j['participanteId']),
@@ -58,6 +63,7 @@ class JogadorMesa {
         nome: _s(j['nome'], 'Jogador'),
         deck: _sn(j['deck']),
         pokemon: _sn(j['pokemon']),
+        shiny: _b(j['shiny']),
       );
 }
 
@@ -90,7 +96,9 @@ class Mesa {
 }
 
 class LinhaTabela {
-  LinhaTabela({required this.posicao, required this.userId, required this.nome, this.deck, required this.pontos, required this.vitorias, required this.empates, required this.derrotas, this.desistiuNaRodada});
+  LinhaTabela({required this.posicao, required this.userId, required this.nome, this.deck, required this.pontos, required this.vitorias, required this.empates, required this.derrotas, this.desistiuNaRodada, this.pokemon, this.shiny = false});
+  final String? pokemon;
+  final bool shiny;
   final int posicao;
   final String userId;
   final String nome;
@@ -111,6 +119,8 @@ class LinhaTabela {
         empates: _i(j['empates']),
         derrotas: _i(j['derrotas']),
         desistiuNaRodada: _in(j['desistiuNaRodada']),
+        pokemon: _sn(j['pokemon']),
+        shiny: _b(j['shiny']),
       );
 }
 
@@ -229,7 +239,8 @@ class MinhaMesa {
 }
 
 class RankingLinha {
-  RankingLinha({required this.userId, required this.nome, required this.pontos, required this.eventos, required this.melhorColocacao, required this.decks, this.pokemon});
+  RankingLinha({required this.userId, required this.nome, required this.pontos, required this.eventos, required this.melhorColocacao, required this.decks, this.pokemon, this.shiny = false});
+  final bool shiny;
   final String userId;
   final String nome;
   final int pontos;
@@ -246,6 +257,7 @@ class RankingLinha {
         melhorColocacao: _i(j['bestPlacement']),
         decks: (j['decks'] is List) ? (j['decks'] as List).whereType<String>().toList() : [],
         pokemon: _sn(j['pokemon']),
+        shiny: _b(j['shiny']),
       );
 }
 
