@@ -1839,7 +1839,7 @@ export default function DashboardPage() {
             {connected ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
             {connected ? 'Conectado' : 'Desconectado'}
           </div>
-          <button onClick={() => setOpenModal(true)} className="btn-primary text-sm py-1.5">
+          <button onClick={() => setOpenModal(true)} aria-label="Abrir comanda" title="Abrir comanda" className="btn-primary text-sm py-1.5">
             <FolderOpen className="w-4 h-4" /> <span className="hidden sm:inline">Abrir Comanda</span>
           </button>
           <button onClick={fetchComandas} className="btn-secondary text-sm py-1.5">

@@ -14,6 +14,10 @@
 - **Corrigido:** os atalhos de teclado do painel (D, P, E, U, C, F, R, A) trocavam de tela com um modal aberto e sem foco num campo — digitar o nome de um produto sem clicar na busca tirava o caixa da venda. Com modal aberto eles ficam quietos
 - **Celular:** o botão de confirmar de "Fechar comanda" agora fica fixo no rodapé (antes ficava abaixo da dobra e era preciso rolar); na Nova Venda, produtos e carrinho se empilham (antes ficavam em duas colunas espremidas, com o nome do produto quebrando em três linhas)
 - O aviso "Venda em andamento recuperada" usa a cor de alerta do tema (legível no claro e no escuro)
+- **Corrigido (celular):** na área do cliente o botão flutuante de Libras cobria a seta que abre os itens da comanda e, aberta, o preço do item; agora sobe acima da barra e a lista reserva margem à direita
+- **Corrigido:** o "Complete seu cadastro" e a criação de usuário pelo admin não diziam ao navegador que era conta nova, e ele preenchia e-mail e senha com o login salvo da equipe (no aparelho da loja, o cliente novo via as credenciais do admin; e o admin podia criar usuário com a própria senha sem perceber). Os campos agora têm `autoComplete` de conta nova
+- O WhatsApp da tela da mesa ganhou a máscara `(17) 99999-0000` (usa o mesmo formatador do resto do site e trata número colado com +55)
+- "Abrir comanda" do painel, que no celular é só um ícone, ganhou nome acessível
 
 ## [v1.84.1] — 2026-11-07
 
