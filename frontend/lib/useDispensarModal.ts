@@ -15,6 +15,15 @@ import { MouseEvent, useCallback, useEffect, useRef } from 'react'
 
 const pilha: symbol[] = []
 
+/**
+ * Tem modal aberto? Os que usam este hook entram na pilha; os demais (feitos à mão, um
+ * `fixed inset-0` com fundo escuro) a gente reconhece pelo fundo. Usado pelos atalhos de
+ * teclado de navegação: digitar com um modal aberto e sem foco num campo trocava de tela.
+ */
+export function haModalAberto(): boolean {
+  return pilha.length > 0 || !!document.querySelector('div.fixed.inset-0[class*="bg-black"]')
+}
+
 export function useDispensarModal(dispensar: () => void) {
   const id = useRef(Symbol('modal')).current
   const dispensarRef = useRef(dispensar)

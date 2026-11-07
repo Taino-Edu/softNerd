@@ -535,7 +535,8 @@ function CloseComandaModal({
     // Esc e clique fora fecham: pagamento, desconto e divisão ficam no rascunho desta
     // comanda (antes sumiam no meio do fechamento, por isso o clique fora não fechava).
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" {...fundo}>
-      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
+       <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
         <div>
           <h3 className="font-semibold text-white text-lg">Fechar comanda</h3>
           <p className="text-gray-400 text-sm mt-1">
@@ -761,8 +762,12 @@ function CloseComandaModal({
           </p>
         )}
 
+       </div>
+
+       {/* Rodapé fixo: os botões de confirmar não ficam escondidos abaixo da dobra no celular */}
+       <div className="shrink-0 border-t border-surface-500 p-4">
         {method === 'Pix' && !splitEnabled ? (
-          <div className="space-y-2 pt-1">
+          <div className="space-y-2">
             <button
               onClick={() => onGerarPix(descontoCents)}
               className="btn-success w-full justify-center"
@@ -781,7 +786,7 @@ function CloseComandaModal({
             </div>
           </div>
         ) : (
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3">
             <button onClick={onCancel} className="btn-secondary justify-center shrink-0">Voltar</button>
             <button
               onClick={handleConfirm}
@@ -792,6 +797,7 @@ function CloseComandaModal({
             </button>
           </div>
         )}
+       </div>
       </div>
     </div>
   )

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Keyboard } from 'lucide-react'
+import { haModalAberto } from '@/lib/useDispensarModal'
 
 interface Shortcut {
   key: string
@@ -67,8 +68,9 @@ export default function KeyboardShortcutsOverlay() {
       return
     }
 
-    // Atalhos de navegação — apenas fora de campos de texto
-    if (isTyping || e.ctrlKey || e.metaKey || e.altKey) return
+    // Atalhos de navegação — apenas fora de campos de texto e sem modal aberto (digitar o
+    // nome de um produto sem foco na busca tirava o caixa da venda no meio)
+    if (isTyping || e.ctrlKey || e.metaKey || e.altKey || haModalAberto()) return
 
     const dest = NAV_MAP[e.key.toLowerCase()]
     if (dest) {
