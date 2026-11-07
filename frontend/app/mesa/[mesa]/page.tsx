@@ -6,6 +6,7 @@ import { authApi, comandaApi } from '@/lib/api'
 import { saveAuth, isLoggedIn, getRole, getUserName, clearAuth } from '@/lib/auth'
 import toast, { Toaster } from 'react-hot-toast'
 import GoogleLoginButton from '@/components/GoogleLoginButton'
+import { telefoneBR, soDigitosTelefone } from '@/lib/rotulos'
 import {
   User, Hash, MessageCircle, Loader2,
   X, Shield, ChevronRight, ArrowLeft, Receipt, Lock
@@ -133,12 +134,6 @@ export default function MesaPage() {
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-  }
-
-  function formatPhone(v: string) {
-    const digits = v.replace(/\D/g, '').slice(0, 13)
-    setWhatsApp(digits)
-    return digits
   }
 
   function maskCpf(cpf: string) {
@@ -384,7 +379,7 @@ export default function MesaPage() {
                 <div className="relative">
                   <MessageCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
-                    type="tel" value={whatsApp} onChange={e => setWhatsApp(formatPhone(e.target.value))}
+                    type="tel" inputMode="tel" autoComplete="tel" value={telefoneBR(whatsApp)} onChange={e => setWhatsApp(soDigitosTelefone(e.target.value))}
                     placeholder="(00) 00000-0000"
                     className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#3EC2F2] focus:ring-2 focus:ring-[#3EC2F2]/20 transition-all"
                   />

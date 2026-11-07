@@ -69,7 +69,7 @@ function NovoClienteModal({ onClose, onSuccess }: { onClose: () => void; onSucce
           </div>
           <div>
             <label className="label">Senha inicial (opcional)</label>
-            <input type="password" className="input" placeholder="Mínimo 8 caracteres" value={senha} onChange={e => setSenha(e.target.value)} minLength={8} />
+            <input type="password" autoComplete="new-password" className="input" placeholder="Mínimo 8 caracteres" value={senha} onChange={e => setSenha(e.target.value)} minLength={8} />
             <p className="text-xs text-gray-400 mt-1">Se não informada, o cliente precisará redefinir via e-mail.</p>
           </div>
           <div className="flex gap-3 pt-2">
@@ -139,7 +139,7 @@ function NovoOperadorModal({ onClose, onSuccess }: { onClose: () => void; onSucc
           </div>
           <div>
             <label className="label">Senha *</label>
-            <input type="password" className="input" placeholder="Mínimo 8 caracteres" value={senha} onChange={e => setSenha(e.target.value)} minLength={8} required />
+            <input type="password" autoComplete="new-password" className="input" placeholder="Mínimo 8 caracteres" value={senha} onChange={e => setSenha(e.target.value)} minLength={8} required />
           </div>
           <div>
             <label className="label">Perfil de acesso</label>
@@ -340,11 +340,11 @@ function RedefinirSenhaModal({ user, onClose }: { user: UserSummary; onClose: ()
           <p className="text-sm text-gray-400">Definindo nova senha para <strong className="text-white">{user.name}</strong>.</p>
           <div>
             <label className="label">Nova senha</label>
-            <input type="password" className="input" placeholder="Mínimo 8 caracteres" value={senha} onChange={e => setSenha(e.target.value)} required minLength={8} />
+            <input type="password" autoComplete="new-password" className="input" placeholder="Mínimo 8 caracteres" value={senha} onChange={e => setSenha(e.target.value)} required minLength={8} />
           </div>
           <div>
             <label className="label">Confirmar senha</label>
-            <input type="password" className="input" placeholder="Repita a senha" value={confirma} onChange={e => setConfirma(e.target.value)} required minLength={8} />
+            <input type="password" autoComplete="new-password" className="input" placeholder="Repita a senha" value={confirma} onChange={e => setConfirma(e.target.value)} required minLength={8} />
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancelar</button>

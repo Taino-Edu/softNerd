@@ -1251,7 +1251,8 @@ export default function ClientePage() {
               </button>
 
               {/* Conteúdo da comanda */}
-              <div className="max-h-72 overflow-y-auto px-5 pt-4 pb-6" style={{ backgroundColor: C.white }}>
+              {/* pr-16: sobra espaço à direita pro botão flutuante de Libras não cobrir o preço */}
+              <div className="max-h-72 overflow-y-auto pl-5 pr-16 sm:pr-5 pt-4 pb-6" style={{ backgroundColor: C.white }}>
                 <div className="space-y-3">
                   {comanda.items.map((item, idx) => (
                     <div key={item.id}>

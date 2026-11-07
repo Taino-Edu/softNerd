@@ -1,5 +1,24 @@
 # Changelog — Santuário Nerd
 
+## [v1.85.0] — 2026-11-07
+
+### Fechar o modal de venda não perde mais nada
+- **Novo:** o fechamento de comanda e a Nova Venda do caixa guardam o que já foi marcado (pagamento, desconto, divisão, carrinho, cliente). Dá pra fechar por **Esc**, **clique fora** ou X e voltar: tudo reaparece, até depois de recarregar a página. O clique fora não fechava justamente porque a tela perdia tudo; agora perde nada
+- A comanda guarda o rascunho dela (um por comanda); a Nova Venda mostra "Venda em andamento recuperada" com o botão **Começar do zero**. O rascunho some quando a venda/comanda é confirmada ou cancelada e vence sozinho em 12 horas
+- O carrinho recuperado guarda só produto e quantidade: preço e estoque vêm sempre da lista de agora, e produto sem estoque sai do carrinho
+- Com modal dentro de modal, o Esc fecha só o de cima
+- Os botões de confirmar mostram a forma de pagamento ("Confirmar venda · Pix", "Confirmar · Dinheiro"), pra um clique distraído não gravar a forma errada
+- Fechar comanda usa os mesmos ícones do caixa (Pix, dinheiro, cartão, crediário, pontos, cashback); antes todos tinham o ícone de cartão
+- "Gerar QR Pix" ganhou linha própria e deixou de quebrar o texto em três linhas
+- **Corrigido:** a janela de escolher tamanho/cor (venda de camiseta e outros produtos com grade) era **transparente** — usava variáveis de cor que não existem no projeto, e o texto do assistente aparecia por trás. Agora tem fundo, e o Esc fecha só ela (o assistente de venda continua aberto)
+- **Corrigido:** os atalhos de teclado do painel (D, P, E, U, C, F, R, A) trocavam de tela com um modal aberto e sem foco num campo — digitar o nome de um produto sem clicar na busca tirava o caixa da venda. Com modal aberto eles ficam quietos
+- **Celular:** o botão de confirmar de "Fechar comanda" agora fica fixo no rodapé (antes ficava abaixo da dobra e era preciso rolar); na Nova Venda, produtos e carrinho se empilham (antes ficavam em duas colunas espremidas, com o nome do produto quebrando em três linhas)
+- O aviso "Venda em andamento recuperada" usa a cor de alerta do tema (legível no claro e no escuro)
+- **Corrigido (celular):** na área do cliente o botão flutuante de Libras cobria a seta que abre os itens da comanda e, aberta, o preço do item; agora sobe acima da barra e a lista reserva margem à direita
+- **Corrigido:** o "Complete seu cadastro" e a criação de usuário pelo admin não diziam ao navegador que era conta nova, e ele preenchia e-mail e senha com o login salvo da equipe (no aparelho da loja, o cliente novo via as credenciais do admin; e o admin podia criar usuário com a própria senha sem perceber). Os campos agora têm `autoComplete` de conta nova
+- O WhatsApp da tela da mesa ganhou a máscara `(17) 99999-0000` (usa o mesmo formatador do resto do site e trata número colado com +55)
+- "Abrir comanda" do painel, que no celular é só um ícone, ganhou nome acessível
+
 ## [v1.84.1] — 2026-11-07
 
 ### Tempo real das comandas que parava de atualizar
