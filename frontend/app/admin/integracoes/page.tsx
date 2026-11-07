@@ -317,7 +317,7 @@ export default function IntegracoesPage() {
                   <input
                     value={configModal.clientSecret}
                     onChange={e => setConfigModal(m => m ? { ...m, clientSecret: e.target.value } : m)}
-                    type="password" placeholder="Client Secret da API" className="input w-full" />
+                    type="password" autoComplete="new-password" placeholder="Client Secret da API" className="input w-full" />
                 </div>
               )}
               {cfgInfo.fields.includes('pixKey') && (

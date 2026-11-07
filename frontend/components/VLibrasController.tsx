@@ -34,6 +34,11 @@ const TELAS_DE_ENTRADA = ['/entrar', '/cadastro', '/login', '/primeiro-acesso', 
 const cantoDaTela = (caminho: string, corner: string) =>
   TELAS_DE_ENTRADA.includes(caminho) && corner.endsWith('right') ? corner.replace('right', 'left') : corner
 
+// Páginas com a barra da comanda no rodapé: no celular a mão ficava em cima da seta que abre os
+// itens (teste do fluxo da mesa, 07/11). Nos cantos de baixo ela sobe e deixa a barra livre.
+const COM_BARRA_NO_RODAPE = ['/cliente']
+const folgaInferior = (caminho: string) => (COM_BARRA_NO_RODAPE.includes(caminho) ? 88 : 10)
+
 /**
  * Abre o painel do VLibras. O botão mora dentro do Shadow DOM do plugin — o seletor antigo
  * `[vw-access-button]` não existe mais e o "Libras" do menu não abria nada.
@@ -49,7 +54,7 @@ export function abrirVLibras() {
  * preferência desligada.
  * flutuante: mostra a mão no canto; carregado: o plugin fica disponível (pro menu) mesmo sem ela.
  */
-function applyPreferences(flutuante: boolean, carregado: boolean, corner: string) {
+function applyPreferences(flutuante: boolean, carregado: boolean, corner: string, baixo: number) {
   const wrapper = document.getElementById(WRAPPER_ID) as HTMLElement | null
   if (!wrapper) return false
 
@@ -66,7 +71,7 @@ function applyPreferences(flutuante: boolean, carregado: boolean, corner: string
   const left = corner.endsWith('left')
   const top = corner.startsWith('top')
   access.style.setProperty('top', top ? '64px' : 'auto', 'important')
-  access.style.setProperty('bottom', top ? 'auto' : '10px', 'important')
+  access.style.setProperty('bottom', top ? 'auto' : `${baixo}px`, 'important')
   access.style.setProperty('left', left ? '10px' : 'auto', 'important')
   access.style.setProperty('right', left ? 'auto' : '10px', 'important')
   access.style.setProperty('flex-direction', left ? 'row-reverse' : 'row', 'important')
@@ -80,6 +85,7 @@ export default function VLibrasController() {
   const caminho = usePathname() ?? ''
   const noMenu = temLibrasNoMenu(caminho)
   const canto = cantoDaTela(caminho, prefs.vlibras.corner)
+  const baixo = folgaInferior(caminho)
   const carregado = prefs.vlibras.enabled || noMenu
   const flutuante = prefs.vlibras.enabled && !noMenu
 
@@ -89,7 +95,7 @@ export default function VLibrasController() {
     let timer: ReturnType<typeof setInterval> | undefined
 
     const waitAndApply = () => {
-      if (applyPreferences(flutuante, carregado, canto)) {
+      if (applyPreferences(flutuante, carregado, canto, baixo)) {
         if (timer) clearInterval(timer)
         timer = undefined
       }
@@ -129,7 +135,7 @@ export default function VLibrasController() {
       if (timer) clearInterval(timer)
       existingScript?.removeEventListener('load', initialize)
     }
-  }, [loading, carregado, flutuante, canto])
+  }, [loading, carregado, flutuante, canto, baixo])
 
   return null
 }
