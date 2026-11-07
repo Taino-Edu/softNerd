@@ -54,6 +54,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.84.1 | 07/11 | **Tempo real das comandas**: `lib/signalr.ts` com conexão única contada por uso e parada com espera de 1,5 s (trocar de tela deixava a tela nova com conexão morta e o selo "Conectado"); `ouvirEstadoHub`, `garanteHub`, `recarregarSeDesconectado` (refetch a cada 30 s só enquanto desconectado) no cliente e no estoque; handlers removidos ao sair; `ComandaHub` aceita Admin e Operator como a API. Provável causa do "sistema cai com comanda aberta durante o campeonato" |
 | v1.84.0 | 06/11 | **SEO e prévia de link (fase 1)**: produto com título/preço/foto no HTML (`app/produtos/[id]/layout.tsx`, dados `schema.org/Product`), `/sitemap.xml`, `/robots.txt`, dados da loja (`Store`) e imagem padrão `og-santuario.jpg`; foto em JPEG com fundo branco pra prévia (`/uploads/x?w=N&f=jpg`). Próximo: fase 2 (home que vende, atrás de chave) |
 | v1.83.2 | 06/11 | **Vazamento: custo/margem do produto** — `GET /api/product`, `/{id}`, `/store` e `/barcode` devolviam a entidade (custo, margem, estoque mínimo) pra visitante/cliente. Agora `ProdutoPublicoDto` pra quem não é Admin/Operator; teste em `VazamentosTests` |
 | v1.83.1 | 06/11 | **Pacotes**: Microsoft 10.0.14 (EF Core, JwtBearer, SignalR.Client, testes), Google.Apis.Auth 1.78, QRCoder 1.8.1, WebPush 1.0.13, SharpCompress 0.50.8. Fora de propósito: FluentAssertions 8 (licença paga), SkiaSharp 4 e MongoDB.Driver 3 (troca grande) |
