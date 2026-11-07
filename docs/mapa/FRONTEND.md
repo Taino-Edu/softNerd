@@ -17,7 +17,7 @@
 | `/admin/configuracoes` | `app/admin/configuracoes/page.tsx` | `ui/PageHeader`, `ui/Switch` |
 | `/admin/contas-receber` | `app/admin/contas-receber/page.tsx` | `ui/Badge`, `ui/PageHeader` |
 | `/admin/crediario` | `app/admin/crediario/page.tsx` | `admin/CobrancaPixModal`, `admin/CrediarioAvisos`, `ui/Badge`, `ui/PageHeader` |
-| `/admin/dashboard` | `app/admin/dashboard/page.tsx` | `CameraScanner`, `admin/CobrancaPixModal`, `admin/ConferenciaButton`, `admin/EscolherContaCrediarioModal`, `admin/PercentPicker`, `admin/TopClientes` |
+| `/admin/dashboard` | `app/admin/dashboard/page.tsx` | `CameraScanner`, `PagamentoIcone`, `admin/CobrancaPixModal`, `admin/ConferenciaButton`, `admin/EscolherContaCrediarioModal`, `admin/PercentPicker`, `admin/TopClientes` |
 | `/admin/estoque` | `app/admin/estoque/page.tsx` | `CameraScanner`, `admin/ImageUpload`, `ui/Badge`, `ui/Switch`, `ui/Table` |
 | `/admin/financeiro` | `app/admin/financeiro/page.tsx` | — |
 | `/admin/funcionalidades` | `app/admin/funcionalidades/page.tsx` | `ui/Badge`, `ui/PageHeader`, `ui/Switch` |
@@ -39,7 +39,7 @@
 | `/admin/sobre` | `app/admin/sobre/page.tsx` | `ui/PageHeader` |
 | `/admin/timer` | `app/admin/timer/page.tsx` | `ui/Switch` |
 | `/admin/usuarios` | `app/admin/usuarios/page.tsx` | `admin/DeckViewerModal`, `ui/Badge` |
-| `/admin/venda-avulsa` | `app/admin/venda-avulsa/page.tsx` | `admin/ConferenciaButton`, `admin/EscolherContaCrediarioModal`, `admin/PercentPicker`, `admin/VariantPicker`, `ui/PageHeader` |
+| `/admin/venda-avulsa` | `app/admin/venda-avulsa/page.tsx` | `PagamentoIcone`, `admin/ConferenciaButton`, `admin/EscolherContaCrediarioModal`, `admin/PercentPicker`, `admin/VariantPicker`, `ui/PageHeader` |
 | `/cadastro` | `app/cadastro/page.tsx` | `auth/Moldura` |
 | `/campeonato/[id]` | `app/campeonato/[id]/page.tsx` | — |
 | `/campeonato/jogar` | `app/campeonato/jogar/page.tsx` | — |
@@ -84,6 +84,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `GoogleLoginButton` | `GoogleLoginButton` | `app/entrar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
 | `LegalActions` | `LegalActions` | `app/privacidade/page.tsx`<br>`app/termos/page.tsx` |
 | `PWAInstallButton` | `PWAInstallButton` | `app/layout.tsx` |
+| `PagamentoIcone` | `PagamentoIcone` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
 | `PixReservaModal` | `PixReservaModal` | `app/admin/reservas/page.tsx`<br>`app/cliente/perfil/page.tsx` |
 | `RelatorDeErros` | `RelatorDeErros` | `components/ClientProviders.tsx` |
 | `ThemeToggle` | `ThemeToggle` | `app/lgpd/page.tsx`<br>`app/privacidade/page.tsx`<br>`app/termos/page.tsx`<br>`components/admin/Sidebar.tsx` |
@@ -184,7 +185,9 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |
 | `lib/spritesDeck.ts` | `candidatosDoPokemon`, `idDoPokemon`, `spritesDoDeck` |
 | `lib/sumula-crediario.ts` | `gerarSumulaCrediario` |
+| `lib/useDispensarModal.ts` | `useDispensarModal` |
 | `lib/useFuncionalidade.ts` | `useFuncionalidade` |
 | `lib/useMontado.ts` | `useMontado` |
+| `lib/useRascunho.ts` | `limparRascunhos`, `useRascunho`, `useGravarRascunho`, `lerRascunho` |
 | `lib/useSiteConfig.ts` | `useSiteConfig` |
 | `lib/useTorneioAoVivo.ts` | `useTorneioAoVivo` |
