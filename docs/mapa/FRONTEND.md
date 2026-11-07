@@ -185,7 +185,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |
 | `lib/spritesDeck.ts` | `candidatosDoPokemon`, `idDoPokemon`, `spritesDoDeck` |
 | `lib/sumula-crediario.ts` | `gerarSumulaCrediario` |
-| `lib/useDispensarModal.ts` | `useDispensarModal` |
+| `lib/useDispensarModal.ts` | `haModalAberto`, `useDispensarModal` |
 | `lib/useFuncionalidade.ts` | `useFuncionalidade` |
 | `lib/useMontado.ts` | `useMontado` |
 | `lib/useRascunho.ts` | `limparRascunhos`, `useRascunho`, `useGravarRascunho`, `lerRascunho` |

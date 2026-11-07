@@ -10,6 +10,10 @@
 - Os botões de confirmar mostram a forma de pagamento ("Confirmar venda · Pix", "Confirmar · Dinheiro"), pra um clique distraído não gravar a forma errada
 - Fechar comanda usa os mesmos ícones do caixa (Pix, dinheiro, cartão, crediário, pontos, cashback); antes todos tinham o ícone de cartão
 - "Gerar QR Pix" ganhou linha própria e deixou de quebrar o texto em três linhas
+- **Corrigido:** a janela de escolher tamanho/cor (venda de camiseta e outros produtos com grade) era **transparente** — usava variáveis de cor que não existem no projeto, e o texto do assistente aparecia por trás. Agora tem fundo, e o Esc fecha só ela (o assistente de venda continua aberto)
+- **Corrigido:** os atalhos de teclado do painel (D, P, E, U, C, F, R, A) trocavam de tela com um modal aberto e sem foco num campo — digitar o nome de um produto sem clicar na busca tirava o caixa da venda. Com modal aberto eles ficam quietos
+- **Celular:** o botão de confirmar de "Fechar comanda" agora fica fixo no rodapé (antes ficava abaixo da dobra e era preciso rolar); na Nova Venda, produtos e carrinho se empilham (antes ficavam em duas colunas espremidas, com o nome do produto quebrando em três linhas)
+- O aviso "Venda em andamento recuperada" usa a cor de alerta do tema (legível no claro e no escuro)
 
 ## [v1.84.1] — 2026-11-07
 

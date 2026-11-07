@@ -493,7 +493,9 @@ function VendaWizard({
   onComplete: (receipt: VendaAvulsaDto) => void
   onClose: () => void
 }) {
-  const [step, setStep] = useRascunho<1 | 2 | 3>('pdv:step', 1)
+  // Só volta pra etapa onde parou se tem venda recuperada (carrinho); senão começa pelo cliente.
+  const [step, setStep] = useState<1 | 2 | 3>(() => (lerRascunho<CartRascunho[]>('pdv:cart')?.length ? lerRascunho<1 | 2 | 3>('pdv:step') ?? 1 : 1))
+  useGravarRascunho<1 | 2 | 3>('pdv:step', step, 1)
 
   // Etapa 1 — cliente
   const [clientSearch, setClientSearch] = useRascunho('pdv:clienteBusca', '')
@@ -795,11 +797,11 @@ function VendaWizard({
         </div>
 
         {recuperado && (
-          <div className="px-5 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-3 text-xs text-amber-300 shrink-0">
+          <div className="px-5 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-3 text-xs txt-alerta shrink-0">
             <span>
               Venda em andamento recuperada ({cart.length} {cart.length === 1 ? 'item' : 'itens'}{clientName ? ` · ${clientName}` : ''}).
             </span>
-            <button onClick={descartarRascunho} className="font-bold underline hover:text-amber-200 shrink-0">Começar do zero</button>
+            <button onClick={descartarRascunho} className="font-bold underline hover:opacity-80 shrink-0">Começar do zero</button>
           </div>
         )}
 
@@ -876,10 +878,10 @@ function VendaWizard({
 
           {/* ── Etapa 2: Produtos ──────────────────────────────── */}
           {step === 2 && (
-            <div className="flex gap-4 flex-1 min-h-0">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1 min-h-0">
 
               {/* Coluna esquerda — catálogo */}
-              <div className="flex-1 min-w-0 flex flex-col gap-3">
+              <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-3">
                 <input
                   ref={searchRef}
                   className="input text-sm shrink-0"
@@ -971,11 +973,11 @@ function VendaWizard({
               </div>
 
               {/* Divisor */}
-              <div className="w-px bg-surface-600 shrink-0" />
+              <div className="hidden sm:block w-px bg-surface-600 shrink-0" />
 
               {/* Coluna direita — carrinho (w-72: com w-52 o nome do produto ficava cortado
                   no meio e pedido grande não dava pra conferir) */}
-              <div className="w-72 shrink-0 flex flex-col gap-2 min-h-0">
+              <div className="w-full sm:w-72 shrink-0 flex flex-col gap-2 min-h-0 max-h-[38%] sm:max-h-none border-t border-surface-600 pt-3 sm:border-0 sm:pt-0">
                 <div className="flex items-center justify-between gap-2 shrink-0">
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
                     Carrinho {cart.length > 0 && <span className="text-brand-400">({cart.reduce((s, i) => s + i.quantity, 0)})</span>}

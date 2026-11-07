@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { variantApi, ProductVariant } from '@/lib/api'
 import { X, Package } from 'lucide-react'
 import clsx from 'clsx'
+import { useDispensarModal } from '@/lib/useDispensarModal'
 
 interface Props {
   productId: string
@@ -18,6 +19,8 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
   const [loading, setLoading]       = useState(true)
   const [selColor, setSelColor]     = useState<string | null>(null)
   const [selVariant, setSelVariant] = useState<ProductVariant | null>(null)
+  // Esc e clique fora fecham só esta janela (ela abre por cima da Nova Venda)
+  const fundo = useDispensarModal(onClose)
 
   useEffect(() => {
     variantApi.list(productId)
@@ -56,32 +59,32 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
   const flatList = !hasColors
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="bg-[var(--surface)] rounded-2xl w-full max-w-sm shadow-2xl border border-[var(--border)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" {...fundo}>
+      <div className="bg-surface-800 rounded-2xl w-full max-w-sm shadow-2xl border border-surface-500">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+        <div className="flex items-center justify-between p-4 border-b border-surface-500">
           <div>
-            <p className="text-xs text-[var(--text-muted)]">Selecionar variante</p>
-            <h3 className="font-semibold text-[var(--text-primary)] truncate max-w-[240px]">{productName}</h3>
+            <p className="text-xs text-gray-400">Selecionar variante</p>
+            <h3 className="font-semibold text-white truncate max-w-[240px]">{productName}</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--surface-600)] text-[var(--text-muted)]">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-600 text-gray-400">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-4 space-y-4">
           {loading ? (
-            <div className="flex items-center justify-center py-8 text-[var(--text-muted)]">
+            <div className="flex items-center justify-center py-8 text-gray-400">
               <Package className="w-5 h-5 animate-pulse mr-2" /> Carregando grade...
             </div>
           ) : variants.length === 0 ? (
-            <p className="text-center text-[var(--text-muted)] py-6">Nenhuma variante cadastrada.</p>
+            <p className="text-center text-gray-400 py-6">Nenhuma variante cadastrada.</p>
           ) : (
             <>
               {/* Seletor de cor */}
               {hasColors && (
                 <div>
-                  <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Cor</p>
+                  <p className="text-xs font-medium text-gray-400 mb-2">Cor</p>
                   <div className="flex flex-wrap gap-2">
                     {colors.map(color => {
                       const hasStk = colorsWithStock.includes(color)
@@ -95,8 +98,8 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
                             selColor === color
                               ? 'bg-violet-600 border-violet-500 text-white'
                               : hasStk
-                              ? 'border-[var(--border)] text-[var(--text-primary)] hover:border-violet-500'
-                              : 'border-[var(--border)] text-[var(--text-muted)] opacity-40 cursor-not-allowed line-through'
+                              ? 'border-surface-500 text-white hover:border-violet-500'
+                              : 'border-surface-500 text-gray-400 opacity-40 cursor-not-allowed line-through'
                           )}
                         >
                           {color}
@@ -110,7 +113,7 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
               {/* Seletor de tamanho */}
               {hasSizes && (
                 <div>
-                  <p className="text-xs font-medium text-[var(--text-muted)] mb-2">
+                  <p className="text-xs font-medium text-gray-400 mb-2">
                     {hasColors ? 'Tamanho' : 'Variante'}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -127,15 +130,15 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
                             selVariant?.id === v.id
                               ? 'bg-violet-600 border-violet-500 text-white'
                               : inStock
-                              ? 'border-[var(--border)] text-[var(--text-primary)] hover:border-violet-500'
-                              : 'border-[var(--border)] text-[var(--text-muted)] opacity-40 cursor-not-allowed'
+                              ? 'border-surface-500 text-white hover:border-violet-500'
+                              : 'border-surface-500 text-gray-400 opacity-40 cursor-not-allowed'
                           )}
                           title={inStock ? `${v.stockQuantity} em estoque` : 'Sem estoque'}
                         >
                           {label}
                           {!inStock && (
                             <span className="absolute inset-0 flex items-center justify-center">
-                              <span className="w-full h-px bg-[var(--text-muted)] rotate-45 opacity-60" />
+                              <span className="w-full h-px bg-gray-400 rotate-45 opacity-60" />
                             </span>
                           )}
                         </button>
@@ -148,7 +151,7 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
               {/* Sem tamanhos — produto só tem cores */}
               {!hasSizes && hasColors && (
                 <div>
-                  <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Cor</p>
+                  <p className="text-xs font-medium text-gray-400 mb-2">Cor</p>
                   <div className="flex flex-wrap gap-2">
                     {variants.map(v => {
                       const inStock = v.stockQuantity > 0
@@ -162,8 +165,8 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
                             selVariant?.id === v.id
                               ? 'bg-violet-600 border-violet-500 text-white'
                               : inStock
-                              ? 'border-[var(--border)] text-[var(--text-primary)] hover:border-violet-500'
-                              : 'border-[var(--border)] text-[var(--text-muted)] opacity-40 cursor-not-allowed line-through'
+                              ? 'border-surface-500 text-white hover:border-violet-500'
+                              : 'border-surface-500 text-gray-400 opacity-40 cursor-not-allowed line-through'
                           )}
                         >
                           {v.color}
@@ -185,7 +188,7 @@ export default function VariantPicker({ productId, productName, onConfirm, onClo
         </div>
 
         {/* Footer */}
-        <div className="flex gap-2 p-4 border-t border-[var(--border)]">
+        <div className="flex gap-2 p-4 border-t border-surface-500">
           <button onClick={onClose} className="flex-1 btn-secondary py-2 text-sm">
             Cancelar
           </button>
