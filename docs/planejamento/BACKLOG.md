@@ -47,6 +47,7 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
    Chaves que ficam por enquanto: Ficam por enquanto: `vigia-sistema` (liga/desliga de verdade), `pokemon-preferido`, `home-visual-uniforme`, `campeonato-separado`, `pedido-pix-junto`, `pagamento-sem-retirada` e `relatorio-por-subcategoria` (Maikon ainda testando).
 3. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
 4. Botão "Voltar versão" e checks obrigatórios novos no `main`.
+4b. **Tirar o MongoDB** (Taino, 07/11): o Mongo guarda as **vendas do PDV** (`vendas_avulsas`), não só cache de cartas — é migração de dado de produção, com volta. Roteiro pro Codex em `docs/planejamento/MONGO-FORA.md`. Fora do caminho crítico do PIM (14/11).
 5. Dependabot grandes (.NET 10, Next 16, TS 7) — um por vez, com teste.
 6. Produto, mais adiante: "excluir minha conta" (LGPD), auditoria de acessibilidade, SaaS multi-loja (pausado).
 
