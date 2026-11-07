@@ -1,8 +1,31 @@
 # PIM IV × softNerd (Santuário Nerd) — o que já atende e o que falta
 
-> Análise de 23/10/2026 contra o `manual-pim-iv.md` (extraído de `Manual_PIM_IV_ADS_v2.docx`, nesta pasta).
+> Análise de 23/10/2026 contra o `manual-pim-iv.md` (extraído de `Manual_PIM_IV_ADS_v2.docx`, nesta pasta),
+> **revisada em 07/11/2026** (ver "O que mudou desde 23/10" logo abaixo — o texto das etapas já está corrigido).
 > Só levantamento: nada foi implementado por causa do PIM ainda.
 > ✅ atende · 🔸 atende em parte · ❌ falta
+
+## O que mudou desde 23/10 (conferido no `main` em 07/11/2026)
+
+O sistema andou e **algumas coisas que esta análise citava deixaram de existir**. O trabalho escrito só pode
+descrever o que está no código de hoje.
+
+| Assunto | 23/10 | 07/11 |
+|---|---|---|
+| Plataforma da API | ASP.NET Core 8 (suporte acaba em 10/11) | **.NET 10 LTS** em produção (v1.70.0) |
+| Front | Next.js 15 | Next.js 15 (`15.5.x`) |
+| Endpoints REST | 286 | **252** (lista em `docs/mapa/ENDPOINTS.md`) |
+| **NFC-e / fiscal** | citado como diferencial | **removido do sistema** (v1.71.0, 26/10). Não citar no texto |
+| WhatsApp automático, OFX, Mercado Pago | existiam | **removidos** (v1.73.0). Não citar |
+| Tenant-ERP (SaaS multi-loja) | em andamento | **fora do repositório** (v1.71.0) |
+| Testes de unidade | "mais de 620" | **608 casos** (605 passam, 3 ignorados) |
+| Procedures / triggers no PostgreSQL | 0 | **0** (continua o maior buraco do Banco) |
+| Bancos | PostgreSQL + MongoDB | PostgreSQL + MongoDB; **retirada do Mongo planejada** (Mongo ainda em 6 arquivos). Deixar pra descrever a arquitetura final, com um banco só |
+| Tempo real | SignalR | SignalR; **corrida de reconexão corrigida** (v1.84.1) e telas com rede de segurança |
+| Painel de venda e comanda | — | rascunho dos modais, Esc, uso no celular (v1.85.0) |
+
+**Para o trabalho escrito:** o que sobrou de funcionalidade é pedido do site → Pix → venda → estoque → financeiro;
+comanda por mesa (QR), crediário, pré-venda, Liga/Liguinha com telão, Vigia do sistema, LGPD e acessibilidade (VLibras).
 
 ## Resumo
 
@@ -14,7 +37,7 @@
 | 3 | Responsabilidade social e diversidade (Rel. étnico-raciais) | 0,5 | 🔸 acessibilidade forte; diversidade e combate à discriminação não estão explícitos |
 | 4 | Solução Web (Desenvolvimento Web com .NET) | 2,0 | ✅ API ASP.NET Core + painel web completo |
 | 5 | Solução Mobile (Desenvolvimento Mobile) | 2,0 | ❌/🔸 só existe PWA/site responsivo — **não há aplicativo móvel** |
-| 6 | Arquitetura de Software (Programação Aplicada em .NET) | — | ✅ camadas, OO e módulos; faltam os diagramas |
+| 6 | Arquitetura de Software (Programação Aplicada em .NET) | — | ✅ camadas, OO e módulos (já em .NET 10); faltam os diagramas |
 | 7 | Banco de Dados (Programação de BD) | 1,0 | 🔸 físico pronto; **faltam MER, modelo lógico, procedures e triggers** |
 | 8 | Nuvem e DevOps (Cloud Computing e DevOps) | 0,5 | ✅ containers, CI/CD, monitoramento — falta escrever o plano |
 | 9 | Gerenciamento Ágil (Gerenc. de Projetos Ágil) | 1,0 | 🔸 backlog e entregas existem; faltam sprints e Kanban formais |
@@ -24,12 +47,12 @@ Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele 
 ## Etapa por etapa
 
 ### Etapa 1 — Caracterização da organização 🔸
-- **Já temos:** Santuário Nerd, loja de TCG (Pokémon, One Piece, Riftbound…) em José Bonifácio-SP, do Maikon: venda no balcão e no site, pré-venda, comandas na mesa, campeonatos/liguinha semanais, crediário, NFC-e.
+- **Já temos:** Santuário Nerd, loja de TCG (Pokémon, One Piece, Riftbound…) em José Bonifácio-SP, do Maikon: venda no balcão e no site, pré-venda, comandas na mesa, campeonatos/liguinha semanais, crediário. *(NFC-e saiu do sistema em 26/10.)*
 - **Falta:** o texto com segmento, produtos/serviços, estrutura organizacional, processos, problemas e oportunidades.
 - **Atenção:** o tema é **continuação do PIM III** ("desenvolvimento das aplicações definidas no PIM III"). Precisa ser a **mesma organização** estudada no PIM III — confirmar.
 
 ### Etapa 2 — Planejamento da solução 🔸
-- **Já temos:** problema real resolvido (controle de estoque/caixa/pré-venda/torneios que antes era manual), público (Maikon/equipe e clientes jogadores), diferenciais (liguinha com telão e celular, Pix integrado ao Inter, NFC-e, Vigia do sistema, Pokémon preferido).
+- **Já temos:** problema real resolvido (controle de estoque/caixa/pré-venda/torneios que antes era manual), público (Maikon/equipe e clientes jogadores), diferenciais (liguinha com telão e celular, Pix integrado ao Inter, Vigia do sistema, Pokémon preferido). *(NFC-e não é mais diferencial: foi removida.)*
 - **Falta:** escrever problema, objetivos, público-alvo, proposta de valor, benefícios e diferenciais no formato do manual.
 
 ### Etapa 3 — Responsabilidade social e diversidade 🔸
@@ -41,14 +64,14 @@ Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele 
 - **Pendente no backlog:** auditoria de acessibilidade.
 
 ### Etapa 4 — Solução Web (.NET) ✅
-- **Arquitetura:** API **ASP.NET Core 8** + front **Next.js 15**; PostgreSQL + MongoDB; SignalR (tempo real).
-- **APIs REST:** 286 endpoints (lista em `docs/mapa/ENDPOINTS.md`).
+- **Arquitetura:** API **ASP.NET Core (.NET 10 LTS)** + front **Next.js 15**; PostgreSQL (+ MongoDB, em retirada); SignalR (tempo real).
+- **APIs REST:** 252 endpoints (lista em `docs/mapa/ENDPOINTS.md`).
 - **Autenticação:** JWT em cookie **HttpOnly** + refresh token, bloqueio por senha errada, login rápido por QR da mesa.
 - **Segurança:** perfis e permissões de operador, rate limiting, CodeQL, auditoria, chaves de funcionalidade, firewall só Cloudflare.
-- **Estrutura administrativa:** painel `/admin` (PDV, estoque, financeiro, crediário, liguinha, relatórios, fiscal).
-- **Integração entre módulos:** pedido do site → Pix → venda → estoque → financeiro; comanda → NFC-e; campeonato → Liga Mensal.
+- **Estrutura administrativa:** painel `/admin` (PDV, estoque, financeiro, crediário, liguinha, relatórios).
+- **Integração entre módulos:** pedido do site → Pix → venda → estoque → financeiro; comanda → crediário/pontos; campeonato → Liga Mensal.
 - **Observação:** a disciplina é "Desenvolvimento Web com .NET". A API é .NET, mas as telas são Next.js (React). Vale confirmar com o professor se isso conta ou se ele espera telas em .NET (Razor/Blazor/MVC).
-- **Atenção à versão:** o .NET 8 perde suporte em 10/11/2026 — migrar pro .NET 10 também ajuda no trabalho.
+- **Versão:** ✅ migrado pro .NET 10 LTS (v1.70.0), antes do fim do suporte do .NET 8 (10/11/2026).
 
 ### Etapa 5 — Solução Mobile ❌/🔸 (vale 2,0)
 - **Já temos:** site 100% responsivo, **PWA** (manifest `standalone` + service worker, instala na tela inicial) e push no celular. A parte do jogador da liguinha é praticamente um app (código → deck → mesa → resultado → ranking).
@@ -63,8 +86,8 @@ Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele 
 - **Já temos:**
   - **Camadas**: `Controllers` → `Services` (`Interfaces` + `Implementations`) → `Data` (EF Core) → `Models`/`DTOs`.
   - **OO**: injeção de dependência, interfaces, `Common`, `Validation`, `Middleware`.
-  - **Módulos**: `Services/Liga`, `Services/Vigia`, fiscal, Pix.
-  - **Testes**: mais de 620 testes de unidade.
+  - **Módulos**: `Services/Liga`, `Services/Vigia`, `Services/Pedidos`, `Services/Crediarios`, `Services/Campeonatos`, Pix.
+  - **Testes**: 608 casos de teste de unidade (605 passam, 3 ignorados) + CI com Postgres de verdade e carga.
 - **Falta:** diagramas — de camadas/componentes e de classes de um módulo (ex.: Liga).
 
 ### Etapa 7 — Banco de Dados 🔸
