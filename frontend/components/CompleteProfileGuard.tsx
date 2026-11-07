@@ -130,19 +130,19 @@ export default function CompleteProfileGuard() {
           </>
         ) : (<>
         <input
-          type="email" required placeholder="Seu e-mail"
+          type="email" required autoComplete="email" placeholder="Seu e-mail"
           value={email} onChange={e => setEmail(e.target.value)}
           className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
           style={inputStyle}
         />
         <input
-          type="password" required minLength={8} placeholder="Senha (mín. 8 caracteres)"
+          type="password" required minLength={8} autoComplete="new-password" placeholder="Senha (mín. 8 caracteres)"
           value={password} onChange={e => setPassword(e.target.value)}
           className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
           style={inputStyle}
         />
         <input
-          type="password" required placeholder="Confirmar senha"
+          type="password" required autoComplete="new-password" placeholder="Confirmar senha"
           value={confirm} onChange={e => setConfirm(e.target.value)}
           className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[#1E4FD6]/40"
           style={inputStyle}
