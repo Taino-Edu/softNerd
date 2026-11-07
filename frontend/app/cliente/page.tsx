@@ -588,6 +588,7 @@ export default function ClientePage() {
     userApi.me().then(r => setProfile(r.data)).catch(() => {})
 
     let hub: Awaited<ReturnType<typeof startHub>> | undefined
+    let saiu = false
     let caiu = false
 
     const onOpened = async (data: ComandaOpenedEvent) => {
@@ -622,6 +623,7 @@ export default function ClientePage() {
     })
 
     startHub().then(h => {
+      if (saiu) return // a tela já saiu (ou o Strict Mode desmontou): não deixa handler pendurado
       hub = h
       hub.on('ComandaOpened', onOpened)
       hub.on('ComandaClosed', onClosed)
@@ -634,6 +636,7 @@ export default function ClientePage() {
     const paraFallback = recarregarSeDesconectado(() => { fetchComanda(); fetchPix() })
 
     return () => {
+      saiu = true
       paraFallback()
       hub?.off('ComandaOpened', onOpened)
       hub?.off('ComandaClosed', onClosed)

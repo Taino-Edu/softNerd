@@ -803,8 +803,10 @@ export default function EstoquePage() {
   // Comanda* cobre as vendas da comanda. Refetch silencioso, sem piscar a tela.
   useEffect(() => {
     let hub: Awaited<ReturnType<typeof startHub>> | undefined
+    let saiu = false
     const atualiza = () => fetch(true)
     startHub().then(h => {
+      if (saiu) return // a tela já saiu (ou o Strict Mode desmontou): não deixa handler pendurado
       hub = h
       hub.on('StockChanged', atualiza)
       hub.on('ComandaUpdated', atualiza)
@@ -813,6 +815,7 @@ export default function EstoquePage() {
     }).catch(() => {})
     const paraFallback = recarregarSeDesconectado(atualiza)
     return () => {
+      saiu = true
       paraFallback()
       hub?.off('StockChanged', atualiza)
       hub?.off('ComandaUpdated', atualiza)
