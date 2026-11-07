@@ -180,7 +180,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/rotulos.ts` | `rotuloStatusComanda`, `rotuloMesa`, `soDigitosTelefone`, `telefoneBR` |
 | `lib/servidor.ts` | `SITE`, `daApi`, `fotoAbsoluta`, `resumo`, `reais` |
 | `lib/sessionKeepAlive.ts` | `renovarSessao`, `iniciarKeepAlive` |
-| `lib/signalr.ts` | `getComandaHub`, `startHub`, `stopHub` |
+| `lib/signalr.ts` | `ouvirEstadoHub`, `getComandaHub`, `garanteHub`, `recarregarSeDesconectado`, `startHub`, `stopHub` |
 | `lib/sounds.ts` | `playGoalSound`, `playErrorSound`, `playSuccessSound` |
 | `lib/spritesDeck.ts` | `candidatosDoPokemon`, `idDoPokemon`, `spritesDoDeck` |
 | `lib/sumula-crediario.ts` | `gerarSumulaCrediario` |

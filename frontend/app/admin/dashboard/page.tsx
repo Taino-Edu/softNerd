@@ -2,7 +2,8 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { SECOND_PAYMENT_METHODS, comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
 import { usePreferences } from '@/hooks/usePreferences'
-import { startHub, stopHub, ComandaUpdatedEvent } from '@/lib/signalr'
+import { HubConnectionState } from '@microsoft/signalr'
+import { startHub, stopHub, garanteHub, ouvirEstadoHub, ComandaUpdatedEvent } from '@/lib/signalr'
 import { playGoalSound } from '@/lib/sounds'
 import { tocarSom, notificarBrowser, pedirPermissaoNotificacao, incrementBadge, clearBadge } from '@/lib/notificacoes'
 import CameraScanner from '@/components/CameraScanner'
@@ -1553,41 +1554,47 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchComandas()
-    let hub: Awaited<ReturnType<typeof startHub>>
+    let hub: Awaited<ReturnType<typeof startHub>> | undefined
+    let saiu = false
+    let caiu = false
 
     if (notificationPrefsRef.current.browserEnabled) pedirPermissaoNotificacao()
 
+    const onUpdated = (event: ComandaUpdatedEvent) => {
+      setNewIds(s => new Set(s).add(event.comandaId))
+      setTimeout(() => setNewIds(s => { const n = new Set(s); n.delete(event.comandaId); return n }), 3000)
+      fetchComandas()
+      if (notificationPrefsRef.current.soundEnabled) tocarSom('nova')
+      incrementBadge()
+      if (notificationPrefsRef.current.browserEnabled) {
+        notificarBrowser('Nova atividade — Santuário Nerd', `${event.userName}: +${event.lastItemAdded ?? 'item'}`)
+      }
+      toast(`📋 ${event.userName}: +${event.lastItemAdded ?? 'item'}`, {
+        icon: '🃏',
+        style: { background: '#1A1A1F', color: '#fff', border: '1px solid #42B6EE', borderRadius: '12px' }
+      })
+    }
+    const onOpened = () => { fetchComandas() }
+    const onClosed = () => {
+      fetchComandas()
+      fetchHistory(histData)
+      if (notificationPrefsRef.current.soundEnabled) tocarSom('fechada')
+    }
+
+    // O selo segue o estado real da conexão, não o fato de a tela ter pedido pra ligar.
+    const desouvir = ouvirEstadoHub(ok => {
+      setConnected(ok)
+      if (!ok) caiu = true
+      else if (caiu) { caiu = false; fetchComandas() }
+    })
+
     startHub().then(h => {
+      if (saiu) return // a tela já saiu (ou o Strict Mode desmontou): não deixa handler pendurado
       hub = h
-      setConnected(true)
-
-      hub.on('ComandaUpdated', (event: ComandaUpdatedEvent) => {
-        setNewIds(s => new Set(s).add(event.comandaId))
-        setTimeout(() => setNewIds(s => { const n = new Set(s); n.delete(event.comandaId); return n }), 3000)
-        fetchComandas()
-        if (notificationPrefsRef.current.soundEnabled) tocarSom('nova')
-        incrementBadge()
-        if (notificationPrefsRef.current.browserEnabled) {
-          notificarBrowser('Nova atividade — Santuário Nerd', `${event.userName}: +${event.lastItemAdded ?? 'item'}`)
-        }
-        toast(`📋 ${event.userName}: +${event.lastItemAdded ?? 'item'}`, {
-          icon: '🃏',
-          style: { background: '#1A1A1F', color: '#fff', border: '1px solid #42B6EE', borderRadius: '12px' }
-        })
-      })
-
-      hub.on('ComandaOpened', () => {
-        fetchComandas()
-      })
-
-      hub.on('ComandaClosed', () => {
-        fetchComandas()
-        fetchHistory(histData)
-        if (notificationPrefsRef.current.soundEnabled) tocarSom('fechada')
-      })
-      hub.onclose(() => setConnected(false))
-      hub.onreconnecting(() => setConnected(false))
-      hub.onreconnected(() => { setConnected(true); fetchComandas() })
+      hub.on('ComandaUpdated', onUpdated)
+      hub.on('ComandaOpened', onOpened)
+      hub.on('ComandaClosed', onClosed)
+      setConnected(h.state === HubConnectionState.Connected)
     }).catch(() => setConnected(false))
 
     // Limpa badge quando admin foca na aba
@@ -1595,6 +1602,11 @@ export default function DashboardPage() {
     window.addEventListener('focus', onFocus)
 
     return () => {
+      saiu = true
+      hub?.off('ComandaUpdated', onUpdated)
+      hub?.off('ComandaOpened', onOpened)
+      hub?.off('ComandaClosed', onClosed)
+      desouvir()
       stopHub()
       window.removeEventListener('focus', onFocus)
     }
@@ -1605,11 +1617,7 @@ export default function DashboardPage() {
     if (dp.refreshInterval === 0) return
     const intervalMs = dp.refreshInterval * 1000
     const poll = setInterval(async () => {
-      const { HubConnectionState } = await import('@microsoft/signalr')
-      const hub = (await import('@/lib/signalr')).getComandaHub()
-      if (hub.state === HubConnectionState.Disconnected) {
-        try { await hub.start(); setConnected(true) } catch { /* ignora */ }
-      }
+      try { await garanteHub() } catch { /* ignora */ }
       fetchComandas()
     }, intervalMs)
     return () => clearInterval(poll)

@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, championshipApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation, Championship } from '@/lib/api'
 import { fmtRestante } from '@/lib/prazo'
 import NotificationBell from '@/components/cliente/NotificationBell'
-import { startHub, stopHub, ComandaOpenedEvent } from '@/lib/signalr'
+import { startHub, stopHub, ouvirEstadoHub, recarregarSeDesconectado, ComandaOpenedEvent } from '@/lib/signalr'
 import toast, { Toaster } from 'react-hot-toast'
 import {
   ShoppingCart, Plus, Trash2, Loader2, Search,
@@ -587,35 +587,66 @@ export default function ClientePage() {
     categoryApi.list().then(r => setCategories(r.data)).catch(() => {})
     userApi.me().then(r => setProfile(r.data)).catch(() => {})
 
-    startHub().then(hub => {
-      hub.on('ComandaOpened', async (data: ComandaOpenedEvent) => {
-        await hub.invoke('JoinComandaGroup', data.comandaId).catch(() => {})
-        await fetchComanda()
-        toast.success('Sua comanda foi aberta!', { duration: 5000 })
-      })
-      hub.on('ComandaClosed', () => {
-        toast.success('Comanda fechada! Obrigado pela visita.', { duration: 6000 })
-        setPix(null)
-        fetchComanda()
-      })
-      hub.on('ComandaCancelled', () => {
-        toast.error('Sua comanda foi cancelada.', { duration: 6000 })
-        setPix(null)
-        fetchComanda()
-      })
-      hub.on('ItemAddedByAdmin', (data: { itemName: string }) => {
-        toast(`+${data.itemName} adicionado pelo atendente`, { icon: '🛒' })
-        fetchComanda()
-      })
-      hub.on('PixCobrancaCriada', (data: PixCobrancaDto) => {
-        setPix(data)
-        toast('Cobrança Pix recebida — pague direto pelo app do seu banco!', { icon: '💸', duration: 8000 })
-      })
-      hub.on('ComandaUpdated', () => fetchComanda())
-      hub.onreconnected(() => { fetchComanda(); fetchPix() })
+    let hub: Awaited<ReturnType<typeof startHub>> | undefined
+    let saiu = false
+    let caiu = false
+
+    const onOpened = async (data: ComandaOpenedEvent) => {
+      await hub?.invoke('JoinComandaGroup', data.comandaId).catch(() => {})
+      await fetchComanda()
+      toast.success('Sua comanda foi aberta!', { duration: 5000 })
+    }
+    const onClosed = () => {
+      toast.success('Comanda fechada! Obrigado pela visita.', { duration: 6000 })
+      setPix(null)
+      fetchComanda()
+    }
+    const onCancelled = () => {
+      toast.error('Sua comanda foi cancelada.', { duration: 6000 })
+      setPix(null)
+      fetchComanda()
+    }
+    const onItemAdded = (data: { itemName: string }) => {
+      toast(`+${data.itemName} adicionado pelo atendente`, { icon: '🛒' })
+      fetchComanda()
+    }
+    const onPix = (data: PixCobrancaDto) => {
+      setPix(data)
+      toast('Cobrança Pix recebida — pague direto pelo app do seu banco!', { icon: '💸', duration: 8000 })
+    }
+    const onUpdated = () => { fetchComanda() }
+
+    // Voltou depois de cair: pode ter perdido aviso no meio, então busca de novo.
+    const desouvir = ouvirEstadoHub(ok => {
+      if (!ok) caiu = true
+      else if (caiu) { caiu = false; fetchComanda(); fetchPix() }
+    })
+
+    startHub().then(h => {
+      if (saiu) return // a tela já saiu (ou o Strict Mode desmontou): não deixa handler pendurado
+      hub = h
+      hub.on('ComandaOpened', onOpened)
+      hub.on('ComandaClosed', onClosed)
+      hub.on('ComandaCancelled', onCancelled)
+      hub.on('ItemAddedByAdmin', onItemAdded)
+      hub.on('PixCobrancaCriada', onPix)
+      hub.on('ComandaUpdated', onUpdated)
     }).catch(() => {})
 
-    return () => { stopHub() }
+    const paraFallback = recarregarSeDesconectado(() => { fetchComanda(); fetchPix() })
+
+    return () => {
+      saiu = true
+      paraFallback()
+      hub?.off('ComandaOpened', onOpened)
+      hub?.off('ComandaClosed', onClosed)
+      hub?.off('ComandaCancelled', onCancelled)
+      hub?.off('ItemAddedByAdmin', onItemAdded)
+      hub?.off('PixCobrancaCriada', onPix)
+      hub?.off('ComandaUpdated', onUpdated)
+      desouvir()
+      stopHub()
+    }
   }, [fetchComanda, fetchPix])
 
   // Carrega variantes quando um produto com grade é selecionado

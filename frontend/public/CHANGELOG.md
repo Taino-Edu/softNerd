@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.84.1] — 2026-11-07
+
+### Tempo real das comandas que parava de atualizar
+- **Corrigido:** ao trocar de tela (Painel → Estoque → Painel, ou cliente → outra página e voltar) a conexão em tempo real era derrubada no meio da troca e a tela nova ficava ouvindo uma conexão morta. O selo continuava dizendo "Conectado" e comanda aberta, item adicionado, Pix e fechamento deixavam de aparecer até o F5. Agora as telas dividem a mesma conexão e ela só é parada 1,5 s depois que ninguém mais usa
+- O selo "Conectado/Desconectado" do painel passou a mostrar o estado real da conexão e, ao reconectar, a tela busca tudo de novo (pode ter perdido aviso no meio)
+- Rede de segurança: se o tempo real cair de vez, a área do cliente (comanda e Pix) e o estoque buscam os dados de novo a cada 30 s e tentam religar — só enquanto desconectados, sem polling à toa
+- Os avisos de cada tela são removidos ao sair (antes acumulavam e podiam repetir som e aviso)
+- **Corrigido:** operador (não só admin) agora entra no grupo do painel em tempo real e pode fechar comanda e lançar item pelo hub — a regra do hub bate com a da API (`AdminOnly` = Admin e Operator). Antes o operador só via comanda nova depois de um F5
+
 ## [v1.84.0] — 2026-11-06
 
 ### Site no Google e na prévia do WhatsApp/Instagram

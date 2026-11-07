@@ -9,7 +9,7 @@ import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X, Loader2, Check,
 import ImageUpload from '@/components/admin/ImageUpload'
 import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relatorio-estoque'
 import CameraScanner from '@/components/CameraScanner'
-import { startHub, stopHub } from '@/lib/signalr'
+import { startHub, stopHub, recarregarSeDesconectado } from '@/lib/signalr'
 import { brl } from '@/lib/format'
 
 // ── Drawer de detalhe do produto ─────────────────────────────────────────────
@@ -803,15 +803,20 @@ export default function EstoquePage() {
   // Comanda* cobre as vendas da comanda. Refetch silencioso, sem piscar a tela.
   useEffect(() => {
     let hub: Awaited<ReturnType<typeof startHub>> | undefined
+    let saiu = false
     const atualiza = () => fetch(true)
     startHub().then(h => {
+      if (saiu) return // a tela já saiu (ou o Strict Mode desmontou): não deixa handler pendurado
       hub = h
       hub.on('StockChanged', atualiza)
       hub.on('ComandaUpdated', atualiza)
       hub.on('ComandaClosed', atualiza)
       hub.on('ComandaCancelled', atualiza)
     }).catch(() => {})
+    const paraFallback = recarregarSeDesconectado(atualiza)
     return () => {
+      saiu = true
+      paraFallback()
       hub?.off('StockChanged', atualiza)
       hub?.off('ComandaUpdated', atualiza)
       hub?.off('ComandaClosed', atualiza)

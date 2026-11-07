@@ -46,7 +46,10 @@ public class ComandaHub : Hub
 
         _logger.LogInformation("Usuário {UserId} ({Role}) conectado ao ComandaHub", userId, role);
 
-        if (role == "Admin")
+        // A API REST usa a policy AdminOnly, que permite Admin e Operator.
+        // O hub precisa espelhar essa regra; caso contrario o Operator fica
+        // fora do grupo do dashboard e so ve novas comandas depois de um F5.
+        if (CanReceiveAdminEvents(role))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, AdminGroup);
         }
@@ -101,7 +104,7 @@ public class ComandaHub : Hub
     // ADMIN → HUB: fechar comanda (via Hub — mantido para compatibilidade)
     // =========================================================================
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Operator")]
     public async Task CloseComanda(Guid comandaId)
     {
         var adminId = GetUserId();
@@ -121,7 +124,7 @@ public class ComandaHub : Hub
     // ADMIN → HUB: adicionar item manualmente (via Hub — mantido para compatibilidade)
     // =========================================================================
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Operator")]
     public async Task AdminAddItemToComanda(Guid comandaId, AddItemToComandaRequest request)
     {
         var adminId = GetUserId();
@@ -160,6 +163,9 @@ public class ComandaHub : Hub
 
     private string GetUserRole() =>
         Context.User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Customer";
+
+    public static bool CanReceiveAdminEvents(string role) =>
+        role is "Admin" or "Operator";
 
     public static string GetComandaGroup(Guid comandaId) => $"Comanda_{comandaId}";
     public static string GetUserGroup(Guid userId)       => $"User_{userId}";
