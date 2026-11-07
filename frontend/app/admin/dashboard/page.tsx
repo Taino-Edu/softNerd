@@ -25,6 +25,9 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { rotuloCurtoPagamento } from '@/lib/pagamentos'
+import { useRascunho, limparRascunhos } from '@/lib/useRascunho'
+import { useDispensarModal } from '@/lib/useDispensarModal'
+import { PagamentoIcone } from '@/components/PagamentoIcone'
 import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
 import { agoraNoServidor } from '@/lib/relogioServidor'
 
@@ -483,15 +486,19 @@ function CloseComandaModal({
   onCancel:  () => void
   onGerarPix: (discountInCents: number) => void
 }) {
-  const [method,        setMethod]        = useState('Dinheiro')
-  const [splitEnabled,  setSplitEnabled]  = useState(false)
-  const [secondMethod,  setSecondMethod]  = useState('Cashback')
-  const [secondAmtStr,  setSecondAmtStr]  = useState('')
+  // Pagamento, divisão e desconto ficam guardados por comanda (lib/useRascunho): dá pra
+  // fechar o modal por engano e voltar sem perder o que já estava marcado.
+  const rascunho = `fechar:${comanda.id}:`
+  const [method,        setMethod]        = useRascunho(rascunho + 'method', 'Dinheiro')
+  const [splitEnabled,  setSplitEnabled]  = useRascunho(rascunho + 'split', false)
+  const [secondMethod,  setSecondMethod]  = useRascunho(rascunho + 'method2', 'Cashback')
+  const [secondAmtStr,  setSecondAmtStr]  = useRascunho(rascunho + 'valor2', '')
   // Comanda só guarda desconto em centavos no banco (sem campo de percentual) — o
   // percentual é resolvido aqui no front antes de mandar, mesmo padrão do Venda Avulsa.
-  const [discountMode,  setDiscountMode]  = useState<'percent' | 'cents'>('percent')
-  const [discountPct,   setDiscountPct]   = useState(0)
-  const [descontoStr,   setDescontoStr]   = useState('')
+  const [discountMode,  setDiscountMode]  = useRascunho<'percent' | 'cents'>(rascunho + 'descModo', 'percent')
+  const [discountPct,   setDiscountPct]   = useRascunho(rascunho + 'descPct', 0)
+  const [descontoStr,   setDescontoStr]   = useRascunho(rascunho + 'descValor', '')
+  const fundo = useDispensarModal(onCancel)
 
   const totalAntesDesconto = comanda.totalInReais - comanda.pointsApplied / 100
   const totalAntesDescontoCents = Math.round(totalAntesDesconto * 100)
@@ -525,9 +532,9 @@ function CloseComandaModal({
   }
 
   return (
-    // Clique fora nao fecha: pagamento, desconto, pontos e a nota ja marcados
-    // sumiam no meio do fechamento.
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    // Esc e clique fora fecham: pagamento, desconto e divisão ficam no rascunho desta
+    // comanda (antes sumiam no meio do fechamento, por isso o clique fora não fechava).
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" {...fundo}>
       <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div>
           <h3 className="font-semibold text-white text-lg">Fechar comanda</h3>
@@ -607,7 +614,7 @@ function CloseComandaModal({
                     : 'border-surface-500 text-gray-400 hover:border-surface-400 hover:text-gray-200'
                 )}
               >
-                <CreditCard className="w-4 h-4 shrink-0" />
+                <PagamentoIcone forma={pm.value} />
                 <span className="flex-1">{pm.label}</span>
                 {splitEnabled && method === pm.value && (
                   <span className="text-xs font-mono text-white">
@@ -754,10 +761,16 @@ function CloseComandaModal({
           </p>
         )}
 
-        <div className="flex gap-3 pt-1">
-          <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Voltar</button>
-          {method === 'Pix' && !splitEnabled ? (
-            <>
+        {method === 'Pix' && !splitEnabled ? (
+          <div className="space-y-2 pt-1">
+            <button
+              onClick={() => onGerarPix(descontoCents)}
+              className="btn-success w-full justify-center"
+            >
+              <QrCode className="w-4 h-4" /> Gerar QR Pix
+            </button>
+            <div className="flex gap-3">
+              <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Voltar</button>
               <button
                 onClick={handleConfirm}
                 disabled={bloqueado}
@@ -765,23 +778,20 @@ function CloseComandaModal({
               >
                 <CheckCircle className="w-4 h-4" /> Confirmar
               </button>
-              <button
-                onClick={() => onGerarPix(descontoCents)}
-                className="btn-success flex-1 justify-center"
-              >
-                <QrCode className="w-4 h-4" /> Gerar QR Pix
-              </button>
-            </>
-          ) : (
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-3 pt-1">
+            <button onClick={onCancel} className="btn-secondary justify-center shrink-0">Voltar</button>
             <button
               onClick={handleConfirm}
               disabled={bloqueado}
-              className="btn-success flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-success flex-1 justify-center whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <CheckCircle className="w-4 h-4" /> Confirmar
+              <CheckCircle className="w-4 h-4" /> Confirmar · {rotuloCurtoPagamento(method)}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1675,6 +1685,7 @@ export default function DashboardPage() {
       await comandaApi.close(id, paymentMethod, undefined, secondMethod, secondAmountInCents, crediarioExistenteId, discountInCents, crediarioVencimento)
       const label = paymentMethod === 'Crediario' ? 'Comanda fechada no crediário!' : 'Comanda fechada!'
       toast.success(label)
+      limparRascunhos(`fechar:${id}:`)
       fetchComandas()
       fetchHistory(histData)
     } catch (err: unknown) {
@@ -1707,6 +1718,7 @@ export default function DashboardPage() {
     try {
       await comandaApi.cancel(id)
       toast.success('Comanda cancelada.')
+      limparRascunhos(`fechar:${id}:`)
       fetchComandas()
       fetchHistory(histData)
     } catch (err: unknown) {

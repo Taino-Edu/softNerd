@@ -8,8 +8,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import toast from 'react-hot-toast'
 import {
   ShoppingBag, Plus, Minus, User, CheckCircle, RotateCcw,
-  Loader2, Receipt, PackageOpen, Banknote, CreditCard, QrCode,
-  Tag, History, TrendingUp, Clock, FileText, AlertCircle, Star, Wallet, X,
+  Loader2, Receipt, PackageOpen, Banknote, CreditCard,
+  Tag, History, TrendingUp, Clock, FileText, AlertCircle, Star, X,
   BarChart2, ArrowRight, ChevronLeft, Pencil,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -18,6 +18,10 @@ import ConferenciaButton from '@/components/admin/ConferenciaButton'
 import EscolherContaCrediarioModal from '@/components/admin/EscolherContaCrediarioModal'
 import PercentPicker from '@/components/admin/PercentPicker'
 import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
+import { useRascunho, useGravarRascunho, lerRascunho, limparRascunhos } from '@/lib/useRascunho'
+import { useDispensarModal } from '@/lib/useDispensarModal'
+import { PagamentoIcone } from '@/components/PagamentoIcone'
+import { rotuloCurtoPagamento } from '@/lib/pagamentos'
 
 interface CartItem {
   product: Product
@@ -319,7 +323,7 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
             <span className="text-xl font-bold text-accent-gold">{fmt(venda.totalInReais)}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-400 pt-1">
-            {PAYMENT_ICONS_INNER[venda.paymentMethod]}
+            <PagamentoIcone forma={venda.paymentMethod} />
             <span>{payLabel}</span>
           </div>
         </div>
@@ -462,17 +466,18 @@ function VendaDetailModal({ venda, onClose, onUpdate }: { venda: VendaAvulsaDto;
   )
 }
 
-const PAYMENT_ICONS_INNER: Record<string, React.ReactNode> = {
-  Pix:           <QrCode     className="w-4 h-4" />,
-  Dinheiro:      <Banknote   className="w-4 h-4" />,
-  CartaoCredito: <CreditCard className="w-4 h-4" />,
-  CartaoDebito:  <CreditCard className="w-4 h-4" />,
-  Crediario:     <FileText   className="w-4 h-4" />,
-  Pontos:        <Star       className="w-4 h-4" />,
-  Cashback:      <Wallet     className="w-4 h-4" />,
-}
+// Rascunho da venda em andamento: o carrinho guarda só ids e quantidades (o preço e o
+// estoque vêm sempre da lista de produtos de agora, nunca de um valor velho guardado).
+interface CartRascunho { productId: string; variantId?: string; variantLabel?: string; quantity: number; cartKey: string }
 
-const PAYMENT_ICONS = PAYMENT_ICONS_INNER
+function carrinhoDoRascunho(products: Product[]): CartItem[] {
+  const salvo = lerRascunho<CartRascunho[]>('pdv:cart') ?? []
+  return salvo.flatMap(r => {
+    const product = products.find(p => p.id === r.productId)
+    if (!product || product.stockQuantity <= 0) return []
+    return [{ product, quantity: Math.min(r.quantity, product.stockQuantity), variantId: r.variantId, variantLabel: r.variantLabel, cartKey: r.cartKey }]
+  })
+}
 
 
 // ── Wizard de nova venda (3 etapas) ──────────────────────────────────────────
@@ -488,18 +493,22 @@ function VendaWizard({
   onComplete: (receipt: VendaAvulsaDto) => void
   onClose: () => void
 }) {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useRascunho<1 | 2 | 3>('pdv:step', 1)
 
   // Etapa 1 — cliente
-  const [clientSearch, setClientSearch] = useState('')
+  const [clientSearch, setClientSearch] = useRascunho('pdv:clienteBusca', '')
   const [clientResults, setClientResults] = useState<UserSummary[]>([])
   const [clientLoading, setClientLoading] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null)
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-  const [clientName, setClientName] = useState('')
+  const [selectedUser, setSelectedUser] = useRascunho<UserSummary | null>('pdv:cliente', null)
+  const [selectedUserId, setSelectedUserId] = useRascunho<string | null>('pdv:clienteId', null)
+  const [clientName, setClientName] = useRascunho('pdv:clienteNome', '')
 
   // Etapa 2 — produtos
-  const [cart, setCart] = useState<CartItem[]>([])
+  const [cart, setCart] = useState<CartItem[]>(() => carrinhoDoRascunho(products))
+  const cartRascunho = useMemo<CartRascunho[]>(() => cart.map(i => ({
+    productId: i.product.id, variantId: i.variantId, variantLabel: i.variantLabel, quantity: i.quantity, cartKey: i.cartKey,
+  })), [cart])
+  useGravarRascunho<CartRascunho[]>('pdv:cart', cartRascunho, [])
   const [search, setSearch] = useState('')
   const [catFilter, setCat] = useState<string | null>(null)
   const [allCategories, setAllCategories] = useState<ProductCategory[]>([])
@@ -507,19 +516,23 @@ function VendaWizard({
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null)
 
   // Etapa 3 — pagamento
-  const [payment, setPayment] = useState<string>(PAYMENT_METHODS[0].value)
-  const [discountMode, setDiscountMode] = useState<'percent' | 'cents'>('percent')
-  const [discountPct, setDiscountPct] = useState(defaultDiscount)
-  const [discountValueStr, setDiscountValueStr] = useState('')
-  const [received, setReceived] = useState('')
+  const [payment, setPayment] = useRascunho<string>('pdv:pagamento', PAYMENT_METHODS[0].value)
+  const [discountMode, setDiscountMode] = useRascunho<'percent' | 'cents'>('pdv:descModo', 'percent')
+  const [discountPct, setDiscountPct] = useRascunho('pdv:descPct', defaultDiscount)
+  const [discountValueStr, setDiscountValueStr] = useRascunho('pdv:descValor', '')
+  const [received, setReceived] = useRascunho('pdv:recebido', '')
   const [submitting, setSubmitting] = useState(false)
   // Contas de crediário abertas do cliente — quando tem alguma, o caixa escolhe onde lançar.
   const [contasCrediario, setContasCrediario] = useState<CrediariosDto[] | null>(null)
 
   // Pagamento dividido (segundo método)
-  const [splitEnabled, setSplit] = useState(false)
-  const [secondPayment, setSecondPayment] = useState<string>(PAYMENT_METHODS[1].value)
-  const [secondAmountStr, setSecondAmountStr] = useState('')
+  const [splitEnabled, setSplit] = useRascunho('pdv:divide', false)
+  const [secondPayment, setSecondPayment] = useRascunho<string>('pdv:pagamento2', PAYMENT_METHODS[1].value)
+  const [secondAmountStr, setSecondAmountStr] = useRascunho('pdv:valor2', '')
+
+  // Fechar o assistente (X, Esc, clique fora) guarda a venda; ao abrir de novo ela volta.
+  const fundo = useDispensarModal(onClose)
+  const [recuperado, setRecuperado] = useState(() => cart.length > 0 || selectedUserId != null)
 
   useEffect(() => {
     categoryApi.list().then(r => setAllCategories(r.data)).catch(() => {})
@@ -583,6 +596,15 @@ function VendaWizard({
   function clearClient() {
     setSelectedUser(null); setSelectedUserId(null)
     setClientName(''); setClientSearch(''); setClientResults([])
+  }
+
+  function descartarRascunho() {
+    limparRascunhos('pdv:')
+    clearClient(); setCart([]); setStep(1)
+    setPayment(PAYMENT_METHODS[0].value); setReceived('')
+    setDiscountMode('percent'); setDiscountPct(defaultDiscount); setDiscountValueStr('')
+    setSplit(false); setSecondPayment(PAYMENT_METHODS[1].value); setSecondAmountStr('')
+    setRecuperado(false)
   }
 
   function addToCart(product: Product, variant?: ProductVariant) {
@@ -691,6 +713,7 @@ function VendaWizard({
         crediario?.novaConta,
         crediario?.vencimento,
       )
+      limparRascunhos('pdv:')
       onComplete(data)
       toast.success('Venda registrada!')
     } catch (err: unknown) {
@@ -726,9 +749,9 @@ function VendaWizard({
 
   return (
     <>
-    {/* Clique fora nao fecha: a venda em andamento so some pelo X, senao o caixa
-        perde o carrinho inteiro por um clique torto. */}
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    {/* Esc e clique fora fecham: a venda em andamento fica guardada (lib/useRascunho) e
+        volta ao abrir de novo; antes sumia, por isso o clique fora não fechava. */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" {...fundo}>
       <div className={clsx(
         "bg-surface-800 border border-surface-500 rounded-2xl w-full flex flex-col shadow-2xl animate-fade-in",
         step === 2 ? "max-w-3xl max-h-[92vh]" : "max-w-md max-h-[92vh]"
@@ -770,6 +793,15 @@ function VendaWizard({
             ))}
           </div>
         </div>
+
+        {recuperado && (
+          <div className="px-5 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-3 text-xs text-amber-300 shrink-0">
+            <span>
+              Venda em andamento recuperada ({cart.length} {cart.length === 1 ? 'item' : 'itens'}{clientName ? ` · ${clientName}` : ''}).
+            </span>
+            <button onClick={descartarRascunho} className="font-bold underline hover:text-amber-200 shrink-0">Começar do zero</button>
+          </div>
+        )}
 
         {/* Conteúdo */}
         <div className={clsx("flex-1 p-5 min-h-0", step === 2 ? "overflow-hidden flex flex-col" : "overflow-y-auto")}>
@@ -1124,7 +1156,7 @@ function VendaWizard({
                           : 'border-surface-500 text-gray-400 hover:border-surface-400 hover:text-gray-200'
                       )}
                     >
-                      {PAYMENT_ICONS[m.value]}
+                      <PagamentoIcone forma={m.value} />
                       <span className="flex-1">{m.label}</span>
                       {splitEnabled && payment === m.value && primaryAmountCents > 0 && (
                         <span className="text-xs font-mono text-white">
@@ -1321,7 +1353,7 @@ function VendaWizard({
               >
                 {submitting
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> Registrando...</>
-                  : <><CheckCircle className="w-4 h-4" /> Confirmar venda</>
+                  : <><CheckCircle className="w-4 h-4" /> Confirmar venda · {rotuloCurtoPagamento(payment)}</>
                 }
               </button>
             </>
@@ -1456,7 +1488,7 @@ export default function VendaAvulsaPage() {
               </p>
             )}
             <p className="text-gray-500 text-xs mt-1 flex items-center justify-center gap-1">
-              {PAYMENT_ICONS[receipt.paymentMethod]} {payLabel}
+              <PagamentoIcone forma={receipt.paymentMethod} /> {payLabel}
             </p>
           </div>
           <div className="bg-surface-800 rounded-xl divide-y divide-surface-500 text-left">
@@ -1909,7 +1941,7 @@ function HistoricoTab({ history, loading, date, onDateChange, onVendaUpdate }: {
                           <Clock className="w-3 h-3" />
                           {new Date(v.soldAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           <span>·</span>
-                          {PAYMENT_ICONS[v.paymentMethod]}
+                          <PagamentoIcone forma={v.paymentMethod} />
                           {payLabel}
                         </div>
                       </div>

@@ -1,5 +1,16 @@
 # Changelog — Santuário Nerd
 
+## [v1.85.0] — 2026-11-07
+
+### Fechar o modal de venda não perde mais nada
+- **Novo:** o fechamento de comanda e a Nova Venda do caixa guardam o que já foi marcado (pagamento, desconto, divisão, carrinho, cliente). Dá pra fechar por **Esc**, **clique fora** ou X e voltar: tudo reaparece, até depois de recarregar a página. O clique fora não fechava justamente porque a tela perdia tudo; agora perde nada
+- A comanda guarda o rascunho dela (um por comanda); a Nova Venda mostra "Venda em andamento recuperada" com o botão **Começar do zero**. O rascunho some quando a venda/comanda é confirmada ou cancelada e vence sozinho em 12 horas
+- O carrinho recuperado guarda só produto e quantidade: preço e estoque vêm sempre da lista de agora, e produto sem estoque sai do carrinho
+- Com modal dentro de modal, o Esc fecha só o de cima
+- Os botões de confirmar mostram a forma de pagamento ("Confirmar venda · Pix", "Confirmar · Dinheiro"), pra um clique distraído não gravar a forma errada
+- Fechar comanda usa os mesmos ícones do caixa (Pix, dinheiro, cartão, crediário, pontos, cashback); antes todos tinham o ícone de cartão
+- "Gerar QR Pix" ganhou linha própria e deixou de quebrar o texto em três linhas
+
 ## [v1.84.1] — 2026-11-07
 
 ### Tempo real das comandas que parava de atualizar
