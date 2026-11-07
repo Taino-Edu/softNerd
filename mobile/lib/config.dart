@@ -1,0 +1,3 @@
+// Endereço da API. No desenvolvimento (celular no USB) usa `adb reverse tcp:5000 tcp:5000`,
+// então "localhost" no celular é o computador. Em produção: --dart-define=API_URL=https://...
+const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'http://localhost:5000');
