@@ -9,7 +9,7 @@ import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X, Loader2, Check,
 import ImageUpload from '@/components/admin/ImageUpload'
 import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relatorio-estoque'
 import CameraScanner from '@/components/CameraScanner'
-import { startHub, stopHub } from '@/lib/signalr'
+import { startHub, stopHub, recarregarSeDesconectado } from '@/lib/signalr'
 import { brl } from '@/lib/format'
 
 // ── Drawer de detalhe do produto ─────────────────────────────────────────────
@@ -811,7 +811,9 @@ export default function EstoquePage() {
       hub.on('ComandaClosed', atualiza)
       hub.on('ComandaCancelled', atualiza)
     }).catch(() => {})
+    const paraFallback = recarregarSeDesconectado(atualiza)
     return () => {
+      paraFallback()
       hub?.off('StockChanged', atualiza)
       hub?.off('ComandaUpdated', atualiza)
       hub?.off('ComandaClosed', atualiza)

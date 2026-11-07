@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, championshipApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation, Championship } from '@/lib/api'
 import { fmtRestante } from '@/lib/prazo'
 import NotificationBell from '@/components/cliente/NotificationBell'
-import { startHub, stopHub, ouvirEstadoHub, ComandaOpenedEvent } from '@/lib/signalr'
+import { startHub, stopHub, ouvirEstadoHub, recarregarSeDesconectado, ComandaOpenedEvent } from '@/lib/signalr'
 import toast, { Toaster } from 'react-hot-toast'
 import {
   ShoppingCart, Plus, Trash2, Loader2, Search,
@@ -631,7 +631,10 @@ export default function ClientePage() {
       hub.on('ComandaUpdated', onUpdated)
     }).catch(() => {})
 
+    const paraFallback = recarregarSeDesconectado(() => { fetchComanda(); fetchPix() })
+
     return () => {
+      paraFallback()
       hub?.off('ComandaOpened', onOpened)
       hub?.off('ComandaClosed', onClosed)
       hub?.off('ComandaCancelled', onCancelled)

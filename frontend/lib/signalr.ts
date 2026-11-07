@@ -72,6 +72,20 @@ export async function garanteHub(): Promise<signalR.HubConnection> {
   return hub
 }
 
+/**
+ * Rede de segurança do tempo real: enquanto o hub NÃO está conectado, roda `recarregar`
+ * a cada `cadaMs` e tenta religar. Conectado, não faz nada (sem polling à toa: o limite
+ * de requisições é por IP e a loja inteira sai pelo mesmo). Devolve a função que cancela.
+ */
+export function recarregarSeDesconectado(recarregar: () => void, cadaMs = 30_000): () => void {
+  const id = setInterval(() => {
+    if (connection?.state === signalR.HubConnectionState.Connected) return
+    garanteHub().catch(() => {})
+    recarregar()
+  }, cadaMs)
+  return () => clearInterval(id)
+}
+
 /** Cada tela que usa o hub chama startHub ao montar e stopHub ao desmontar. */
 export async function startHub(): Promise<signalR.HubConnection> {
   usuarios++
