@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1344 530" width="1344" height="530" font-family="Arial, Helvetica, sans-serif">
+<rect width="1344" height="530" fill="#fff"/>
+<text x="24" y="32" font-size="19" font-weight="700" fill="#0C3D5A">Quadro Kanban do Santuário Nerd</text>
+<text x="24" y="52" font-size="12.5" fill="#5B7289">Foto de 07/11/2026 montada do BACKLOG, dos PRs abertos e do CHANGELOG</text>
+<rect x="24" y="58" width="250" height="456" rx="12" fill="#EEF4FF"/>
+<rect x="24" y="58" width="250" height="30" rx="12" fill="#5B7289"/>
+<text x="38" y="78" font-size="13.5" font-weight="700" fill="#fff">A fazer (fila) (5)</text>
+<rect x="32" y="100" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="32" y="100" width="5" height="74" rx="2" fill="#5B7289"/>
+<text x="46" y="118" font-size="10.5" font-weight="700" fill="#5B7289">Fila 1</text>
+<text x="46" y="136" font-size="11.5" fill="#0C3D5A">Lentidão nas telas do painel</text>
+<rect x="32" y="184" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="32" y="184" width="5" height="74" rx="2" fill="#5B7289"/>
+<text x="46" y="202" font-size="10.5" font-weight="700" fill="#5B7289">Fila 2</text>
+<text x="46" y="220" font-size="11.5" fill="#0C3D5A">Segurança restante</text>
+<rect x="32" y="268" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="32" y="268" width="5" height="74" rx="2" fill="#5B7289"/>
+<text x="46" y="286" font-size="10.5" font-weight="700" fill="#5B7289">Fila 3</text>
+<text x="46" y="304" font-size="11.5" fill="#0C3D5A">Código mais limpo pra banca</text>
+<rect x="32" y="352" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="32" y="352" width="5" height="74" rx="2" fill="#5B7289"/>
+<text x="46" y="370" font-size="10.5" font-weight="700" fill="#5B7289">Fila 4</text>
+<text x="46" y="388" font-size="11.5" fill="#0C3D5A">Testes travados na pasta</text>
+<text x="46" y="402" font-size="11.5" fill="#0C3D5A">principal desta máquina</text>
+<rect x="32" y="436" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="32" y="436" width="5" height="74" rx="2" fill="#5B7289"/>
+<text x="46" y="454" font-size="10.5" font-weight="700" fill="#5B7289">Fila 5</text>
+<text x="46" y="472" font-size="11.5" fill="#0C3D5A">Botão "Voltar versão" e checks</text>
+<text x="46" y="486" font-size="11.5" fill="#0C3D5A">obrigatórios novos no main</text>
+<rect x="288" y="58" width="250" height="456" rx="12" fill="#EEF4FF"/>
+<rect x="288" y="58" width="250" height="30" rx="12" fill="#F59E0B"/>
+<text x="302" y="78" font-size="13.5" font-weight="700" fill="#fff">Esperando alguém (4)</text>
+<rect x="296" y="100" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="296" y="100" width="5" height="74" rx="2" fill="#F59E0B"/>
+<text x="310" y="118" font-size="10.5" font-weight="700" fill="#F59E0B">Aguarda</text>
+<text x="310" y="136" font-size="11.5" fill="#0C3D5A">"Sistema cai com comanda aberta</text>
+<text x="310" y="150" font-size="11.5" fill="#0C3D5A">durante o campeonato"</text>
+<rect x="296" y="184" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="296" y="184" width="5" height="74" rx="2" fill="#F59E0B"/>
+<text x="310" y="202" font-size="10.5" font-weight="700" fill="#F59E0B">Aguarda</text>
+<text x="310" y="220" font-size="11.5" fill="#0C3D5A">Regras da Liga: prêmios por</text>
+<text x="310" y="234" font-size="11.5" fill="#0C3D5A">posição, desempate, mínimo de</text>
+<text x="310" y="248" font-size="11.5" fill="#0C3D5A">etapas, fechamento do mês</text>
+<rect x="296" y="268" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="296" y="268" width="5" height="74" rx="2" fill="#F59E0B"/>
+<text x="310" y="286" font-size="10.5" font-weight="700" fill="#F59E0B">Aguarda</text>
+<text x="310" y="304" font-size="11.5" fill="#0C3D5A">Prazo de pagamento dos pedidos</text>
+<text x="310" y="318" font-size="11.5" fill="#0C3D5A">(Pix 1h / balcão 3 dias)</text>
+<rect x="296" y="352" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="296" y="352" width="5" height="74" rx="2" fill="#F59E0B"/>
+<text x="310" y="370" font-size="10.5" font-weight="700" fill="#F59E0B">Aguarda</text>
+<text x="310" y="388" font-size="11.5" fill="#0C3D5A">Check-in por QR Code (igual</text>
+<text x="310" y="402" font-size="11.5" fill="#0C3D5A">Bandai)</text>
+<rect x="552" y="58" width="250" height="456" rx="12" fill="#EEF4FF"/>
+<rect x="552" y="58" width="250" height="30" rx="12" fill="#1E4FD6"/>
+<text x="566" y="78" font-size="13.5" font-weight="700" fill="#fff">Em andamento (2)</text>
+<rect x="560" y="100" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="560" y="100" width="5" height="74" rx="2" fill="#1E4FD6"/>
+<text x="574" y="118" font-size="10.5" font-weight="700" fill="#1E4FD6">Em andamento</text>
+<text x="574" y="136" font-size="11.5" fill="#0C3D5A">App Android da Liga (Flutter)</text>
+<rect x="560" y="184" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="560" y="184" width="5" height="74" rx="2" fill="#1E4FD6"/>
+<text x="574" y="202" font-size="10.5" font-weight="700" fill="#1E4FD6">Em andamento</text>
+<text x="574" y="220" font-size="11.5" fill="#0C3D5A">Ajustes visuais da home (cores,</text>
+<text x="574" y="234" font-size="11.5" fill="#0C3D5A">linhas, responsividade)</text>
+<rect x="816" y="58" width="250" height="456" rx="12" fill="#EEF4FF"/>
+<rect x="816" y="58" width="250" height="30" rx="12" fill="#7C3AED"/>
+<text x="830" y="78" font-size="13.5" font-weight="700" fill="#fff">Em revisão (PR + CI) (2)</text>
+<rect x="824" y="100" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="824" y="100" width="5" height="74" rx="2" fill="#7C3AED"/>
+<text x="838" y="118" font-size="10.5" font-weight="700" fill="#7C3AED">PR #158</text>
+<text x="838" y="136" font-size="11.5" fill="#0C3D5A">roteiro pro Codex tirar o MongoDB</text>
+<rect x="824" y="184" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="824" y="184" width="5" height="74" rx="2" fill="#7C3AED"/>
+<text x="838" y="202" font-size="10.5" font-weight="700" fill="#7C3AED">PR #142</text>
+<text x="838" y="220" font-size="11.5" fill="#0C3D5A">sem aprovação desde 03/11 — merge</text>
+<text x="838" y="234" font-size="11.5" fill="#0C3D5A">= produção</text>
+<rect x="1080" y="58" width="250" height="456" rx="12" fill="#EEF4FF"/>
+<rect x="1080" y="58" width="250" height="30" rx="12" fill="#16A34A"/>
+<text x="1094" y="78" font-size="13.5" font-weight="700" fill="#fff">Feito (em produção) (5)</text>
+<rect x="1088" y="100" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="1088" y="100" width="5" height="74" rx="2" fill="#16A34A"/>
+<text x="1102" y="118" font-size="10.5" font-weight="700" fill="#16A34A">v1.85.0 · 07/11</text>
+<text x="1102" y="136" font-size="11.5" fill="#0C3D5A">Fechar o modal de venda não perde</text>
+<text x="1102" y="150" font-size="11.5" fill="#0C3D5A">mais nada</text>
+<rect x="1088" y="184" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="1088" y="184" width="5" height="74" rx="2" fill="#16A34A"/>
+<text x="1102" y="202" font-size="10.5" font-weight="700" fill="#16A34A">v1.84.1 · 07/11</text>
+<text x="1102" y="220" font-size="11.5" fill="#0C3D5A">Tempo real das comandas que</text>
+<text x="1102" y="234" font-size="11.5" fill="#0C3D5A">parava de atualizar</text>
+<rect x="1088" y="268" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="1088" y="268" width="5" height="74" rx="2" fill="#16A34A"/>
+<text x="1102" y="286" font-size="10.5" font-weight="700" fill="#16A34A">v1.84.0 · 06/11</text>
+<text x="1102" y="304" font-size="11.5" fill="#0C3D5A">Site no Google e na prévia do</text>
+<text x="1102" y="318" font-size="11.5" fill="#0C3D5A">WhatsApp/Instagram</text>
+<rect x="1088" y="352" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="1088" y="352" width="5" height="74" rx="2" fill="#16A34A"/>
+<text x="1102" y="370" font-size="10.5" font-weight="700" fill="#16A34A">v1.83.2 · 06/11</text>
+<text x="1102" y="388" font-size="11.5" fill="#0C3D5A">Segurança — custo e margem dos</text>
+<text x="1102" y="402" font-size="11.5" fill="#0C3D5A">produtos fechados</text>
+<rect x="1088" y="436" width="234" height="74" rx="9" fill="#fff" stroke="#D5E0F5"/>
+<rect x="1088" y="436" width="5" height="74" rx="2" fill="#16A34A"/>
+<text x="1102" y="454" font-size="10.5" font-weight="700" fill="#16A34A">v1.83.1 · 06/11</text>
+<text x="1102" y="472" font-size="11.5" fill="#0C3D5A">Manutenção — pacotes do .NET 10</text>
+<text x="1102" y="486" font-size="11.5" fill="#0C3D5A">em dia</text>
+</svg>

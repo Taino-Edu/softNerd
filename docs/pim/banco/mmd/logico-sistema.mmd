@@ -1,0 +1,96 @@
+erDiagram
+  audit_logs {
+    text id PK
+    text actor_user_id "null"
+    varchar(200) actor_user_name "null"
+    varchar(50) action
+    varchar(50) entity_type
+    varchar(100) entity_id "null"
+    text details "null"
+    varchar(64) ip_hash
+    timestamptz created_at
+  }
+  alertas_sistema {
+    uuid id PK
+    varchar(60) codigo
+    varchar(200) chave
+    varchar(10) gravidade
+    varchar(200) titulo
+    varchar(2000) detalhe
+    varchar(300) link "null"
+    int ocorrencias
+    timestamptz criado_em
+    timestamptz ultima_vez_em
+    timestamptz resolvido_em "null"
+    varchar(120) resolvido_por "null"
+  }
+  announcements {
+    uuid id PK
+    varchar(200) title
+    varchar(2000) body "null"
+    varchar(500) image_url "null"
+    varchar(500) link_url "null"
+    int type
+    bool is_active
+    timestamptz expires_at "null"
+    timestamptz created_at
+    timestamptz updated_at
+    uuid created_by_admin_id
+  }
+  funcionalidades {
+    varchar(60) codigo PK
+    bool ligada
+    timestamptz alterada_em
+    uuid alterada_por_id "null"
+  }
+  marcos_operacao {
+    varchar(60) chave PK
+    timestamptz quando
+    varchar(500) detalhe "null"
+  }
+  site_config {
+    uuid id PK
+    varchar(100) site_name
+    varchar(400) hero_subtitle
+    varchar(150) address_line
+    varchar(60) contact_person_name
+    varchar(300) logo_url "null"
+    varchar(300) favicon_url "null"
+    varchar(300) pwa_icon_url "null"
+    varchar(300) hero_image_url "null"
+    varchar(300) admin_icon_url "null"
+    varchar(80) hero_eyebrow
+    varchar(120) aviso_topo
+    varchar(20) whatsapp_number
+    varchar(150) contact_email
+    varchar(40) nav_torneios_label
+    varchar(40) nav_produtos_label
+    varchar(40) nav_mercado_label
+    varchar(40) nav_pontos_label
+    varchar(40) nav_liga_label
+    varchar(40) cta_ver_eventos_label
+    varchar(40) cta_ver_torneios_label
+    varchar(40) cta_ver_produtos_label
+    varchar(60) torneios_eyebrow
+    varchar(80) torneios_title
+    varchar(60) produtos_eyebrow
+    varchar(80) produtos_title
+    varchar(60) pontos_eyebrow
+    varchar(80) pontos_title
+    varchar(400) pontos_paragraph
+    varchar(9) color_primary
+    varchar(9) color_accent
+    varchar(9) color_navy
+    varchar(9) color_hero
+    varchar(9) color_background
+    varchar(9) color_card
+    varchar(20) border_radius_style
+    decimal pix_discount_percent
+    int max_installments
+    int min_installment_in_cents
+    timestamptz updated_at
+  }
+  app_migrations {
+    text key PK
+    timestamptz applied_at
+  }

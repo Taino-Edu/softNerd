@@ -1,0 +1,143 @@
+erDiagram
+  comandas |o--o{ championship_participants : "comanda_id"
+  comandas ||--o{ comanda_items : "comanda_id"
+  products |o--o{ comanda_items : "product_id"
+  championships |o--o{ comandas : "championship_id"
+  users ||--o{ comandas : "user_id"
+  comandas |o--o{ crediarios : "comanda_id"
+  championship_participants |o--o{ pix_cobrancas : "championship_participant_id"
+  comandas |o--o{ pix_cobrancas : "comanda_id"
+  crediarios |o--o{ pix_cobrancas : "crediario_id"
+  product_variants |o--o{ product_reservations : "variant_id"
+  products ||--o{ product_reservations : "product_id"
+  users ||--o{ product_reservations : "user_id"
+  comandas {
+    uuid id PK
+    uuid user_id FK
+    varchar(50) table_identifier "null"
+    text status
+    timestamptz opened_at
+    timestamptz closed_at "null"
+    varchar(30) payment_method "null"
+    varchar(30) second_payment_method "null"
+    int second_payment_amount_in_cents
+    uuid championship_id FK
+    int total_in_cents
+    int points_applied
+    int discount_in_cents
+    varchar(500) notes "null"
+    timestamptz estornada_em "null"
+    uuid estornada_por_admin_id "null"
+    varchar(300) motivo_estorno "null"
+  }
+  comanda_items {
+    uuid id PK
+    uuid comanda_id FK
+    uuid product_id FK
+    varchar(100) card_cache_id "null"
+    uuid variant_id "null"
+    varchar(200) item_name_snapshot
+    int unit_price_in_cents
+    int cost_price_snapshot_in_cents
+    int quantity
+    int subtotal_in_cents
+    timestamptz added_at
+    uuid added_by_user_id
+  }
+  product_reservations {
+    uuid id PK
+    uuid reservation_group_id
+    uuid user_id FK
+    uuid product_id FK
+    uuid variant_id FK
+    int quantity
+    varchar(20) kind
+    varchar(20) status
+    varchar(500) notes "null"
+    varchar(20) payment_method "null"
+    timestamptz reserved_at
+    timestamptz expires_at "null"
+    timestamptz fulfilled_at "null"
+    timestamptz cancelled_at "null"
+    int unit_price_in_cents "null"
+    varchar(80) venda_avulsa_id "null"
+  }
+  pix_cobrancas {
+    uuid id PK
+    text origem
+    uuid crediario_id FK
+    uuid comanda_id FK
+    varchar(50) venda_avulsa_id "null"
+    uuid championship_participant_id FK
+    uuid reservation_group_id "null"
+    text reservation_item_ids "null"
+    varchar(35) tx_id
+    int valor_em_centavos
+    int desconto_em_centavos "null"
+    varchar(40) status
+    text pix_copia_cola "null"
+    text imagem_qrcode "null"
+    varchar(200) nome_devedor "null"
+    text crediario_ids_json "null"
+    uuid criado_por_admin_id
+    timestamptz criado_em
+    timestamptz expira_em "null"
+    timestamptz pago_em "null"
+  }
+  external_transactions {
+    uuid id PK
+    varchar(30) source
+    varchar(200) external_id "null"
+    varchar(10) type
+    decimal amount
+    varchar(500) description
+    timestamptz due_date "null"
+    timestamptz paid_at "null"
+    varchar(20) status
+    varchar(100) category "null"
+    varchar(200) supplier "null"
+    varchar(44) nfe_key "null"
+    varchar(2000) notes "null"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  integration_configs {
+    uuid id PK
+    varchar(30) source
+    varchar(2000) access_token "null"
+    varchar(2000) refresh_token "null"
+    varchar(200) client_id "null"
+    varchar(200) client_secret "null"
+    timestamptz expires_at "null"
+    bool is_active
+    varchar(18) cnpj "null"
+    varchar(100) pix_key "null"
+    timestamptz last_sync_at "null"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  championship_participants {
+    uuid id PK
+    uuid championship_id FK
+    uuid user_id FK
+    uuid comanda_id FK
+  }
+  championships {
+    uuid id PK
+  }
+  crediarios {
+    uuid id PK
+    uuid user_id FK
+    uuid comanda_id FK
+  }
+  product_variants {
+    uuid id PK
+    uuid product_id FK
+  }
+  products {
+    uuid id PK
+  }
+  users {
+    uuid id PK
+    uuid perfil_id FK
+  }

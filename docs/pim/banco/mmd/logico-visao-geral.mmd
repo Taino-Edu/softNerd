@@ -1,0 +1,192 @@
+erDiagram
+  users ||--o{ card_listings : "user_id"
+  championships ||--o{ championship_participants : "championship_id"
+  comandas |o--o{ championship_participants : "comanda_id"
+  users ||--o{ championship_participants : "user_id"
+  championships ||--o{ championship_preinscricoes : "championship_id"
+  comandas ||--o{ comanda_items : "comanda_id"
+  products |o--o{ comanda_items : "product_id"
+  championships |o--o{ comandas : "championship_id"
+  users ||--o{ comandas : "user_id"
+  users |o--o{ cookie_consents : "user_id"
+  crediarios ||--o{ crediario_avisos : "crediario_id"
+  crediarios ||--o{ crediario_lancamentos : "crediario_id"
+  comandas |o--o{ crediarios : "comanda_id"
+  users ||--o{ crediarios : "user_id"
+  users ||--o{ decks : "user_id"
+  users |o--o{ lgpd_requests : "user_id"
+  card_listings ||--o{ listing_interests : "listing_id"
+  users ||--o{ listing_interests : "user_id"
+  users ||--o{ notifications : "user_id"
+  crediarios ||--o{ pagamentos_crediario : "crediario_id"
+  championship_participants |o--o{ pix_cobrancas : "championship_participant_id"
+  comandas |o--o{ pix_cobrancas : "comanda_id"
+  crediarios |o--o{ pix_cobrancas : "crediario_id"
+  product_categories |o--o{ product_categories : "parent_category_id"
+  product_variants |o--o{ product_reservations : "variant_id"
+  products ||--o{ product_reservations : "product_id"
+  users ||--o{ product_reservations : "user_id"
+  products ||--o{ product_variants : "product_id"
+  products ||--o{ product_waitlist : "product_id"
+  users |o--o{ product_waitlist : "user_id"
+  users ||--o{ push_subscriptions : "user_id"
+  championship_participants ||--o{ torneio_partidas : "participante_a_id"
+  championship_participants |o--o{ torneio_partidas : "participante_b_id"
+  torneio_rodadas ||--o{ torneio_partidas : "rodada_id"
+  championships ||--o{ torneio_rodadas : "championship_id"
+  users ||--o{ user_sessions : "user_id"
+  perfis |o--o{ users : "perfil_id"
+  alertas_sistema {
+    uuid id PK
+  }
+  announcements {
+    uuid id PK
+  }
+  app_migrations {
+    text key PK
+  }
+  audit_logs {
+    text id PK
+  }
+  card_listings {
+    uuid id PK
+    uuid user_id FK
+  }
+  championship_participants {
+    uuid id PK
+    uuid championship_id FK
+    uuid user_id FK
+    uuid comanda_id FK
+  }
+  championship_preinscricoes {
+    uuid id PK
+    uuid championship_id FK
+  }
+  championships {
+    uuid id PK
+  }
+  comanda_items {
+    uuid id PK
+    uuid comanda_id FK
+    uuid product_id FK
+  }
+  comandas {
+    uuid id PK
+    uuid user_id FK
+    uuid championship_id FK
+  }
+  cookie_consents {
+    text id PK
+    uuid user_id FK
+  }
+  crediario_aviso_config {
+    uuid id PK
+  }
+  crediario_avisos {
+    uuid id PK
+    uuid crediario_id FK
+  }
+  crediario_lancamentos {
+    uuid id PK
+    uuid crediario_id FK
+  }
+  crediarios {
+    uuid id PK
+    uuid user_id FK
+    uuid comanda_id FK
+  }
+  decks {
+    uuid id PK
+    uuid user_id FK
+  }
+  external_transactions {
+    uuid id PK
+  }
+  funcionalidades {
+    varchar(60) codigo PK
+  }
+  integration_configs {
+    uuid id PK
+  }
+  lgpd_requests {
+    text id PK
+    uuid user_id FK
+  }
+  liga_mensal_manual_entries {
+    uuid id PK
+  }
+  listing_interests {
+    uuid id PK
+    uuid listing_id FK
+    uuid user_id FK
+  }
+  marcos_operacao {
+    varchar(60) chave PK
+  }
+  notifications {
+    uuid id PK
+    uuid user_id FK
+  }
+  pagamentos_crediario {
+    uuid id PK
+    uuid crediario_id FK
+  }
+  perfis {
+    uuid id PK
+  }
+  pix_cobrancas {
+    uuid id PK
+    uuid crediario_id FK
+    uuid comanda_id FK
+    uuid championship_participant_id FK
+  }
+  product_categories {
+    uuid id PK
+    uuid parent_category_id FK
+  }
+  product_reservations {
+    uuid id PK
+    uuid user_id FK
+    uuid product_id FK
+    uuid variant_id FK
+  }
+  product_variants {
+    uuid id PK
+    uuid product_id FK
+  }
+  product_waitlist {
+    uuid id PK
+    uuid product_id FK
+    uuid user_id FK
+  }
+  products {
+    uuid id PK
+  }
+  push_subscriptions {
+    uuid id PK
+    uuid user_id FK
+  }
+  site_config {
+    uuid id PK
+  }
+  timers {
+    uuid id PK
+  }
+  torneio_partidas {
+    uuid id PK
+    uuid rodada_id FK
+    uuid participante_a_id FK
+    uuid participante_b_id FK
+  }
+  torneio_rodadas {
+    uuid id PK
+    uuid championship_id FK
+  }
+  user_sessions {
+    uuid id PK
+    uuid user_id FK
+  }
+  users {
+    uuid id PK
+    uuid perfil_id FK
+  }

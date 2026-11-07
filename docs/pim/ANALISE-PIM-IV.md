@@ -27,6 +27,18 @@ descrever o que está no código de hoje.
 **Para o trabalho escrito:** o que sobrou de funcionalidade é pedido do site → Pix → venda → estoque → financeiro;
 comanda por mesa (QR), crediário, pré-venda, Liga/Liguinha com telão, Vigia do sistema, LGPD e acessibilidade (VLibras).
 
+## Progresso em 07/11/2026
+
+| Entrega | Onde | Situação |
+|---|---|---|
+| App Android da Liga (Flutter): login, torneios, mesa, ranking, identidade da loja | `mobile/` (PR #159 e #160) | ✅ testado em aparelho real (Android 16) |
+| MER conceitual, modelo lógico, dicionário de dados e script físico, **gerados do schema real** | `docs/pim/banco/`, `scripts/gerar-modelo-dados.py` | ✅ |
+| Sprints (18 reconstruídas + plano da 19), Kanban, backlog em histórias, retrospectivas e métricas | `docs/pim/agil/`, `scripts/gerar-metricas-agil.py` | ✅ |
+| Procedures e triggers no PostgreSQL | — | ⏳ sprint 19 |
+| App para iPhone (Flutter Web/PWA + build iOS no CI) | — | ⏳ sprint 19 |
+| Diagramas de arquitetura (camadas e classes da Liga) | — | ⏳ sprint 19 |
+| Trabalho escrito em ABNT | — | ⏳ sprint 19 (texto autoral do grupo) |
+
 ## Resumo
 
 | # | Etapa (disciplina) | Pontos | Situação |
@@ -36,11 +48,11 @@ comanda por mesa (QR), crediário, pré-venda, Liga/Liguinha com telão, Vigia d
 | 2 | Planejamento da solução (Empreendedorismo em TI) | 1,0 | 🔸 a solução existe e está em produção; falta o texto de negócio |
 | 3 | Responsabilidade social e diversidade (Rel. étnico-raciais) | 0,5 | 🔸 acessibilidade forte; diversidade e combate à discriminação não estão explícitos |
 | 4 | Solução Web (Desenvolvimento Web com .NET) | 2,0 | ✅ API ASP.NET Core + painel web completo |
-| 5 | Solução Mobile (Desenvolvimento Mobile) | 2,0 | ❌/🔸 só existe PWA/site responsivo — **não há aplicativo móvel** |
+| 5 | Solução Mobile (Desenvolvimento Mobile) | 2,0 | 🔸 **app Android da Liga pronto** (`mobile/`, Flutter, testado em aparelho real); falta iPhone (Flutter Web/iOS) e tempo real por SignalR |
 | 6 | Arquitetura de Software (Programação Aplicada em .NET) | — | ✅ camadas, OO e módulos (já em .NET 10); faltam os diagramas |
-| 7 | Banco de Dados (Programação de BD) | 1,0 | 🔸 físico pronto; **faltam MER, modelo lógico, procedures e triggers** |
+| 7 | Banco de Dados (Programação de BD) | 1,0 | 🔸 **MER conceitual, modelo lógico, dicionário e script físico prontos** (`docs/pim/banco/`); faltam **procedures e triggers** |
 | 8 | Nuvem e DevOps (Cloud Computing e DevOps) | 0,5 | ✅ containers, CI/CD, monitoramento — falta escrever o plano |
-| 9 | Gerenciamento Ágil (Gerenc. de Projetos Ágil) | 1,0 | 🔸 backlog e entregas existem; faltam sprints e Kanban formais |
+| 9 | Gerenciamento Ágil (Gerenc. de Projetos Ágil) | 1,0 | ✅ **18 sprints, Kanban, backlog em histórias e métricas reconstruídos do histórico real** (`docs/pim/agil/`) |
 
 Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele é a base de todas as outras notas)** e **Banco (MER, procedures, triggers)**.
 
@@ -73,7 +85,9 @@ Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele 
 - **Observação:** a disciplina é "Desenvolvimento Web com .NET". A API é .NET, mas as telas são Next.js (React). Vale confirmar com o professor se isso conta ou se ele espera telas em .NET (Razor/Blazor/MVC).
 - **Versão:** ✅ migrado pro .NET 10 LTS (v1.70.0), antes do fim do suporte do .NET 8 (10/11/2026).
 
-### Etapa 5 — Solução Mobile ❌/🔸 (vale 2,0)
+### Etapa 5 — Solução Mobile 🔸 (vale 2,0)
+
+> **Atualização 07/11:** o app Android (Flutter) está pronto em `mobile/`; ver `mobile/README.md`. Pendentes: iPhone (Flutter Web e build iOS no CI), SignalR e APK de release. O texto abaixo é o levantamento original de 23/10.
 - **Já temos:** site 100% responsivo, **PWA** (manifest `standalone` + service worker, instala na tela inicial) e push no celular. A parte do jogador da liguinha é praticamente um app (código → deck → mesa → resultado → ranking).
 - **Falta:** o manual pede **aplicativo móvel integrado**: telas principais, fluxo de navegação, autenticação, **sincronização de dados** e integração com as APIs. PWA pode não ser aceito como "aplicativo".
 - **Caminhos possíveis** (decidir antes de fazer):
@@ -91,6 +105,8 @@ Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele 
 - **Falta:** diagramas — de camadas/componentes e de classes de um módulo (ex.: Liga).
 
 ### Etapa 7 — Banco de Dados 🔸
+
+> **Atualização 07/11:** o MER, o modelo lógico, o dicionário de dados e o script físico estão em `docs/pim/banco/`, gerados do banco real. Faltam procedures e triggers. O texto abaixo é o levantamento original de 23/10.
 - **Já temos:**
   - **Modelo físico**: 32+ tabelas (`CardGameStore/Data/Inicializacao/postgres.sql` + EF Core); lista em `docs/mapa/BACKEND.md`.
   - **Índices**, chaves únicas e regras de concorrência (ex.: Pix, homologar).
@@ -114,7 +130,9 @@ Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele 
   - Escrever o plano: arquitetura em nuvem, serviços, escalabilidade.
   - **Atenção**: hoje é uma **VPS** (Hostinger) + Cloudflare. Pro texto, descrever como IaaS e propor a evolução (ex.: Postgres gerenciado, réplica da API atrás de balanceador) como plano de escalabilidade.
 
-### Etapa 9 — Gerenciamento Ágil 🔸
+### Etapa 9 — Gerenciamento Ágil ✅
+
+> **Atualização 07/11:** sprints, Kanban, backlog em histórias de usuário, retrospectivas e métricas foram reconstruídos do histórico real em `docs/pim/agil/` (retroativos, e assim declarados). O texto abaixo é o levantamento original de 23/10.
 - **Já temos:** **Product Backlog** vivo (`docs/planejamento/BACKLOG.md`), entregas por versão (CHANGELOG com datas), fluxo branch → PR → CI → deploy, "esperando alguém" / "na fila" / "feito".
 - **Falta:** **Sprint Backlog**, **cronograma das sprints** e **quadro Kanban**. Dá pra montar retroativo a partir do CHANGELOG (ex.: sprints de 2 semanas) e um Kanban no GitHub Projects.
 

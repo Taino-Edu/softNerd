@@ -1,0 +1,46 @@
+erDiagram
+  PERFIL ||--o{ USUARIO : "define permissões de"
+  USUARIO ||--o{ SESSAO : "mantém"
+  USUARIO ||--o{ NOTIFICACAO : "recebe"
+  USUARIO ||--o{ INSCRICAO_PUSH : "registra"
+  USUARIO |o--o{ CONSENTIMENTO_COOKIES : "dá"
+  USUARIO |o--o{ SOLICITACAO_LGPD : "faz"
+  USUARIO {
+    uuid id PK
+    string nome
+    string email
+    string cpf
+    string whatsapp
+    string papel "cliente, operador ou administrador"
+    int pontos
+    decimal saldo
+    string pokemon_preferido
+  }
+  PERFIL {
+    uuid id PK
+    string nome
+    string permissoes
+  }
+  SESSAO {
+    uuid id PK
+    datetime expira_em
+    string dispositivo
+  }
+  NOTIFICACAO {
+    uuid id PK
+    string titulo
+    bool lida
+  }
+  INSCRICAO_PUSH {
+    uuid id PK
+    string endpoint
+  }
+  CONSENTIMENTO_COOKIES {
+    string id PK
+    string escolha
+  }
+  SOLICITACAO_LGPD {
+    string id PK
+    string tipo
+    string situacao
+  }

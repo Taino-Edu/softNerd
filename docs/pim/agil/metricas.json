@@ -1,0 +1,199 @@
+{
+  "periodo": "01/03/2026 a 07/11/2026",
+  "sprints_completas": 18,
+  "dias_por_sprint": 14,
+  "versoes": 157,
+  "commits": 877,
+  "prs_total": 160,
+  "prs_dev_mergeados": 109,
+  "prs_dependabot_mergeados": 3,
+  "ciclo_mediano_h": 0.2,
+  "ciclo_medio_h": 6.3,
+  "ciclo_p90_h": 5.6,
+  "versoes_com_cliente": 33,
+  "versoes_com_volta": 16,
+  "linhas_adicionadas_prs": 46995,
+  "linhas_removidas_prs": 31590,
+  "por_sprint": {
+    "1": {
+      "inicio": "2026-03-01",
+      "fim": "2026-03-14",
+      "versoes": 1,
+      "commits": 0,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "2": {
+      "inicio": "2026-03-15",
+      "fim": "2026-03-28",
+      "versoes": 1,
+      "commits": 2,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "3": {
+      "inicio": "2026-03-29",
+      "fim": "2026-04-11",
+      "versoes": 0,
+      "commits": 0,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "4": {
+      "inicio": "2026-04-12",
+      "fim": "2026-04-25",
+      "versoes": 1,
+      "commits": 0,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "5": {
+      "inicio": "2026-04-26",
+      "fim": "2026-05-09",
+      "versoes": 0,
+      "commits": 14,
+      "prs": 2,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 1.1
+    },
+    "6": {
+      "inicio": "2026-05-10",
+      "fim": "2026-05-23",
+      "versoes": 2,
+      "commits": 50,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "7": {
+      "inicio": "2026-05-24",
+      "fim": "2026-06-06",
+      "versoes": 0,
+      "commits": 136,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "8": {
+      "inicio": "2026-06-07",
+      "fim": "2026-06-20",
+      "versoes": 3,
+      "commits": 132,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "9": {
+      "inicio": "2026-06-21",
+      "fim": "2026-07-04",
+      "versoes": 11,
+      "commits": 147,
+      "prs": 0,
+      "cliente": 1,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "10": {
+      "inicio": "2026-07-05",
+      "fim": "2026-07-18",
+      "versoes": 13,
+      "commits": 64,
+      "prs": 5,
+      "cliente": 3,
+      "volta": 0,
+      "ciclo_mediano_h": 3.1
+    },
+    "11": {
+      "inicio": "2026-07-19",
+      "fim": "2026-08-01",
+      "versoes": 3,
+      "commits": 66,
+      "prs": 3,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0.1
+    },
+    "12": {
+      "inicio": "2026-08-02",
+      "fim": "2026-08-15",
+      "versoes": 11,
+      "commits": 18,
+      "prs": 0,
+      "cliente": 2,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "13": {
+      "inicio": "2026-08-16",
+      "fim": "2026-08-29",
+      "versoes": 3,
+      "commits": 10,
+      "prs": 0,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 0
+    },
+    "14": {
+      "inicio": "2026-08-30",
+      "fim": "2026-09-12",
+      "versoes": 6,
+      "commits": 24,
+      "prs": 3,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 17.0
+    },
+    "15": {
+      "inicio": "2026-09-13",
+      "fim": "2026-09-26",
+      "versoes": 1,
+      "commits": 4,
+      "prs": 1,
+      "cliente": 0,
+      "volta": 0,
+      "ciclo_mediano_h": 282.1
+    },
+    "16": {
+      "inicio": "2026-09-27",
+      "fim": "2026-10-10",
+      "versoes": 22,
+      "commits": 43,
+      "prs": 9,
+      "cliente": 1,
+      "volta": 0,
+      "ciclo_mediano_h": 2.8
+    },
+    "17": {
+      "inicio": "2026-10-11",
+      "fim": "2026-10-24",
+      "versoes": 47,
+      "commits": 132,
+      "prs": 50,
+      "cliente": 14,
+      "volta": 16,
+      "ciclo_mediano_h": 0.2
+    },
+    "18": {
+      "inicio": "2026-10-25",
+      "fim": "2026-11-07",
+      "versoes": 32,
+      "commits": 35,
+      "prs": 36,
+      "cliente": 12,
+      "volta": 0,
+      "ciclo_mediano_h": 0.3
+    }
+  }
+}

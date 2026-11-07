@@ -1,0 +1,34 @@
+erDiagram
+  CATEGORIA |o--o{ CATEGORIA : "tem subcategorias"
+  CATEGORIA ||..o{ PRODUTO : "classifica (pelo nome)"
+  PRODUTO ||--o{ VARIANTE : "tem grade de"
+  PRODUTO ||--o{ LISTA_ESPERA : "tem fila de"
+  USUARIO |o--o{ LISTA_ESPERA : "entra na"
+  CATEGORIA {
+    uuid id PK
+    string nome
+    decimal desconto_pix
+  }
+  PRODUTO {
+    uuid id PK
+    string nome
+    string categoria
+    decimal preco
+    decimal custo
+    int estoque
+    bool pre_venda
+  }
+  VARIANTE {
+    uuid id PK
+    string tamanho
+    string cor
+    int estoque
+  }
+  LISTA_ESPERA {
+    uuid id PK
+    datetime entrou_em
+  }
+  USUARIO {
+    uuid id PK
+    string nome
+  }
