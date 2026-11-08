@@ -636,3 +636,185 @@ CREATE TABLE IF NOT EXISTS marcos_operacao (
     quando  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     detalhe VARCHAR(500) NULL
 );
+
+
+-- =============================================================================
+-- PROCEDURES, FUNÇÕES E TRIGGERS  (PIM IV, etapa 7 — Programação de Banco de Dados)
+--
+-- Só carimbo de data, auditoria de estoque e funções de RELATÓRIO (somente leitura).
+-- NENHUMA regra de negócio depende deles: se forem removidos o sistema funciona igual
+-- (a aplicação continua gravando updated_at e estoque do mesmo jeito).
+-- Idempotente: CREATE OR REPLACE / IF NOT EXISTS (Postgres 14+; produção usa o 16).
+-- Só existe no Postgres: o SQLite de dev não tem triggers/funções PL/pgSQL, por isso o
+-- sqlite.sql não os cria e os endpoints que os usam respondem 501 no SQLite.
+-- Para desligar tudo: scripts/reverter-procedures-triggers.sql
+-- Testado em tests/sql/procedures-triggers.sql (roda no job de CI com Postgres de verdade).
+-- =============================================================================
+
+-- ── 1) updated_at automático ─────────────────────────────────────────────────
+-- Todo UPDATE numa tabela com a coluna updated_at (timestamptz) carimba a hora do banco.
+CREATE OR REPLACE FUNCTION fn_carimbar_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $fn$
+BEGIN
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END
+$fn$;
+
+DO $do$
+DECLARE
+    tabela text;
+BEGIN
+    FOR tabela IN
+        SELECT c.table_name
+        FROM information_schema.columns c
+        JOIN information_schema.tables t
+          ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE'
+        WHERE c.table_schema = 'public'
+          AND c.column_name = 'updated_at'
+          AND c.data_type = 'timestamp with time zone'
+    LOOP
+        EXECUTE format(
+            'CREATE OR REPLACE TRIGGER %I BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION fn_carimbar_updated_at()',
+            'trg_' || tabela || '_updated_at', tabela);
+    END LOOP;
+END
+$do$;
+
+-- ── 2) Auditoria de estoque ──────────────────────────────────────────────────
+-- Toda mudança de stock_quantity (venda, reserva, ajuste, devolução) vira uma linha com o antes e o depois.
+-- Sem FK de propósito: o histórico sobrevive à exclusão do produto.
+CREATE TABLE IF NOT EXISTS estoque_movimentos (
+    id             BIGINT       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    product_id     UUID         NOT NULL,
+    variant_id     UUID         NULL,
+    estoque_antes  INTEGER      NOT NULL,
+    estoque_depois INTEGER      NOT NULL,
+    delta          INTEGER      GENERATED ALWAYS AS (estoque_depois - estoque_antes) STORED,
+    origem         VARCHAR(20)  NOT NULL,
+    quando         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_estoque_movimentos_produto ON estoque_movimentos (product_id, quando DESC);
+CREATE INDEX IF NOT EXISTS ix_estoque_movimentos_quando  ON estoque_movimentos (quando);
+
+CREATE OR REPLACE FUNCTION fn_auditar_estoque()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $fn$
+BEGIN
+    IF TG_TABLE_NAME = 'products' THEN
+        INSERT INTO estoque_movimentos (product_id, variant_id, estoque_antes, estoque_depois, origem)
+        VALUES (NEW.id, NULL, OLD.stock_quantity, NEW.stock_quantity, 'products');
+    ELSE
+        INSERT INTO estoque_movimentos (product_id, variant_id, estoque_antes, estoque_depois, origem)
+        VALUES (NEW.product_id, NEW.id, OLD.stock_quantity, NEW.stock_quantity, 'product_variants');
+    END IF;
+    RETURN NULL;
+END
+$fn$;
+
+CREATE OR REPLACE TRIGGER trg_products_auditar_estoque
+    AFTER UPDATE OF stock_quantity ON products
+    FOR EACH ROW
+    WHEN (OLD.stock_quantity IS DISTINCT FROM NEW.stock_quantity)
+    EXECUTE FUNCTION fn_auditar_estoque();
+
+CREATE OR REPLACE TRIGGER trg_product_variants_auditar_estoque
+    AFTER UPDATE OF stock_quantity ON product_variants
+    FOR EACH ROW
+    WHEN (OLD.stock_quantity IS DISTINCT FROM NEW.stock_quantity)
+    EXECUTE FUNCTION fn_auditar_estoque();
+
+-- ── 3) Funções de relatório (somente leitura) ────────────────────────────────
+
+-- Produtos ativos no mínimo ou abaixo (mesma regra de Product.IsLowStock), do mais urgente ao menos.
+CREATE OR REPLACE FUNCTION fn_estoque_baixo()
+RETURNS TABLE (product_id uuid, nome varchar, categoria varchar, estoque integer, minimo integer, faltam integer)
+LANGUAGE sql
+STABLE
+AS $fn$
+    SELECT p.id, p.name, p.category, p.stock_quantity, p.minimum_stock,
+           GREATEST(p.minimum_stock - p.stock_quantity, 0)
+    FROM products p
+    WHERE p.is_active AND p.stock_quantity <= p.minimum_stock
+    ORDER BY (p.stock_quantity - p.minimum_stock), p.name
+$fn$;
+
+-- Fechamento das comandas de um dia (calendário de Brasília), por forma de pagamento.
+-- Mesma regra do Financeiro: só status 'Fechada' (estornada fica de fora) e, numa comanda dividida,
+-- a 1ª forma recebe total - 2º pagamento e a 2ª recebe o valor dela.
+CREATE OR REPLACE FUNCTION fn_fechamento_comandas(p_dia date)
+RETURNS TABLE (forma_pagamento text, comandas integer, total_centavos bigint)
+LANGUAGE sql
+STABLE
+AS $fn$
+    WITH dia AS (
+        SELECT c.id, c.payment_method, c.second_payment_method,
+               c.total_in_cents, c.second_payment_amount_in_cents
+        FROM comandas c
+        WHERE c.status = 'Fechada'
+          AND c.estornada_em IS NULL
+          AND c.closed_at IS NOT NULL
+          AND (c.closed_at AT TIME ZONE 'America/Sao_Paulo')::date = p_dia
+    ), partes AS (
+        SELECT d.id, COALESCE(d.payment_method, '(sem forma)') AS forma,
+               (d.total_in_cents - d.second_payment_amount_in_cents)::bigint AS valor
+        FROM dia d
+        UNION ALL
+        SELECT d.id, d.second_payment_method, d.second_payment_amount_in_cents::bigint
+        FROM dia d
+        WHERE d.second_payment_method IS NOT NULL AND d.second_payment_amount_in_cents > 0
+    )
+    SELECT forma::text, COUNT(DISTINCT id)::integer, SUM(valor)::bigint
+    FROM partes
+    GROUP BY forma
+    ORDER BY SUM(valor) DESC, forma
+$fn$;
+
+-- Crediários em aberto com saldo, vencimento e se já venceu. p_user_id NULL = todos os clientes.
+CREATE OR REPLACE FUNCTION fn_saldo_crediario(p_user_id uuid DEFAULT NULL)
+RETURNS TABLE (crediario_id uuid, user_id uuid, cliente varchar, valor_centavos integer,
+               pago_centavos integer, saldo_centavos integer, vencimento timestamptz, vencido boolean)
+LANGUAGE sql
+STABLE
+AS $fn$
+    SELECT c.id, c.user_id, u.name, c.valor_em_centavos, c.valor_pago_em_centavos,
+           c.valor_em_centavos - c.valor_pago_em_centavos,
+           c.data_vencimento, c.data_vencimento < NOW()
+    FROM crediarios c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.status = 'Aberto'
+      AND (p_user_id IS NULL OR c.user_id = p_user_id)
+    ORDER BY c.data_vencimento, u.name
+$fn$;
+
+-- ── 4) Procedure de manutenção ───────────────────────────────────────────────
+-- Apaga sessões de login mortas (expiradas ou revogadas há mais de p_dias_sessoes dias) e movimentos de
+-- estoque com mais de p_dias_movimentos dias. Grava o resultado em marcos_operacao ('manutencao-banco').
+CREATE OR REPLACE PROCEDURE pr_manutencao_banco(p_dias_sessoes integer DEFAULT 30, p_dias_movimentos integer DEFAULT 365)
+LANGUAGE plpgsql
+AS $pr$
+DECLARE
+    v_sessoes    integer;
+    v_movimentos integer;
+BEGIN
+    IF p_dias_sessoes < 1 OR p_dias_movimentos < 30 THEN
+        RAISE EXCEPTION 'Prazos inválidos: sessões >= 1 dia e movimentos >= 30 dias (recebi % e %)', p_dias_sessoes, p_dias_movimentos;
+    END IF;
+
+    DELETE FROM user_sessions
+    WHERE expires_at < NOW() - make_interval(days => p_dias_sessoes)
+       OR (revoked_at IS NOT NULL AND revoked_at < NOW() - make_interval(days => p_dias_sessoes));
+    GET DIAGNOSTICS v_sessoes = ROW_COUNT;
+
+    DELETE FROM estoque_movimentos WHERE quando < NOW() - make_interval(days => p_dias_movimentos);
+    GET DIAGNOSTICS v_movimentos = ROW_COUNT;
+
+    INSERT INTO marcos_operacao (chave, quando, detalhe)
+    VALUES ('manutencao-banco', NOW(),
+            format('sessões removidas: %s; movimentos de estoque removidos: %s', v_sessoes, v_movimentos))
+    ON CONFLICT (chave) DO UPDATE SET quando = EXCLUDED.quando, detalhe = EXCLUDED.detalhe;
+END
+$pr$;

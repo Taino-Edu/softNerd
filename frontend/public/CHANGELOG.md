@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.86.0] — 2026-11-07
+
+### Procedures, funções e triggers no PostgreSQL (PIM IV, etapa 7)
+- **Novo (banco):** o `updated_at` das 12 tabelas que o têm agora é carimbado por trigger, sem depender do código
+- **Novo (banco):** trigger de auditoria do estoque — toda mudança em `stock_quantity` (produto ou variação) grava antes/depois/diferença em `estoque_movimentos`
+- **Novo (banco):** funções `fn_estoque_baixo`, `fn_fechamento_comandas` (dia de Brasília, estornadas fora, pagamento dividido) e `fn_saldo_crediario`, e a procedure `pr_manutencao_banco` (limpa sessões mortas e movimentos antigos)
+- **Novo (API):** `/api/relatorios/banco/*` expõe esses relatórios só para leitura; a manutenção (POST) é só do dono. No SQLite de desenvolvimento respondem 501
+- Nenhuma regra de venda, estoque ou crediário muda: é tudo aditivo. Volta: `scripts/reverter-procedures-triggers.sql`
+- CI: `tests/sql/procedures-triggers.sql` roda no Postgres real (dentro de um ROLLBACK)
+
 ## [v1.85.0] — 2026-11-07
 
 ### Fechar o modal de venda não perde mais nada

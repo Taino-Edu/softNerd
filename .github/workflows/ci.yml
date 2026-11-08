@@ -158,6 +158,10 @@ jobs:
           echo "::error::A API não subiu na segunda vez — algum SQL do startup não é idempotente"
           tail -80 api2.log; exit 1
 
+      - name: Procedures e triggers (tests/sql, roda e desfaz tudo num ROLLBACK)
+        run: |
+          PGPASSWORD=ci psql -h localhost -U ci -d cardgamestore -v ON_ERROR_STOP=1 -f tests/sql/procedures-triggers.sql
+
       - name: Smoke
         run: python scripts/smoke.py --api http://localhost:5000 --so-api
 

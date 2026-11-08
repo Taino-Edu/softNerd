@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-252 endpoints em 35 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+257 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -33,6 +33,7 @@
 - [PublicProfile](#publicprofile) (1)
 - [Push](#push) (3)
 - [Relatorios](#relatorios) (2)
+- [RelatoriosBanco](#relatoriosbanco) (5)
 - [Reservation](#reservation) (18)
 - [SiteConfig](#siteconfig) (2)
 - [Tcg](#tcg) (8)
@@ -393,6 +394,18 @@
 |---|---|---|---|---|---|
 | GET | `/api/relatorios/crediario` | AdminOnly | `Crediario` (205) | `relatorioApi.crediario` | `app/admin/relatorios/page.tsx` |
 | GET | `/api/relatorios/vendas` | AdminOnly | `Vendas` (44) | `relatorioApi.vendas` | `app/admin/relatorios/page.tsx` |
+
+## RelatoriosBanco
+
+`CardGameStore/Controllers/RelatoriosBancoController.cs`
+
+| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
+|---|---|---|---|---|---|
+| GET | `/api/relatorios/banco/crediario-saldo` | AdminOnly | `CrediarioSaldo` (121) | — | — |
+| GET | `/api/relatorios/banco/estoque-baixo` | AdminOnly | `EstoqueBaixo` (88) | — | — |
+| GET | `/api/relatorios/banco/estoque-movimentos` | AdminOnly | `EstoqueMovimentos` (138) | — | — |
+| GET | `/api/relatorios/banco/fechamento` | AdminOnly | `Fechamento` (102) | — | — |
+| POST | `/api/relatorios/banco/manutencao` | OwnerOnly | `Manutencao` (161) | — | — |
 
 ## Reservation
 
