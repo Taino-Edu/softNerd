@@ -63,6 +63,16 @@ erDiagram
     timestamptz created_at
     timestamptz notified_at "null"
   }
+  estoque_movimentos {
+    bigint id PK
+    uuid product_id
+    uuid variant_id "null"
+    int estoque_antes
+    int estoque_depois
+    int delta "null"
+    varchar(20) origem
+    timestamptz quando
+  }
   comanda_items {
     uuid id PK
     uuid comanda_id FK

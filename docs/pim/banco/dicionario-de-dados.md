@@ -5,7 +5,7 @@
 ## Índice
 
 - **Acesso e identidade**: [`users`](#users), [`perfis`](#perfis), [`user_sessions`](#user_sessions), [`cookie_consents`](#cookie_consents), [`lgpd_requests`](#lgpd_requests), [`push_subscriptions`](#push_subscriptions), [`notifications`](#notifications)
-- **Catálogo e estoque**: [`product_categories`](#product_categories), [`products`](#products), [`product_variants`](#product_variants), [`product_waitlist`](#product_waitlist)
+- **Catálogo e estoque**: [`product_categories`](#product_categories), [`products`](#products), [`product_variants`](#product_variants), [`product_waitlist`](#product_waitlist), [`estoque_movimentos`](#estoque_movimentos)
 - **Comanda, reservas e pagamentos**: [`comandas`](#comandas), [`comanda_items`](#comanda_items), [`product_reservations`](#product_reservations), [`pix_cobrancas`](#pix_cobrancas), [`external_transactions`](#external_transactions), [`integration_configs`](#integration_configs)
 - **Crediário**: [`crediarios`](#crediarios), [`crediario_lancamentos`](#crediario_lancamentos), [`pagamentos_crediario`](#pagamentos_crediario), [`crediario_avisos`](#crediario_avisos), [`crediario_aviso_config`](#crediario_aviso_config)
 - **Campeonatos, Liga e torneios**: [`championships`](#championships), [`championship_participants`](#championship_participants), [`championship_preinscricoes`](#championship_preinscricoes), [`torneio_rodadas`](#torneio_rodadas), [`torneio_partidas`](#torneio_partidas), [`decks`](#decks), [`timers`](#timers), [`liga_mensal_manual_entries`](#liga_mensal_manual_entries)
@@ -291,6 +291,26 @@ Lista de espera de quem quer ser avisado quando um produto voltar ao estoque.
 - `ix_product_waitlist_product` — (product_id)
 - `ix_product_waitlist_user` — (user_id) WHERE (user_id IS NOT NULL)
 - `pk_product_waitlist` — único · (id)
+
+### estoque_movimentos
+
+Histórico de mudanças de estoque (antes, depois, diferença), gravado por trigger a cada alteração em produto ou variação.
+
+| Coluna | Tipo | Nulo | Padrão | Chave / referência |
+|---|---|:-:|---|---|
+| `id` | bigint | não |  | PK |
+| `product_id` | uuid | não |  |  |
+| `variant_id` | uuid | sim |  |  |
+| `estoque_antes` | int | não |  |  |
+| `estoque_depois` | int | não |  |  |
+| `delta` | int | sim |  |  |
+| `origem` | varchar(20) | não |  |  |
+| `quando` | timestamptz | não | `now()` |  |
+
+Índices:
+
+- `ix_estoque_movimentos_produto` — (product_id, quando DESC)
+- `ix_estoque_movimentos_quando` — (quando)
 
 ## Comanda, reservas e pagamentos
 

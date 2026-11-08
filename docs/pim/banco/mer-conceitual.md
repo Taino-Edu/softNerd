@@ -95,7 +95,7 @@ erDiagram
 
 ## Catálogo e estoque
 
-O que a loja vende: categorias (com subcategorias), produtos, variações de tamanho/cor e lista de espera.
+O que a loja vende: categorias (com subcategorias), produtos, variações de tamanho/cor, lista de espera e o histórico de mudanças de estoque (gravado por trigger).
 
 ```mermaid
 erDiagram
@@ -103,11 +103,19 @@ erDiagram
   CATEGORIA ||..o{ PRODUTO : "classifica (pelo nome)"
   PRODUTO ||--o{ VARIANTE : "tem grade de"
   PRODUTO ||--o{ LISTA_ESPERA : "tem fila de"
+  PRODUTO ||..o{ MOVIMENTO_ESTOQUE : "tem histórico (trigger)"
   USUARIO |o--o{ LISTA_ESPERA : "entra na"
   CATEGORIA {
     uuid id PK
     string nome
     decimal desconto_pix
+  }
+  MOVIMENTO_ESTOQUE {
+    bigint id PK
+    int estoque_antes
+    int estoque_depois
+    int delta
+    string origem
   }
   PRODUTO {
     uuid id PK

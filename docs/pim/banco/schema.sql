@@ -22,6 +22,135 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: fn_auditar_estoque(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fn_auditar_estoque() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF TG_TABLE_NAME = 'products' THEN
+        INSERT INTO estoque_movimentos (product_id, variant_id, estoque_antes, estoque_depois, origem)
+        VALUES (NEW.id, NULL, OLD.stock_quantity, NEW.stock_quantity, 'products');
+    ELSE
+        INSERT INTO estoque_movimentos (product_id, variant_id, estoque_antes, estoque_depois, origem)
+        VALUES (NEW.product_id, NEW.id, OLD.stock_quantity, NEW.stock_quantity, 'product_variants');
+    END IF;
+    RETURN NULL;
+END
+$$;
+
+
+--
+-- Name: fn_carimbar_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fn_carimbar_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END
+$$;
+
+
+--
+-- Name: fn_estoque_baixo(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fn_estoque_baixo() RETURNS TABLE(product_id uuid, nome character varying, categoria character varying, estoque integer, minimo integer, faltam integer)
+    LANGUAGE sql STABLE
+    AS $$
+    SELECT p.id, p.name, p.category, p.stock_quantity, p.minimum_stock,
+           GREATEST(p.minimum_stock - p.stock_quantity, 0)
+    FROM products p
+    WHERE p.is_active AND p.stock_quantity <= p.minimum_stock
+    ORDER BY (p.stock_quantity - p.minimum_stock), p.name
+$$;
+
+
+--
+-- Name: fn_fechamento_comandas(date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fn_fechamento_comandas(p_dia date) RETURNS TABLE(forma_pagamento text, comandas integer, total_centavos bigint)
+    LANGUAGE sql STABLE
+    AS $$
+    WITH dia AS (
+        SELECT c.id, c.payment_method, c.second_payment_method,
+               c.total_in_cents, c.second_payment_amount_in_cents
+        FROM comandas c
+        WHERE c.status = 'Fechada'
+          AND c.estornada_em IS NULL
+          AND c.closed_at IS NOT NULL
+          AND (c.closed_at AT TIME ZONE 'America/Sao_Paulo')::date = p_dia
+    ), partes AS (
+        SELECT d.id, COALESCE(d.payment_method, '(sem forma)') AS forma,
+               (d.total_in_cents - d.second_payment_amount_in_cents)::bigint AS valor
+        FROM dia d
+        UNION ALL
+        SELECT d.id, d.second_payment_method, d.second_payment_amount_in_cents::bigint
+        FROM dia d
+        WHERE d.second_payment_method IS NOT NULL AND d.second_payment_amount_in_cents > 0
+    )
+    SELECT forma::text, COUNT(DISTINCT id)::integer, SUM(valor)::bigint
+    FROM partes
+    GROUP BY forma
+    ORDER BY SUM(valor) DESC, forma
+$$;
+
+
+--
+-- Name: fn_saldo_crediario(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fn_saldo_crediario(p_user_id uuid DEFAULT NULL::uuid) RETURNS TABLE(crediario_id uuid, user_id uuid, cliente character varying, valor_centavos integer, pago_centavos integer, saldo_centavos integer, vencimento timestamp with time zone, vencido boolean)
+    LANGUAGE sql STABLE
+    AS $$
+    SELECT c.id, c.user_id, u.name, c.valor_em_centavos, c.valor_pago_em_centavos,
+           c.valor_em_centavos - c.valor_pago_em_centavos,
+           c.data_vencimento, c.data_vencimento < NOW()
+    FROM crediarios c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.status = 'Aberto'
+      AND (p_user_id IS NULL OR c.user_id = p_user_id)
+    ORDER BY c.data_vencimento, u.name
+$$;
+
+
+--
+-- Name: pr_manutencao_banco(integer, integer); Type: PROCEDURE; Schema: public; Owner: -
+--
+
+CREATE PROCEDURE public.pr_manutencao_banco(IN p_dias_sessoes integer DEFAULT 30, IN p_dias_movimentos integer DEFAULT 365)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_sessoes    integer;
+    v_movimentos integer;
+BEGIN
+    IF p_dias_sessoes < 1 OR p_dias_movimentos < 30 THEN
+        RAISE EXCEPTION 'Prazos inválidos: sessões >= 1 dia e movimentos >= 30 dias (recebi % e %)', p_dias_sessoes, p_dias_movimentos;
+    END IF;
+
+    DELETE FROM user_sessions
+    WHERE expires_at < NOW() - make_interval(days => p_dias_sessoes)
+       OR (revoked_at IS NOT NULL AND revoked_at < NOW() - make_interval(days => p_dias_sessoes));
+    GET DIAGNOSTICS v_sessoes = ROW_COUNT;
+
+    DELETE FROM estoque_movimentos WHERE quando < NOW() - make_interval(days => p_dias_movimentos);
+    GET DIAGNOSTICS v_movimentos = ROW_COUNT;
+
+    INSERT INTO marcos_operacao (chave, quando, detalhe)
+    VALUES ('manutencao-banco', NOW(),
+            format('sessões removidas: %s; movimentos de estoque removidos: %s', v_sessoes, v_movimentos))
+    ON CONFLICT (chave) DO UPDATE SET quando = EXCLUDED.quando, detalhe = EXCLUDED.detalhe;
+END
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -328,6 +457,36 @@ CREATE TABLE public.decks (
     is_public boolean NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: estoque_movimentos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.estoque_movimentos (
+    id bigint NOT NULL,
+    product_id uuid NOT NULL,
+    variant_id uuid,
+    estoque_antes integer NOT NULL,
+    estoque_depois integer NOT NULL,
+    delta integer GENERATED ALWAYS AS ((estoque_depois - estoque_antes)) STORED,
+    origem character varying(20) NOT NULL,
+    quando timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: estoque_movimentos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.estoque_movimentos ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.estoque_movimentos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
 );
 
 
@@ -1111,6 +1270,14 @@ ALTER TABLE ONLY public.app_migrations
 
 
 --
+-- Name: estoque_movimentos estoque_movimentos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_movimentos
+    ADD CONSTRAINT estoque_movimentos_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: product_waitlist pk_product_waitlist; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1420,6 +1587,20 @@ CREATE INDEX ix_decks_user_public ON public.decks USING btree (user_id, is_publi
 
 
 --
+-- Name: ix_estoque_movimentos_produto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_estoque_movimentos_produto ON public.estoque_movimentos USING btree (product_id, quando DESC);
+
+
+--
+-- Name: ix_estoque_movimentos_quando; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_estoque_movimentos_quando ON public.estoque_movimentos USING btree (quando);
+
+
+--
 -- Name: ix_ext_tx_source_external_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1704,6 +1885,104 @@ CREATE UNIQUE INDEX ux_users_email_lower ON public.users USING btree (lower((ema
 --
 
 CREATE UNIQUE INDEX ux_users_google_sub ON public.users USING btree (google_sub) WHERE (google_sub IS NOT NULL);
+
+
+--
+-- Name: announcements trg_announcements_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_announcements_updated_at BEFORE UPDATE ON public.announcements FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: card_listings trg_card_listings_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_card_listings_updated_at BEFORE UPDATE ON public.card_listings FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: crediario_aviso_config trg_crediario_aviso_config_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_crediario_aviso_config_updated_at BEFORE UPDATE ON public.crediario_aviso_config FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: decks trg_decks_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_decks_updated_at BEFORE UPDATE ON public.decks FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: external_transactions trg_external_transactions_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_external_transactions_updated_at BEFORE UPDATE ON public.external_transactions FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: integration_configs trg_integration_configs_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_integration_configs_updated_at BEFORE UPDATE ON public.integration_configs FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: liga_mensal_manual_entries trg_liga_mensal_manual_entries_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_liga_mensal_manual_entries_updated_at BEFORE UPDATE ON public.liga_mensal_manual_entries FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: product_variants trg_product_variants_auditar_estoque; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_product_variants_auditar_estoque AFTER UPDATE OF stock_quantity ON public.product_variants FOR EACH ROW WHEN ((old.stock_quantity IS DISTINCT FROM new.stock_quantity)) EXECUTE FUNCTION public.fn_auditar_estoque();
+
+
+--
+-- Name: product_variants trg_product_variants_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_product_variants_updated_at BEFORE UPDATE ON public.product_variants FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: products trg_products_auditar_estoque; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_products_auditar_estoque AFTER UPDATE OF stock_quantity ON public.products FOR EACH ROW WHEN ((old.stock_quantity IS DISTINCT FROM new.stock_quantity)) EXECUTE FUNCTION public.fn_auditar_estoque();
+
+
+--
+-- Name: products trg_products_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_products_updated_at BEFORE UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: site_config trg_site_config_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_site_config_updated_at BEFORE UPDATE ON public.site_config FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: timers trg_timers_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_timers_updated_at BEFORE UPDATE ON public.timers FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
+
+
+--
+-- Name: users trg_users_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.fn_carimbar_updated_at();
 
 
 --

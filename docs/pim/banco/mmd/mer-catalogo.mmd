@@ -3,11 +3,19 @@ erDiagram
   CATEGORIA ||..o{ PRODUTO : "classifica (pelo nome)"
   PRODUTO ||--o{ VARIANTE : "tem grade de"
   PRODUTO ||--o{ LISTA_ESPERA : "tem fila de"
+  PRODUTO ||..o{ MOVIMENTO_ESTOQUE : "tem histórico (trigger)"
   USUARIO |o--o{ LISTA_ESPERA : "entra na"
   CATEGORIA {
     uuid id PK
     string nome
     decimal desconto_pix
+  }
+  MOVIMENTO_ESTOQUE {
+    bigint id PK
+    int estoque_antes
+    int estoque_depois
+    int delta
+    string origem
   }
   PRODUTO {
     uuid id PK

@@ -43,8 +43,8 @@ DOMINIOS = [
      "Quem usa o sistema: clientes, equipe, perfis de permissão, sessões, avisos ao usuário e LGPD.",
      ["users", "perfis", "user_sessions", "cookie_consents", "lgpd_requests", "push_subscriptions", "notifications"]),
     ("catalogo", "Catálogo e estoque",
-     "O que a loja vende: categorias (com subcategorias), produtos, variações de tamanho/cor e lista de espera.",
-     ["product_categories", "products", "product_variants", "product_waitlist"]),
+     "O que a loja vende: categorias (com subcategorias), produtos, variações de tamanho/cor, lista de espera e o histórico de mudanças de estoque (gravado por trigger).",
+     ["product_categories", "products", "product_variants", "product_waitlist", "estoque_movimentos"]),
     ("vendas", "Comanda, reservas e pagamentos",
      "Venda na mesa (comanda), pré-venda/reserva do site, cobranças Pix e integração bancária.",
      ["comandas", "comanda_items", "product_reservations", "pix_cobrancas", "external_transactions", "integration_configs"]),
@@ -73,6 +73,7 @@ DESCRICAO = {
     "notifications": "Notificações dentro do site para cada usuário.",
     "product_categories": "Categorias de produto, com subcategorias (auto-relacionamento) e desconto Pix próprio.",
     "products": "Produtos à venda: preço, custo, estoque, promoção, pré-venda, foto e dados de busca.",
+    "estoque_movimentos": "Histórico de mudanças de estoque (antes, depois, diferença), gravado por trigger a cada alteração em produto ou variação.",
     "product_variants": "Variações de um produto (tamanho/cor) com estoque próprio.",
     "product_waitlist": "Lista de espera de quem quer ser avisado quando um produto voltar ao estoque.",
     "comandas": "Comanda aberta por mesa/cliente: status, forma de pagamento, desconto, pontos aplicados e estorno.",
@@ -125,6 +126,17 @@ def tipo_texto(c):
     if t == "numeric" and c.get("prec"):
         return f"numeric({c['prec']},{c['esc'] or 0})"
     return TIPO_CURTO.get(t, t)
+
+
+def carregar_objetos():
+    """Triggers, funções e procedures criados pelo postgres.sql (só os do sistema: fn_*, pr_*, trg_*)."""
+    triggers = sql("""select json_agg(t) from (select c.relname as tabela, g.tgname as nome, p.proname as funcao,
+        pg_get_triggerdef(g.oid) as def from pg_trigger g join pg_class c on c.oid=g.tgrelid join pg_proc p on p.oid=g.tgfoid
+        where not g.tgisinternal and g.tgname like 'trg\\_%' order by 1,2) t""")
+    rotinas = sql("""select json_agg(t) from (select p.proname as nome, p.prokind as tipo, pg_get_function_arguments(p.oid) as args,
+        pg_get_function_result(p.oid) as retorno from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+        where n.nspname='public' and (p.proname like 'fn\\_%' or p.proname like 'pr\\_%') order by 1) t""")
+    return triggers, rotinas
 
 
 def carregar():
@@ -222,11 +234,19 @@ CONCEITUAL = {
   CATEGORIA ||..o{ PRODUTO : "classifica (pelo nome)"
   PRODUTO ||--o{ VARIANTE : "tem grade de"
   PRODUTO ||--o{ LISTA_ESPERA : "tem fila de"
+  PRODUTO ||..o{ MOVIMENTO_ESTOQUE : "tem histórico (trigger)"
   USUARIO |o--o{ LISTA_ESPERA : "entra na"
   CATEGORIA {
     uuid id PK
     string nome
     decimal desconto_pix
+  }
+  MOVIMENTO_ESTOQUE {
+    bigint id PK
+    int estoque_antes
+    int estoque_depois
+    int delta
+    string origem
   }
   PRODUTO {
     uuid id PK
@@ -539,8 +559,48 @@ def gerar_visao_geral(colunas, restr):
 ACAO = {"a": "NO ACTION", "r": "RESTRICT", "c": "CASCADE", "n": "SET NULL", "d": "SET DEFAULT"}
 
 
+ROTINAS_DESC = {
+    "fn_carimbar_updated_at": "Função de trigger: coloca `now()` em `updated_at` antes de todo UPDATE.",
+    "fn_auditar_estoque": "Função de trigger: grava em `estoque_movimentos` o estoque antes/depois quando `stock_quantity` muda.",
+    "fn_estoque_baixo": "Produtos ativos com estoque no mínimo ou abaixo, do mais urgente ao menos.",
+    "fn_fechamento_comandas": "Comandas fechadas num dia (calendário de Brasília) por forma de pagamento; ignora estornadas e trata pagamento dividido.",
+    "fn_saldo_crediario": "Crediários em aberto com valor, pago, saldo e se já venceram (de um cliente ou de todos).",
+    "pr_manutencao_banco": "Procedure: apaga sessões de login mortas e movimentos de estoque antigos; registra o resultado em `marcos_operacao`.",
+}
+TIPO_ROTINA = {"f": "função", "p": "procedure"}
+
+
+def gerar_procedures(triggers, rotinas):
+    md = ["# Procedures, funções e triggers — PIM IV, etapa 7", "",
+          "Gerado de `pg_trigger`/`pg_proc` do PostgreSQL real por `scripts/gerar-modelo-dados.py`. Tudo é **aditivo**: nenhuma regra de venda, "
+          "estoque ou crediário depende destes objetos; a aplicação continua funcionando se eles forem removidos.", "",
+          "## Onde está o código", "",
+          "- Criação: bloco \"PROCEDURES, FUNÇÕES E TRIGGERS\" no fim de `CardGameStore/Data/Inicializacao/postgres.sql` (idempotente: `CREATE OR REPLACE`, `IF NOT EXISTS`).",
+          "- Reverter: `scripts/reverter-procedures-triggers.sql` (a tabela `estoque_movimentos` fica, para não perder histórico).",
+          "- Testes: `tests/sql/procedures-triggers.sql` (ASSERTs dentro de `BEGIN … ROLLBACK`, roda no CI contra o Postgres real).",
+          "- Uso pela API: `RelatoriosBancoController`, rotas `/api/relatorios/banco/*` (somente leitura; a manutenção é só do dono; 501 no SQLite de dev).", "",
+          f"## Funções e procedures ({len(rotinas)})", "", "| Nome | Tipo | Argumentos | Retorno | O que faz |", "|---|---|---|---|---|"]
+    for r in rotinas:
+        md.append(f"| `{r['nome']}` | {TIPO_ROTINA.get(r['tipo'], r['tipo'])} | `{r['args'] or '—'}` | `{r['retorno'] or '—'}` | {ROTINAS_DESC.get(r['nome'], '—')} |")
+    updated = [t for t in triggers if t["funcao"] == "fn_carimbar_updated_at"]
+    outros = [t for t in triggers if t["funcao"] != "fn_carimbar_updated_at"]
+    md += ["", f"## Triggers ({len(triggers)})", "",
+           f"**`updated_at` automático — {len(updated)} triggers** (`BEFORE UPDATE`, função `fn_carimbar_updated_at`), um em cada tabela que tem a coluna:", "",
+           ", ".join(f"`{t['tabela']}`" for t in updated), "",
+           "**Auditoria de estoque:**", "", "| Trigger | Tabela | Definição |", "|---|---|---|"]
+    for t in outros:
+        md.append(f"| `{t['nome']}` | `{t['tabela']}` | `{t['def'].split(' ON ', 1)[0].replace('CREATE TRIGGER ', '')} ON {t['def'].split(' ON ', 1)[1]}` |")
+    md += ["", "## Decisões", "",
+           "- **Só PostgreSQL.** O SQLite de desenvolvimento não tem PL/pgSQL; por isso o código vive em `postgres.sql` e as rotas respondem 501 no SQLite.",
+           "- **Sem chave estrangeira em `estoque_movimentos`:** o histórico precisa sobreviver à exclusão do produto.",
+           "- **Trigger só quando o estoque muda de fato** (`WHEN OLD IS DISTINCT FROM NEW`), para não gravar linha à toa.",
+           "- **Dia do fechamento** no calendário de Brasília (`America/Sao_Paulo`), como o resto do sistema.", ""]
+    (SAIDA / "procedures-triggers.md").write_text("\n".join(md), encoding="utf-8")
+
+
 def main():
     colunas, restr, indices = carregar()
+    triggers, rotinas = carregar_objetos()
     tabelas = sorted({c["tabela"] for c in colunas})
     dominio_de = {t: d[0] for d in DOMINIOS for t in d[3]}
     faltando = [t for t in tabelas if t not in dominio_de]
@@ -643,7 +703,7 @@ def main():
            "não força (foram mantidas assim de propósito ou por histórico):", "",
            "| Coluna | Tipo | Aponta para (na prática) |", "|---|---|---|"]
     alvo = {"venda_avulsa_id": "venda do PDV (MongoDB `vendas_avulsas`)", "deck_id": "`decks.id`", "deck_a_id": "`decks.id`", "deck_b_id": "`decks.id`",
-            "variant_id": "`product_variants.id`", "comanda_id": "`comandas.id`", "reservation_group_id": "grupo de reserva (carrinho) — sem tabela própria",
+            "product_id": "`products.id` (sem FK de propósito: o histórico sobrevive à exclusão do produto)", "variant_id": "`product_variants.id`", "comanda_id": "`comandas.id`", "reservation_group_id": "grupo de reserva (carrinho) — sem tabela própria",
             "championship_id": "`championships.id`", "actor_user_id": "`users.id` (autor da ação)", "entity_id": "qualquer entidade auditada",
             "external_id": "identificador no sistema externo (banco)", "tx_id": "txid do Pix no banco", "client_id": "credencial da integração",
             "card_cache_id": "carta no cache do MongoDB"}
@@ -705,6 +765,7 @@ def main():
           "| [`mer-conceitual.md`](mer-conceitual.md) | MER conceitual por domínio (entidades de negócio e relacionamentos) | MER |",
           "| [`modelo-logico.md`](modelo-logico.md) | Modelo lógico: tabelas, colunas, PK/FK/UK, decisões de modelagem, relações sem FK | Modelo lógico |",
           "| [`dicionario-de-dados.md`](dicionario-de-dados.md) | Uma seção por tabela, com todas as colunas e índices | Apoio ao lógico/físico |",
+          "| [`procedures-triggers.md`](procedures-triggers.md) | Procedures, funções e triggers: o que fazem, onde ficam, como testar e reverter | Procedures e triggers |",
           "| [`schema.sql`](schema.sql) | Script físico completo (estrutura) | Script do banco |",
           "| `mmd/*.mmd` | Fonte Mermaid de cada diagrama | — |",
           "| `img/*.svg`, `img/*.png` | Diagramas renderizados, prontos pro trabalho escrito (ABNT) | — |", "",
@@ -713,15 +774,16 @@ def main():
           f"- **{n_pks} chaves primárias**, **{n_fks} chaves estrangeiras** declaradas, **{n_idx} índices** ({unicos} únicos, {parciais} parciais)",
           "- PostgreSQL 16 (dados relacionais) + MongoDB (vendas do caixa e cache de cartas, fora deste schema)", "",
           "## Procedures e triggers", "",
-          "Hoje o banco tem **0 procedures e 0 triggers**: toda regra de negócio mora na aplicação (C#). O manual do PIM pede os dois; "
-          "o plano de como incluí-los sem arriscar o sistema em produção está em `docs/pim/ANALISE-PIM-IV.md` (etapa 7). "
-          "Este pacote cobre o MER, o modelo lógico e o script físico.", "",
+          f"O banco tem **{len(rotinas)} funções/procedures** e **{len(triggers)} triggers** próprios, criados pelo bloco final de "
+          "`CardGameStore/Data/Inicializacao/postgres.sql` (idempotente, roda a cada partida). Detalhes, regras e como testar em "
+          "[`procedures-triggers.md`](procedures-triggers.md).", "",
           "## Como regenerar", "",
           "```bash",
           "# precisa do banco local no ar (podman start softnerd_postgres_dev) com a API já rodada uma vez pra criar o schema",
           "python3 scripts/gerar-modelo-dados.py",
           "# imagens: os .mmd abrem em https://mermaid.js.org; os SVG/PNG de img/ foram renderizados com Mermaid 11.4.1",
           "```", ""]
+    gerar_procedures(triggers, rotinas)
     (SAIDA / "README.md").write_text("\n".join(md), encoding="utf-8")
 
     print(f"ok: {len(tabelas)} tabelas, {n_cols} colunas, {n_fks} FKs, {n_idx} índices, {len(mmd)} diagramas -> {SAIDA.relative_to(RAIZ)}")

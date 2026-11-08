@@ -19,7 +19,7 @@ descrever o que está no código de hoje.
 | WhatsApp automático, OFX, Mercado Pago | existiam | **removidos** (v1.73.0). Não citar |
 | Tenant-ERP (SaaS multi-loja) | em andamento | **fora do repositório** (v1.71.0) |
 | Testes de unidade | "mais de 620" | **608 casos** (605 passam, 3 ignorados) |
-| Procedures / triggers no PostgreSQL | 0 | **0** (continua o maior buraco do Banco) |
+| Procedures / triggers no PostgreSQL | 0 | **6 funções/procedures e 14 triggers** (PR #162, v1.86.0) |
 | Bancos | PostgreSQL + MongoDB | PostgreSQL + MongoDB; **retirada do Mongo planejada** (Mongo ainda em 6 arquivos). Deixar pra descrever a arquitetura final, com um banco só |
 | Tempo real | SignalR | SignalR; **corrida de reconexão corrigida** (v1.84.1) e telas com rede de segurança |
 | Painel de venda e comanda | — | rascunho dos modais, Esc, uso no celular (v1.85.0) |
@@ -34,7 +34,7 @@ comanda por mesa (QR), crediário, pré-venda, Liga/Liguinha com telão, Vigia d
 | App Android da Liga (Flutter): login, torneios, mesa, ranking, identidade da loja | `mobile/` (PR #159 e #160) | ✅ testado em aparelho real (Android 16) |
 | MER conceitual, modelo lógico, dicionário de dados e script físico, **gerados do schema real** | `docs/pim/banco/`, `scripts/gerar-modelo-dados.py` | ✅ |
 | Sprints (18 reconstruídas + plano da 19), Kanban, backlog em histórias, retrospectivas e métricas | `docs/pim/agil/`, `scripts/gerar-metricas-agil.py` | ✅ |
-| Procedures e triggers no PostgreSQL | — | ⏳ sprint 19 |
+| Procedures e triggers no PostgreSQL | — | ✅ v1.86.0 (PR #162) |
 | App para iPhone (Flutter Web/PWA + build iOS no CI) | — | ⏳ sprint 19 |
 | Diagramas de arquitetura (camadas e classes da Liga) | — | ⏳ sprint 19 |
 | Trabalho escrito em ABNT | — | ⏳ sprint 19 (texto autoral do grupo) |
@@ -50,11 +50,11 @@ comanda por mesa (QR), crediário, pré-venda, Liga/Liguinha com telão, Vigia d
 | 4 | Solução Web (Desenvolvimento Web com .NET) | 2,0 | ✅ API ASP.NET Core + painel web completo |
 | 5 | Solução Mobile (Desenvolvimento Mobile) | 2,0 | 🔸 **app Android da Liga pronto** (`mobile/`, Flutter, testado em aparelho real); falta iPhone (Flutter Web/iOS) e tempo real por SignalR |
 | 6 | Arquitetura de Software (Programação Aplicada em .NET) | — | ✅ camadas, OO e módulos (já em .NET 10); faltam os diagramas |
-| 7 | Banco de Dados (Programação de BD) | 1,0 | 🔸 **MER conceitual, modelo lógico, dicionário e script físico prontos** (`docs/pim/banco/`); faltam **procedures e triggers** |
+| 7 | Banco de Dados (Programação de BD) | 1,0 | ✅ **MER, modelo lógico, dicionário, script físico, procedures e triggers prontos** (`docs/pim/banco/`, `docs/pim/banco/procedures-triggers.md`) |
 | 8 | Nuvem e DevOps (Cloud Computing e DevOps) | 0,5 | ✅ containers, CI/CD, monitoramento — falta escrever o plano |
 | 9 | Gerenciamento Ágil (Gerenc. de Projetos Ágil) | 1,0 | ✅ **18 sprints, Kanban, backlog em histórias e métricas reconstruídos do histórico real** (`docs/pim/agil/`) |
 
-Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele é a base de todas as outras notas)** e **Banco (MER, procedures, triggers)**.
+Maiores buracos em pontos: **Mobile (2,0)** e **trabalho escrito/ABNT (1,0 + ele é a base de todas as outras notas)**.
 
 ## Etapa por etapa
 
@@ -104,9 +104,9 @@ Maiores buracos em pontos: **Mobile (2,0)**, **trabalho escrito/ABNT (1,0 + ele 
   - **Testes**: 608 casos de teste de unidade (605 passam, 3 ignorados) + CI com Postgres de verdade e carga.
 - **Falta:** diagramas — de camadas/componentes e de classes de um módulo (ex.: Liga).
 
-### Etapa 7 — Banco de Dados 🔸
+### Etapa 7 — Banco de Dados ✅
 
-> **Atualização 07/11:** o MER, o modelo lógico, o dicionário de dados e o script físico estão em `docs/pim/banco/`, gerados do banco real. Faltam procedures e triggers. O texto abaixo é o levantamento original de 23/10.
+> **Atualização 07/11:** o MER, o modelo lógico, o dicionário de dados e o script físico estão em `docs/pim/banco/`, gerados do banco real. As procedures, funções e triggers (6 + 14) entraram na v1.86.0 (PR #162) e estão documentadas em `docs/pim/banco/procedures-triggers.md`. O texto abaixo é o levantamento original de 23/10.
 - **Já temos:**
   - **Modelo físico**: 32+ tabelas (`CardGameStore/Data/Inicializacao/postgres.sql` + EF Core); lista em `docs/mapa/BACKEND.md`.
   - **Índices**, chaves únicas e regras de concorrência (ex.: Pix, homologar).

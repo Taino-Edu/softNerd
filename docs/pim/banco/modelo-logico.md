@@ -2,7 +2,7 @@
 
 > **Gerado do banco real** por `scripts/gerar-modelo-dados.py`. Não é desenho à mão: se o schema mudar, rode o script de novo.
 
-**39 tabelas · 468 colunas · 39 chaves primárias · 37 chaves estrangeiras · 123 índices** (banco PostgreSQL 16).
+**40 tabelas · 476 colunas · 40 chaves primárias · 37 chaves estrangeiras · 126 índices** (banco PostgreSQL 16).
 
 Legenda: `PK` chave primária, `FK` chave estrangeira, `UK` valor único; `"null"` = coluna aceita nulo. Tabelas com sufixo *(ref.)* aparecem só pra mostrar a relação com outro domínio (só as chaves).
 
@@ -109,6 +109,9 @@ erDiagram
   decks {
     uuid id PK
     uuid user_id FK
+  }
+  estoque_movimentos {
+    bigint id PK
   }
   external_transactions {
     uuid id PK
@@ -359,7 +362,7 @@ erDiagram
 
 ## Catálogo e estoque
 
-O que a loja vende: categorias (com subcategorias), produtos, variações de tamanho/cor e lista de espera.
+O que a loja vende: categorias (com subcategorias), produtos, variações de tamanho/cor, lista de espera e o histórico de mudanças de estoque (gravado por trigger).
 
 ```mermaid
 erDiagram
@@ -426,6 +429,16 @@ erDiagram
     int position
     timestamptz created_at
     timestamptz notified_at "null"
+  }
+  estoque_movimentos {
+    bigint id PK
+    uuid product_id
+    uuid variant_id "null"
+    int estoque_antes
+    int estoque_depois
+    int delta "null"
+    varchar(20) origem
+    timestamptz quando
   }
   comanda_items {
     uuid id PK
@@ -983,7 +996,7 @@ erDiagram
 
 ## Relações lógicas sem chave estrangeira
 
-O banco declara **37 chaves estrangeiras**. Além delas, há **31 colunas de referência** que a aplicação respeita mas o banco não força (foram mantidas assim de propósito ou por histórico):
+O banco declara **37 chaves estrangeiras**. Além delas, há **33 colunas de referência** que a aplicação respeita mas o banco não força (foram mantidas assim de propósito ou por histórico):
 
 | Coluna | Tipo | Aponta para (na prática) |
 |---|---|---|
@@ -1002,6 +1015,8 @@ O banco declara **37 chaves estrangeiras**. Além delas, há **31 colunas de ref
 | `crediario_lancamentos.venda_avulsa_id` | varchar(50), nulo | venda do PDV (MongoDB `vendas_avulsas`) |
 | `crediarios.aberto_por_admin_id` | uuid | `users.id` (quem fez a ação; id guardado como histórico) |
 | `crediarios.pago_por_admin_id` | uuid, nulo | `users.id` (quem fez a ação; id guardado como histórico) |
+| `estoque_movimentos.product_id` | uuid | `products.id` (sem FK de propósito: o histórico sobrevive à exclusão do produto) |
+| `estoque_movimentos.variant_id` | uuid, nulo | `product_variants.id` |
 | `external_transactions.external_id` | varchar(200), nulo | identificador no sistema externo (banco) |
 | `funcionalidades.alterada_por_id` | uuid, nulo | `users.id` (quem fez a ação; id guardado como histórico) |
 | `integration_configs.client_id` | varchar(200), nulo | credencial da integração |
