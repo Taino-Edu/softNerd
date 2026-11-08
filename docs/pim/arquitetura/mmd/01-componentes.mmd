@@ -1,0 +1,39 @@
+flowchart LR
+  subgraph Clientes
+    PWA["Navegador / PWA<br/>Next.js 15 (React)"]
+    APP["App da Liga<br/>Flutter (Android)"]
+  end
+  CF["Cloudflare<br/>HTTPS e proteção"]
+  subgraph VPS["VPS Hostinger - Docker Compose"]
+    NGX["nginx 1.30<br/>única porta pública (80)"]
+    FE["frontend<br/>Next.js (SSR)"]
+    API["api<br/>ASP.NET Core .NET 10<br/>REST + SignalR"]
+    PG[("PostgreSQL 16<br/>dados do negócio")]
+    MG[("MongoDB 7<br/>cache TCG e vendas avulsas")]
+    UP[/"uploads/<br/>fotos dos produtos"/]
+  end
+  subgraph Externos["Serviços externos"]
+    INTER["Banco Inter<br/>cobrança Pix"]
+    GEM["Google Gemini<br/>chat de IA"]
+    TCG["APIs de cartas<br/>Pokémon, Magic, Yu-Gi-Oh!"]
+    GOO["Login com Google"]
+    PUSH["Web Push"]
+    MAIL["E-mail (SMTP)"]
+  end
+  PWA --> CF
+  APP --> CF
+  CF --> NGX
+  NGX -- "/" --> FE
+  NGX -- "/api/ e /hubs/" --> API
+  NGX -- "/uploads/" --> API
+  FE -- "SSR" --> API
+  API --> PG
+  API --> MG
+  API --> UP
+  API --> INTER
+  API --> GEM
+  API --> TCG
+  API --> GOO
+  API --> PUSH
+  API --> MAIL
+  INTER -. "consulta de pagamento (reconciliação)" .-> API
