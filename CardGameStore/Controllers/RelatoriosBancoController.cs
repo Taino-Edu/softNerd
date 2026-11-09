@@ -6,6 +6,7 @@
 // GET  /api/relatorios/banco/crediario-saldo?userId=       → fn_saldo_crediario(userId)
 // GET  /api/relatorios/banco/estoque-movimentos?produtoId= → tabela estoque_movimentos (trigger de auditoria)
 // POST /api/relatorios/banco/manutencao                    → CALL pr_manutencao_banco() (só o dono)
+// POST /api/relatorios/banco/conferencia-integridade       → CALL pr_conferir_integridade() (só o dono)
 //
 // As funções, o trigger e a procedure estão em Data/Inicializacao/postgres.sql (PIM IV, etapa 7) e só existem
 // no Postgres: no SQLite de desenvolvimento cada rota responde 501. Nenhuma regra do sistema depende delas;
@@ -167,6 +168,22 @@ public class RelatoriosBancoController : ControllerBase
         await _db.Database.ExecuteSqlRawAsync("CALL pr_manutencao_banco({0}, {1})", [diasSessoes, diasMovimentos], ct);
         var marco = await _db.Database.SqlQueryRaw<MarcoManutencaoDto>(
             """SELECT quando AS "Quando", detalhe AS "Detalhe" FROM marcos_operacao WHERE chave = 'manutencao-banco'""")
+            .FirstOrDefaultAsync(ct);
+        return Ok(marco);
+    }
+
+    /// <summary>
+    /// Roda a procedure de conferência: conta referências órfãs e linhas antigas fora das regras CHECK.
+    /// Não altera dados de negócio. Só o dono. Devolve o resultado gravado em marcos_operacao.
+    /// </summary>
+    [HttpPost("conferencia-integridade")]
+    [Authorize(Policy = "OwnerOnly")]
+    public async Task<IActionResult> ConferenciaIntegridade(CancellationToken ct)
+    {
+        if (!EhPostgres) return SoNoPostgres();
+        await _db.Database.ExecuteSqlRawAsync("CALL pr_conferir_integridade()", ct);
+        var marco = await _db.Database.SqlQueryRaw<MarcoManutencaoDto>(
+            """SELECT quando AS "Quando", detalhe AS "Detalhe" FROM marcos_operacao WHERE chave = 'conferencia-integridade'""")
             .FirstOrDefaultAsync(ct);
         return Ok(marco);
     }

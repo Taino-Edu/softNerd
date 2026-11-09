@@ -649,6 +649,7 @@ CREATE TABLE IF NOT EXISTS marcos_operacao (
 -- sqlite.sql não os cria e os endpoints que os usam respondem 501 no SQLite.
 -- Para desligar tudo: scripts/reverter-procedures-triggers.sql
 -- Testado em tests/sql/procedures-triggers.sql (roda no job de CI com Postgres de verdade).
+-- Restrições CHECK e pr_conferir_integridade ficam no bloco seguinte, no fim deste arquivo.
 -- =============================================================================
 
 -- ── 1) updated_at automático ─────────────────────────────────────────────────
@@ -815,6 +816,107 @@ BEGIN
     INSERT INTO marcos_operacao (chave, quando, detalhe)
     VALUES ('manutencao-banco', NOW(),
             format('sessões removidas: %s; movimentos de estoque removidos: %s', v_sessoes, v_movimentos))
+    ON CONFLICT (chave) DO UPDATE SET quando = EXCLUDED.quando, detalhe = EXCLUDED.detalhe;
+END
+$pr$;
+
+
+-- =============================================================================
+-- RESTRIÇÕES CHECK E CONFERÊNCIA DE INTEGRIDADE  (PIM IV, etapa 7)
+-- NOT VALID: vale para INSERT/UPDATE daqui em diante e não relê as linhas antigas, então não
+-- impede o startup. Linha antiga fora da regra aparece em pr_conferir_integridade().
+-- Estoque e valor de lançamento ficam de fora de propósito: a aplicação pode gerar esses casos.
+-- Status listados = enums ComandaStatus, CrediariosStatus, ChampionshipStatus e StatusRodada.
+-- Para desligar: scripts/reverter-procedures-triggers.sql
+-- =============================================================================
+DO $do$
+DECLARE
+    r record;
+BEGIN
+    FOR r IN
+        SELECT * FROM (VALUES
+            ('comanda_items',        'chk_comanda_items_quantidade',  'quantity > 0'),
+            ('comanda_items',        'chk_comanda_items_valores',     'unit_price_in_cents >= 0 AND subtotal_in_cents >= 0'),
+            ('comandas',             'chk_comandas_valores',          'discount_in_cents >= 0 AND points_applied >= 0'),
+            ('comandas',             'chk_comandas_status',           'status IN (''Aberta'', ''EmAndamento'', ''Fechada'', ''Cancelada'', ''Estornada'')'),
+            ('crediarios',           'chk_crediarios_valores',        'valor_em_centavos >= 0 AND valor_pago_em_centavos >= 0'),
+            ('crediarios',           'chk_crediarios_status',         'status IN (''Aberto'', ''Pago'')'),
+            ('pagamentos_crediario', 'chk_pagamentos_crediario_valor','valor_em_centavos >= 0'),
+            ('pix_cobrancas',        'chk_pix_cobrancas_valor',       'valor_em_centavos >= 0'),
+            ('products',             'chk_products_precos',           'price_in_cents >= 0 AND cost_price_in_cents >= 0'),
+            ('championships',        'chk_championships_status',      'status IN (''Planejado'', ''Inscricoes'', ''EmAndamento'', ''Finalizado'', ''Cancelado'')'),
+            ('torneio_rodadas',      'chk_torneio_rodadas_status',    'status IN (''Aberta'', ''Fechada'')')
+        ) AS v(tabela, nome, regra)
+    LOOP
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = r.nome AND conrelid = to_regclass(r.tabela)) THEN
+            EXECUTE format('ALTER TABLE %I ADD CONSTRAINT %I CHECK (%s) NOT VALID', r.tabela, r.nome, r.regra);
+        END IF;
+    END LOOP;
+END
+$do$;
+
+-- Só lê os dados: conta referências órfãs nas colunas sem chave estrangeira (histórico e autoria sobrevivem
+-- à exclusão do registro de origem, por isso não têm FK) e linhas antigas fora das regras CHECK.
+-- Grava o resultado em marcos_operacao ('conferencia-integridade').
+CREATE OR REPLACE PROCEDURE pr_conferir_integridade()
+LANGUAGE plpgsql
+AS $pr$
+DECLARE
+    r            record;
+    v_qtd        bigint;
+    v_orfaos     bigint := 0;
+    v_invalidas  bigint := 0;
+    v_detalhes   text[] := ARRAY[]::text[];
+BEGIN
+    FOR r IN
+        SELECT * FROM (VALUES
+            ('announcements',              'created_by_admin_id',    'users'),
+            ('championship_participants',  'deck_id',                'decks'),
+            ('championship_preinscricoes', 'deck_id',                'decks'),
+            ('championships',              'created_by_admin_id',    'users'),
+            ('comanda_items',              'variant_id',             'product_variants'),
+            ('comanda_items',              'added_by_user_id',       'users'),
+            ('comandas',                   'estornada_por_admin_id', 'users'),
+            ('crediario_avisos',           'enviado_por_admin_id',   'users'),
+            ('crediario_lancamentos',      'comanda_id',             'comandas'),
+            ('crediarios',                 'aberto_por_admin_id',    'users'),
+            ('crediarios',                 'pago_por_admin_id',      'users'),
+            ('estoque_movimentos',         'product_id',             'products'),
+            ('estoque_movimentos',         'variant_id',             'product_variants'),
+            ('funcionalidades',            'alterada_por_id',        'users'),
+            ('liga_mensal_manual_entries', 'created_by_admin_id',    'users'),
+            ('pagamentos_crediario',       'admin_id',               'users'),
+            ('perfis',                     'criado_por_admin_id',    'users'),
+            ('pix_cobrancas',              'criado_por_admin_id',    'users'),
+            ('timers',                     'championship_id',        'championships'),
+            ('torneio_partidas',           'deck_a_id',              'decks'),
+            ('torneio_partidas',           'deck_b_id',              'decks'),
+            ('torneio_partidas',           'resolvido_por_admin_id', 'users')
+        ) AS v(tabela, coluna, alvo)
+    LOOP
+        EXECUTE format('SELECT count(*) FROM %I f WHERE f.%I IS NOT NULL AND NOT EXISTS (SELECT 1 FROM %I a WHERE a.id = f.%I)',
+                       r.tabela, r.coluna, r.alvo, r.coluna) INTO v_qtd;
+        IF v_qtd > 0 THEN
+            v_orfaos := v_orfaos + v_qtd;
+            v_detalhes := v_detalhes || format('%s.%s=%s', r.tabela, r.coluna, v_qtd);
+        END IF;
+    END LOOP;
+
+    FOR r IN
+        SELECT c.conrelid::regclass::text AS tabela, c.conname::text AS nome, pg_get_expr(c.conbin, c.conrelid) AS regra
+        FROM pg_constraint c
+        WHERE c.contype = 'c' AND c.connamespace = 'public'::regnamespace AND c.conname LIKE 'chk\_%'
+    LOOP
+        EXECUTE format('SELECT count(*) FROM %s WHERE (%s) IS FALSE', r.tabela, r.regra) INTO v_qtd;
+        IF v_qtd > 0 THEN
+            v_invalidas := v_invalidas + v_qtd;
+            v_detalhes := v_detalhes || format('%s=%s', r.nome, v_qtd);
+        END IF;
+    END LOOP;
+
+    INSERT INTO marcos_operacao (chave, quando, detalhe)
+    VALUES ('conferencia-integridade', NOW(),
+            left(format('referências órfãs: %s; linhas fora das regras: %s; %s', v_orfaos, v_invalidas, array_to_string(v_detalhes, ', ')), 500))
     ON CONFLICT (chave) DO UPDATE SET quando = EXCLUDED.quando, detalhe = EXCLUDED.detalhe;
 END
 $pr$;

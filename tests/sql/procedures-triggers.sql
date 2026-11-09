@@ -114,6 +114,38 @@ BEGIN
         NULL;   -- esperado
     END;
     RAISE NOTICE 'OK pr_manutencao_banco';
+
+    -- ── Restrições CHECK ──────────────────────────────────────────────────────────────
+    BEGIN
+        UPDATE products SET price_in_cents = -1 WHERE id = v_prod;
+        ASSERT false, 'preço negativo devia ser recusado';
+    EXCEPTION WHEN check_violation THEN
+        NULL;   -- esperado
+    END;
+    BEGIN
+        UPDATE crediarios SET status = 'Inventado' WHERE user_id = v_user AND valor_em_centavos = 10000;
+        ASSERT false, 'status de crediário fora do enum devia ser recusado';
+    EXCEPTION WHEN check_violation THEN
+        NULL;   -- esperado
+    END;
+    BEGIN
+        UPDATE comandas SET status = 'Inventado' WHERE user_id = v_user AND total_in_cents = 10000;
+        ASSERT false, 'status de comanda fora do enum devia ser recusado';
+    EXCEPTION WHEN check_violation THEN
+        NULL;   -- esperado
+    END;
+    SELECT count(*) INTO v_qtd FROM pg_constraint WHERE contype = 'c' AND conname LIKE 'chk\_%';
+    ASSERT v_qtd = 11, format('esperava 11 restrições CHECK, achei %s', v_qtd);
+    RAISE NOTICE 'OK restrições CHECK';
+
+    -- ── Procedure: conferência de integridade ─────────────────────────────────────────
+    INSERT INTO estoque_movimentos (product_id, estoque_antes, estoque_depois, origem, quando)
+    VALUES (gen_random_uuid(), 1, 2, 'products', NOW());
+    CALL pr_conferir_integridade();
+    SELECT detalhe INTO v_msg FROM marcos_operacao WHERE chave = 'conferencia-integridade';
+    ASSERT v_msg LIKE 'referências órfãs: %' AND v_msg LIKE '%estoque_movimentos.product_id=%',
+           format('a conferência devia apontar o movimento órfão: %s', v_msg);
+    RAISE NOTICE 'OK pr_conferir_integridade';
     RAISE NOTICE 'TODOS OS TESTES DE PROCEDURES E TRIGGERS PASSARAM';
 END
 $teste$;

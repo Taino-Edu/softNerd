@@ -1,0 +1,259 @@
+<!-- Gerado do catálogo do PostgreSQL 16 (banco criado pela API v1.88.0 em banco vazio). Não editar à mão. -->
+
+# MER por domínio
+
+Cada relação aparece no domínio da tabela que tem a chave estrangeira; entidades de outros domínios aparecem só como referência. Linha tracejada indica referência sem chave estrangeira no banco.
+
+## Usuários e acesso
+
+```mermaid
+erDiagram
+  users |o--o{ cookie_consents : "user_id"
+  users ||--o{ decks : "user_id"
+  users |o--o{ lgpd_requests : "user_id"
+  users ||--o{ notifications : "user_id"
+  users ||--o{ push_subscriptions : "user_id"
+  users ||--o{ user_sessions : "user_id"
+  perfis |o--o{ users : "perfil_id"
+  perfis {
+    uuid id PK
+  }
+  users {
+    uuid id PK
+    uuid perfil_id FK
+  }
+  user_sessions {
+    uuid id PK
+    uuid user_id FK
+  }
+  push_subscriptions {
+    uuid id PK
+    uuid user_id FK
+  }
+  notifications {
+    uuid id PK
+    uuid user_id FK
+  }
+  cookie_consents {
+    text id PK
+    uuid user_id FK
+  }
+  lgpd_requests {
+    text id PK
+    uuid user_id FK
+  }
+  decks {
+    uuid id PK
+    uuid user_id FK
+  }
+```
+
+## Catálogo e estoque
+
+```mermaid
+erDiagram
+  product_categories |o--o{ product_categories : "parent_category_id"
+  product_variants |o--o{ product_reservations : "variant_id"
+  products ||--o{ product_reservations : "product_id"
+  users ||--o{ product_reservations : "user_id"
+  products ||--o{ product_variants : "product_id"
+  products ||--o{ product_waitlist : "product_id"
+  users |o--o{ product_waitlist : "user_id"
+  products |o..o{ estoque_movimentos : "product_id (sem FK)"
+  product_variants |o..o{ estoque_movimentos : "variant_id (sem FK)"
+  product_categories {
+    uuid id PK
+    uuid parent_category_id FK
+  }
+  products {
+    uuid id PK
+  }
+  product_variants {
+    uuid id PK
+    uuid product_id FK
+  }
+  product_reservations {
+    uuid id PK
+    uuid user_id FK
+    uuid product_id FK
+    uuid variant_id FK
+  }
+  product_waitlist {
+    uuid id PK
+    uuid product_id FK
+    uuid user_id FK
+  }
+  estoque_movimentos {
+    bigint id PK
+    uuid product_id
+    uuid variant_id
+  }
+```
+
+## Vendas e pagamentos
+
+```mermaid
+erDiagram
+  comandas ||--o{ comanda_items : "comanda_id"
+  products |o--o{ comanda_items : "product_id"
+  championships |o--o{ comandas : "championship_id"
+  users ||--o{ comandas : "user_id"
+  championship_participants |o--o{ pix_cobrancas : "championship_participant_id"
+  comandas |o--o{ pix_cobrancas : "comanda_id"
+  crediarios |o--o{ pix_cobrancas : "crediario_id"
+  product_variants |o..o{ comanda_items : "variant_id (sem FK)"
+  comandas {
+    uuid id PK
+    uuid user_id FK
+    uuid championship_id FK
+  }
+  comanda_items {
+    uuid id PK
+    uuid comanda_id FK
+    uuid product_id FK
+    uuid variant_id
+  }
+  pix_cobrancas {
+    uuid id PK
+    uuid crediario_id FK
+    uuid comanda_id FK
+    uuid championship_participant_id FK
+  }
+  external_transactions {
+    uuid id PK
+  }
+```
+
+## Crediário
+
+```mermaid
+erDiagram
+  crediarios ||--o{ crediario_avisos : "crediario_id"
+  crediarios ||--o{ crediario_lancamentos : "crediario_id"
+  comandas |o--o{ crediarios : "comanda_id"
+  users ||--o{ crediarios : "user_id"
+  crediarios ||--o{ pagamentos_crediario : "crediario_id"
+  comandas |o..o{ crediario_lancamentos : "comanda_id (sem FK)"
+  crediarios {
+    uuid id PK
+    uuid user_id FK
+    uuid comanda_id FK
+  }
+  crediario_lancamentos {
+    uuid id PK
+    uuid crediario_id FK
+    uuid comanda_id
+  }
+  pagamentos_crediario {
+    uuid id PK
+    uuid crediario_id FK
+  }
+  crediario_avisos {
+    uuid id PK
+    uuid crediario_id FK
+  }
+  crediario_aviso_config {
+    uuid id PK
+  }
+```
+
+## Torneios e liga
+
+```mermaid
+erDiagram
+  championships ||--o{ championship_participants : "championship_id"
+  comandas |o--o{ championship_participants : "comanda_id"
+  users ||--o{ championship_participants : "user_id"
+  championships ||--o{ championship_preinscricoes : "championship_id"
+  championship_participants ||--o{ torneio_partidas : "participante_a_id"
+  championship_participants |o--o{ torneio_partidas : "participante_b_id"
+  torneio_rodadas ||--o{ torneio_partidas : "rodada_id"
+  championships ||--o{ torneio_rodadas : "championship_id"
+  decks |o..o{ championship_participants : "deck_id (sem FK)"
+  decks |o..o{ championship_preinscricoes : "deck_id (sem FK)"
+  championships |o..o{ timers : "championship_id (sem FK)"
+  decks |o..o{ torneio_partidas : "deck_a_id (sem FK)"
+  decks |o..o{ torneio_partidas : "deck_b_id (sem FK)"
+  championships {
+    uuid id PK
+  }
+  championship_participants {
+    uuid id PK
+    uuid championship_id FK
+    uuid user_id FK
+    uuid deck_id
+    uuid comanda_id FK
+  }
+  championship_preinscricoes {
+    uuid id PK
+    uuid championship_id FK
+    uuid deck_id
+  }
+  torneio_rodadas {
+    uuid id PK
+    uuid championship_id FK
+  }
+  torneio_partidas {
+    uuid id PK
+    uuid rodada_id FK
+    uuid participante_a_id FK
+    uuid participante_b_id FK
+    uuid deck_a_id
+    uuid deck_b_id
+  }
+  timers {
+    uuid id PK
+    uuid championship_id
+  }
+  liga_mensal_manual_entries {
+    uuid id PK
+  }
+```
+
+## Vitrine de cartas
+
+```mermaid
+erDiagram
+  users ||--o{ card_listings : "user_id"
+  card_listings ||--o{ listing_interests : "listing_id"
+  users ||--o{ listing_interests : "user_id"
+  card_listings {
+    uuid id PK
+    uuid user_id FK
+  }
+  listing_interests {
+    uuid id PK
+    uuid listing_id FK
+    uuid user_id FK
+  }
+```
+
+## Administração e operação
+
+```mermaid
+erDiagram
+  announcements {
+    uuid id PK
+  }
+  site_config {
+    uuid id PK
+  }
+  funcionalidades {
+    varchar codigo PK
+  }
+  integration_configs {
+    uuid id PK
+  }
+  audit_logs {
+    text id PK
+  }
+  alertas_sistema {
+    uuid id PK
+  }
+  marcos_operacao {
+    varchar chave PK
+  }
+  app_migrations {
+    text key PK
+  }
+```
