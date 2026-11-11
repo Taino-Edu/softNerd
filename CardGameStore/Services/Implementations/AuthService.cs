@@ -331,8 +331,11 @@ public class AuthService : IAuthService
     /// O WhatsApp (e o CPF, se o cadastro tiver) batem com o cadastro? Quem entra sem senha
     /// (QR Code da mesa, primeiro acesso pelo site) prova que é o dono por aqui. Dado que não
     /// bate conta como senha errada (bloqueio por conta, ProtecaoLogin.cs).
+    /// <paramref name="zerarFalhas"/> = false pra conta com senha ou Google: lá o contador é o
+    /// das senhas erradas, e acertar CPF+WhatsApp não pode zerá-lo — senão dava pra intercalar
+    /// tentativas de senha com buscas pelo CPF e o bloqueio nunca chegava.
     /// </summary>
-    private async Task ConferirWhatsAppDoCadastroAsync(User user, string? cpf, string? whatsApp)
+    private async Task ConferirWhatsAppDoCadastroAsync(User user, string? cpf, string? whatsApp, bool zerarFalhas = true)
     {
         var agora = DateTime.UtcNow;
         var estado = await _db.Users.AsNoTracking().Where(u => u.Id == user.Id)
@@ -368,7 +371,7 @@ public class AuthService : IAuthService
                 cpfDoCadastro is not null && cpf is null ? "precisaCpf" : "naoBate");
         }
 
-        if (estado.FalhasLogin != 0)
+        if (zerarFalhas && estado.FalhasLogin != 0)
             await _db.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s
                 .SetProperty(u => u.FalhasLogin, 0).SetProperty(u => u.LoginBloqueadoAte, (DateTime?)null));
     }
@@ -681,7 +684,9 @@ public class AuthService : IAuthService
             && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf)
             ?? throw new KeyNotFoundException(CadastroNaoAchado);
 
-        try { await ConferirWhatsAppDoCadastroAsync(user, cpf, whatsApp); }
+        // Conta já ativada (senha, Google ou da equipe): confere sem zerar o contador de senhas erradas
+        var semCredencial = user.Role == UserRole.Customer && user.PasswordHash is null && user.GoogleSub is null;
+        try { await ConferirWhatsAppDoCadastroAsync(user, cpf, whatsApp, zerarFalhas: semCredencial); }
         catch (QuickLoginRecusadoException) { throw new KeyNotFoundException(CadastroNaoAchado); }
         return user;
     }

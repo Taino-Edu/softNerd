@@ -1210,6 +1210,31 @@ public class AuthServiceTests
         r.HasPassword.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(UserRole.Customer, "Senha!123")]
+    [InlineData("Admin", "Senha!123")]
+    public async Task CpfLookup_ContaComSenha_NaoZeraAsSenhasErradas(string role, string senha)
+    {
+        // Senão: 4 senhas erradas, 1 busca certa pelo CPF, mais 4 senhas... e o bloqueio nunca chega
+        var (db, service, id) = await ContaDaMesaAsync(senha: senha, role: role);
+        await db.Users.Where(u => u.Id == id).ExecuteUpdateAsync(s => s.SetProperty(u => u.FalhasLogin, 4));
+
+        await service.LookupByCpfAsync(CpfVitima, ZapVitima);
+
+        (await db.Users.AsNoTracking().SingleAsync(x => x.Id == id)).FalhasLogin.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task CpfLookup_ClienteSemSenha_DadosBatem_ZeraAsFalhas()
+    {
+        var (db, service, id) = await ContaDaMesaAsync();
+        await db.Users.Where(u => u.Id == id).ExecuteUpdateAsync(s => s.SetProperty(u => u.FalhasLogin, 3));
+
+        await service.LookupByCpfAsync(CpfVitima, ZapVitima);
+
+        (await db.Users.AsNoTracking().SingleAsync(x => x.Id == id)).FalhasLogin.Should().Be(0);
+    }
+
     [Fact]
     public async Task CpfLookup_CincoTentativasErradas_TravaAConta()
     {
