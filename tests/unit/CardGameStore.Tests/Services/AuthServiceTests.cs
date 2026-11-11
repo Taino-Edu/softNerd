@@ -1129,6 +1129,101 @@ public class AuthServiceTests
         (await db.Users.AsNoTracking().SingleAsync(x => x.Id == id)).Cpf.Should().Be(CpfVitima);
     }
 
+    // ── Primeiro acesso pelo site (cpf-lookup + setup-account) ───────────────
+    // Antes bastava o CPF: a busca devolvia o nome do dono e o setup-account trocava
+    // e-mail e senha de qualquer conta — tomada de conta com um dado que circula fácil.
+
+    [Fact]
+    public async Task SetupAccount_ContaComSenha_NaoTrocaEmailNemSenha()
+    {
+        var (db, service, id) = await ContaDaMesaAsync(senha: "Senha!123");
+        var antes = await db.Users.AsNoTracking().SingleAsync(x => x.Id == id);
+
+        var act = () => service.SetupAccountAsync(new SetupAccountRequest(CpfVitima, ZapVitima, "invasor@x.com", "Invasor!123"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        var depois = await db.Users.AsNoTracking().SingleAsync(x => x.Id == id);
+        depois.Email.Should().Be(antes.Email);
+        depois.PasswordHash.Should().Be(antes.PasswordHash);
+    }
+
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Operator")]
+    public async Task SetupAccount_ContaDaEquipe_NuncaAtivaPeloCpf(string role)
+    {
+        var (db, service, id) = await ContaDaMesaAsync(role: role);
+
+        var act = () => service.SetupAccountAsync(new SetupAccountRequest(CpfVitima, ZapVitima, "invasor@x.com", "Invasor!123"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        (await db.Users.AsNoTracking().SingleAsync(x => x.Id == id)).PasswordHash.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SetupAccount_SoOCpf_ComOutroWhatsApp_NaoAtiva()
+    {
+        var (db, service, id) = await ContaDaMesaAsync();
+
+        var act = () => service.SetupAccountAsync(new SetupAccountRequest(CpfVitima, "11988887777", "invasor@x.com", "Invasor!123"));
+
+        (await act.Should().ThrowAsync<KeyNotFoundException>()).Which.Message.Should().Be(AuthService.CadastroNaoAchado);
+        var u = await db.Users.AsNoTracking().SingleAsync(x => x.Id == id);
+        u.PasswordHash.Should().BeNull();
+        u.Email.Should().NotBe("invasor@x.com");
+    }
+
+    [Fact]
+    public async Task SetupAccount_ClienteSemSenha_ComWhatsAppDoCadastro_Ativa()
+    {
+        var (db, service, id) = await ContaDaMesaAsync();
+
+        var r = await service.SetupAccountAsync(new SetupAccountRequest("529.982.247-25", "(17) 99112-2890", "Dono@Email.com", "Dono!12345"));
+
+        r.UserId.Should().Be(id);
+        var u = await db.Users.AsNoTracking().SingleAsync(x => x.Id == id);
+        u.Email.Should().Be("dono@email.com");
+        BCrypt.Net.BCrypt.Verify("Dono!12345", u.PasswordHash).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CpfLookup_WhatsAppErrado_RespondeIgualACpfInexistente()
+    {
+        var (_, service, _) = await ContaDaMesaAsync();
+
+        var errado     = () => service.LookupByCpfAsync(CpfVitima, "11988887777");
+        var inexistente = () => service.LookupByCpfAsync("11144477735", ZapVitima);
+
+        var m1 = (await errado.Should().ThrowAsync<KeyNotFoundException>()).Which.Message;
+        var m2 = (await inexistente.Should().ThrowAsync<KeyNotFoundException>()).Which.Message;
+        m1.Should().Be(m2);
+    }
+
+    [Fact]
+    public async Task CpfLookup_DadosBatem_DevolveSoOPrimeiroNome()
+    {
+        var (_, service, _) = await ContaDaMesaAsync();
+
+        var r = await service.LookupByCpfAsync(CpfVitima, ZapVitima);
+
+        r.Name.Should().Be("Cliente");
+        r.HasPassword.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CpfLookup_CincoTentativasErradas_TravaAConta()
+    {
+        var (_, service, _) = await ContaDaMesaAsync();
+        for (var i = 0; i < 4; i++)
+        {
+            var errado = () => service.LookupByCpfAsync(CpfVitima, $"1198888000{i}");
+            await errado.Should().ThrowAsync<KeyNotFoundException>();
+        }
+
+        var quinta = () => service.LookupByCpfAsync(CpfVitima, "11988880009");
+        await quinta.Should().ThrowAsync<ContaBloqueadaException>();
+    }
+
     // ── Entrar com Google (LoginGoogle.cs) ───────────────────────────────────
 
     private const string ClientIdTeste = "teste.apps.googleusercontent.com";

@@ -301,10 +301,11 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid) return BadRequest(ModelState);
         try
         {
-            var result = await _authService.LookupByCpfAsync(request.Cpf);
+            var result = await _authService.LookupByCpfAsync(request.Cpf, request.WhatsApp);
             return Ok(result);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { Message = ex.Message }); }
+        catch (ContaBloqueadaException ex) { return RespostaContaBloqueada(ex); }
     }
 
     [HttpPost("setup-account")]
@@ -321,6 +322,7 @@ public class AuthController : ControllerBase
         }
         catch (KeyNotFoundException ex)    { return NotFound(new { Message = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { Message = ex.Message }); }
+        catch (ContaBloqueadaException ex) { return RespostaContaBloqueada(ex); }
     }
 
     [HttpPost("client-login")]

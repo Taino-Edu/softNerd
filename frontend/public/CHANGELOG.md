@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.86.1] — 2026-11-11
+
+### Segurança: ativar conta pelo CPF
+- **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
+- A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
+- Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
+- A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
 ## [v1.86.0] — 2026-11-07
 
 ### Procedures, funções e triggers no PostgreSQL (PIM IV, etapa 7)

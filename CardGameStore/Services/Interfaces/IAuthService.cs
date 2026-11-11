@@ -38,7 +38,7 @@ public interface IAuthService
     Task ResetPasswordAsync(ResetPasswordRequest request);
 
     /// <summary>Busca cliente por CPF — retorna nome e se já tem senha.</summary>
-    Task<CpfLookupResponse> LookupByCpfAsync(string cpf);
+    Task<CpfLookupResponse> LookupByCpfAsync(string cpf, string whatsApp);
 
     /// <summary>Ativa conta de cliente existente: define email + senha.</summary>
     Task<AuthResponse> SetupAccountAsync(SetupAccountRequest request);

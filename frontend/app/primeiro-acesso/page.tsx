@@ -1,12 +1,14 @@
 'use client'
-// Primeiro acesso de quem comprou no balcão: CPF → cria senha (ou entra, se já ativou).
+// Primeiro acesso de quem comprou no balcão: CPF + WhatsApp do cadastro → cria senha (ou entra,
+// se já ativou). O WhatsApp prova que é o dono — só o CPF não basta (mesma regra do QR Code da mesa).
 // Na moldura do /entrar (components/auth/Moldura.tsx).
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { authApi, CpfLookupResponse } from '@/lib/api'
 import { saveAuth } from '@/lib/auth'
+import { soDigitosTelefone, telefoneBR } from '@/lib/rotulos'
 import toast from 'react-hot-toast'
-import { ArrowLeft, CreditCard, Mail, KeyRound } from 'lucide-react'
+import { ArrowLeft, CreditCard, Mail, KeyRound, Phone } from 'lucide-react'
 import Link from 'next/link'
 import { MolduraEntrada, TituloEntrada, CampoEntrada, BotaoEntrada, LinhaEntrada, LinkEntrada, useMarca, L } from '@/components/auth/Moldura'
 
@@ -20,6 +22,7 @@ export default function PrimeiroAcessoPage() {
   const router = useRouter()
   const [step, setStep]           = useState<Step>('cpf')
   const [cpf, setCpf]             = useState('')
+  const [whatsApp, setWhatsApp]   = useState('')
   const [lookup, setLookup]       = useState<CpfLookupResponse | null>(null)
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
@@ -31,11 +34,13 @@ export default function PrimeiroAcessoPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      const { data } = await authApi.cpfLookup(cpf)
+      const { data } = await authApi.cpfLookup(cpf, soDigitosTelefone(whatsApp))
       setLookup(data)
       setStep(data.hasPassword ? 'login' : 'criar')
-    } catch {
-      toast.error('CPF não encontrado. Visite a loja e escaneie o QR Code para criar sua conta.')
+    } catch (err: unknown) {
+      // A API responde igual pra CPF que não existe e WhatsApp que não bate; conta travada traz o tempo
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg || 'Não achamos cadastro com esse CPF e WhatsApp. Confira os dados ou fale com o balcão.')
     } finally {
       setLoading(false)
     }
@@ -46,7 +51,7 @@ export default function PrimeiroAcessoPage() {
     if (password !== confirm) { toast.error('As senhas não coincidem.'); return }
     setLoading(true)
     try {
-      const { data } = await authApi.setupAccount(cpf, email, password)
+      const { data } = await authApi.setupAccount(cpf, soDigitosTelefone(whatsApp), email, password)
       saveAuth(data)
       toast.success('Conta criada! Bem-vindo, ' + data.userName)
       // A Minha Conta abre perguntando o Pokémon preferido (chave pokemon-preferido)
@@ -85,7 +90,7 @@ export default function PrimeiroAcessoPage() {
       )}
       <TituloEntrada
         titulo={step === 'cpf' ? 'Ative sua conta' : step === 'criar' ? `Olá, ${lookup?.name?.split(' ')[0] ?? ''}!` : `Bem-vindo de volta, ${lookup?.name?.split(' ')[0] ?? ''}!`}
-        sub={step === 'cpf' ? 'Já comprou ou jogou na loja? Seu cadastro já existe — é só achar pelo CPF.'
+        sub={step === 'cpf' ? 'Já comprou ou jogou na loja? Seu cadastro já existe — é só achar pelo CPF e o WhatsApp que você deu no balcão.'
           : step === 'criar' ? 'Achamos seu cadastro. Agora crie e-mail e senha pra entrar no site.'
           : 'Essa conta já foi ativada. Entre com seu e-mail e senha.'} />
       {/* Passos: deixa claro onde a pessoa está */}
@@ -104,7 +109,9 @@ export default function PrimeiroAcessoPage() {
         <form onSubmit={handleCpfSubmit} className="mt-6 space-y-4">
           <CampoEntrada rotulo="CPF" icone={CreditCard} inputMode="numeric" autoComplete="off" required maxLength={11}
             value={cpf} onChange={e => setCpf(formatCpf(e.target.value))} placeholder="Somente números" />
-          <BotaoEntrada carregando={loading} cor={cor} disabled={cpf.length !== 11}>{loading ? 'Buscando...' : 'Continuar →'}</BotaoEntrada>
+          <CampoEntrada rotulo="WhatsApp do cadastro" icone={Phone} type="tel" inputMode="tel" autoComplete="tel" required
+            value={whatsApp} onChange={e => setWhatsApp(telefoneBR(e.target.value))} placeholder="(17) 99999-9999" />
+          <BotaoEntrada carregando={loading} cor={cor} disabled={cpf.length !== 11 || soDigitosTelefone(whatsApp).length < 10}>{loading ? 'Buscando...' : 'Continuar →'}</BotaoEntrada>
         </form>
       )}
       {step === 'criar' && (

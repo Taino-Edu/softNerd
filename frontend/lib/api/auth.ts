@@ -18,10 +18,10 @@ export const authApi = {
     api.post<AuthResponse>('/api/auth/client-login', { email, password }),
   register: (name: string, email: string, password: string, whatsApp?: string, cpf?: string) =>
     api.post<AuthResponse>('/api/auth/register', { name, email, password, whatsApp, cpf }),
-  cpfLookup: (cpf: string) =>
-    api.post<CpfLookupResponse>('/api/auth/cpf-lookup', { cpf }),
-  setupAccount: (cpf: string, email: string, password: string) =>
-    api.post<AuthResponse>('/api/auth/setup-account', { cpf, email, password }),
+  cpfLookup: (cpf: string, whatsApp: string) =>
+    api.post<CpfLookupResponse>('/api/auth/cpf-lookup', { cpf, whatsApp }),
+  setupAccount: (cpf: string, whatsApp: string, email: string, password: string) =>
+    api.post<AuthResponse>('/api/auth/setup-account', { cpf, whatsApp, email, password }),
   completeProfile: (email: string, password: string) =>
     api.post('/api/auth/complete-profile', { email, password }),
   quickLogin: (name: string, cpf: string | null, whatsApp: string, tableIdentifier?: string) =>
