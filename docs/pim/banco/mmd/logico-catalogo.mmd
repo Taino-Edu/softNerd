@@ -1,0 +1,90 @@
+erDiagram
+  products |o--o{ comanda_items : "product_id"
+  product_categories |o--o{ product_categories : "parent_category_id"
+  product_variants |o--o{ product_reservations : "variant_id"
+  products ||--o{ product_reservations : "product_id"
+  products ||--o{ product_variants : "product_id"
+  products ||--o{ product_waitlist : "product_id"
+  users |o--o{ product_waitlist : "user_id"
+  product_categories {
+    uuid id PK
+    varchar(100) name
+    varchar(10) emoji "null"
+    decimal pix_discount_percent "null"
+    int display_order
+    bool is_active
+    uuid parent_category_id FK
+    timestamptz created_at
+  }
+  products {
+    uuid id PK
+    varchar(200) name
+    varchar(500) description "null"
+    varchar(100) category
+    varchar(100) barcode "null"
+    int cost_price_in_cents
+    int price_in_cents
+    int stock_quantity
+    int minimum_stock
+    varchar(500) image_url "null"
+    ARRAY image_urls
+    text full_description "null"
+    bool is_active
+    bool is_featured
+    bool show_on_site
+    bool show_on_marketplace
+    int discount_price_in_cents "null"
+    bool is_pre_venda
+    int max_installments "null"
+    decimal pix_discount_percent "null"
+    bool has_variants
+    timestamptz created_at
+    timestamptz updated_at
+    date prevenda_release_date "null"
+  }
+  product_variants {
+    uuid id PK
+    uuid product_id FK
+    varchar(50) size "null"
+    varchar(100) color "null"
+    int stock_quantity
+    int price_in_cents "null"
+    varchar(100) sku "null"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  product_waitlist {
+    uuid id PK
+    uuid product_id FK
+    uuid user_id FK
+    varchar(150) name
+    varchar(20) whatsapp
+    int position
+    timestamptz created_at
+    timestamptz notified_at "null"
+  }
+  estoque_movimentos {
+    bigint id PK
+    uuid product_id
+    uuid variant_id "null"
+    int estoque_antes
+    int estoque_depois
+    int delta "null"
+    varchar(20) origem
+    timestamptz quando
+  }
+  comanda_items {
+    uuid id PK
+    uuid comanda_id FK
+    uuid product_id FK
+  }
+  product_reservations {
+    uuid id PK
+    uuid user_id FK
+    uuid product_id FK
+    uuid variant_id FK
+  }
+  users {
+    uuid id PK
+    uuid perfil_id FK
+  }

@@ -1,0 +1,29 @@
+erDiagram
+  users ||--o{ card_listings : "user_id"
+  card_listings ||--o{ listing_interests : "listing_id"
+  users ||--o{ listing_interests : "user_id"
+  card_listings {
+    uuid id PK
+    uuid user_id FK
+    varchar(200) card_name
+    varchar(100) card_game "null"
+    varchar(500) card_image_url "null"
+    int price_in_cents
+    varchar(50) condition
+    varchar(1000) description "null"
+    varchar(20) status
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  listing_interests {
+    uuid id PK
+    uuid listing_id FK
+    uuid user_id FK
+    varchar(500) message "null"
+    bool share_contact
+    timestamptz created_at
+  }
+  users {
+    uuid id PK
+    uuid perfil_id FK
+  }

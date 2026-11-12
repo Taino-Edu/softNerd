@@ -1,0 +1,22 @@
+erDiagram
+  PERFIL ||--o{ USUARIO : "define permissões"
+  USUARIO ||--o{ COMANDA : abre
+  USUARIO ||--o{ RESERVA : faz
+  USUARIO ||--o{ CREDIARIO : deve
+  USUARIO ||--o{ PARTICIPANTE : "se inscreve como"
+  USUARIO ||--o{ DECK : monta
+  USUARIO ||--o{ ANUNCIO_CARTA : anuncia
+  COMANDA ||--o{ ITEM_COMANDA : contem
+  PRODUTO ||--o{ ITEM_COMANDA : "é vendido em"
+  PRODUTO ||--o{ VARIANTE : "tem grade de"
+  PRODUTO ||--o{ RESERVA : "é reservado em"
+  COMANDA ||--o{ COBRANCA_PIX : gera
+  COMANDA ||--o{ CREDIARIO : "origina"
+  CREDIARIO ||--o{ LANCAMENTO : "é composto por"
+  CREDIARIO ||--o{ PAGAMENTO : "é quitado por"
+  CAMPEONATO ||--o{ PARTICIPANTE : reune
+  CAMPEONATO ||--o{ RODADA : "se divide em"
+  RODADA ||--o{ PARTIDA : tem
+  PARTICIPANTE ||--o{ PARTIDA : joga
+  VENDA_AVULSA }o..o| USUARIO : "pode identificar (MongoDB)"
+  VENDA_AVULSA ||..o{ COBRANCA_PIX : "pode originar (MongoDB)"

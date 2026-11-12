@@ -1,0 +1,147 @@
+erDiagram
+  users ||--o{ card_listings : "user_id"
+  users ||--o{ championship_participants : "user_id"
+  users ||--o{ comandas : "user_id"
+  users |o--o{ cookie_consents : "user_id"
+  users ||--o{ crediarios : "user_id"
+  users ||--o{ decks : "user_id"
+  users |o--o{ lgpd_requests : "user_id"
+  users ||--o{ listing_interests : "user_id"
+  users ||--o{ notifications : "user_id"
+  users ||--o{ product_reservations : "user_id"
+  users |o--o{ product_waitlist : "user_id"
+  users ||--o{ push_subscriptions : "user_id"
+  users ||--o{ user_sessions : "user_id"
+  perfis |o--o{ users : "perfil_id"
+  users {
+    uuid id PK
+    varchar(150) name
+    varchar(255) email "null"
+    text password_hash "null"
+    varchar(20) whatsapp "null"
+    varchar(11) cpf "null"
+    varchar(500) profile_image_url "null"
+    varchar(45) pokemon_favorito "null"
+    bool pokemon_favorito_shiny
+    varchar(20) role
+    text refresh_token "null"
+    timestamptz refresh_token_expiry "null"
+    text password_reset_token "null"
+    timestamptz password_reset_token_expiry "null"
+    varchar(64) google_sub "null"
+    int falhas_login
+    timestamptz login_bloqueado_ate "null"
+    int points_balance
+    timestamptz points_expires_at "null"
+    int balance_in_cents
+    text preferences_json "null"
+    timestamptz created_at
+    timestamptz updated_at
+    bool is_active
+    timestamptz deleted_at "null"
+    timestamptz consent_at "null"
+    uuid perfil_id FK
+  }
+  perfis {
+    uuid id PK
+    varchar(100) nome
+    text permissoes_json
+    uuid criado_por_admin_id
+    timestamptz criado_em
+    timestamptz atualizado_em
+  }
+  user_sessions {
+    uuid id PK
+    uuid user_id FK
+    varchar(64) token_hash
+    timestamptz expires_at
+    timestamptz rotated_at "null"
+    timestamptz revoked_at "null"
+    varchar(300) user_agent "null"
+    varchar(45) ip_address "null"
+    timestamptz created_at
+    timestamptz last_used_at
+  }
+  cookie_consents {
+    text id PK
+    uuid user_id FK
+    varchar(64) ip_hash
+    varchar(500) user_agent
+    bool accepted
+    varchar(10) policy_version
+    timestamptz consent_at
+  }
+  lgpd_requests {
+    text id PK
+    uuid user_id FK
+    varchar(200) requester_name
+    varchar(255) requester_email
+    varchar(11) requester_cpf
+    varchar(20) request_type
+    varchar(2000) description "null"
+    varchar(15) status
+    varchar(4000) admin_response "null"
+    timestamptz created_at
+    timestamptz responded_at "null"
+    timestamptz deadline
+    varchar(255) anexo_nome "null"
+    bytea anexo_dados "null"
+  }
+  push_subscriptions {
+    uuid id PK
+    uuid user_id FK
+    varchar(600) endpoint
+    varchar(300) p256dh
+    varchar(150) auth
+    timestamptz created_at
+  }
+  notifications {
+    uuid id PK
+    uuid user_id FK
+    varchar(120) title
+    varchar(500) body
+    varchar(300) link "null"
+    varchar(500) image_url "null"
+    timestamptz created_at
+    timestamptz read_at "null"
+  }
+  card_listings {
+    uuid id PK
+    uuid user_id FK
+  }
+  championship_participants {
+    uuid id PK
+    uuid championship_id FK
+    uuid user_id FK
+    uuid comanda_id FK
+  }
+  comandas {
+    uuid id PK
+    uuid user_id FK
+    uuid championship_id FK
+  }
+  crediarios {
+    uuid id PK
+    uuid user_id FK
+    uuid comanda_id FK
+  }
+  decks {
+    uuid id PK
+    uuid user_id FK
+  }
+  listing_interests {
+    uuid id PK
+    uuid listing_id FK
+    uuid user_id FK
+  }
+  product_reservations {
+    uuid id PK
+    uuid user_id FK
+    uuid product_id FK
+    uuid variant_id FK
+  }
+  product_waitlist {
+    uuid id PK
+    uuid product_id FK
+    uuid user_id FK
+  }

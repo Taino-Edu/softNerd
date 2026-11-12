@@ -1,0 +1,54 @@
+erDiagram
+  USUARIO ||--o{ COMANDA : abre
+  COMANDA ||--o{ ITEM_COMANDA : contem
+  PRODUTO ||--o{ ITEM_COMANDA : "é vendido em"
+  USUARIO ||--o{ RESERVA : faz
+  PRODUTO ||--o{ RESERVA : "é reservado em"
+  VARIANTE |o--o{ RESERVA : "escolhida em"
+  COMANDA ||--o{ COBRANCA_PIX : gera
+  RESERVA }o..o| COBRANCA_PIX : "paga por (grupo de reserva)"
+  VENDA_AVULSA ||..o{ COBRANCA_PIX : "pode originar (MongoDB)"
+  VENDA_AVULSA }o..o| RESERVA : "homologa (MongoDB)"
+  COMANDA {
+    uuid id PK
+    string status
+    string forma_pagamento
+    decimal desconto
+    int pontos_aplicados
+    datetime estornada_em
+  }
+  ITEM_COMANDA {
+    uuid id PK
+    string nome_no_momento "snapshot"
+    decimal preco_no_momento "snapshot"
+    int quantidade
+  }
+  RESERVA {
+    uuid id PK
+    uuid grupo_reserva
+    string situacao
+    int quantidade
+  }
+  COBRANCA_PIX {
+    uuid id PK
+    string txid
+    decimal valor
+    string situacao
+  }
+  VENDA_AVULSA {
+    string id "ObjectId do MongoDB"
+    decimal total
+    string forma_pagamento
+    datetime vendida_em
+  }
+  TRANSACAO_EXTERNA {
+    uuid id PK
+    string tipo
+    decimal valor
+    string situacao
+  }
+  CONFIG_INTEGRACAO {
+    uuid id PK
+    string origem
+    datetime ultima_sincronizacao
+  }
