@@ -31,7 +31,9 @@ adb reverse tcp:5000 tcp:5000        # "localhost" do celular = o computador (AP
 flutter run                           # ou: flutter build apk --debug && adb install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-API em outro endereço (produção/staging): `flutter build apk --release --dart-define=API_URL=https://seu-dominio`.
+O APK de **release** já aponta para a produção (`https://santuarionerd.com.br`): `flutter build apk --release`.
+O de **debug** aponta para `http://localhost:5000` (só funciona com o cabo e o `adb reverse` acima; sem isso dá
+"Sem conexão com o servidor"). Outro endereço: `--dart-define=API_URL=https://seu-dominio`.
 Em desenvolvimento a API grava cookies sem `Secure` (HTTP local); em produção eles são `Secure` e o app usa HTTPS.
 
 ## Estrutura
