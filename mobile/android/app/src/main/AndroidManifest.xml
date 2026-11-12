@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sem isso o APK de release não acessa a rede (o debug só funcionava porque o manifesto de debug já tem). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Santuário Liga"
         android:name="${applicationName}"
