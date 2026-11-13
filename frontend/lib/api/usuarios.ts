@@ -118,6 +118,7 @@ export interface ClienteHistoricoComanda {
   id: string; status: string; totalInReais: number
   paymentMethod: string | null; secondPaymentMethod: string | null
   openedAt: string; closedAt: string | null; tableIdentifier: string | null
+  discountInReais?: number
   items: ClienteHistoricoComandaItem[]
 }
 
@@ -127,6 +128,7 @@ export interface ClienteHistoricoVendaAvulsaItem {
 
 export interface ClienteHistoricoVendaAvulsa {
   id: string; totalInReais: number; paymentMethod: string; soldAt: string
+  discountInReais?: number; descontoDoPix?: boolean
   items: ClienteHistoricoVendaAvulsaItem[]
 }
 

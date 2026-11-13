@@ -645,6 +645,7 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                               <span className="text-gray-300">{fmt(item.subtotalInReais)}</span>
                             </div>
                           ))}
+                          <LinhaDesconto itens={c.items} desconto={c.discountInReais ?? 0} rotulo="Desconto" />
                         </div>
                       )}
                     </div>
@@ -675,6 +676,8 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
                               <span className="text-gray-300">{fmt(item.subtotalInReais)}</span>
                             </div>
                           ))}
+                          <LinhaDesconto itens={v.items} desconto={v.discountInReais ?? 0}
+                            rotulo={v.descontoDoPix ? 'Desconto do Pix (o que a vitrine anuncia)' : 'Desconto'} />
                         </div>
                       )}
                     </div>
@@ -786,6 +789,25 @@ function HistoricoDrawer({ user, onClose, onAnonimized }: { user: UserSummary; o
           onClose={() => setDeckAberto(null)}
         />
       )}
+    </div>
+  )
+}
+
+/** Soma dos itens e o desconto já tirado do total — sem isso os itens não fecham com o total de
+ *  cima (Maikon 13/11: o pedido do site com o desconto do Pix parecia "soma errada"). */
+function LinhaDesconto({ itens, desconto, rotulo }: {
+  itens: { subtotalInReais: number }[]; desconto: number; rotulo: string
+}) {
+  if (desconto <= 0) return null
+  const soma = itens.reduce((s, i) => s + i.subtotalInReais, 0)
+  return (
+    <div className="pt-1.5 mt-1 border-t border-surface-500 space-y-1 text-xs">
+      <div className="flex justify-between text-gray-500">
+        <span>Soma dos itens</span><span>{brl(soma)}</span>
+      </div>
+      <div className="flex justify-between text-accent-green">
+        <span>{rotulo}</span><span>− {brl(desconto)}</span>
+      </div>
     </div>
   )
 }

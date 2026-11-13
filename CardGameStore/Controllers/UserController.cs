@@ -347,6 +347,7 @@ public class UserController : ControllerBase
                 OpenedAt        = c.OpenedAt,
                 ClosedAt        = c.ClosedAt,
                 TableIdentifier = c.TableIdentifier,
+                DiscountInReais = c.DiscountInCents / 100m,
                 Items           = c.Items.Select(i => new ComandaItemHistoricoDto
                 {
                     ItemName         = i.ItemNameSnapshot,
@@ -362,6 +363,8 @@ public class UserController : ControllerBase
                 TotalInReais = v.TotalInReais,
                 PaymentMethod = v.PaymentMethod,
                 SoldAt       = v.SoldAt,
+                DiscountInReais = v.DiscountInReais,
+                DescontoDoPix   = v.DiscountInReais > 0 && v.SoldByAdminName == PedidoVendaService.VendedorPixDoSite,
                 Items        = v.Items.Select(i => new VendaAvulsaItemHistoricoDto
                 {
                     ProductName      = i.ProductName,

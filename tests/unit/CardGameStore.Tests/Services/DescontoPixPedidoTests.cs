@@ -109,6 +109,28 @@ public class DescontoPixPedidoTests
 
     private static FuncionalidadesService Chaves(AppDbContext db) => new(db, new MemoryCache(new MemoryCacheOptions()));
 
+    /// <summary>A chave nasce desligada desde 13/11 — os testes do caminho "ligado" ligam na mão.</summary>
+    private static async Task<FuncionalidadesService> ChaveLigadaAsync(AppDbContext db)
+    {
+        var chaves = Chaves(db);
+        await chaves.DefinirAsync(Funcionalidades.PixPedidoComDesconto, true, Guid.NewGuid());
+        return chaves;
+    }
+
+    [Fact]
+    public async Task SemNinguemMexer_PixDoPedidoCobraOPrecoCheio()
+    {
+        // Maikon 13/11: desconto no pedido só quando ele escolher, nunca automático
+        var db = CreateDb();
+        var (grupo, cliente) = await SeedPedidoAsync(db);
+
+        var r = await new ReservationPixService(db, CreateInterMock().Object, Chaves(db)).GerarAsync(grupo, cliente.Id);
+
+        r.Success.Should().BeTrue(r.Error);
+        r.Pix!.ValorEmCentavos.Should().Be(23489);
+        r.Pix.DescontoEmCentavos.Should().BeNull();
+    }
+
     [Fact]
     public async Task ChaveLigada_PixCobraComODescontoDaLojaEGravaODesconto()
     {
@@ -116,7 +138,7 @@ public class DescontoPixPedidoTests
         var (grupo, cliente) = await SeedPedidoAsync(db);
         var inter = CreateInterMock();
 
-        var r = await new ReservationPixService(db, inter.Object, Chaves(db)).GerarAsync(grupo, cliente.Id);
+        var r = await new ReservationPixService(db, inter.Object, await ChaveLigadaAsync(db)).GerarAsync(grupo, cliente.Id);
 
         r.Success.Should().BeTrue(r.Error);
         // 39,90 → 35,91 (10%) e 194,99 → 189,14 (3%): o mesmo "No Pix R$ 225,05" da sacola
@@ -150,7 +172,7 @@ public class DescontoPixPedidoTests
         await db.SaveChangesAsync();
         var inter = CreateInterMock();
 
-        var r = await new ReservationPixService(db, inter.Object, Chaves(db)).GerarAsync(grupo, cliente.Id);
+        var r = await new ReservationPixService(db, inter.Object, await ChaveLigadaAsync(db)).GerarAsync(grupo, cliente.Id);
 
         r.Success.Should().BeFalse("Pix de R$ 0 não existe e o preço cheio cobraria o que era de graça");
         inter.Verify(i => i.CriarCobrancaAsync(It.IsAny<IntegrationConfig>(), It.IsAny<int>(),
