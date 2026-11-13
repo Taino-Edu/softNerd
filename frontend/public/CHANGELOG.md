@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.88.0] — 2026-11-13
+
+### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
+- **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
+- **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
+- **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
+- Volta: `scripts/reverter-procedures-triggers.sql`
+
 ## [v1.86.1] — 2026-11-13
 
 ### Desconto só quando o Maikon escolher
