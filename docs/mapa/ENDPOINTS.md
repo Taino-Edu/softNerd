@@ -517,14 +517,14 @@
 | DELETE | `/api/user/me` | CustomerOrAdmin | `DeleteMe` (135) | `userApi.deleteMe` | — |
 | GET | `/api/user/me` | logado | `GetMe` (90) | `userApi.me` | `app/cliente/decks/[id]/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`components/CompleteProfileGuard.tsx` |
 | PUT | `/api/user/me` | CustomerOrAdmin | `UpdateMe` (105) | `userApi.updateMe` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/user/me/preferences` | logado | `GetPreferences` (413) | `userApi.getPreferences` | `contexts/PreferencesContext.tsx` |
-| PUT | `/api/user/me/preferences` | logado | `UpdatePreferences` (429) | `userApi.updatePreferences` | `contexts/PreferencesContext.tsx` |
-| DELETE | `/api/user/{id:guid}` | AdminOnly | `DeleteUser` (497) | `userApi.adminDelete` | `app/admin/usuarios/page.tsx` |
+| GET | `/api/user/me/preferences` | logado | `GetPreferences` (416) | `userApi.getPreferences` | `contexts/PreferencesContext.tsx` |
+| PUT | `/api/user/me/preferences` | logado | `UpdatePreferences` (432) | `userApi.updatePreferences` | `contexts/PreferencesContext.tsx` |
+| DELETE | `/api/user/{id:guid}` | AdminOnly | `DeleteUser` (500) | `userApi.adminDelete` | `app/admin/usuarios/page.tsx` |
 | GET | `/api/user/{id:guid}` | AdminOnly | `GetById` (159) | `userApi.getById` | `app/admin/venda-avulsa/page.tsx` |
 | PUT | `/api/user/{id:guid}` | AdminOnly | `AdminUpdateUser` (226) | `userApi.adminUpdate` | `app/admin/usuarios/page.tsx` |
 | POST | `/api/user/{id:guid}/balance` | AdminOnly | `AdjustBalance` (203) | `userApi.adjustBalance` | `app/admin/usuarios/page.tsx` |
 | GET | `/api/user/{id:guid}/historico` | AdminOnly | `GetHistorico` (279) | `userApi.historico` | `app/admin/usuarios/page.tsx` |
-| PUT | `/api/user/{id:guid}/perfil` | AdminOnly | `AtualizarPerfil` (450) | `userApi.adminUpdatePerfil` | `app/admin/usuarios/page.tsx` |
+| PUT | `/api/user/{id:guid}/perfil` | AdminOnly | `AtualizarPerfil` (453) | `userApi.adminUpdatePerfil` | `app/admin/usuarios/page.tsx` |
 | POST | `/api/user/{id:guid}/points` | AdminOnly | `AddPoints` (177) | `userApi.addPoints` | `app/admin/usuarios/page.tsx` |
 | PUT | `/api/user/{id:guid}/reset-password` | AdminOnly | `AdminResetPassword` (253) | `userApi.adminResetPassword` | `app/admin/usuarios/page.tsx` |
 

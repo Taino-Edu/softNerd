@@ -121,8 +121,10 @@ public static class Funcionalidades
                         "(o do produto, senão o da categoria, senão o padrão da loja) — o mesmo \"R$ X no Pix\" da vitrine e da sacola. " +
                         "A venda registrada quando o Pix cai sai com esse desconto.",
             SeDesligar: "O Pix do pedido volta a cobrar o preço cheio (o desconto do Pix fica só como texto da vitrine). " +
-                        "QR já gerado continua com o valor que tinha.",
-            Padrao:     true,
+                        "QR já gerado continua com o valor que tinha. Desconto, só o que o Maikon der no \"Registrar pagamento\".",
+            // Desligada desde 13/11: a loja não quer desconto automático no pedido — o Maikon escolhe na
+            // hora de receber (o pedido de 13/11 saiu R$ 41,22 mais barato "sem eu pedir").
+            Padrao:     false,
             Desde:      "v1.83.0",
             RevisarEm:  new DateOnly(2027, 5, 1)),
     ];
