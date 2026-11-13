@@ -265,6 +265,8 @@ public class ComandaHistoricoDto
     public DateTime OpenedAt       { get; set; }
     public DateTime? ClosedAt      { get; set; }
     public string?  TableIdentifier { get; set; }
+    /// <summary>Desconto da loja já tirado do total — sem ele os itens não fecham com o total.</summary>
+    public decimal  DiscountInReais { get; set; }
     public List<ComandaItemHistoricoDto> Items { get; set; } = new();
 }
 
@@ -282,6 +284,11 @@ public class VendaAvulsaHistoricoDto
     public decimal  TotalInReais  { get; set; }
     public string   PaymentMethod { get; set; } = string.Empty;
     public DateTime SoldAt        { get; set; }
+    /// <summary>Desconto já tirado do total (no balcão ou o do Pix do pedido do site) — sem ele
+    /// os itens não fecham com o total (Maikon 13/11: "deu R$ 41,22 de desconto sem eu pedir").</summary>
+    public decimal  DiscountInReais { get; set; }
+    /// <summary>true = o desconto é o do Pix que a vitrine anuncia, aplicado no pedido do site.</summary>
+    public bool     DescontoDoPix   { get; set; }
     public List<VendaAvulsaItemHistoricoDto> Items { get; set; } = new();
 }
 

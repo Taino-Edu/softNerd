@@ -24,6 +24,10 @@ public class PedidoVendaService
     /// <summary>Prefixo do claim enquanto a venda está sendo gravada no Mongo.</summary>
     public const string Registrando = "registrando:";
 
+    /// <summary>"Vendedor" da venda que nasce quando o Pix do pedido do site cai — é por ele que a
+    /// ficha do cliente sabe que o desconto da venda é o do Pix (chave pix-pedido-com-desconto).</summary>
+    public const string VendedorPixDoSite = "Site (Pix)";
+
     private readonly AppDbContext _db;
     private readonly IVendaAvulsaService _vendas;
     private readonly ILogger<PedidoVendaService> _logger;
@@ -108,7 +112,7 @@ public class PedidoVendaService
                     ProductId = r.ProductId, VariantId = r.VariantId, Quantity = r.Quantity,
                     UnitPriceInCents = PrecoDoPedido(r),
                 }).ToList(),
-            }, pix.CriadoPorAdminId, "Site (Pix)");
+            }, pix.CriadoPorAdminId, VendedorPixDoSite);
 
             await _db.ProductReservations
                 .Where(r => ids.Contains(r.Id) && r.VendaAvulsaId == marca)
