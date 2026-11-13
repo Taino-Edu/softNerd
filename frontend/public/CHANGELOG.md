@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.88.0] — 2026-11-09
+## [v1.88.0] — 2026-11-13
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.86.1] — 2026-11-13
+
+### Desconto só quando o Maikon escolher
+- **Mudou:** o Pix do pedido do site volta a cobrar o **preço cheio**. Um pedido de pré-venda saiu R$ 41,22 mais barato sem ninguém pedir: era o "% no Pix" da vitrine (3% em Pokémon, 5% em alguns produtos, 5% padrão da loja) entrando sozinho no QR. Desconto agora só o que o Maikon der na finalização ("Registrar pagamento", fechar comanda, caixa)
+- A chave "Pix do pedido do site com o desconto da loja" passa a nascer **desligada**; o jeito de antes continua em `/admin/funcionalidades`
+- **Corrigido:** na ficha do cliente (Usuários → Caixa e Comandas) a venda com desconto mostrava os itens com preço cheio e o total já descontado, sem dizer por quê — parecia soma errada. Agora aparecem "Soma dos itens" e a linha do desconto (na venda que veio do Pix do site: "Desconto do Pix")
+- Dados: as categorias Pokémon e One Piece ficaram com 0% no Pix e os produtos delas sem % própria (feito direto no banco em 13/11)
 
 ## [v1.86.0] — 2026-11-07
 
