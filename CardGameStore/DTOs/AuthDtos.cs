@@ -72,14 +72,18 @@ public record RefreshTokenBody(
     string? RefreshToken = null
 );
 
-/// <summary>Busca cliente por CPF — primeiro acesso pelo site.</summary>
+/// <summary>Busca cliente por CPF — primeiro acesso pelo site. O WhatsApp prova que é o dono
+/// (sem ele, a busca dizia de quem era qualquer CPF).</summary>
 public record CpfLookupRequest(
-    [Required, ValidCpf] string Cpf
+    [Required, ValidCpf]       string Cpf,
+    [Required, MaxLength(20)]  string WhatsApp
 );
 
-/// <summary>Ativa a conta de um cliente existente (CPF + email + senha).</summary>
+/// <summary>Ativa a conta de um cliente existente (CPF + WhatsApp do cadastro + e-mail + senha).
+/// Só vale pra conta de cliente que ainda não tem senha nem Google.</summary>
 public record SetupAccountRequest(
     [Required, ValidCpf]        string Cpf,
+    [Required, MaxLength(20)]   string WhatsApp,
     [Required, EmailAddress]    string Email,
     [Required, MinLength(8)]    string Password
 );
