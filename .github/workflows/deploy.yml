@@ -1,11 +1,13 @@
 # =============================================================================
-# Deploy produção — começa SOZINHO depois do merge e ESPERA a aprovação do Taino
+# Deploy produção — sobe SOZINHO depois do merge, sem aprovação
 #
-# Fluxo: merge no main → CI verde → este workflow abre e fica "Waiting" no ambiente
-# "producao" → o GitHub avisa (e-mail/app) → Aprovar → sobe. Aprovar é escolher a
-# hora: não aprovou, não sobe. Também dá pra rodar à mão (Actions → Run workflow).
-# Cada deploy novo cancela os antigos que ainda esperavam aprovação (job limpar-fila):
-# fica sempre um só esperando, o mais novo — e ele sobe a última versão do main.
+# Fluxo: merge no main → CI verde → este workflow sobe. Desde 03/11 o ambiente "producao"
+# não pede mais aprovação (decisão do Taino: o clique travava a esteira quando ninguém via).
+# Consequência: merge no meio de torneio sobe no meio do torneio — a troca é sem queda, mas
+# o painel recarrega. Também dá pra rodar à mão (Actions → Run workflow).
+# Cada deploy novo cancela os antigos ainda na fila (job limpar-fila): o mais novo sobe a
+# última versão do main. Pra voltar a aprovar: Settings → Environments → producao →
+# Required reviewers.
 #
 # Roda deploy/update.sh na VPS (backup dos bancos → git pull → build com o site no
 # ar → troca sem queda, deploy/rollout.sh). Enquanto isso o vigia mede se algum
@@ -13,7 +15,7 @@
 #
 # Proteções:
 #   - só roda a partir do main, e só se o último CI do main passou
-#   - ambiente "producao": só aceita o main e exige aprovação do Taino
+#   - ambiente "producao": só aceita o main (aprovação desligada desde 03/11)
 #   - a chave SSH do deploy é presa na VPS ao porteiro /usr/local/bin/santuario-ci,
 #     que só aceita "ping", "status" e "deploy" (registra tudo em
 #     /var/log/santuario-ci.log): mesmo vazada, não abre terminal nem roda outra coisa
@@ -41,10 +43,10 @@ permissions:
   actions: read
 
 jobs:
-  # Deploy esperando aprovação segurava a fila: os seguintes ficavam "pending" atrás dele e nada
-  # subia até alguém achar e aprovar o velho (30/10 e 03/11). Como todo deploy sobe a ÚLTIMA
-  # versão do main, o mais novo basta — os antigos que ainda esperam (ou estão na fila) saem.
-  # Deploy já aprovado e rodando ("in_progress") não é tocado.
+  # Deploy parado segurava a fila: os seguintes ficavam "pending" atrás dele e nada subia até
+  # alguém achar e aprovar o velho (30/10 e 03/11, quando ainda havia aprovação). Como todo
+  # deploy sobe a ÚLTIMA versão do main, o mais novo basta — os antigos ainda na fila (ou
+  # esperando, se a aprovação voltar) saem. Deploy rodando ("in_progress") não é tocado.
   limpar-fila:
     name: Cancelar deploys antigos parados
     runs-on: ubuntu-latest
