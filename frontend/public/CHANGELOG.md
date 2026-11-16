@@ -1,12 +1,29 @@
 # Changelog — Santuário Nerd
 
-## [v1.88.0] — 2026-11-13
+## [v1.88.0] — 2026-11-16
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.87.0] — 2026-11-16
+
+### Página inicial que vende (chave nova, ligada)
+- **Topo no modelo do Maikon:** título bem grande e legível (72 px no computador) "Prepare seu próximo **grande jogo**!" no lugar do nome da loja (que segue no menu), o texto do que a loja tem e os botões **Explorar produtos** e **Ver campeonatos**; o mascote (a logo de Personalizar Site) à direita, aparecendo só depois que a configuração chega — sem piscar a nuvem antes (no celular ele sai, pra os produtos aparecerem logo)
+- **Cabeçalho em 3 tons de azul:** faixa de aviso mais escura (em todas as páginas da loja), menu e topo no azul da marca com os anéis de fundo — num tom só eles "ficavam grudados"
+- A busca fica em Produtos (o modelo do topo não tem busca)
+- **Logo abaixo do topo:** atalhos das categorias e as vantagens da loja (parcelas no cartão, retirada na loja, pontos) — sem "% OFF no Pix", que desde a v1.86.1 o pedido do site não cobra
+- **Produtos sobem:** a vitrine vem antes dos avisos e dos torneios; sem torneio marcado, a seção de torneios some (antes mostrava "Nenhum evento agendado")
+- **"+ Sacola" no cartão de produto** (home e Produtos): põe na sacola sem abrir o produto, com aviso e atalho "Ver sacola". Produto com tamanho/cor continua abrindo a página dele
+- **Catálogo maior no computador:** a home e Produtos passam a 3 colunas, com foto maior e letras maiores no cartão (nome, preço, parcelas); títulos, categorias e vantagens também crescem
+- **Cartão novo, no modelo de catálogo do Maikon:** fundo da foto colorido pelo selo (promoção, pré-venda, destaque), selo amarelo, "CATEGORIA · SUBCATEGORIA", descrição curta, "X% OFF no Pix · R$" e o botão **Adicionar**; o cartão inteiro abre o produto. Avaliação em estrelas e favoritos do modelo ficam de fora (a loja não tem esses dados)
+- **Produtos:** filtros em pílula à esquerda e "Buscar na loja…" à direita na mesma linha; uma grade só (antes um bloco por categoria, com linhas quase vazias)
+- **Página do produto:** foto bem maior no computador e botão **Ampliar** (abre a foto original na tela toda; fecha no clique ou Esc) — pra ver os detalhes das figures
+- **Animação ao pôr na sacola:** a foto do produto voa até a Sacola do menu, que dá um pulinho (no cartão e na página do produto). Quem pede menos movimento no sistema vê só o pulinho
+- Busca de Produtos sem acento: "pokemon" acha "Pokémon"
+- **Chave em Funcionalidades:** "Home que vende" (ligada). Desligar volta tudo como antes (nome da loja no topo, um azul só, torneios primeiro, 3 cartões curtos, 4 colunas, "Ver produto" no cartão)
 
 ## [v1.86.1] — 2026-11-13
 

@@ -5,7 +5,8 @@
 | **[mapa/README.md](mapa/README.md)** | **Onde fica cada coisa e o que muda junto** — comece por aqui antes de alterar algo. Inclui as listas geradas de endpoints, telas, componentes e tabelas (`python scripts/gerar-mapa.py`) |
 | [DOCUMENTACAO-TECNICA.md](DOCUMENTACAO-TECNICA.md) | Arquitetura, como rodar, estrutura, endpoints, regras de negócio, testes, variáveis de ambiente |
 | [operacao/BACKUP.md](operacao/BACKUP.md) | Backup do Postgres/Mongo pro Google Drive (rclone + cron) e restauração |
-| [planejamento/BACKLOG.md](planejamento/BACKLOG.md) | Pedidos levantados e ainda não implementados |
+| [planejamento/BACKLOG.md](planejamento/BACKLOG.md) | Backlog vivo: em andamento, esperando alguém, na fila e feito no mês |
+| [planejamento/HISTORICO.md](planejamento/HISTORICO.md) | O que foi feito nos meses anteriores (sai do backlog na virada do mês) |
 
 Fora desta pasta:
 

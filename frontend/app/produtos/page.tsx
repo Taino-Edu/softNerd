@@ -11,9 +11,13 @@ import {
   Search, Tag,
 } from 'lucide-react'
 import { mixHex } from '@/lib/colors'
-import CartaoProduto from '@/components/loja/CartaoProduto'
+import CartaoProduto, { rotuloCategoria } from '@/components/loja/CartaoProduto'
+import AvisoSacola, { usePorNaSacola } from '@/components/loja/AvisoSacola'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 type Theme = { bg: string; card: string; border: string; blue: string; yellow: string; text: string; navy: string; muted: string; pix: string }
+
+const semAcento = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 export default function ProdutosPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -23,6 +27,9 @@ export default function ProdutosPage() {
   const [isDark,   setIsDark]   = useState(false)
   const [siteCfg,    setSiteCfg]    = useState<SiteConfigDto | null>(null)
   const [categorias, setCategorias] = useState<ProductCategory[]>([])
+  // "+ Sacola" no cartão junto com a home nova (chave home-que-vende)
+  const vende = useFuncionalidade('home-que-vende') !== false
+  const { porNaSacola, nome: naSacola } = usePorNaSacola()
 
   // pix: tom fechado no claro e aberto no escuro, pra manter contraste nos dois temas
   const C: Theme = isDark ? {
@@ -39,8 +46,12 @@ export default function ProdutosPage() {
     const saved = localStorage.getItem('landing-theme')
     if (saved === 'dark') setIsDark(true)
     // Atalho de categoria vindo da home (/produtos?categoria=Pokémon)
-    const cat = new URLSearchParams(window.location.search).get('categoria')
+    const params = new URLSearchParams(window.location.search)
+    const cat = params.get('categoria')
     if (cat) setCatFilter(cat)
+    // Busca feita no topo da home (/produtos?busca=booster)
+    const q = params.get('busca')
+    if (q) setSearch(q.slice(0, 80))
     productApi.list()
       .then(r => setProducts(r.data.filter(p => p.isActive && p.stockQuantity > 0 && p.showOnMarketplace !== false)))
       .finally(() => setLoading(false))
@@ -70,10 +81,11 @@ export default function ProdutosPage() {
   const categories = useMemo(() => [...new Set(products.map(p => p.category))].sort(), [products])
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
+    // Sem acento e sem maiúscula: "pokemon" acha "Pokémon"
+    const q = semAcento(search.trim())
     return products.filter(p => {
       const matchCat = catFilter ? p.category === catFilter : true
-      const matchSearch = !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
+      const matchSearch = !q || semAcento(p.name).includes(q) || semAcento(p.category).includes(q)
       return matchCat && matchSearch
     })
   }, [products, search, catFilter])
@@ -101,47 +113,48 @@ export default function ProdutosPage() {
 
         <div className="mb-6">
           <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: CN.blue }}>Catálogo completo</p>
-          <h1 className="text-3xl md:text-4xl font-black" style={{ color: C.navy }}>Todos os produtos</h1>
-          <p className="text-sm mt-1" style={{ color: CN.text }}>
+          <h1 className={`text-3xl md:text-4xl ${vende ? 'lg:text-5xl' : ''} font-black`} style={{ color: C.navy }}>Todos os produtos</h1>
+          <p className={`text-sm ${vende ? 'lg:text-base' : ''} mt-1`} style={{ color: CN.text }}>
             Busque e filtre pra achar o que precisa pra próxima partida{products.length ? ` — ${products.length} itens em estoque` : ''}.
           </p>
         </div>
 
-        {/* Busca */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: C.muted }} />
-          <input
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border text-sm focus:outline-none transition-all"
-            style={{ backgroundColor: C.card, borderColor: C.border, color: C.navy }}
-            placeholder="Buscar produto..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-
-        {/* Filtro de categorias */}
-        {categories.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-8" style={{ scrollbarWidth: 'none' }}>
-            <button
-              onClick={() => setCatFilter(null)}
-              className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all"
-              style={!catFilter
-                ? { backgroundColor: CN.blue, borderColor: CN.blue, color: '#fff' }
-                : { backgroundColor: C.card, borderColor: C.border, color: C.text }}>
-              <Tag className="w-3 h-3" /> Todos
-            </button>
-            {categories.map(cat => (
-              <button key={cat}
-                onClick={() => setCatFilter(catFilter === cat ? null : cat)}
-                className="shrink-0 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all"
-                style={catFilter === cat
-                  ? { backgroundColor: CN.blue, borderColor: CN.blue, color: '#fff' }
-                  : { backgroundColor: C.card, borderColor: C.border, color: C.text }}>
-                {cat}
-              </button>
-            ))}
+        {/* Catálogo (modelo do Maikon, 16/11): filtros à esquerda e busca à direita na mesma linha no
+            computador; no celular a busca vem em cima. Chave desligada: busca e filtros um embaixo do outro. */}
+        <div className={vende ? 'flex flex-col lg:flex-row-reverse lg:items-center gap-3 lg:gap-6 mb-8' : ''}>
+          {/* Busca */}
+          <div className={vende ? 'relative lg:w-80 shrink-0' : 'relative mb-6'}>
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: C.muted }} />
+            <input
+              className={`w-full pl-10 pr-4 py-3 rounded-2xl border text-sm ${vende ? 'lg:text-base shadow-sm' : ''} focus:outline-none transition-all`}
+              style={{ backgroundColor: C.card, borderColor: C.border, color: C.navy }}
+              placeholder={vende ? 'Buscar na loja…' : 'Buscar produto...'}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
-        )}
+
+          {/* Filtro de categorias */}
+          {categories.length > 1 && (
+            <div className={vende ? 'flex-1 min-w-0 flex gap-2 overflow-x-auto pb-1' : 'flex gap-2 overflow-x-auto pb-2 mb-8'} style={{ scrollbarWidth: 'none' }}>
+              {[null, ...categories].map(cat => {
+                const ativo = catFilter === cat
+                return (
+                  <button key={cat ?? 'todos'}
+                    onClick={() => setCatFilter(cat === null || catFilter === cat ? null : cat)}
+                    className={vende
+                      ? 'shrink-0 text-sm font-bold px-4 lg:px-5 py-2 lg:py-2.5 rounded-full border transition-all hover:-translate-y-px'
+                      : `shrink-0 ${cat === null ? 'flex items-center gap-1.5' : ''} text-xs font-bold px-3.5 py-2 rounded-xl border transition-all`}
+                    style={ativo
+                      ? { backgroundColor: CN.blue, borderColor: CN.blue, color: '#fff', boxShadow: vende ? `0 8px 18px -10px ${CN.blue}` : undefined }
+                      : { backgroundColor: C.card, borderColor: C.border, color: vende ? C.navy : C.text }}>
+                    {cat === null ? <>{!vende && <Tag className="w-3 h-3" />} Todos</> : cat}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Produtos */}
         {loading ? (
@@ -155,19 +168,23 @@ export default function ProdutosPage() {
           </div>
         ) : (
           <div className="space-y-12">
-            {grouped.map(([cat, items]) => (
-              <section key={cat}>
-                <div className="flex items-center gap-3 mb-5">
-                  <h2 className="text-lg font-black" style={{ color: C.navy }}>{cat}</h2>
+            {/* Catálogo: uma grade só, na ordem das categorias (os filtros de cima separam); antes, um bloco
+                por categoria — com 1 ou 2 itens em cada sobrava a linha quase vazia */}
+            {(vende ? [['', grouped.flatMap(([, items]) => items)] as [string, Product[]]] : grouped).map(([cat, items]) => (
+              <section key={cat || 'todos'}>
+                {cat && <div className="flex items-center gap-3 mb-5">
+                  <h2 className={`text-lg ${vende ? 'lg:text-2xl' : ''} font-black`} style={{ color: C.navy }}>{cat}</h2>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ backgroundColor: C.blue + '22', color: C.blue }}>
                     {items.length}
                   </span>
                   <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
-                </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                </div>}
+                  {/* Catálogo (home-que-vende): 3 colunas no computador e cartão grande — fotos maiores (Maikon, 16/11) */}
+                  <div className={`grid grid-cols-2 sm:grid-cols-3 ${vende ? 'gap-3 sm:gap-4 lg:gap-6' : 'lg:grid-cols-4 gap-3 sm:gap-4'}`}>
                     {items.map(p => {
                       const { pix, cartao } = precosNovos(p)
-                      return <CartaoProduto key={p.id} p={p} C={CN} pix={pix} cartao={cartao} href={`/produtos/${p.id}`} />
+                      return <CartaoProduto key={p.id} p={p} C={CN} pix={pix} cartao={cartao} href={`/produtos/${p.id}`} grande={vende} categoria={rotuloCategoria(p.category, categorias)}
+                        onAdd={vende && !p.hasVariants ? () => porNaSacola(p) : undefined} />
                     })}
                   </div>
                 
@@ -177,6 +194,7 @@ export default function ProdutosPage() {
         )}
       </div>
 
+      <AvisoSacola nome={naSacola} />
     </div>
   )
 }
