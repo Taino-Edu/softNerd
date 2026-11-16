@@ -137,8 +137,9 @@ function CartaoCatalogo({ p, C, pix, cartao, href, onClick, onAdd, categoria }: 
           <p className="mt-1.5 text-[11px] lg:text-xs font-bold" style={{ color: '#E11D48' }}>Últimas {p.stockQuantity}!</p>
         )}
 
-        {/* Celular (2 colunas, ~160 px): o botão desce pra baixo do preço, na largura toda */}
-        <div className="mt-auto pt-4 flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
+        {/* Até o computador (cartão < ~300 px: 2 colunas no celular, 3 colunas a partir de 640 px) o botão
+            desce pra baixo do preço, na largura toda — lado a lado o preço invadia o botão */}
+        <div className="mt-auto pt-4 flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             {promo && (
               <span className="block text-[11px] lg:text-xs line-through" style={{ color: C.text }}>{brl(p.priceInReais)}</span>
@@ -161,12 +162,12 @@ function CartaoCatalogo({ p, C, pix, cartao, href, onClick, onAdd, categoria }: 
           {onAdd ? (
             <button type="button" aria-label={`Pôr ${p.name} na sacola`}
               onClick={() => { onAdd(); voarParaSacola(fotoRef.current); setPosto(true); setTimeout(() => setPosto(false), 1600) }}
-              className="pointer-events-auto relative z-10 shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-1 h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm font-black rounded-xl transition-all hover:brightness-95 active:scale-95 whitespace-nowrap"
+              className="pointer-events-auto relative z-10 shrink-0 w-full lg:w-auto inline-flex items-center justify-center gap-1 h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm font-black rounded-xl transition-all hover:brightness-95 active:scale-95 whitespace-nowrap"
               style={posto ? { backgroundColor: C.pix, color: '#FFFFFF' } : { backgroundColor: `${C.blue}1A`, color: C.blue }}>
               {posto ? <><Check className="w-3.5 h-3.5" /> Na sacola</> : 'Adicionar'}
             </button>
           ) : (
-            <span className="shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-0.5 h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm font-black rounded-xl whitespace-nowrap"
+            <span className="shrink-0 w-full lg:w-auto inline-flex items-center justify-center gap-0.5 h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm font-black rounded-xl whitespace-nowrap"
               style={{ backgroundColor: `${C.blue}1A`, color: C.blue }}>
               Ver <ChevronRight className="w-3.5 h-3.5" />
             </span>

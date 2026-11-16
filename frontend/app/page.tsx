@@ -565,6 +565,15 @@ export default function LandingPage() {
   )
   // Sem torneio marcado a seção some na home nova (o "Nenhum evento agendado" só tomava espaço)
   const mostraTorneios = !vende || loading || championships.length > 0
+  // Sem a seção, os links "Torneios"/"Ver Eventos" do menu (#eventos, ou /#eventos de outra página)
+  // não levariam a lugar nenhum: vão pra Liga, como o "Ver campeonatos" do topo (revisão do PR #170)
+  useEffect(() => {
+    if (mostraTorneios) return
+    const irPraLiga = () => { if (window.location.hash === '#eventos') router.replace('/liga') }
+    irPraLiga()
+    window.addEventListener('hashchange', irPraLiga)
+    return () => window.removeEventListener('hashchange', irPraLiga)
+  }, [mostraTorneios, router])
 
   return (
     <div className={`site-shell min-h-screen ${uniforme ? 'home-uniforme' : ''}`} style={{ backgroundColor: C.bg, color: C.navy }}>
