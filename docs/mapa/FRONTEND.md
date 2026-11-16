@@ -192,3 +192,4 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/useRascunho.ts` | `limparRascunhos`, `useRascunho`, `useGravarRascunho`, `lerRascunho` |
 | `lib/useSiteConfig.ts` | `useSiteConfig` |
 | `lib/useTorneioAoVivo.ts` | `useTorneioAoVivo` |
+| `lib/voarParaSacola.ts` | `EVENTO_SACOLA`, `voarParaSacola` |
