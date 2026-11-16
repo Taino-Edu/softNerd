@@ -12,12 +12,13 @@ import {
   Trophy, ShoppingBag, Star, Calendar, Users,
   X, MessageCircle, CheckCircle, Package,
   CreditCard, Award, QrCode, Shield, ChevronRight, ChevronLeft,
-  Mail, Heart,
+  Mail, Heart, Store,
 } from 'lucide-react'
 import { brl, dataHoraBR } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
-import CartaoProduto from '@/components/loja/CartaoProduto'
+import CartaoProduto, { rotuloCategoria } from '@/components/loja/CartaoProduto'
+import AvisoSacola, { usePorNaSacola } from '@/components/loja/AvisoSacola'
 import MenuLoja from '@/components/loja/MenuLoja'
 
 // Espelha os defaults do backend (SiteConfig) — usado até a config real carregar,
@@ -93,6 +94,9 @@ type PixVitrine = { precoPix: number; pixPercent: number } | null
 type CartaoVitrine = { parcelas: number; valorParcela: number } | null
 
 function fmtBRL(v: number) { return `${brl(v)}` }
+/** Letreiro do topo da home que vende (modelo do Maikon, 16/11). O nome da loja fica só no menu. */
+const TITULO_VENDE = { linha1: 'Prepare seu', antes: 'próximo ', destaque: 'grande jogo', depois: '!' }
+
 function fmtPixPct(v: number) { return `${(Math.round(v * 10) / 10).toString().replace('.', ',')}%` }
 
 export default function LandingPage() {
@@ -112,6 +116,7 @@ export default function LandingPage() {
   const [bannerIdx,    setBannerIdx]  = useState(0)
   const [annIdx,       setAnnIdx]     = useState(0)
   const [site,         setSite]       = useState<SiteConfigDto>(DEFAULT_SITE)
+  const [siteCarregado, setSiteCarregado] = useState(false)
   const [categorias,   setCategorias] = useState<ProductCategory[]>([])
   const bannerPaused   = useRef(false)
   const annPaused      = useRef(false)
@@ -141,6 +146,12 @@ export default function LandingPage() {
   // títulos, textos, destaques e fundo saem TODOS do azul da marca (colorHero, em Personalizar Site)
   // em vez de misturar o azul-céu (colorPrimary) e o azul-petróleo (colorNavy). Desligada = C0.
   const uniforme = useFuncionalidade('home-visual-uniforme') !== false
+  // Home que vende (chave "home-que-vende", v1.87.0): topo do modelo do Maikon (letreiro "Prepare seu
+  // próximo grande jogo!", 3 tons), categorias e vantagens logo abaixo, produtos antes de avisos/torneios,
+  // "+ Sacola" no cartão e torneios somem quando não há nenhum. A busca fica em Produtos (?busca=).
+  // Desligada = a ordem de antes (torneios, 3 cartões curtos, produtos depois).
+  const vende = useFuncionalidade('home-que-vende') !== false
+  const { porNaSacola, nome: naSacola } = usePorNaSacola()
   const marcaEscura = mixHex(site.colorHero, '#000000', 0.55)
   const C = !uniforme ? C0 : isDark ? {
     ...C0, blue: mixHex(site.colorHero, '#FFFFFF', 0.38),
@@ -180,13 +191,20 @@ export default function LandingPage() {
   // Topo (pedido do Maikon, 14/10): azul do topo, etiqueta e ilustração próprias de Personalizar Site
   const heroGradient = `linear-gradient(135deg, ${mixHex(site.colorHero, '#FFFFFF', 0.10)} 0%, ${site.colorHero} 45%, ${mixHex(site.colorHero, '#000000', 0.38)} 100%)`
   const navBg = mixHex(site.colorHero, '#000000', 0.32)
+  // Home que vende — 3 tons: faixa (mais escura, cor no MenuLoja) → menu (navBg) → topo no azul da marca,
+  // mais claro à esquerda (atrás do texto) e fechando à direita, como no modelo do Maikon (16/11)
+  const heroVende = `linear-gradient(120deg, ${mixHex(site.colorHero, '#FFFFFF', 0.12)} 0%, ${site.colorHero} 50%, ${mixHex(site.colorHero, '#000000', 0.16)} 100%)`
   // Pedido do Taino (04/11): topo sem o mascote de IA. A logo enviada em Personalizar Site (o mascote)
   // entrava depois que a configuração chegava — a página abria com a nuvem "Santuário Nerd" e trocava.
   // Agora a ilustração do topo é a nuvem fixa (public/logo-santuario.webp), a não ser que se escolha
   // uma "Imagem do topo" própria; a logo enviada continua só no menu.
-  const heroImagem = uniforme
-    ? site.heroImageUrl || '/logo-santuario.webp'
-    : site.heroImageUrl || site.logoUrl || '/logo-santuario.webp'
+  // Home que vende: o modelo do Maikon (16/11) tem o mascote à direita — a logo enviada em Personalizar Site.
+  // Pra não abrir com a nuvem e trocar, a imagem só aparece (com fade) depois que a configuração chega.
+  const heroImagem = vende
+    ? site.heroImageUrl || site.logoUrl || '/logo-santuario.webp'
+    : uniforme
+      ? site.heroImageUrl || '/logo-santuario.webp'
+      : site.heroImageUrl || site.logoUrl || '/logo-santuario.webp'
 
   // Detalhes do modelo do Maikon (14/10): faixa acima do menu, topo arredondado, 3 cartões, chamada
   // "Quero jogar", rodapé no azul e parcelamento no cartão de produto. Vitrine em grade com o botão
@@ -243,7 +261,7 @@ export default function LandingPage() {
         setVitrine([...featured, ...visible.filter(p => !p.isFeatured)])
       }),
       announcementApi.visible().then(r => setAnnouncements(r.data)),
-      siteConfigApi.get().then(r => setSite(r.data)),
+      siteConfigApi.get().then(r => setSite(r.data)).finally(() => setSiteCarregado(true)),
       // Só pra resolver o desconto do Pix da categoria no card/modal de produto.
       categoryApi.list().then(r => setCategorias(r.data)).catch(() => {}),
     ]).finally(() => setLoading(false))
@@ -266,152 +284,17 @@ export default function LandingPage() {
 
   const radius = RADIUS_PRESETS[site.borderRadiusStyle] ?? RADIUS_PRESETS.Padrao
 
-  return (
-    <div className={`site-shell min-h-screen ${uniforme ? 'home-uniforme' : ''}`} style={{ backgroundColor: C.bg, color: C.navy }}>
-      {/* Retematiza os cantos (cards/botões/imagens) sem precisar editar cada className —
-          [class~=...] só bate o token exato "rounded-xl" etc, então variantes responsivas
-          (sm:rounded-2xl) e direcionais (rounded-t-3xl, usadas nos modais de bottom-sheet)
-          ficam de fora de propósito, senão quebraria o desenho deles. */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .site-shell [class~="rounded-md"]  { border-radius: ${radius.md} !important; }
-        .site-shell [class~="rounded-lg"]  { border-radius: ${radius.lg} !important; }
-        .site-shell [class~="rounded-xl"]  { border-radius: ${radius.xl} !important; }
-        .site-shell [class~="rounded-2xl"] { border-radius: ${radius.twoXl} !important; }
-      ` }} />
-
-      {/* ── MENU (o mesmo de Produtos, produto e Sacola — components/loja/MenuLoja) ── */}
-      <MenuLoja site={site} isDark={isDark} onToggleDark={toggleDark} naHome
-        corFaixa={uniforme ? undefined : mixHex(site.colorHero, '#000000', 0.5)} />
-
-      {/* ── HERO + CAROUSEL DE FUNDO ───────────────────────────────────── */}
-      <section
-        className={`relative pt-16 overflow-hidden rounded-b-[2rem] md:rounded-b-[2.75rem]`}
-        style={faixa ? { paddingTop: 64 + faixa } : undefined}
-        onMouseEnter={() => { bannerPaused.current = true }}
-        onMouseLeave={() => { bannerPaused.current = false }}
-        onTouchStart={() => { bannerPaused.current = true }}
-        onTouchEnd={() => { bannerPaused.current = false }}
-      >
-        {/* Fundo: banners rotativos ou gradiente padrão */}
-        {heroBanners.length > 0 ? (
-          <>
-            {heroBanners.map((banner, i) => (
-              <div
-                key={banner.id}
-                className="absolute inset-0 transition-opacity duration-1000"
-                style={{ opacity: i === bannerIdx ? 1 : 0 }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={fotoLeve(banner.imageUrl, 1280)} alt="" className="w-full h-full object-cover" fetchPriority={i === 0 ? 'high' : 'low'} />
-              </div>
-            ))}
-            {/* Overlay escuro — mais forte à esquerda (onde fica o texto do site) e mais
-                fraco à direita, pra não apagar o texto que já vem desenhado na imagem do banner */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/10" />
-          </>
-        ) : (
-          // Topo inteiro no azul da barra do menu (pedido do Taino, 04/11): sem degradê mais claro embaixo dela
-          <div className="absolute inset-0" style={{ background: uniforme ? navBg : heroGradient }}>
-            {!uniforme && (
-              // Anéis de fundo do mockup: só decoração, não pegam clique
-              <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-                <div className="absolute -right-24 top-1/2 -translate-y-1/2 w-[34rem] h-[34rem] rounded-full border border-white/10" />
-                <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-[24rem] h-[24rem] rounded-full border border-white/10 bg-white/[0.03]" />
-                <div className="absolute -left-32 -bottom-40 w-96 h-96 rounded-full bg-white/[0.04] blur-2xl" />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Conteúdo do hero — por cima do fundo */}
-        <div className={`relative z-10 max-w-6xl mx-auto px-5 ${uniforme ? 'py-10 md:py-14' : 'py-20 md:py-24'}`}>
-          <div className="flex flex-col items-center gap-8 md:gap-12 md:flex-row">
-
-            {/* Texto */}
-            <div className="flex-1 text-center md:text-left">
-              {site.heroEyebrow && (
-                <span className="inline-flex items-center gap-2 mb-5 px-3 sm:px-3.5 py-1.5 rounded-full border text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.06em] sm:tracking-[0.14em] whitespace-nowrap"
-                  style={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.22)', backgroundColor: 'rgba(255,255,255,0.10)' }}>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.yellow }} />
-                  {site.heroEyebrow}
-                </span>
-              )}
-              <h1 className={`${uniforme ? 'text-4xl md:text-5xl' : 'text-4xl md:text-5xl lg:text-6xl'} font-black mb-4 leading-tight`}>
-                <span style={{ color: C.yellow }}>{heroFirstWord}</span>
-                {heroRest && <>{' '}<span style={{ color: corTituloHero }}>{heroRest}</span></>}
-              </h1>
-              <p className="text-base md:text-lg max-w-md mb-8 leading-relaxed" style={{ color: '#ffffff' }}>
-                {site.heroSubtitle}
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
-                <a href="#eventos"
-                  className="inline-flex items-center justify-center gap-2 font-black px-7 py-3.5 rounded-xl transition-all active:scale-95"
-                  style={{ backgroundColor: C.yellow, color: site.colorNavy, boxShadow: `0 8px 28px rgba(255,228,94,0.22)` }}>
-                  <Trophy className="w-5 h-5" /> {site.ctaVerTorneiosLabel} →
-                </a>
-                <Link href="/produtos"
-                  className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-xl border transition-all hover:border-white/30 hover:text-white"
-                  style={{ borderColor: 'rgba(255,255,255,0.35)', color: 'rgba(255,255,255,0.85)' }}>
-                  <ShoppingBag className="w-5 h-5" /> {site.ctaVerProdutosLabel}
-                </Link>
-              </div>
-            </div>
-
-            {/* Logo principal — usa a logo configurada em Personalizar Site; sem uma, mantém o
-                arquivo padrão original pra não quebrar o visual de quem nunca configurou nada. */}
-            <div className="relative shrink-0 w-full max-w-xs sm:max-w-sm md:max-w-md">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={fotoLeve(heroImagem, 960) ?? heroImagem}
-                alt={site.siteName}
-                className={`object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)] ${uniforme ? 'w-full h-auto max-h-[min(52vh,24rem)]' : 'w-full h-auto'}`}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Setas prev/next — só com múltiplos banners */}
-        {heroBanners.length > 1 && (
-          <>
-            <button
-              onClick={() => setBannerIdx(i => (i - 1 + heroBanners.length) % heroBanners.length)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-              style={{ background: 'rgba(0,0,0,0.40)', backdropFilter: 'blur(6px)' }}
-              aria-label="Banner anterior"
-            >
-              <ChevronLeft className="w-5 h-5 text-white" />
-            </button>
-            <button
-              onClick={() => setBannerIdx(i => (i + 1) % heroBanners.length)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-              style={{ background: 'rgba(0,0,0,0.40)', backdropFilter: 'blur(6px)' }}
-              aria-label="Próximo banner"
-            >
-              <ChevronRight className="w-5 h-5 text-white" />
-            </button>
-          </>
-        )}
-
-        {/* Dots — só com múltiplos banners */}
-        {heroBanners.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
-            {heroBanners.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setBannerIdx(i)}
-                className="h-1.5 rounded-full transition-all duration-300"
-                style={{
-                  width: i === bannerIdx ? '24px' : '6px',
-                  background: i === bannerIdx ? '#FFE45E' : 'rgba(255,255,255,0.45)',
-                }}
-                aria-label={`Ir para banner ${i + 1}`}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
+  // Vantagens da loja na home nova — só o que existe de verdade (parcelas vêm de Personalizar Site).
+  // Sem "X% OFF no Pix": desde a v1.86.1 o Pix do pedido cobra preço cheio e o desconto só existe
+  // quando o Maikon dá na finalização — anunciar aqui prometeria o que o site não cobra.
+  const vantagens: { icon: typeof Store; titulo: string; texto: string }[] = [
+    ...(site.maxInstallments > 1 ? [{ icon: CreditCard, titulo: `Até ${site.maxInstallments}x no cartão`, texto: 'Parcelado na retirada' }] : []),
+    { icon: Store, titulo: 'Retire na loja', texto: site.addressLine || 'Reserve pelo site' },
+    { icon: Award, titulo: 'Pontos a cada compra', texto: 'Viram desconto na loja' },
+  ]
+  // Blocos da home: a chave home-que-vende muda a ORDEM e o que aparece, não o desenho de cada um
+  const secCartoes = (
+    <>
       {/* ── 3 CARTÕES CURTOS (modelo do Maikon) ────────────────────────── */}
       <section className="px-5 pt-6 max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
@@ -432,7 +315,10 @@ export default function LandingPage() {
           </a>
         ))}
       </section>
-
+    </>
+  )
+  const secAvisos = (
+    <>
       {/* ── CARROSSEL DE AVISOS & DESTAQUES ────────────────────────────── */}
       {visibleAnnouncements.length > 0 && (
         <section className="px-5 py-8 max-w-6xl mx-auto">
@@ -527,7 +413,10 @@ export default function LandingPage() {
           </div>
         </section>
       )}
-
+    </>
+  )
+  const secTorneios = (
+    <>
       {/* ── TORNEIOS ────────────────────────────────────────────────────── */}
       <section id="eventos" className="py-16 px-5">
         <div className="max-w-6xl mx-auto">
@@ -565,25 +454,29 @@ export default function LandingPage() {
           )}
         </div>
       </section>
-
+    </>
+  )
+  const noTopo = vende ? 9 : 8   // grade de 3 (home que vende) ou 4 colunas, sempre completa no computador
+  const secProdutos = (
+    <>
       {/* ── PRODUTOS: VITRINE NOVA (grade, sem carrossel parado) ─────────── */}
-      <section id="produtos" className="py-16 px-5">
+      <section id="produtos" className={`${vende ? 'pt-8 pb-14' : 'py-16'} px-5`}>
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
             <div>
               <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: C.blue }}>{site.produtosEyebrow}</p>
-              <h2 className="text-2xl md:text-3xl font-black" style={{ color: C.navy }}>{site.produtosTitle}</h2>
-              <p className="text-sm mt-1" style={{ color: C.text }}>Cartas, acessórios e colecionáveis pra sua próxima partida.</p>
+              <h2 className={`text-2xl md:text-3xl ${vende ? 'lg:text-4xl' : ''} font-black`} style={{ color: C.navy }}>{site.produtosTitle}</h2>
+              <p className={`text-sm ${vende ? 'lg:text-base' : ''} mt-1`} style={{ color: C.text }}>Cartas, acessórios e colecionáveis pra sua próxima partida.</p>
             </div>
             {vitrine.length > 0 && (
-              <Link href="/produtos" className="inline-flex items-center gap-1 text-sm font-black shrink-0 hover:underline" style={{ color: C.blue }}>
+              <Link href="/produtos" className={`inline-flex items-center gap-1 text-sm ${vende ? 'lg:text-base' : ''} font-black shrink-0 hover:underline`} style={{ color: C.blue }}>
                 Ver todos os {vitrine.length} produtos <ChevronRight className="w-4 h-4" />
               </Link>
             )}
           </div>
 
           {/* Atalhos das categorias com mais itens — levam pra loja já filtrada */}
-          {categoriasVitrine.length > 1 && (
+          {categoriasVitrine.length > 1 && !vende && (
             <div className="flex gap-2 overflow-x-auto pb-2 mb-5" style={{ scrollbarWidth: 'none' }}>
               {categoriasVitrine.map(([cat, n]) => (
                 <Link key={cat} href={`/produtos?categoria=${encodeURIComponent(cat)}`}
@@ -606,13 +499,18 @@ export default function LandingPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                {vitrine.slice(0, 8).map(p => (
-                  <CartaoProduto key={p.id} p={p} C={C} onClick={() => setProductModal(p)}
-                    pix={pixDoProduto(p)} cartao={cartaoDoProduto(p)} />
+              {/* Home que vende: 3 colunas no computador (fotos maiores — figures precisam de detalhe) e 9 itens */}
+              <div className={`grid grid-cols-2 sm:grid-cols-3 ${vende ? 'gap-3 sm:gap-4 lg:gap-6' : 'lg:grid-cols-4 gap-3 sm:gap-4'}`}>
+                {vitrine.slice(0, noTopo).map((p, i) => (
+                  // 9º item some no celular (2 colunas): senão sobra um sozinho na última linha
+                  <div key={p.id} className={i === 8 ? 'max-sm:hidden flex flex-col' : 'contents'}>
+                    <CartaoProduto p={p} C={C} onClick={() => setProductModal(p)}
+                      pix={pixDoProduto(p)} cartao={cartaoDoProduto(p)} grande={vende} categoria={rotuloCategoria(p.category, categorias)}
+                      onAdd={vende && !p.hasVariants ? () => porNaSacola(p) : undefined} />
+                  </div>
                 ))}
               </div>
-              {vitrine.length > 8 && (
+              {vitrine.length > noTopo && (
                 <div className="flex justify-center mt-8">
                   <Link href="/produtos"
                     className="inline-flex items-center gap-2 text-sm font-black px-7 py-3 rounded-xl transition-all active:scale-95"
@@ -625,6 +523,242 @@ export default function LandingPage() {
           )}
         </div>
       </section>
+    </>
+  )
+  const secVitrineTopo = (
+    <>
+      {/* ── LOGO ABAIXO DO TOPO: CATEGORIAS + VANTAGENS (home que vende) ── */}
+      <section className="px-5 pt-6 max-w-6xl mx-auto">
+        {categoriasVitrine.length > 1 && (
+          <nav aria-label="Categorias" className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap" style={{ scrollbarWidth: 'none' }}>
+            <Link href="/produtos"
+              className="shrink-0 inline-flex items-center gap-1.5 text-sm lg:text-base font-black px-4 lg:px-5 py-2.5 lg:py-3 rounded-full transition-all active:scale-95"
+              style={{ backgroundColor: site.colorHero, color: '#FFFFFF' }}>
+              <ShoppingBag className="w-4 h-4" /> Tudo
+            </Link>
+            {categoriasVitrine.map(([cat, n]) => (
+              <Link key={cat} href={`/produtos?categoria=${encodeURIComponent(cat)}`}
+                className="shrink-0 inline-flex items-center gap-1.5 text-sm lg:text-base font-bold px-4 lg:px-5 py-2.5 lg:py-3 rounded-full border transition-colors hover:opacity-80"
+                style={{ backgroundColor: C.card, borderColor: C.border, color: C.navy }}>
+                {cat} <span className="text-xs lg:text-sm" style={{ color: C.text }}>{n}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
+        {/* Vantagens: só o que a loja oferece de verdade (parcelas saem de Personalizar Site).
+            2 ou 3 itens: no desktop uma coluna por item; no celular o último ímpar ocupa a linha toda */}
+        <ul className={`mt-4 grid grid-cols-2 ${vantagens.length === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-2 sm:gap-3`}>
+          {vantagens.map(({ icon: Icon, titulo, texto }) => (
+            <li key={titulo} className="flex items-center gap-3 p-3 lg:p-4 rounded-2xl border min-w-0 max-lg:last:odd:col-span-2" style={{ backgroundColor: C.card, borderColor: C.border }}>
+              <span className="w-9 h-9 lg:w-11 lg:h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${C.blue}18` }}>
+                <Icon className="w-[18px] h-[18px] lg:w-[22px] lg:h-[22px]" style={{ color: C.blue }} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] lg:text-base font-black leading-tight" style={{ color: C.navy }}>{titulo}</span>
+                <span className="block text-xs lg:text-sm mt-0.5 leading-snug line-clamp-2" style={{ color: C.text }}>{texto}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
+  )
+  // Sem torneio marcado a seção some na home nova (o "Nenhum evento agendado" só tomava espaço)
+  const mostraTorneios = !vende || loading || championships.length > 0
+  // Sem a seção, os links "Torneios"/"Ver Eventos" do menu (#eventos, ou /#eventos de outra página)
+  // não levariam a lugar nenhum: vão pra Liga, como o "Ver campeonatos" do topo (revisão do PR #170)
+  useEffect(() => {
+    if (mostraTorneios) return
+    const irPraLiga = () => { if (window.location.hash === '#eventos') router.replace('/liga') }
+    irPraLiga()
+    window.addEventListener('hashchange', irPraLiga)
+    return () => window.removeEventListener('hashchange', irPraLiga)
+  }, [mostraTorneios, router])
+
+  return (
+    <div className={`site-shell min-h-screen ${uniforme ? 'home-uniforme' : ''}`} style={{ backgroundColor: C.bg, color: C.navy }}>
+      {/* Retematiza os cantos (cards/botões/imagens) sem precisar editar cada className —
+          [class~=...] só bate o token exato "rounded-xl" etc, então variantes responsivas
+          (sm:rounded-2xl) e direcionais (rounded-t-3xl, usadas nos modais de bottom-sheet)
+          ficam de fora de propósito, senão quebraria o desenho deles. */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .site-shell [class~="rounded-md"]  { border-radius: ${radius.md} !important; }
+        .site-shell [class~="rounded-lg"]  { border-radius: ${radius.lg} !important; }
+        .site-shell [class~="rounded-xl"]  { border-radius: ${radius.xl} !important; }
+        .site-shell [class~="rounded-2xl"] { border-radius: ${radius.twoXl} !important; }
+      ` }} />
+
+      {/* ── MENU (o mesmo de Produtos, produto e Sacola — components/loja/MenuLoja) ── */}
+      {/* Home que vende: cabeçalho em 3 tons (faixa mais escura, menu, topo no azul da marca) —
+          "aqui ficou tudo da mesma cor, eles ficam grudados" (Maikon, 16/11) */}
+      <MenuLoja site={site} isDark={isDark} onToggleDark={toggleDark} naHome
+        corFaixa={vende || uniforme ? undefined : mixHex(site.colorHero, '#000000', 0.5)} />
+
+      {/* ── HERO + CAROUSEL DE FUNDO ───────────────────────────────────── */}
+      <section
+        className={`relative pt-16 overflow-hidden rounded-b-[2rem] md:rounded-b-[2.75rem]`}
+        style={faixa ? { paddingTop: 64 + faixa } : undefined}
+        onMouseEnter={() => { bannerPaused.current = true }}
+        onMouseLeave={() => { bannerPaused.current = false }}
+        onTouchStart={() => { bannerPaused.current = true }}
+        onTouchEnd={() => { bannerPaused.current = false }}
+      >
+        {/* Fundo: banners rotativos ou gradiente padrão */}
+        {heroBanners.length > 0 ? (
+          <>
+            {heroBanners.map((banner, i) => (
+              <div
+                key={banner.id}
+                className="absolute inset-0 transition-opacity duration-1000"
+                style={{ opacity: i === bannerIdx ? 1 : 0 }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={fotoLeve(banner.imageUrl, 1280)} alt="" className="w-full h-full object-cover" fetchPriority={i === 0 ? 'high' : 'low'} />
+              </div>
+            ))}
+            {/* Overlay escuro — mais forte à esquerda (onde fica o texto do site) e mais
+                fraco à direita, pra não apagar o texto que já vem desenhado na imagem do banner */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/10" />
+          </>
+        ) : (
+          // Topo inteiro no azul da barra do menu (pedido do Taino, 04/11): sem degradê mais claro embaixo dela
+          <div className="absolute inset-0" style={{ background: vende ? heroVende : uniforme ? navBg : heroGradient }}>
+            {(!uniforme || vende) && (
+              // Anéis de fundo do mockup (também no modelo de 16/11): só decoração, não pegam clique
+              <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+                <div className="absolute -right-24 top-1/2 -translate-y-1/2 w-[34rem] h-[34rem] rounded-full border border-white/10" />
+                <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-[24rem] h-[24rem] rounded-full border border-white/10 bg-white/[0.03]" />
+                <div className="absolute -left-32 -bottom-40 w-96 h-96 rounded-full bg-white/[0.04] blur-2xl" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Conteúdo do hero — por cima do fundo */}
+        <div className={`relative z-10 max-w-6xl mx-auto px-5 ${vende ? 'py-10 md:py-14' : uniforme ? 'py-10 md:py-14' : 'py-20 md:py-24'}`}>
+          <div className="flex flex-col items-center gap-8 md:gap-12 md:flex-row">
+
+            {/* Texto à esquerda, arte à direita (no celular a arte sai na home que vende) */}
+            <div className="flex-1 text-center md:text-left">
+              {site.heroEyebrow && (
+                <span className={`inline-flex items-center gap-2 mb-5 px-3 sm:px-3.5 py-1.5 rounded-full border ${vende ? 'text-[11px] sm:text-xs lg:text-sm lg:px-4 lg:py-2' : 'text-[10px] sm:text-[11px] md:text-xs'} font-black uppercase tracking-[0.06em] sm:tracking-[0.14em] whitespace-nowrap`}
+                  style={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.22)', backgroundColor: 'rgba(255,255,255,0.10)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.yellow }} />
+                  {site.heroEyebrow}
+                </span>
+              )}
+              {vende ? (
+                // Chamada pra ação no lugar do nome da loja (que já está no menu) — o letreiro do modelo
+                // que o Maikon mandou: "fica mais visual, a pessoa vê melhor o que a loja trabalha"
+                <h1 className="text-[2.75rem] sm:text-6xl xl:text-7xl font-black mb-5 leading-[1.05] tracking-tight max-w-3xl mx-auto md:mx-0" style={{ color: '#FFFFFF' }}>
+                  {/* Quebra depois de "seu", como no modelo (só do tablet pra cima; no celular quebra sozinho) */}
+                  {TITULO_VENDE.linha1}<br className="hidden sm:block" />{' '}{TITULO_VENDE.antes}<span style={{ color: C.yellow }}>{TITULO_VENDE.destaque}</span>{TITULO_VENDE.depois}
+                </h1>
+              ) : (
+                <h1 className={`${uniforme ? 'text-4xl md:text-5xl' : 'text-4xl md:text-5xl lg:text-6xl'} font-black mb-4 leading-tight`}>
+                  <span style={{ color: C.yellow }}>{heroFirstWord}</span>
+                  {heroRest && <>{' '}<span style={{ color: corTituloHero }}>{heroRest}</span></>}
+                </h1>
+              )}
+              <p className={vende
+                  ? 'text-lg sm:text-xl lg:text-[1.375rem] font-semibold max-w-2xl mx-auto md:mx-0 mb-8 leading-relaxed'
+                  : 'text-base md:text-lg max-w-md mb-8 leading-relaxed'}
+                style={{ color: vende ? 'rgba(255,255,255,0.92)' : '#ffffff' }}>
+                {site.heroSubtitle}
+              </p>
+
+              {vende ? (
+                // Os dois botões do modelo do Maikon (16/11). Sem torneio marcado a seção de torneios
+                // some, então o "Ver campeonatos" leva pra Liga (onde ficam os campeonatos do mês).
+                <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                  <Link href="/produtos"
+                    className="inline-flex items-center justify-center gap-2 font-black lg:text-lg px-7 py-3.5 rounded-xl transition-all hover:brightness-105 active:scale-95"
+                    style={{ backgroundColor: C.yellow, color: site.colorNavy, boxShadow: `0 10px 28px -8px rgba(0,0,0,0.35)` }}>
+                    Explorar produtos <span aria-hidden>→</span>
+                  </Link>
+                  <a href={championships.length > 0 ? '#eventos' : '/liga'}
+                    className="inline-flex items-center justify-center gap-2 font-bold lg:text-lg px-7 py-3.5 rounded-xl border transition-all hover:bg-white/10"
+                    style={{ borderColor: 'rgba(255,255,255,0.55)', color: '#FFFFFF' }}>
+                    Ver campeonatos
+                  </a>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                  <a href="#eventos"
+                    className="inline-flex items-center justify-center gap-2 font-black px-7 py-3.5 rounded-xl transition-all active:scale-95"
+                    style={{ backgroundColor: C.yellow, color: site.colorNavy, boxShadow: `0 8px 28px rgba(255,228,94,0.22)` }}>
+                    <Trophy className="w-5 h-5" /> {site.ctaVerTorneiosLabel} →
+                  </a>
+                  <Link href="/produtos"
+                    className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-xl border transition-all hover:border-white/30 hover:text-white"
+                    style={{ borderColor: 'rgba(255,255,255,0.35)', color: 'rgba(255,255,255,0.85)' }}>
+                    <ShoppingBag className="w-5 h-5" /> {site.ctaVerProdutosLabel}
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Logo principal — usa a logo configurada em Personalizar Site; sem uma, mantém o
+                arquivo padrão original pra não quebrar o visual de quem nunca configurou nada. */}
+            {/* Home que vende: o mascote (logo de Personalizar Site) à direita, como no modelo; no celular ele
+                sai (empurrava os produtos 1 tela e meia pra baixo). O "rostinho" que saiu em 16/11 era o do menu. */}
+            <div className={`relative shrink-0 w-full ${vende ? 'hidden md:flex md:max-w-[16rem] lg:max-w-[20rem] h-[22rem] lg:h-[28rem] items-center justify-center' : 'max-w-xs sm:max-w-sm md:max-w-md'}`}>
+              {(!vende || siteCarregado) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={fotoLeve(heroImagem, 960) ?? heroImagem}
+                  alt={site.siteName}
+                  className={`object-contain drop-shadow-[0_16px_48px_rgba(0,0,0,0.5)] ${vende ? 'w-full h-full animate-fade-in' : uniforme ? 'w-full h-auto max-h-[min(52vh,24rem)]' : 'w-full h-auto'}`}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Setas prev/next — só com múltiplos banners */}
+        {heroBanners.length > 1 && (
+          <>
+            <button
+              onClick={() => setBannerIdx(i => (i - 1 + heroBanners.length) % heroBanners.length)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+              style={{ background: 'rgba(0,0,0,0.40)', backdropFilter: 'blur(6px)' }}
+              aria-label="Banner anterior"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            <button
+              onClick={() => setBannerIdx(i => (i + 1) % heroBanners.length)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+              style={{ background: 'rgba(0,0,0,0.40)', backdropFilter: 'blur(6px)' }}
+              aria-label="Próximo banner"
+            >
+              <ChevronRight className="w-5 h-5 text-white" />
+            </button>
+          </>
+        )}
+
+        {/* Dots — só com múltiplos banners */}
+        {heroBanners.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+            {heroBanners.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setBannerIdx(i)}
+                className="h-1.5 rounded-full transition-all duration-300"
+                style={{
+                  width: i === bannerIdx ? '24px' : '6px',
+                  background: i === bannerIdx ? '#FFE45E' : 'rgba(255,255,255,0.45)',
+                }}
+                aria-label={`Ir para banner ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {vende
+        ? <>{secVitrineTopo}{secProdutos}{secAvisos}{mostraTorneios && secTorneios}</>
+        : <>{secCartoes}{secAvisos}{secTorneios}{secProdutos}</>}
 
       {/* ── PONTOS / FIDELIDADE ─────────────────────────────────────────── */}
       <section id="pontos" className="py-16 px-5 border-t" style={{ borderColor: C.border }}>
@@ -698,7 +832,7 @@ export default function LandingPage() {
               Conheça os campeonatos semanais e faça parte da comunidade do {site.siteName}.
             </p>
           </div>
-          <a href="#eventos"
+          <a href={mostraTorneios ? '#eventos' : '/liga'}
             className="shrink-0 inline-flex items-center gap-2 font-black text-sm px-6 py-3 rounded-xl transition-all active:scale-95"
             style={{ backgroundColor: site.colorHero, color: '#FFFFFF', boxShadow: `0 10px 24px -10px ${site.colorHero}` }}>
             Quero jogar →
@@ -778,6 +912,9 @@ export default function LandingPage() {
           Falar com {site.contactPersonName}
         </a>
       )}
+
+      {/* Aviso depois do "+ Sacola" — com atalho pra Sacola */}
+      <AvisoSacola nome={naSacola} />
 
       {/* ── MODAIS ──────────────────────────────────────────────────────── */}
       {annModal      && <AnnouncementModal ann={annModal}               onClose={() => setAnnModal(null)}      C={C} />}

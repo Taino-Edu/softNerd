@@ -22,6 +22,8 @@ import { useSiteConfig } from '@/lib/useSiteConfig'
 import { useReservationCart } from '@/hooks/useReservationCart'
 import { abrirVLibras } from '@/components/VLibrasController'
 import { isLoggedIn } from '@/lib/auth'
+import { EVENTO_SACOLA } from '@/lib/voarParaSacola'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 /** Rótulos e cores do menu enquanto Personalizar Site não chega (o mesmo padrão da página principal). */
 const PADRAO = {
@@ -86,8 +88,14 @@ export default function MenuLoja({
       setVisivel(y < 80 || y < ultimo)
       ultimo = y
     }
+    // Item posto na sacola com o menu escondido: o menu volta pra a foto ter onde pousar
+    const mostrarSacola = () => setVisivel(true)
     window.addEventListener('scroll', rolou, { passive: true })
-    return () => window.removeEventListener('scroll', rolou)
+    window.addEventListener(EVENTO_SACOLA, mostrarSacola)
+    return () => {
+      window.removeEventListener('scroll', rolou)
+      window.removeEventListener(EVENTO_SACOLA, mostrarSacola)
+    }
   }, [])
 
   const aviso = site.avisoTopo.trim()
@@ -95,6 +103,10 @@ export default function MenuLoja({
   // "Jogue, evolua e divirta-se — encontre tudo…": o trecho antes do travessão sai em amarelo
   const [avisoDestaque, ...avisoResto] = aviso.split(' — ')
   const azul = azulDoMenu(site)
+  // Home que vende: faixa de aviso num tom mais escuro que a barra em todas as páginas (cabeçalho em
+  // 3 tons, pedido do Maikon em 16/11: "tudo da mesma cor, eles ficam grudados")
+  const vende = useFuncionalidade('home-que-vende') !== false
+  const faixaCor = corFaixa ?? (vende ? mixHex(site.colorHero, '#000000', 0.58) : azul)
   const mostra = visivel || hover || aberto
   const secao = (id: string) => (naHome ? `#${id}` : `/#${id}`)
   const fechar = () => setAberto(false)
@@ -110,7 +122,7 @@ export default function MenuLoja({
 
       {aviso && (
         <div className="fixed inset-x-0 top-0 z-[52] h-8 flex items-center justify-center gap-1.5 px-4 text-[11px] sm:text-xs font-bold transition-transform duration-300"
-          style={{ backgroundColor: corFaixa ?? azul, color: '#FFFFFF', transform: mostra ? 'translateY(0)' : 'translateY(-100%)' }}
+          style={{ backgroundColor: faixaCor, color: '#FFFFFF', transform: mostra ? 'translateY(0)' : 'translateY(-100%)' }}
           onMouseEnter={() => setHover(true)}>
           <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: site.colorAccent }} />
           <span className="truncate">
@@ -159,7 +171,9 @@ export default function MenuLoja({
               {logado ? 'Minha Conta' : 'Entrar / Cadastrar'}
             </Link>
             {/* Sacola = carrinho de reserva (/cliente/reserva/carrinho); no celular vira só o ícone */}
+            {/* data-sacola: alvo da foto que voa ao pôr um item na sacola (lib/voarParaSacola) */}
             <Link href="/cliente/reserva/carrinho" aria-label={`Sacola: ${itensSacola} ${itensSacola === 1 ? 'item' : 'itens'}`}
+              data-sacola
               className="flex items-center gap-2 text-sm px-2.5 xl:px-4 py-2 rounded-xl xl:border transition-colors hover:bg-white/10 whitespace-nowrap"
               style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.40)' }}>
               <ShoppingBag className="w-4 h-4" />

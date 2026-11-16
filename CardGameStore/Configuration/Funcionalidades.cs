@@ -43,6 +43,7 @@ public static class Funcionalidades
     public const string PagamentoSemRetirada = "pagamento-sem-retirada";
     public const string RelatorioPorSubcategoria = "relatorio-por-subcategoria";
     public const string PixPedidoComDesconto = "pix-pedido-com-desconto";
+    public const string HomeQueVende = "home-que-vende";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -127,6 +128,20 @@ public static class Funcionalidades
             Padrao:     false,
             Desde:      "v1.83.0",
             RevisarEm:  new DateOnly(2027, 5, 1)),
+
+        new(HomeQueVende,
+            Nome:       "Home que vende: catálogo com produtos em cima, fotos maiores e \"+ Sacola\" no cartão",
+            OQueMuda:   "Na página inicial, o topo segue o modelo do Maikon: título \"Prepare seu próximo grande jogo!\", botões " +
+                        "\"Explorar produtos\" e \"Ver campeonatos\" e o mascote (logo de Personalizar Site) à direita; o cabeçalho fica em 3 tons de azul (a faixa mais " +
+                        "escura em todas as páginas da loja). Logo abaixo vêm as categorias e as vantagens " +
+                        "(cartão, retirada na loja, pontos) e em seguida os produtos — antes dos avisos e torneios. No computador, home e " +
+                        "Produtos ficam em 3 colunas com foto e letras maiores, e a página do produto tem foto maior com \"Ampliar\". " +
+                        "Os cartões ganham \"+ Sacola\" e a foto voa até a Sacola ao adicionar. Sem torneio marcado, a seção de torneios some.",
+            SeDesligar: "Volta como antes: nome da loja no topo, um azul só, torneios primeiro, os 3 cartões curtos, 4 colunas, foto menor na " +
+                        "página do produto e o botão \"Ver produto\" no cartão.",
+            Padrao:     true,
+            Desde:      "v1.87.0",
+            RevisarEm:  new DateOnly(2027, 5, 6)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>
