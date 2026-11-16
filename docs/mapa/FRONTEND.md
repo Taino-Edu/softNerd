@@ -59,12 +59,12 @@
 | `/login` | `app/login/page.tsx` | `auth/Moldura` |
 | `/mesa/[mesa]` | `app/mesa/[mesa]/page.tsx` | `GoogleLoginButton` |
 | `/pagar/[token]` | `app/pagar/[token]/page.tsx` | — |
-| `/` | `app/page.tsx` | `loja/CartaoProduto`, `loja/MenuLoja` |
+| `/` | `app/page.tsx` | `loja/AvisoSacola`, `loja/CartaoProduto`, `loja/MenuLoja` |
 | `/perfil/[id]` | `app/perfil/[id]/page.tsx` | `pokemon/ParceiroDaConta` |
 | `/primeiro-acesso` | `app/primeiro-acesso/page.tsx` | `auth/Moldura` |
 | `/privacidade` | `app/privacidade/page.tsx` | `LegalActions`, `ThemeToggle` |
 | `/produtos/[id]` | `app/produtos/[id]/page.tsx` | `cliente/AvatarCliente`, `loja/CartaoProduto`, `loja/MenuLoja` |
-| `/produtos` | `app/produtos/page.tsx` | `loja/CartaoProduto`, `loja/MenuLoja` |
+| `/produtos` | `app/produtos/page.tsx` | `loja/AvisoSacola`, `loja/CartaoProduto`, `loja/MenuLoja` |
 | `/reset-password` | `app/reset-password/page.tsx` | `auth/Moldura` |
 | `/termos` | `app/termos/page.tsx` | `LegalActions`, `ThemeToggle` |
 
@@ -124,7 +124,8 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/admin/Janela` | `Janela` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/JogadoresTorneio` | `JogadoresTorneio` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/LancarEtapa` | `LancarEtapa` | `app/admin/liguinha/page.tsx` |
-| `loja/CartaoProduto` | `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
+| `loja/AvisoSacola` | `usePorNaSacola`, `AvisoSacola` | `app/page.tsx`<br>`app/produtos/page.tsx` |
+| `loja/CartaoProduto` | `rotuloCategoria`, `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
 | `loja/MenuLoja` | `alturaFaixa`, `azulDoMenu`, `MenuLoja` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
 | `pokemon/EscolherPokemon` | `EscolherPokemon` | `app/cliente/perfil/page.tsx` |
 | `pokemon/ParceiroDaConta` | `ParceiroDaConta` | `app/cliente/perfil/page.tsx`<br>`app/perfil/[id]/page.tsx` |
@@ -191,3 +192,4 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/useRascunho.ts` | `limparRascunhos`, `useRascunho`, `useGravarRascunho`, `lerRascunho` |
 | `lib/useSiteConfig.ts` | `useSiteConfig` |
 | `lib/useTorneioAoVivo.ts` | `useTorneioAoVivo` |
+| `lib/voarParaSacola.ts` | `EVENTO_SACOLA`, `voarParaSacola` |

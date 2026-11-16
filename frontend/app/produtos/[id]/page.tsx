@@ -3,7 +3,9 @@
 // contraste, "Últimas N", garantias da loja e "Você também pode gostar".
 import MenuLoja from '@/components/loja/MenuLoja'
 import AvatarCliente from '@/components/cliente/AvatarCliente'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
+import { voarParaSacola } from '@/lib/voarParaSacola'
 import { useParams, useRouter } from 'next/navigation'
 import { productApi, authApi, userApi, siteConfigApi, categoryApi, Product, UserProfile, SiteConfigDto, ProductCategory } from '@/lib/api'
 import { saveAuth, isLoggedIn, getUserName } from '@/lib/auth'
@@ -11,11 +13,11 @@ import { useReservationCart } from '@/hooks/useReservationCart'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
 import { setOptionalItem } from '@/lib/cookieConsent'
 import Link from 'next/link'
-import { ChevronRight, Package, ShoppingBag, MessageCircle, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store } from 'lucide-react'
+import { ChevronRight, Package, ShoppingBag, MessageCircle, Share2, Tag, CheckCircle, LogIn, X, Loader2, Mail, KeyRound, BookmarkPlus, Minus, Plus, PackageCheck, Wallet, Store, ZoomIn } from 'lucide-react'
 import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
-import CartaoProduto from '@/components/loja/CartaoProduto'
+import CartaoProduto, { rotuloCategoria } from '@/components/loja/CartaoProduto'
 
 const NAVY = '#0C3D5A'
 const BLUE = '#3EC2F2'
@@ -58,6 +60,17 @@ export default function ProductPage() {
   const [relacionados, setRelacionados] = useState<Product[]>([])
   const inCart = product ? cartItems.some(i => i.productId === product.id) : false
   const [qty, setQty] = useState(1)
+  // Catálogo (chave home-que-vende): foto maior no computador, clique amplia na tela toda e a foto
+  // voa até a Sacola ao adicionar — "pra Figure/Funko Pop tem que ver os detalhes" (Maikon, 16/11)
+  const vende = useFuncionalidade('home-que-vende') !== false
+  const fotoRef = useRef<HTMLImageElement>(null)
+  const [ampliada, setAmpliada] = useState(false)
+  useEffect(() => {
+    if (!ampliada) return
+    const fechar = (e: KeyboardEvent) => { if (e.key === 'Escape') setAmpliada(false) }
+    window.addEventListener('keydown', fechar)
+    return () => window.removeEventListener('keydown', fechar)
+  }, [ampliada])
 
   function handleAddToCart() {
     if (!product) return
@@ -69,6 +82,7 @@ export default function ProductPage() {
       productImageUrl: product.imageUrl ?? undefined,
       priceInCents: product.discountPriceInCents ?? product.priceInCents,
     })
+    if (vende) voarParaSacola(fotoRef.current)
     setQty(1)
   }
 
@@ -217,7 +231,7 @@ export default function ProductPage() {
       <MenuLoja site={siteCfg} isDark={isDark} espaco extras={avatar}
         onToggleDark={() => { const n = !isDark; setIsDark(n); setOptionalItem('landing-theme', n ? 'dark' : 'light') }} />
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className={`${vende ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-4 py-6`}>
         <nav aria-label="Caminho" className="flex items-center flex-wrap gap-1 text-xs mb-4" style={{ color: C.muted }}>
           <Link href="/" className="hover:underline">Início</Link>
           <ChevronRight className="w-3 h-3" />
@@ -232,13 +246,23 @@ export default function ProductPage() {
           </button>
         </nav>
         
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className={`flex flex-col lg:flex-row ${vende ? 'gap-6 lg:gap-10' : 'gap-6'}`}>
 
           {/* ── Galeria ── */}
-          <div className="lg:w-[420px] shrink-0 space-y-3">
-            <div className={`overflow-hidden border flex items-center justify-center rounded-3xl`}
+          <div className={`${vende ? 'lg:w-[540px] xl:w-[600px]' : 'lg:w-[420px]'} shrink-0 space-y-3`}>
+            <div className={`relative overflow-hidden border flex items-center justify-center rounded-3xl`}
               style={{ backgroundColor: CN.cardAlt, borderColor: C.border, aspectRatio: '1' }}>
-              {mainImg
+              {mainImg && vende ? (
+                <button type="button" onClick={() => setAmpliada(true)} aria-label="Ampliar a foto"
+                  className="group w-full h-full cursor-zoom-in">
+                  <img ref={fotoRef} src={fotoLeve(mainImg, 1280)} alt={product.name}
+                    className="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-[1.03]" />
+                  <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm"
+                    style={{ backgroundColor: 'rgba(15,27,51,0.75)', color: '#FFFFFF' }}>
+                    <ZoomIn className="w-3.5 h-3.5" /> Ampliar
+                  </span>
+                </button>
+              ) : mainImg
                 ? <img src={fotoLeve(mainImg, 960)} alt={product.name} className="w-full h-full object-contain p-6" />
                 : <Package className="w-20 h-20 opacity-10" style={{ color: C.navy }} />
               }
@@ -247,7 +271,7 @@ export default function ProductPage() {
               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                 {allImgs.map((url, i) => (
                   <button key={i} onClick={() => setMainImg(url)}
-                    className="shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all"
+                    className={`shrink-0 w-16 h-16 ${vende ? 'lg:w-20 lg:h-20' : ''} rounded-xl border-2 overflow-hidden transition-all`}
                     style={{ borderColor: mainImg === url ? destaque : C.border, backgroundColor: C.card }}>
                     <img src={fotoLeve(url, 160)} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
                   </button>
@@ -280,7 +304,7 @@ export default function ProductPage() {
               </span>
             </div>
 
-            <h1 className="text-2xl md:text-3xl font-black leading-tight" style={{ color: C.navy }}>
+            <h1 className={`text-2xl md:text-3xl ${vende ? 'lg:text-4xl' : ''} font-black leading-tight`} style={{ color: C.navy }}>
               {product.name}
             </h1>
 
@@ -463,12 +487,30 @@ export default function ProductPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {relacionados.map(r => {
                 const { pix, cartao } = precosDe(r)
-                return <CartaoProduto key={r.id} p={r} C={CN} pix={pix} cartao={cartao} href={`/produtos/${r.id}`} />
+                return <CartaoProduto key={r.id} p={r} C={CN} pix={pix} cartao={cartao} href={`/produtos/${r.id}`}
+                  grande={vende} categoria={rotuloCategoria(r.category, categorias)} />
               })}
             </div>
           </section>
         )}
       </div>
+
+      {/* ── Foto ampliada (catálogo): a original, na tela toda; fecha no clique ou Esc ── */}
+      {ampliada && mainImg && (
+        <div role="dialog" aria-modal="true" aria-label={`Foto de ${product.name}`}
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-8 bg-black/85 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setAmpliada(false)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mainImg} alt={product.name}
+            // Ocupa a tela (quadrado do menor lado): foto original pequena abria menor que a da página
+            className="w-[min(92vw,92vh)] h-[min(92vw,92vh)] object-contain rounded-2xl bg-white p-2" />
+          <button type="button" onClick={() => setAmpliada(false)} aria-label="Fechar a foto"
+            className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFFFFF' }}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       {/* ── Modal de login inline ── */}
       {showLogin && (
