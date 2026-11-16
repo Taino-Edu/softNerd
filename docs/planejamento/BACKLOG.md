@@ -1,10 +1,12 @@
 # Backlog e progresso
 
 Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/public/CHANGELOG.md`
-(regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito recentemente" com a versão; o
-detalhe de como ficou mora no CHANGELOG e no código.
+(regra no `CLAUDE.md`). Item que saiu do papel vai pra "Feito" com a versão; o detalhe de como
+ficou mora no CHANGELOG e no código. "Feito" guarda só o mês corrente: na virada do mês as linhas
+vão pro [HISTORICO.md](HISTORICO.md).
 
-Atualizado em **26/10/2026** — produção na **v1.77.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
+Atualizado em **16/11/2026** — produção na **v1.86.1** (nginx 1.30.6, Node 24.22.1, .NET 10).
+A v1.87.0 está pronta na branch `feat/home-que-vende`, ainda sem PR.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -14,44 +16,86 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **App Android da Liga (Flutter)** — PIM IV, entrega em 14/11 | — | `mobile/`: login, meus torneios, mesa, ranking da Liga. Testado em aparelho real; identidade visual da loja aplicada (fonte, cores, logo, Pokémon como foto). Falta: SignalR, notificação, iPhone (Flutter Web/iOS), página de download do APK |
-| Ajustes visuais da home (cores, linhas, responsividade) | v1.66.0 | Esperando o print do Maikon pra comparar com o que ele pediu |
+| **Home que vende (fase 2)** | v1.87.0 | Feita na branch `feat/home-que-vende` (já com o `main` da v1.86.1), falta abrir o PR. Chave `home-que-vende`: categorias + vantagens abaixo do topo, produtos antes de avisos/torneios, torneios somem sem evento, "+ Sacola" no `CartaoProduto` (`onAdd`) com `components/loja/AvisoSacola`; busca de Produtos sem acento (`/produtos?busca=`). **Pedido do Maikon em 16/11** (mesma chave): topo no modelo dele (título "Prepare seu próximo grande jogo!", botões Explorar produtos / Ver campeonatos, mascote = logo de Personalizar Site à direita, só depois do site-config carregar; sem a busca no topo), cabeçalho em 3 tons (faixa no `MenuLoja`), catálogo em 3 colunas com `CartaoProduto grande` → `CartaoCatalogo` (modelo de catálogo dele: tom pelo selo, `rotuloCategoria`, descrição, "Adicionar"; sem estrelas/favoritos, que não existem), Produtos com filtros + busca numa linha e grade única, página do produto com foto maior e "Ampliar", foto voando pra Sacola (`lib/voarParaSacola.ts`, `data-sacola` no `MenuLoja`). Carrossel descartado por ele ("o site está simples e assertivo"). Fase 3 na fila |
+| **App Android da Liga (Flutter)** — PIM IV | — | `mobile/`: login, meus torneios, mesa, ranking da Liga; identidade visual da loja; APK de release apontando pra produção (#166). Entrega do PIM era 14/11: **confirmar se foi entregue** e passar pro Feito. O que sobrou está na fila (Loja e app) |
 
 ## ⏳ Esperando alguém
 
+### Pauta pro Maikon
+
+Tudo que depende dele, pra resolver numa conversa só:
+
+1. **"Sistema cai com comanda aberta durante o campeonato"** — a causa provável foi corrigida na v1.84.1 (07/11: ao trocar de tela a conexão em tempo real caía e a tela ficava sem receber comanda/Pix/fechamento, com o selo "Conectado"); a v1.79.7 pôs o botão "Abrir o torneio" (quem abria a comanda pelo QR da mesa não voltava pro campeonato). **Perguntar se voltou a acontecer.** Se sim: qual tela, o que aparece, hora (print ou vídeo) — o Vigia já registra o erro de tela.
+2. **Aprovar a home nova** (v1.87.0, já com o que ele pediu em 16/11: topo sem arte, 3 tons, fotos maiores) — substitui o antigo "ajustes visuais da home (v1.66.0)". Atenção: os 3 tons desfazem o "um azul só" que ele mesmo pediu na v1.66.0/v1.82.0 — ele confirmou a troca em 16/11.
+3. **Regras da Liga**: prêmios por posição, desempate, mínimo de etapas, fechamento do mês. Sem isso o ranking não define prêmio. Já decidido em 22/10: premiação só por mês, sem temporada anual.
+4. **Prazo de pagamento dos pedidos** (Pix 1h / balcão 3 dias) — ele pediu pra tirar o robô que cancelava; confirmar. Enquanto isso o Vigia mostra os pedidos parados.
+5. **% no Pix de 21 produtos** de outras categorias — desde a v1.86.1 é só texto da vitrine (o Pix cobra preço cheio). Zerar ou manter como anúncio?
+6. **Check-in por QR Code** (igual Bandai) — mandar prints do app da Bandai.
+7. **Etapas de outubro jogadas no app externo** — lançar pela Central → "Lançar etapa de fora".
+8. **Cor adicional em "Personalizar Site"** — qual elemento.
+9. **Pietro: "sem baixa no estoque e fora do Financeiro"** — o único pedido dele foi cancelado em 20/10, sem venda. Item digitado na edição do crediário é só texto (não mexe em estoque nem no Financeiro); pra baixar estoque, lançar pela comanda ou pelo balcão como crediário. Confirmar como o item entrou.
+10. **1º pedido real pago no Pix** — o pedido de 13/11 (o da v1.86.1) foi pago no Pix: conferir se aparece no Financeiro do dia como Pix e fechar o item.
+
+### Outros
+
 | Item | Quem | O que falta |
 |---|---|---|
-| **"Sistema cai com comanda aberta durante o campeonato"** | Maikon | Logs de 5 dias sem queda do servidor; não reproduz no local. Com o Vigia no ar, a próxima vez vira alerta com a tela e o erro. Pedir ao Maikon: **qual tela, o que aparece, hora** (print ou vídeo). **03/11:** relato novo ("não consegue voltar pro campeonato") — abrir a comanda pelo QR da mesa leva pra `/cliente`, que mostrava o campeonato sem caminho de volta pra mesa; v1.79.7 pôs o botão "Abrir o torneio". Confirmar com ele se era isso. **07/11:** achada e corrigida uma causa provável (v1.84.1) — ao trocar de tela a conexão em tempo real caía e a tela nova ficava sem receber comanda/Pix/fechamento, com o selo ainda "Conectado"; reproduzido no local. Pedir ao Maikon pra confirmar depois do deploy se o problema some |
-| Regras da Liga: prêmios por posição, desempate, mínimo de etapas, fechamento do mês | Maikon | Decisão dele; sem isso o ranking não define prêmio. **Decidido em 22/10: premiação só por mês, sem temporada anual** (o ranking recomeça sozinho todo mês e os meses anteriores ficam consultáveis) |
-| Prazo de pagamento dos pedidos (Pix 1h / balcão 3 dias) | Maikon | Ele pediu antes pra tirar o robô que cancelava; confirmar. Enquanto isso o Vigia mostra os pedidos parados |
-| Check-in por QR Code (igual Bandai) | Maikon | Prints do app da Bandai |
-| Etapas de outubro jogadas no app externo | Maikon | Lançar pela Central → "Lançar etapa de fora" |
-| Cor adicional em "Personalizar Site" | Maikon | Não ficou claro qual elemento |
 | Chaves da API Pokémon TCG e Riot novas | Taino | Gerar na conta do Maikon e rodar `bash deploy/configurar-chave.sh POKEMON_API_KEY` na VPS |
 | Login com Google | Taino | Client ID do Google Cloud |
-| Pietro: "sem baixa no estoque e fora do Financeiro" | Maikon | Produção (29/10): o único pedido dele foi cancelado em 20/10, sem venda — não houve Pix perdido. Item digitado na edição do crediário é só texto (não mexe em estoque nem no Financeiro); pra baixar estoque, lançar pela comanda ou venda no balcão como crediário. Confirmar com ele como o item entrou |
-| Conferir o 1º pedido real pago no Pix | Taino/Maikon | A venda deve aparecer no Financeiro do dia, como Pix (só tem teste automatizado) |
 
-## 📋 Na fila (ordem sugerida)
+## 📋 Na fila
 
-0. **Lentidão nas telas do painel** (Taino, 29/10) — medido: a API responde em 4–19 ms dentro da VPS e o banco em ~7 ms; nenhum pedido ≥ 2 s no log. O tempo é a rede: a VPS fica em **Boston** e cada chamada do Brasil custa 150–700 ms. Feito: Pix junto da lista de pedidos (v1.79.3). Próximos: mover a VPS pra São Paulo (maior ganho, todas as telas), juntar chamadas repetidas nas telas, miniaturas das fotos (148 fotos = 48 MB, 7 acima de 1 MB).
+Por tema, na ordem sugerida.
 
-1. **Segurança restante**: ~~e-mail nos logs~~ (v1.82.2), alertas de log forging do CodeQL (os do login/cadastro/e-mail resolvidos na v1.82.2), cookies sem `Secure`.
-2. **Código mais limpo pra banca** (pedido do Taino, 27/10), um PR por etapa:
-   - ✅ Limpeza das chaves (v1.75.0–v1.77.0).
-   - Clean Architecture no back: ✅ pedidos (v1.78.0), ✅ campeonatos (v1.79.0), ✅ crediário (v1.80.0); faltam os controllers
-     que falam com o banco direto — `AnalyticsController` (18),
-     `ContasReceberController`, `UserController`, `MarketplaceController`, `LgpdController` e os menores.
-   - Boas práticas no front: configurar o ESLint, tirar os 81 `any`, as 6 telas que chamam a API fora do `lib/api`.
-   - Segurança: revisão completa (CodeQL aberto, cookies `Secure`, e-mail nos logs, permissões, dependências).
-   - Acessibilidade (WCAG): contraste, teclado, leitor de tela, rótulos.
-   Chaves que ficam por enquanto: Ficam por enquanto: `vigia-sistema` (liga/desliga de verdade), `pokemon-preferido`, `home-visual-uniforme`, `campeonato-separado`, `pedido-pix-junto`, `pagamento-sem-retirada` e `relatorio-por-subcategoria` (Maikon ainda testando).
-3. **Testes travados na pasta principal desta máquina** ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
-4. Botão "Voltar versão" e checks obrigatórios novos no `main`.
-5. Dependabot grandes (.NET 10, Next 16, TS 7) — um por vez, com teste.
-6. Produto, mais adiante: "excluir minha conta" (LGPD), auditoria de acessibilidade, SaaS multi-loja (pausado).
+### 1. Loja e app
+- **Home que vende — fase 3**: filtros, ordenação e navegação em Produtos (atrás da chave `home-que-vende`).
+- **App da Liga, pós-PIM**: tempo real (SignalR) na mesa, notificação, iPhone (Flutter Web/iOS), página de download do APK.
 
-## ✅ Feito recentemente
+### 2. Desempenho
+**Lentidão nas telas do painel** (Taino, 29/10). Medido: a API responde em 4–19 ms dentro da VPS e o banco em ~7 ms;
+nenhum pedido ≥ 2 s no log. O tempo é a rede: a VPS fica em **Boston** e cada chamada do Brasil custa 150–700 ms.
+Feito: Pix junto da lista de pedidos (v1.79.3). Próximos:
+- Mover a VPS pra São Paulo (maior ganho, todas as telas).
+- Juntar chamadas repetidas nas telas.
+- Miniaturas das fotos (148 fotos = 48 MB, 7 acima de 1 MB).
+
+### 3. Segurança
+Feito: e-mail fora dos logs e teste de vazamentos (v1.82.2), custo/margem fora da API pública (v1.83.2). Falta:
+- Alertas de log forging que sobraram no CodeQL.
+- Cookies sem `Secure`.
+- Revisão completa: permissões por rota e dependências.
+
+### 4. Código mais limpo pra banca
+Pedido do Taino (27/10), um PR por etapa. Feito: limpeza das chaves (v1.75.0–v1.77.0); Clean Architecture em
+pedidos (v1.78.0), campeonatos (v1.79.0) e crediário (v1.80.0). Falta:
+- **Back:** os controllers que falam com o banco direto — `AnalyticsController` (18), `ContasReceberController`,
+  `UserController`, `MarketplaceController`, `LgpdController` e os menores.
+- **Front:** configurar o ESLint, tirar os 81 `any`, levar pro `lib/api` as 6 telas que chamam a API por fora.
+
+### 5. Chaves de funcionalidade pra limpar
+Viram o jeito único quando o Maikon aprovar (como nas v1.75.0–v1.77.0):
+- `vigia-sistema` — **fica**: é liga/desliga de verdade.
+- `pokemon-preferido`, `home-visual-uniforme`, `campeonato-separado`, `pedido-pix-junto`, `pagamento-sem-retirada`,
+  `relatorio-por-subcategoria` — Maikon ainda testando.
+- `home-que-vende` — nova (v1.87.0), ligada.
+- `pix-pedido-com-desconto` — desligada desde a v1.86.1; se ele não pedir de volta, sai na próxima limpeza.
+
+### 6. Infra e CI
+- Botão "Voltar versão".
+- Checks obrigatórios novos no `main`.
+- Conferir se o deploy ainda espera aprovação (o `CLAUDE.md` diz que sim; desde 03/11 o merge vai direto pra
+  produção) e alinhar a documentação.
+- Testes travados na pasta principal desta máquina ("Acesso negado" no executor) — hoje rodam na cópia `softNerd-pix`.
+- Dependabot grandes, um por vez e com teste: Next 16, TypeScript 7.
+
+### 7. Mais adiante
+- "Excluir minha conta" (LGPD).
+- Acessibilidade (WCAG): contraste, teclado, leitor de tela, rótulos.
+- SaaS multi-loja (pausado).
+
+## ✅ Feito em novembro
+
+Meses anteriores: [HISTORICO.md](HISTORICO.md).
 
 | Versão | Data | O quê |
 |---|---|---|
@@ -74,41 +118,3 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 | v1.80.0 | 03/11 | **Crediário em camadas**: `CrediariosController` só HTTP; contas no `CrediarioContaService`, config dos lembretes no `CrediarioAvisoService`; 13 testes das contas; tirar item da edição zera o bloco de ajuste |
 | v1.79.7 | 03/11 | **Liguinha**: relógio da rodada conta na hora do servidor (celular fora da hora atrasava o timer); botão "Abrir o torneio" em Meus Campeonatos e na aba Torneios (quem saía da tela do jogo não voltava) |
 | v1.79.6 | 03/11 | **Liga Mensal**: tirada a frase "Top 4 do mês ganha brinde" do topo de `/liga` (pedido do Maikon) |
-| v1.79.5 | 30/10 | **Liga Mensal**: tirada a etiqueta "Brinde" atrás do nome dos 4 primeiros no ranking de `/liga` (pedido do Maikon) |
-| v1.79.4 | 29/10 | **Pix da pré-venda por pedido**: "Minhas reservas" agrupa por pedido (um botão de Pix com o total, antes era um por item); cliente junta os próprios pedidos sem pagar ("Pagar tudo num Pix só", `POST /api/reservations/mine/juntar`) |
-| v1.79.3 | 29/10 | **Tela de pedidos mais rápida**: status do Pix não vai mais ao Inter pra Pix vencido (e no máx. 1×/30 s no prazo); conexão mTLS com o Inter reaproveitada; lista de pedidos já traz o status do Pix (sem 1 chamada por pedido); `logs.sh --dias` consertado |
-| v1.79.2 | 29/10 | **Pedidos do Maikon**: pré-venda lançada pelo admin soma no pedido sem pagar (um Pix, um pagamento); botão "Juntar num pedido só"; busca por cliente nos pedidos; aviso de pré-venda nova (sininho, push, e-mail); item adicionado no crediário soma na conta |
-| v1.79.1 | 29/10 | **Pix da pré-venda vencido**: não reaproveita mais o QR depois da 1h (o banco recusava "QR Code não é válido"); gera um novo com o total (derrubando o antigo antes); Vigia ganha o alerta "Pix vencido sem pagamento" |
-| v1.79.0 | 27/10 | **Campeonatos em camadas**: inscrição e Pix da entrada no `CampeonatoInscricaoService`; `RegraException` + `RespostaDeRegra` comuns; 9 testes novos |
-| v1.78.0 | 27/10 | **Pedidos em camadas**: `ReservationController` (1.568 → 159 linhas) só HTTP; regras em `Services/Pedidos/` (criação, andamento, cobrança, consulta) com interface e `PedidoException` |
-| v1.77.0 | 27/10 | **Limpeza das chaves do site/loja/cliente**: 10 chaves viram o jeito único; saem as telas antigas de entrada, sacola, carrossel e cartão de produto antigos |
-| v1.76.0 | 27/10 | **Limpeza das chaves da Liga/Liguinha**: 9 chaves viram o jeito único (ranking por jogador, relógio separado, página e telão novos, animação, Central, modalidades, "Pronto", entrada simples) |
-| v1.75.0 | 27/10 | **Limpeza das chaves de pedidos e painel**: 5 chaves viram o jeito único (operador pelo menu, menu e telas no azul, Pix do pedido consistente, venda no pagamento); tag `arquivo/chaves-antes-da-limpeza` |
-| v1.74.0 | 26/10 | **Relatório de vendas por subcategoria** (pedido do Maikon): categoria-pai com o total (soma das filhas) e as subcategorias dentro; vendas estornadas fora do relatório |
-| v1.73.0 | 26/10 | Limpeza pela contagem de uso: **WhatsApp automático** (Evolution, n8n, IA, caixa de conversas), **OFX** e **Mercado Pago** fora; tag `arquivo/whatsapp-v1.72.0`; banco intacto |
-| v1.72.0 | 26/10 | Pedidos: **Registrar pagamento** sem dar como retirado (fica "Pago · aguardando retirada", igual ao Pix do site); coluna Vendas vira Reservas |
-| v1.71.0 | 26/10 | **Nota fiscal (NFC-e) e Tenant-ERP fora do sistema** — o módulo fica guardado na tag `arquivo/nfce-v1.70.1`; banco intacto |
-| — | 26/10 | Manutenção da VPS: backup, Postgres 16.15, Docker 29.9.2, emSign fora do servidor, SSH só com chave |
-| v1.70.1 | 26/10 | Imagem da API sem as raízes emSign (CA eMudhra comprometida); servidor também |
-| v1.70.0 | 23/10 | **API no .NET 10** (o 8 perde suporte em 10/11/2026); Snappier/SharpCompress corrigidos; certificado A1 no carregador novo |
-| v1.69.0 | 23/10 | Pré-venda: carrinho novo soma no pedido sem pagar (um Pix só); Pix antigo derrubado conferindo pagamento |
-| v1.68.0 | 23/10 | Campeonato separado da Liga: /campeonato/jogar e /campeonato/torneio; Liguinha e Central só com liguinhas |
-| v1.67.0 | 23/10 | Liguinha: foto do jogador = Pokémon preferido (telão, celular, Central, ranking); deck em texto embaixo |
-| v1.66.2 | 23/10 | Liguinha: lançar resultado depois que o tempo acaba ("Parar alarme" zerava o relógio e escondia o Venci/Perdi) |
-| v1.66.1 | 22/10 | "Nerd" do título no azul padrão da loja |
-| v1.66.0 | 22/10 | Home com **um azul só** (faixa, menu e rodapé no mesmo tom; sem azul-céu/petróleo misturados), topo sem círculos e sem espaço vazio, nenhum texto abaixo de 12px |
-| v1.65.1 | 22/10 | O `update.sh` recomeça com a versão nova quando ele mesmo muda no deploy (antes só valia no deploy seguinte) |
-| v1.65.0 | 22/10 | **"Qual o seu Pokémon preferido?"** — escolha depois do cadastro e na Minha Conta (busca, Me surpreenda, brilhante), animado ao lado da foto e no perfil público |
-| v1.64.3 | 22/10 | **nginx 1.27 → 1.30.6** (correções de 14/10); o deploy passa a recriar o nginx quando a versão muda (antes só recarregava a config) |
-| v1.64.2 | 22/10 | **Node.js 20 → 24.22.1** no site e no CI — correção das falhas de 21/10 (Brotli RCE, TLS); o 20 não recebe mais correção |
-| v1.64.1 | 22/10 | Últimos gatilhos do Vigia: crediário sem lembrete (pelos marcos configurados), rodada da liguinha parada, backup atrasado (local e Drive com marcas separadas) |
-| v1.64.0 | 21/10 | Gatilhos de comanda esquecida, Pix de comanda sem fechar, NFC-e, torneio sem encerrar e robô parado (os robôs batem o ponto); fontes dentro do projeto (build sem depender do Google); follow-redirects corrigido |
-| v1.63.1 | 21/10 | **Logs não somem no deploy**: o rollout guarda o log antes de apagar o container (`/var/log/santuarionerd`, 30 dias, limpeza também no backup diário); busca com `bash deploy/logs.sh "texto"` |
-| v1.63.0 | 21/10 | **Vigia do sistema** (gatilhos a cada 10 min, Alertas do sistema com busca, erro de tela registrado + tela "algo deu errado") e furo do PDV fechado. Gatilho novo = uma classe em `Services/Vigia` + uma linha em `ServicosDaLoja` |
-| — | 21/10 | Conferido: firewall só deixa a Cloudflare falar com 80/443 (o IP forjável que estava na fila já estava resolvido) |
-| v1.62.1 | 21/10 | Pódio e telão cabem no celular (cortava ao mexer no zoom) |
-| v1.62.0 | 21/10 | Pedido do site vira venda no pagamento (Pix), preço congelado, retirada vira "Entregar", travas contra venda dupla |
-| v1.61.1 | 21/10 | Entrada da liguinha em uma tela; deck escolhido na tela do torneio |
-| v1.61.0 | 20/10 | Botão "Estou pronto" na mesa da liguinha |
-| v1.60.0 | 20/10 | Métricas na Liga pública e "Minha Liga" na conta do jogador |
-| v1.59.2 | 20/10 | Cancelar pedido derruba o Pix; Pix pago de pedido cancelado não some |
