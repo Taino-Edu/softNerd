@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-261 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+262 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -28,7 +28,7 @@
 - [PagamentoCrediario](#pagamentocrediario) (3)
 - [Perfis](#perfis) (6)
 - [PokemonFavorito](#pokemonfavorito) (1)
-- [Product](#product) (10)
+- [Product](#product) (11)
 - [ProductVariant](#productvariant) (5)
 - [PublicProfile](#publicprofile) (1)
 - [Push](#push) (3)
@@ -345,16 +345,17 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/product` | público | `GetAll` (42) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`app/sitemap.ts` |
-| POST | `/api/product` | AdminOnly | `Create` (105) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts` |
-| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (64) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
-| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (86) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
-| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (95) | — | — |
-| GET | `/api/product/store` | logado | `GetAllStore` (54) | `productApi.listStore` | `app/cliente/page.tsx` |
-| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (133) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
-| GET | `/api/product/{id:guid}` | público | `GetById` (75) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
-| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (122) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
-| PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (145) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
+| GET | `/api/product` | público | `GetAll` (46) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`app/sitemap.ts` |
+| POST | `/api/product` | AdminOnly | `Create` (129) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts` |
+| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (68) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
+| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (110) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
+| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (119) | — | — |
+| GET | `/api/product/mais-vendidos` | público | `MaisVendidosDaLoja` (81) | `productApi.maisVendidos` | `app/page.tsx` |
+| GET | `/api/product/store` | logado | `GetAllStore` (58) | `productApi.listStore` | `app/cliente/page.tsx` |
+| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (157) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
+| GET | `/api/product/{id:guid}` | público | `GetById` (99) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
+| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (146) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
+| PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (169) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
 ## ProductVariant
 

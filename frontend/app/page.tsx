@@ -12,12 +12,12 @@ import {
   Trophy, ShoppingBag, Star, Calendar, Users,
   X, MessageCircle, CheckCircle, Package,
   CreditCard, Award, QrCode, Shield, ChevronRight, ChevronLeft,
-  Mail, Heart, Store,
+  Mail, Heart, Store, Flame, Sparkles, CalendarDays,
 } from 'lucide-react'
 import { brl, dataHoraBR } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
-import CartaoProduto, { rotuloCategoria } from '@/components/loja/CartaoProduto'
+import CartaoProduto, { rotuloCategoria, ehNovidade } from '@/components/loja/CartaoProduto'
 import AvisoSacola, { usePorNaSacola } from '@/components/loja/AvisoSacola'
 import MenuLoja from '@/components/loja/MenuLoja'
 
@@ -63,6 +63,14 @@ const DEFAULT_SITE: SiteConfigDto = {
   pixDiscountPercent: 5,
   maxInstallments: 12,
   minInstallmentInCents: 500,
+}
+
+/** Cores do modelo do Maikon (17/11, o :root do index.html dele) — home com a chave home-vitrines.
+ *  blue2 → blue → deep são os 3 tons do topo; ink/muted os textos; pale o fundo; line as bordas. */
+const PALETA_MAIKON = {
+  blue: '#174CC3', blue2: '#2867E8', deep: '#123A9B', yellow: '#FFD84D',
+  ink: '#172B52', muted: '#72809A', pale: '#EDF3FF', line: '#E3EAF6', green: '#21825D',
+  sombra: '0 16px 40px rgba(23, 60, 130, 0.10)',
 }
 
 /** Valores originais hardcoded do Tailwind pra cada utilitário rounded-* usado na landing —
@@ -118,6 +126,7 @@ export default function LandingPage() {
   const [site,         setSite]       = useState<SiteConfigDto>(DEFAULT_SITE)
   const [siteCarregado, setSiteCarregado] = useState(false)
   const [categorias,   setCategorias] = useState<ProductCategory[]>([])
+  const [maisVendidosIds, setMaisVendidosIds] = useState<string[]>([])
   const bannerPaused   = useRef(false)
   const annPaused      = useRef(false)
 
@@ -151,9 +160,14 @@ export default function LandingPage() {
   // "+ Sacola" no cartão e torneios somem quando não há nenhum. A busca fica em Produtos (?busca=).
   // Desligada = a ordem de antes (torneios, 3 cartões curtos, produtos depois).
   const vende = useFuncionalidade('home-que-vende') !== false
+  // Agenda, Mais vendidos e Novidades (chave "home-vitrines", v1.90.0 — pedido do Maikon, 17/11): os 3 cartões
+  // e a agenda "Campeonatos & eventos" logo abaixo do topo, categorias só em Produtos, topo mais baixo (arte com
+  // 390px) e as cores do modelo dele. Vale em cima da home que vende. Desligada = a home da v1.87.
+  const chaveVitrines = useFuncionalidade('home-vitrines')
+  const vitrines = vende && chaveVitrines !== false
   const { porNaSacola, nome: naSacola } = usePorNaSacola()
   const marcaEscura = mixHex(site.colorHero, '#000000', 0.55)
-  const C = !uniforme ? C0 : isDark ? {
+  const Cbase = !uniforme ? C0 : isDark ? {
     ...C0, blue: mixHex(site.colorHero, '#FFFFFF', 0.38),
   } : {
     ...C0,
@@ -163,6 +177,13 @@ export default function LandingPage() {
     blue: site.colorHero,
     text: mixHex(marcaEscura, '#FFFFFF', 0.38),
     navy: marcaEscura,
+  }
+  // Home com vitrines: as cores do modelo do Maikon no tema claro (no escuro só o amarelo dele)
+  const C = !vitrines ? Cbase : isDark ? { ...Cbase, yellow: PALETA_MAIKON.yellow } : {
+    ...Cbase,
+    bg: PALETA_MAIKON.pale, card: '#FFFFFF', cardAlt: mixHex(PALETA_MAIKON.pale, '#FFFFFF', 0.4),
+    border: PALETA_MAIKON.line, blue: PALETA_MAIKON.blue, yellow: PALETA_MAIKON.yellow,
+    text: PALETA_MAIKON.muted, navy: PALETA_MAIKON.ink,
   }
   /** Segunda palavra do título no topo ("Nerd"): o azul padrão da loja (Cor principal em Personalizar
    *  Site, o mesmo do "NERD" da logo) — pedido do Taino, mesmo com o resto da home num azul só. */
@@ -193,7 +214,9 @@ export default function LandingPage() {
   const navBg = mixHex(site.colorHero, '#000000', 0.32)
   // Home que vende — 3 tons: faixa (mais escura, cor no MenuLoja) → menu (navBg) → topo no azul da marca,
   // mais claro à esquerda (atrás do texto) e fechando à direita, como no modelo do Maikon (16/11)
-  const heroVende = `linear-gradient(120deg, ${mixHex(site.colorHero, '#FFFFFF', 0.12)} 0%, ${site.colorHero} 50%, ${mixHex(site.colorHero, '#000000', 0.16)} 100%)`
+  const heroVende = vitrines
+    ? `linear-gradient(120deg, ${PALETA_MAIKON.blue2} 0%, ${PALETA_MAIKON.blue} 50%, ${PALETA_MAIKON.deep} 100%)`
+    : `linear-gradient(120deg, ${mixHex(site.colorHero, '#FFFFFF', 0.12)} 0%, ${site.colorHero} 50%, ${mixHex(site.colorHero, '#000000', 0.16)} 100%)`
   // Pedido do Taino (04/11): topo sem o mascote de IA. A logo enviada em Personalizar Site (o mascote)
   // entrava depois que a configuração chegava — a página abria com a nuvem "Santuário Nerd" e trocava.
   // Agora a ilustração do topo é a nuvem fixa (public/logo-santuario.webp), a não ser que se escolha
@@ -264,6 +287,8 @@ export default function LandingPage() {
       siteConfigApi.get().then(r => setSite(r.data)).finally(() => setSiteCarregado(true)),
       // Só pra resolver o desconto do Pix da categoria no card/modal de produto.
       categoryApi.list().then(r => setCategorias(r.data)).catch(() => {}),
+      // Seção "Mais vendidos" (chave home-vitrines): só a ordem; os produtos saem da vitrine já carregada
+      productApi.maisVendidos().then(r => setMaisVendidosIds(r.data)).catch(() => {}),
     ]).finally(() => setLoading(false))
   }, [router])
 
@@ -528,8 +553,9 @@ export default function LandingPage() {
   const secVitrineTopo = (
     <>
       {/* ── LOGO ABAIXO DO TOPO: CATEGORIAS + VANTAGENS (home que vende) ── */}
+      {/* Com vitrines as categorias saem ("está duplicada, deixa só na segunda página" — Maikon, 17/11) */}
       <section className="px-5 pt-6 max-w-6xl mx-auto">
-        {categoriasVitrine.length > 1 && (
+        {categoriasVitrine.length > 1 && !vitrines && (
           <nav aria-label="Categorias" className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap" style={{ scrollbarWidth: 'none' }}>
             <Link href="/produtos"
               className="shrink-0 inline-flex items-center gap-1.5 text-sm lg:text-base font-black px-4 lg:px-5 py-2.5 lg:py-3 rounded-full transition-all active:scale-95"
@@ -547,7 +573,7 @@ export default function LandingPage() {
         )}
         {/* Vantagens: só o que a loja oferece de verdade (parcelas saem de Personalizar Site).
             2 ou 3 itens: no desktop uma coluna por item; no celular o último ímpar ocupa a linha toda */}
-        <ul className={`mt-4 grid grid-cols-2 ${vantagens.length === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-2 sm:gap-3`}>
+        <ul className={`${vitrines ? '' : 'mt-4'} grid grid-cols-2 ${vantagens.length === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-2 sm:gap-3`}>
           {vantagens.map(({ icon: Icon, titulo, texto }) => (
             <li key={titulo} className="flex items-center gap-3 p-3 lg:p-4 rounded-2xl border min-w-0 max-lg:last:odd:col-span-2" style={{ backgroundColor: C.card, borderColor: C.border }}>
               <span className="w-9 h-9 lg:w-11 lg:h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${C.blue}18` }}>
@@ -563,8 +589,115 @@ export default function LandingPage() {
       </section>
     </>
   )
+  // ── Home com vitrines (chave home-vitrines) ─────────────────────────────────
+  const temCampeonatos = !loading && championships.length > 0
+  const proximoCampeonato = [...championships].sort((a, b) => a.startDate.localeCompare(b.startDate))[0]
+  // Mais vendidos: a ordem vem da API; só entra o que está na vitrine (ativo, com estoque, no site)
+  const porId = new Map(vitrine.map(p => [p.id, p]))
+  const maisVendidos = maisVendidosIds.map(id => porId.get(id)).filter((p): p is Product => !!p).slice(0, 4)
+  // Novidades: cadastrados nos últimos 30 dias (selo "Novo"), os mais novos primeiro
+  const novidades = vitrine.filter(p => ehNovidade(p))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4)
+
+  const secAgenda = (
+    <>
+      {/* ── AGENDA DA COMUNIDADE (modelo do Maikon, 17/11) ─────────────────────
+          Aparece sempre: sem campeonato marcado, antes sobrava o bloco branco "Nenhum evento agendado". */}
+      <section id="agenda" className="px-5 pt-10 max-w-6xl mx-auto scroll-mt-24">
+        {/* Sem a lista de torneios mais abaixo, o #eventos do menu ("Torneios") cai aqui */}
+        {!temCampeonatos && <span id="eventos" className="block scroll-mt-24" aria-hidden />}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-5">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: C.blue }}>Agenda da comunidade</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black" style={{ color: C.navy }}>Campeonatos &amp; eventos</h2>
+            <p className="text-sm lg:text-base mt-1" style={{ color: C.text }}>Acompanhe as novidades da loja e fique por dentro dos próximos encontros.</p>
+          </div>
+          <span className="self-start md:self-auto inline-flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-full"
+            style={{ backgroundColor: mixHex(C.yellow, C.card, isDark ? 0.8 : 0.55), color: isDark ? C.navy : '#5C4500' }}>
+            <CalendarDays className="w-4 h-4" /> Horários e inscrições direto com a loja
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
+          {[
+            {
+              icon: Trophy, titulo: 'Campeonato semanal', etiqueta: 'Toda semana', cheio: true,
+              texto: proximoCampeonato
+                ? `Próximo: ${proximoCampeonato.name} — ${dataHoraBR(proximoCampeonato.startDate)}.`
+                : 'A próxima rodada, o horário e as informações de inscrição ficam por aqui.',
+              cta: 'Ver programação', href: temCampeonatos ? '#eventos' : '/liga',
+            },
+            { icon: Star, titulo: 'Liga mensal', etiqueta: 'Todo mês', cheio: false,
+              texto: 'Acompanhe as etapas, a pontuação e o ranking da temporada.', cta: 'Ver etapas', href: '/liga' },
+            { icon: Award, titulo: 'Torneios especiais', etiqueta: 'Fique de olho', cheio: false,
+              texto: 'Eventos maiores e campeonatos com premiação, avisados com antecedência.', cta: 'Acompanhar agenda',
+              href: temCampeonatos ? '#eventos' : '/liga' },
+          ].map(({ icon: Icon, titulo, etiqueta, cheio, texto, cta, href }) => (
+            <a key={titulo} href={href}
+              className="group flex flex-col gap-3 p-5 lg:p-6 rounded-2xl border transition-all hover:-translate-y-0.5"
+              style={cheio
+                ? { background: `linear-gradient(140deg, ${PALETA_MAIKON.blue2}, ${PALETA_MAIKON.blue} 55%, ${PALETA_MAIKON.deep})`, borderColor: 'transparent', boxShadow: PALETA_MAIKON.sombra }
+                : { backgroundColor: C.card, borderColor: C.border, boxShadow: isDark ? undefined : PALETA_MAIKON.sombra }}>
+              <div className="flex items-start justify-between gap-3">
+                <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: cheio ? 'rgba(255,255,255,0.16)' : `${C.blue}14` }}>
+                  <Icon className="w-5 h-5" style={{ color: cheio ? '#FFFFFF' : C.blue }} />
+                </span>
+                <span className="text-[10px] lg:text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: PALETA_MAIKON.yellow, color: '#3D2E00' }}>{etiqueta}</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-base lg:text-lg font-black leading-tight" style={{ color: cheio ? '#FFFFFF' : C.navy }}>{titulo}</p>
+                <p className="text-sm mt-1 leading-snug" style={{ color: cheio ? 'rgba(255,255,255,0.82)' : C.text }}>{texto}</p>
+              </div>
+              <span className="inline-flex items-center gap-1 text-sm font-black group-hover:gap-2 transition-all"
+                style={{ color: cheio ? PALETA_MAIKON.yellow : C.blue }}>
+                {cta} <ChevronRight className="w-4 h-4" />
+              </span>
+            </a>
+          ))}
+        </div>
+      </section>
+    </>
+  )
+
+  /** Vitrine curta da home (Mais vendidos / Novidades): 2 colunas no celular, 4 no computador. */
+  function vitrineCurta(id: string, icone: typeof Flame, eyebrow: string, titulo: string, texto: string, lista: Product[]) {
+    if (lista.length === 0) return null
+    const Icone = icone
+    return (
+      <section id={id} className="px-5 pb-14 scroll-mt-24">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
+            <div>
+              <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: C.blue }}>
+                <Icone className="w-3.5 h-3.5" /> {eyebrow}
+              </p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-black" style={{ color: C.navy }}>{titulo}</h2>
+              <p className="text-sm lg:text-base mt-1" style={{ color: C.text }}>{texto}</p>
+            </div>
+            <Link href="/produtos" className="inline-flex items-center gap-1 text-sm lg:text-base font-black shrink-0 hover:underline" style={{ color: C.blue }}>
+              Ver todos <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
+            {lista.map(p => (
+              <CartaoProduto key={p.id} p={p} C={C} onClick={() => setProductModal(p)}
+                pix={pixDoProduto(p)} cartao={cartaoDoProduto(p)} grande categoria={rotuloCategoria(p.category, categorias)}
+                onAdd={!p.hasVariants ? () => porNaSacola(p) : undefined} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+  const secMaisVendidos = vitrineCurta('mais-vendidos', Flame, 'Os queridinhos da loja', 'Mais vendidos',
+    'O que mais saiu no balcão e nas mesas nos últimos 3 meses.', maisVendidos)
+  const secNovidades = vitrineCurta('novidades', Sparkles, 'Acabou de chegar', 'Novidades',
+    'Produtos que entraram na loja nos últimos 30 dias.', novidades)
+
   // Sem torneio marcado a seção some na home nova (o "Nenhum evento agendado" só tomava espaço)
-  const mostraTorneios = !vende || loading || championships.length > 0
+  // Com vitrines a agenda fica sempre, então o #eventos sempre tem pra onde ir
+  const mostraTorneios = !vende || vitrines || loading || championships.length > 0
   // Sem a seção, os links "Torneios"/"Ver Eventos" do menu (#eventos, ou /#eventos de outra página)
   // não levariam a lugar nenhum: vão pra Liga, como o "Ver campeonatos" do topo (revisão do PR #170)
   useEffect(() => {
@@ -635,7 +768,7 @@ export default function LandingPage() {
         )}
 
         {/* Conteúdo do hero — por cima do fundo */}
-        <div className={`relative z-10 max-w-6xl mx-auto px-5 ${vende ? 'py-10 md:py-14' : uniforme ? 'py-10 md:py-14' : 'py-20 md:py-24'}`}>
+        <div className={`relative z-10 max-w-6xl mx-auto px-5 ${vitrines ? 'py-9 md:py-8' : vende ? 'py-10 md:py-14' : uniforme ? 'py-10 md:py-14' : 'py-20 md:py-24'}`}>
           <div className="flex flex-col items-center gap-8 md:gap-12 md:flex-row">
 
             {/* Texto à esquerda, arte à direita (no celular a arte sai na home que vende) */}
@@ -650,7 +783,7 @@ export default function LandingPage() {
               {vende ? (
                 // Chamada pra ação no lugar do nome da loja (que já está no menu) — o letreiro do modelo
                 // que o Maikon mandou: "fica mais visual, a pessoa vê melhor o que a loja trabalha"
-                <h1 className="text-[2.75rem] sm:text-6xl xl:text-7xl font-black mb-5 leading-[1.05] tracking-tight max-w-3xl mx-auto md:mx-0" style={{ color: '#FFFFFF' }}>
+                <h1 className={`${vitrines ? 'text-[2.5rem] sm:text-5xl lg:text-6xl mb-4' : 'text-[2.75rem] sm:text-6xl xl:text-7xl mb-5'} font-black leading-[1.05] tracking-tight max-w-3xl mx-auto md:mx-0`} style={{ color: '#FFFFFF' }}>
                   {/* Quebra depois de "seu", como no modelo (só do tablet pra cima; no celular quebra sozinho) */}
                   {TITULO_VENDE.linha1}<br className="hidden sm:block" />{' '}{TITULO_VENDE.antes}<span style={{ color: C.yellow }}>{TITULO_VENDE.destaque}</span>{TITULO_VENDE.depois}
                 </h1>
@@ -660,7 +793,9 @@ export default function LandingPage() {
                   {heroRest && <>{' '}<span style={{ color: corTituloHero }}>{heroRest}</span></>}
                 </h1>
               )}
-              <p className={vende
+              <p className={vitrines
+                  ? 'text-base sm:text-lg lg:text-xl font-semibold max-w-xl mx-auto md:mx-0 mb-7 leading-relaxed'
+                  : vende
                   ? 'text-lg sm:text-xl lg:text-[1.375rem] font-semibold max-w-2xl mx-auto md:mx-0 mb-8 leading-relaxed'
                   : 'text-base md:text-lg max-w-md mb-8 leading-relaxed'}
                 style={{ color: vende ? 'rgba(255,255,255,0.92)' : '#ffffff' }}>
@@ -676,7 +811,7 @@ export default function LandingPage() {
                     style={{ backgroundColor: C.yellow, color: site.colorNavy, boxShadow: `0 10px 28px -8px rgba(0,0,0,0.35)` }}>
                     Explorar produtos <span aria-hidden>→</span>
                   </Link>
-                  <a href={championships.length > 0 ? '#eventos' : '/liga'}
+                  <a href={vitrines ? '#agenda' : championships.length > 0 ? '#eventos' : '/liga'}
                     className="inline-flex items-center justify-center gap-2 font-bold lg:text-lg px-7 py-3.5 rounded-xl border transition-all hover:bg-white/10"
                     style={{ borderColor: 'rgba(255,255,255,0.55)', color: '#FFFFFF' }}>
                     Ver campeonatos
@@ -702,7 +837,10 @@ export default function LandingPage() {
                 arquivo padrão original pra não quebrar o visual de quem nunca configurou nada. */}
             {/* Home que vende: o mascote (logo de Personalizar Site) à direita, como no modelo; no celular ele
                 sai (empurrava os produtos 1 tela e meia pra baixo). O "rostinho" que saiu em 16/11 era o do menu. */}
-            <div className={`relative shrink-0 w-full ${vende ? 'hidden md:flex md:max-w-[16rem] lg:max-w-[20rem] h-[22rem] lg:h-[28rem] items-center justify-center' : 'max-w-xs sm:max-w-sm md:max-w-md'}`}>
+            {/* Com vitrines a arte tem 390px de altura: "com 448 o banner fica muito grande" (Maikon, 17/11) */}
+            <div className={`relative shrink-0 w-full ${vitrines
+              ? 'hidden md:flex md:max-w-[17rem] lg:max-w-[26rem] h-[20rem] lg:h-[390px] items-center justify-center'
+              : vende ? 'hidden md:flex md:max-w-[16rem] lg:max-w-[20rem] h-[22rem] lg:h-[28rem] items-center justify-center' : 'max-w-xs sm:max-w-sm md:max-w-md'}`}>
               {(!vende || siteCarregado) && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -756,7 +894,10 @@ export default function LandingPage() {
         )}
       </section>
 
-      {vende
+      {vitrines
+        // Modelo do Maikon de 17/11: cartões e agenda logo abaixo do topo, depois vantagens e as vitrines
+        ? <>{secCartoes}{secAgenda}{secVitrineTopo}{secProdutos}{secMaisVendidos}{secNovidades}{secAvisos}{temCampeonatos && secTorneios}</>
+        : vende
         ? <>{secVitrineTopo}{secProdutos}{secAvisos}{mostraTorneios && secTorneios}</>
         : <>{secCartoes}{secAvisos}{secTorneios}{secProdutos}</>}
 

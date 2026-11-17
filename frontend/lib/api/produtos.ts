@@ -48,6 +48,8 @@ export const productApi = {
   listAdmin:   ()                  => api.get<Product[]>('/api/product/admin'),
   listStore:   ()                  => api.get<Product[]>('/api/product/store'),
   get:         (id: string)         => api.get<Product>(`/api/product/${id}`),
+  /** Ids dos mais vendidos dos últimos 90 dias, em ordem (seção da home — só a ordem, sem números). */
+  maisVendidos:(limite = 12)        => api.get<string[]>('/api/product/mais-vendidos', { params: { limite } }),
   getByBarcode:(barcode: string)    => api.get<Product>(`/api/product/barcode/${encodeURIComponent(barcode)}`),
   create:      (p: Partial<Product>) => api.post<Product>('/api/product', p),
   update:      (id: string, p: Partial<Product>) => api.put<Product>(`/api/product/${id}`, p),

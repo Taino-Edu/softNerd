@@ -170,6 +170,8 @@ public class EditarPagamentoVendaAvulsaRequest
 
 public class VendaAvulsaItemDto
 {
+    /// <summary>Produto vendido (usado no ranking de mais vendidos da home).</summary>
+    public Guid    ProductId        { get; set; }
     public string  ProductName      { get; set; } = string.Empty;
     public string? ProductCategory  { get; set; }
     public int     Quantity         { get; set; }
