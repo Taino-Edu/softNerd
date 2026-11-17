@@ -319,6 +319,11 @@ export default function PainelTorneio({ id, embutido = false, somaNaLiga = true 
                   )}
                 </>
               )}
+              {!encerrado && !!x.desistiuNaRodada && (
+                <button onClick={() => acao(`v${x.id}`, () => torneioApi.desfazerDesistencia(id, x.id), `${x.nome} voltou pro torneio.`)}
+                  disabled={ocupado !== null}
+                  className="text-xs font-semibold text-brand-400 hover:text-white px-2 py-1">Voltar pro torneio</button>
+              )}
             </div>
           ))}
         </div>

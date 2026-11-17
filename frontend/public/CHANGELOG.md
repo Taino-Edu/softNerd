@@ -1,12 +1,21 @@
 # Changelog — Santuário Nerd
 
-## [v1.87.1] — 2026-11-16
+## [v1.87.2] — 2026-11-17
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.87.1] — 2026-11-17
+
+### Liguinha e comanda juntas (pedido do Maikon)
+- **Corrigido:** quem saía da tela do torneio pra ir à comanda tocava em "Desistir" (o botão tinha o ícone de sair e perguntava "Sair do torneio?") e ficava fora do torneio de vez — nem o código nem o "Estou aqui" deixavam voltar, e o organizador não tinha como desfazer
+- **Atalho pra comanda no topo da tela do torneio** ("Comanda", ou "Conta" sem comanda aberta): ir lá e voltar pelo "Abrir o torneio" não tira ninguém do torneio
+- **"Desistir" virou "Abandonar torneio"**, com outro ícone e um aviso de que pra ir à comanda não precisa abandonar
+- **Voltar pro torneio:** quem saiu sem querer volta com um toque (ou entrando de novo pelo código / "Estou aqui") e joga a partir da próxima rodada; as partidas já jogadas ficam como estão. Vale até o organizador encerrar
+- **Painel do organizador:** botão "Voltar pro torneio" em quem saiu
 
 ## [v1.87.0] — 2026-11-16
 

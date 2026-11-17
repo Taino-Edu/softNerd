@@ -100,6 +100,15 @@ public class TorneioController : ControllerBase
         return NoContent();
     });
 
+    /// <summary>Desfaz a desistência: volta a ser pareado na próxima rodada.</summary>
+    [HttpDelete("{id:guid}/participantes/{participantId:guid}/desistencia")]
+    [Authorize(Policy = "AdminOnly")]
+    public Task<IActionResult> DesfazerDesistencia(Guid id, Guid participantId) => Rodar(async () =>
+    {
+        await _torneio.VoltarAoTorneioAsync(id, participantId);
+        return NoContent();
+    });
+
     /// <summary>Classificação final → colocação de cada um + pódio → Liga Mensal.</summary>
     [HttpPost("{id:guid}/encerrar")]
     [Authorize(Policy = "AdminOnly")]
@@ -179,6 +188,15 @@ public class TorneioController : ControllerBase
     public Task<IActionResult> Desistir(Guid id) => Rodar(async () =>
     {
         await _torneio.DesistirAsync(UsuarioId(), id);
+        return NoContent();
+    });
+
+    /// <summary>Volta pro torneio depois de ter saído (até o organizador encerrar).</summary>
+    [HttpPost("{id:guid}/voltar")]
+    [Authorize]
+    public Task<IActionResult> Voltar(Guid id) => Rodar(async () =>
+    {
+        await _torneio.VoltarAsync(UsuarioId(), id);
         return NoContent();
     });
 

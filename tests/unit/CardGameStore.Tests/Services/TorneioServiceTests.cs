@@ -419,6 +419,85 @@ public class TorneioServiceTests
         (await amb.Torneio.ClassificacaoAsync(amb.Ch.Id)).Should().Contain(l => l.ParticipanteId == desistente.Id);
     }
 
+    // ── Sair e voltar (Maikon, 17/11): quem tocou em "sair" ficava preso fora do torneio ──
+
+    [Fact]
+    public async Task Voltar_DepoisDeDesistir_EhEmparelhadoNaProximaRodada()
+    {
+        var amb = Criar(4);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 50);
+        foreach (var u in amb.Jogadores) await amb.Torneio.EntrarAsync(u.Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+        await FecharRodadaAsync(amb, 1);
+
+        await amb.Torneio.DesistirAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+        await amb.Torneio.VoltarAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+        await amb.Torneio.GerarRodadaAsync(amb.Ch.Id);
+
+        var eu = await amb.Db.ChampionshipParticipants.AsNoTracking().SingleAsync(p => p.UserId == amb.Jogadores[0].Id);
+        eu.DesistiuNaRodada.Should().BeNull();
+        var rodada2 = await amb.Db.TorneioPartidas.AsNoTracking().Where(p => p.Rodada.Numero == 2).ToListAsync();
+        rodada2.Should().Contain(p => p.ParticipanteAId == eu.Id || p.ParticipanteBId == eu.Id);
+    }
+
+    [Fact]
+    public async Task Entrar_PeloCodigoDepoisDeDesistir_Volta()
+    {
+        var amb = Criar(2);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 50);
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.DesistirAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, null);
+
+        (await amb.Db.ChampionshipParticipants.AsNoTracking().SingleAsync(p => p.UserId == amb.Jogadores[0].Id))
+            .DesistiuNaRodada.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CheckInProprio_DepoisDeDesistir_Volta()
+    {
+        var amb = Criar(2);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 50);
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.DesistirAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+
+        await amb.Torneio.CheckInProprioAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+
+        (await amb.Db.ChampionshipParticipants.AsNoTracking().SingleAsync(p => p.UserId == amb.Jogadores[0].Id))
+            .DesistiuNaRodada.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DesfazerDesistencia_PeloOrganizador_Volta()
+    {
+        var amb = Criar(2);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 50);
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, null);
+        var p = await amb.Db.ChampionshipParticipants.AsNoTracking().SingleAsync(x => x.UserId == amb.Jogadores[0].Id);
+        await amb.Torneio.DesistenciaAsync(amb.Ch.Id, p.Id);
+
+        await amb.Torneio.VoltarAoTorneioAsync(amb.Ch.Id, p.Id);
+
+        (await amb.Db.ChampionshipParticipants.AsNoTracking().SingleAsync(x => x.Id == p.Id))
+            .DesistiuNaRodada.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Voltar_TorneioEncerrado_Recusa()
+    {
+        var amb = Criar(2);
+        var ch = await amb.Torneio.PrepararAsync(amb.Ch.Id, 1, 50);
+        await amb.Torneio.EntrarAsync(amb.Jogadores[0].Id, ch.CodigoEntrada!, null, null);
+        await amb.Torneio.DesistirAsync(amb.Jogadores[0].Id, amb.Ch.Id);
+        var campeonato = await amb.Db.Championships.SingleAsync(c => c.Id == amb.Ch.Id);
+        campeonato.Status = ChampionshipStatus.Finalizado;
+        await amb.Db.SaveChangesAsync();
+
+        await FluentActions.Awaiting(() => amb.Torneio.VoltarAsync(amb.Jogadores[0].Id, amb.Ch.Id))
+            .Should().ThrowAsync<TorneioException>();
+    }
+
     [Fact]
     public async Task MinhaMesa_MostraOponenteEOQueEuLancei()
     {
