@@ -36,6 +36,14 @@ public class NotificationPrefs
 
     [JsonPropertyName("browserEnabled")]
     public bool BrowserEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Tipos de aviso que a pessoa mandou ignorar no sininho do painel (v1.89.0): o começo do
+    /// título antes dos dois-pontos, ex. "Fila de espera". Continuam na lista, mas chegam como
+    /// lidos e sem push — ver EquipeDaLoja.
+    /// </summary>
+    [JsonPropertyName("silenciados")]
+    public List<string> Silenciados { get; set; } = new();
 }
 
 public class PdvPrefs

@@ -495,7 +495,7 @@ public class PixReconciliationService : IPixReconciliationService
         var corpo  = $"{quem} pagou {valor} no Pix pelo site. Separe o pedido: ele aguarda retirada em Pré-vendas.";
 
         EquipeDaLoja.Avisar(_db, equipe, titulo, corpo, "/admin/reservas");
-        return new AvisoDaEquipe(equipe.Select(m => m.Id).ToList(), titulo, corpo);
+        return new AvisoDaEquipe(EquipeDaLoja.QuemOuve(equipe, titulo).Select(m => m.Id).ToList(), titulo, corpo);
     }
 
     /// <summary>Tira do estoque de novo o item de um pedido reativado (mesmo decremento

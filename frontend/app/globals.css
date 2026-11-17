@@ -395,3 +395,5 @@ html.light .painel-novo .btn-primary :is(span, svg) {
 .menu-rolagem::-webkit-scrollbar { width: 6px; }
 .menu-rolagem::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 9999px; }
 .menu-rolagem::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.55); }
+/* Pesquisa do menu (v1.89.0): texto claro sobre o azul nos dois temas (vence o placeholder cinza do html.light) */
+.menu-busca::placeholder { color: rgba(255,255,255,0.6) !important; }

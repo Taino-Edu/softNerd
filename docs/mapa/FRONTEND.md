@@ -91,7 +91,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `TimerWidget` | `TimerWidget` | `app/admin/layout.tsx` |
 | `VLibrasController` | `abrirVLibras`, `VLibrasController` | `app/layout.tsx`<br>`components/loja/MenuLoja.tsx` |
 | `admin/AiChatWidget` | `AiChatWidget` | `app/admin/layout.tsx` |
-| `admin/AvisosDaLoja` | `AvisosDaLoja` | `components/admin/Sidebar.tsx` |
+| `admin/AvisosDaLoja` | `tipoDoAviso`, `AvisosDaLoja` | `components/admin/Sidebar.tsx` |
 | `admin/CobrancaPixModal` | `CobrancaPixModal` | `app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/ConferenciaButton` | `ConferenciaButton` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
 | `admin/ConferenciaDecksModal` | `ConferenciaDecksModal` | `app/admin/campeonatos/page.tsx` |
