@@ -9,9 +9,9 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, LogOut, Layers, Hand, PartyPopper, ThumbsUp } from 'lucide-react'
+import { ArrowLeft, Loader2, Swords, Trophy, CheckCircle2, AlertTriangle, Flag, Layers, Hand, PartyPopper, ThumbsUp, Receipt, UserRound, Undo2 } from 'lucide-react'
 import {
-  torneioApi, deckApi, DeckListDto, MinhaMesaDto, ResultadoJogador, TorneioResumoDto, rodadaComecou,
+  torneioApi, deckApi, comandaApi, DeckListDto, MinhaMesaDto, ResultadoJogador, TorneioResumoDto, rodadaComecou,
 } from '@/lib/api'
 import { isLoggedIn } from '@/lib/auth'
 import { useTorneioAoVivo } from '@/lib/useTorneioAoVivo'
@@ -48,7 +48,14 @@ function Jogar() {
   const modo = modalidadeDoEndereco(usePathname())
   const rotas = rotasDoEvento(modo, separado)
 
-  useEffect(() => { setLogado(isLoggedIn()) }, [])
+  /** Comanda aberta nesta conta: o atalho do topo vira "Comanda". Torneio e comanda andam juntos. */
+  const [temComanda, setTemComanda] = useState(false)
+
+  useEffect(() => {
+    const ok = isLoggedIn()
+    setLogado(ok)
+    if (ok) comandaApi.myComanda().then(() => setTemComanda(true)).catch(() => setTemComanda(false))
+  }, [])
 
   if (logado === null) return <Carregando />
 
@@ -65,6 +72,13 @@ function Jogar() {
           </Link>
         )}
         <Link href={rotas.jogar} className="ml-auto flex items-center gap-1.5 text-sm font-semibold"><Swords className="w-4 h-4 text-brand-400" /> {rotas.nome}</Link>
+        {/* Ir à comanda não tira ninguém do torneio: antes não havia caminho daqui pra lá, e quem tocava
+            em "Desistir" pra sair da tela ficava fora do torneio (Maikon, 17/11) */}
+        {logado && (
+          <Link href="/cliente" className="flex items-center gap-1.5 text-sm text-gray-300 pl-3 border-l border-surface-500">
+            {temComanda ? <><Receipt className="w-4 h-4" /> Comanda</> : <><UserRound className="w-4 h-4" /> Conta</>}
+          </Link>
+        )}
       </nav>
 
       <main className="max-w-md mx-auto px-4 py-5">
@@ -390,9 +404,18 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
   }
 
   async function desistir() {
-    if (!confirm('Sair do torneio? Você não joga as próximas rodadas.')) return
+    if (!confirm('Abandonar o torneio? Você não é pareado nas próximas rodadas.\n\n'
+      + 'Pra só ir à comanda ou fechar esta tela, não precisa abandonar: você continua no torneio.')) return
     try { await torneioApi.desistir(torneioId); recarregar() }
-    catch (e) { setErro(mensagemDe(e, 'Não deu pra desistir.')) }
+    catch (e) { setErro(mensagemDe(e, 'Não deu pra abandonar o torneio.')) }
+  }
+
+  const [voltando, setVoltando] = useState(false)
+  async function voltar() {
+    setVoltando(true)
+    try { await torneioApi.voltar(torneioId); recarregar() }
+    catch (e) { setErro(mensagemDe(e, 'Não deu pra voltar pro torneio.')) }
+    finally { setVoltando(false) }
   }
 
   if (!dados) return erro ? <p className="txt-erro text-sm">{erro}</p> : <Carregando />
@@ -447,9 +470,14 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
           )}
         </div>
       ) : dados.desistiuNaRodada ? (
-        <p className="bg-surface-800 border border-surface-500 rounded-2xl p-5 text-sm text-gray-300">
-          Você saiu do torneio na rodada {dados.desistiuNaRodada}. Fale com o organizador se foi engano.
-        </p>
+        <div className="bg-surface-800 border border-surface-500 rounded-2xl p-5 space-y-3 text-center">
+          <p className="text-sm text-gray-300">
+            Você saiu do torneio na rodada {dados.desistiuNaRodada}. Foi sem querer? Volte e jogue a partir da próxima rodada.
+          </p>
+          <button onClick={voltar} disabled={voltando} className="btn-primary w-full justify-center py-3 text-base">
+            {voltando ? <Loader2 className="w-5 h-5 animate-spin" /> : <Undo2 className="w-5 h-5" />} Voltar pro torneio
+          </button>
+        </div>
       ) : dados.participanteId && !dados.checkIn && !mesa ? (
         <div className="bg-surface-800 border border-surface-500 rounded-2xl p-5 space-y-3 text-center">
           <p className="text-sm text-gray-300">
@@ -576,7 +604,7 @@ function MinhaMesa({ torneioId, modo, separado }: { torneioId: string; modo: str
       <div className="flex items-center justify-between pt-2">
         <Link href={`/liga/torneio/${t.id}`} className="text-sm text-brand-400">Ver todas as mesas</Link>
         {!encerrado && !dados.desistiuNaRodada && dados.participanteId && (
-          <button onClick={desistir} className="text-sm text-gray-500 flex items-center gap-1"><LogOut className="w-4 h-4" /> Desistir</button>
+          <button onClick={desistir} className="text-sm text-gray-500 flex items-center gap-1"><Flag className="w-4 h-4" /> Abandonar torneio</button>
         )}
       </div>
     </div>

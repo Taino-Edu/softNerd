@@ -124,6 +124,9 @@ export const torneioApi = {
     api.put(`/api/torneios/${id}/partidas/${partidaId}/pronto`, { pronto }),
   desistencia: (id: string, participantId: string) =>
     api.post(`/api/torneios/${id}/participantes/${participantId}/desistencia`),
+  /** Desfaz a desistência: volta a ser pareado na próxima rodada. */
+  desfazerDesistencia: (id: string, participantId: string) =>
+    api.delete(`/api/torneios/${id}/participantes/${participantId}/desistencia`),
   encerrar:    (id: string) => api.post<LinhaTabela[]>(`/api/torneios/${id}/encerrar`),
   /** Mesas de uma rodada já jogada (histórico). */
   rodada:      (id: string, numero: number) => api.get<MesaDto[]>(`/api/torneios/${id}/rodadas/${numero}`),
@@ -140,6 +143,8 @@ export const torneioApi = {
   lancar:      (id: string, partidaId: string, resultado: ResultadoJogador) =>
     api.post(`/api/torneios/${id}/partidas/${partidaId}/resultado`, { resultado }),
   desistir:    (id: string) => api.post(`/api/torneios/${id}/desistir`),
+  /** Volta pro torneio depois de ter saído (até o organizador encerrar). */
+  voltar:      (id: string) => api.post(`/api/torneios/${id}/voltar`),
   /** Escolhe/troca o próprio deck (livre até a 1ª rodada; depois só quem está sem deck). */
   meuDeck:     (id: string, body: { deckId?: string | null; deckNome?: string | null }) =>
     api.put(`/api/torneios/${id}/meu-deck`, body),
