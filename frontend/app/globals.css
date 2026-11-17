@@ -403,4 +403,7 @@ html.light .painel-novo .btn-primary :is(span, svg) {
 /* Selo "Alarme sem som" no celular: faixa de 36px logo abaixo da barra do painel (AvisoAlarme). */
 @media (max-width: 767px) {
   body.com-aviso-alarme .admin-main { padding-top: calc(3.5rem + 2.25rem); }
+  /* A lista do sininho (barra do celular) abre logo abaixo da faixa, senão a faixa cobria o
+     cabeçalho dela e o "Marcar todos como lidos" */
+  body.com-aviso-alarme .avisos-lista-celular { top: calc(3.5rem + 2.25rem + 0.25rem); }
 }
