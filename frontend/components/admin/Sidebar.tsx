@@ -7,10 +7,13 @@
 // página e o Sair ficava lá embaixo). Chave "menu-lateral-enxuto": grupos abrem e fecham no título
 // e o rodapé vira uma linha. Chave "avisos-pra-equipe": sininho (AvisosDaLoja) e o número de
 // pedidos em aberto no item Pré-vendas.
+//
+// v1.89.0 (mesma chave do menu): pesquisa no topo (Ctrl+K ou "/") que filtra os itens de todos os
+// grupos enquanto digita — setas escolhem, Enter abre — e o grupo da tela atual agora fecha também.
 import React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { clearAuth, getUserName, getRole, hasPermission } from '@/lib/auth'
 import { useMontado } from '@/lib/useMontado'
 import { authApi, notificationsApi, reservationApi } from '@/lib/api'
@@ -40,71 +43,71 @@ const sections = [
   {
     label: 'Dia a dia',
     items: [
-      { href: '/admin/dashboard',    label: 'Painel Geral',     icon: LayoutDashboard, badge: 'LIVE', perm: 'dashboard' },
-      { href: '/admin/venda-avulsa', label: 'Frente de Caixa',  icon: ShoppingBag,                    perm: 'pdv' },
-      { href: '/admin/reservas',     label: 'Pré-vendas',       icon: ClipboardList,                  perm: 'estoque' },
-      { href: '/admin/qrcodes',      label: 'Gatilhos QR Code', icon: QrCode,                         perm: 'qrcodes' },
+      { href: '/admin/dashboard',    label: 'Painel Geral',     icon: LayoutDashboard, badge: 'LIVE', perm: 'dashboard', busca: 'inicio home resumo hoje ao vivo' },
+      { href: '/admin/venda-avulsa', label: 'Frente de Caixa',  icon: ShoppingBag,                    perm: 'pdv', busca: 'pdv caixa vender venda balcao cobrar' },
+      { href: '/admin/reservas',     label: 'Pré-vendas',       icon: ClipboardList,                  perm: 'estoque', busca: 'pedidos pedido reservas reserva pre venda encomenda fila espera retirada site pix' },
+      { href: '/admin/qrcodes',      label: 'Gatilhos QR Code', icon: QrCode,                         perm: 'qrcodes', busca: 'qr gatilho codigo' },
     ],
   },
   {
     label: 'Catálogo',
     items: [
-      { href: '/admin/estoque',     label: 'Estoque',           icon: Package, perm: 'estoque' },
-      { href: '/admin/categorias',  label: 'Categorias',        icon: Tag,     perm: 'categorias' },
-      { href: '/admin/cartas',      label: 'Cartas TCG',        icon: Search,  perm: 'cartas' },
-      { href: '/admin/marketplace', label: 'Mercado de Cartas', icon: Store,   perm: 'estoque' },
+      { href: '/admin/estoque',     label: 'Estoque',           icon: Package, perm: 'estoque', busca: 'produtos produto cadastrar preco' },
+      { href: '/admin/categorias',  label: 'Categorias',        icon: Tag,     perm: 'categorias', busca: 'categoria' },
+      { href: '/admin/cartas',      label: 'Cartas TCG',        icon: Search,  perm: 'cartas', busca: 'carta tcg magic pokemon yugioh one piece' },
+      { href: '/admin/marketplace', label: 'Mercado de Cartas', icon: Store,   perm: 'estoque', busca: 'mercado vitrine cartas avulsas' },
     ],
   },
   {
     label: 'Clientes',
     items: [
-      { href: '/admin/usuarios',          label: 'Clientes',   icon: Users,      perm: 'usuarios' },
-      { href: '/admin/clientes/analises', label: 'Análises',   icon: BarChart2,  perm: 'usuarios' },
-      { href: '/admin/crediario',         label: 'Crediário',  icon: CreditCard, perm: 'crediario' },
+      { href: '/admin/usuarios',          label: 'Clientes',   icon: Users,      perm: 'usuarios', busca: 'cliente usuarios cadastro pontos' },
+      { href: '/admin/clientes/analises', label: 'Análises',   icon: BarChart2,  perm: 'usuarios', busca: 'analise clientes ranking top' },
+      { href: '/admin/crediario',         label: 'Crediário',  icon: CreditCard, perm: 'crediario', busca: 'fiado divida conta cliente' },
     ],
   },
   {
     label: 'Financeiro',
     items: [
-      { href: '/admin/financeiro',     label: 'Financeiro',        icon: TrendingUp, perm: 'financeiro' },
-      { href: '/admin/contas-receber', label: 'Contas a Pagar/Rec', icon: Wallet,    perm: 'financeiro' },
-      { href: '/admin/relatorios',     label: 'Relatórios',        icon: BarChart2,  perm: 'relatorios' },
+      { href: '/admin/financeiro',     label: 'Financeiro',        icon: TrendingUp, perm: 'financeiro', busca: 'dinheiro faturamento caixa receita despesa vendas' },
+      { href: '/admin/contas-receber', label: 'Contas a Pagar/Rec', icon: Wallet,    perm: 'financeiro', busca: 'contas pagar receber boleto despesa' },
+      { href: '/admin/relatorios',     label: 'Relatórios',        icon: BarChart2,  perm: 'relatorios', busca: 'relatorio vendas exportar' },
     ],
   },
   {
     label: 'Eventos',
     items: [
-      { href: '/admin/liguinha',    label: 'Central da Liguinha', icon: Swords, perm: 'campeonatos' },
-      { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy, perm: 'campeonatos' },
-      { href: '/admin/liga-mensal', label: 'Liga Mensal', icon: Award,  perm: 'campeonatos' },
-      { href: '/admin/timer',       label: 'Timers',      icon: Timer,  perm: 'campeonatos' },
+      { href: '/admin/liguinha',    label: 'Central da Liguinha', icon: Swords, perm: 'campeonatos', busca: 'liga torneio suico pokemon rodada' },
+      { href: '/admin/campeonatos', label: 'Campeonatos', icon: Trophy, perm: 'campeonatos', busca: 'torneio campeonato evento inscricao' },
+      { href: '/admin/liga-mensal', label: 'Liga Mensal', icon: Award,  perm: 'campeonatos', busca: 'ranking liga mensal pontos' },
+      { href: '/admin/timer',       label: 'Timers',      icon: Timer,  perm: 'campeonatos', busca: 'cronometro relogio tempo' },
     ],
   },
   {
     label: 'Divulgação',
     items: [
-      { href: '/admin/anuncios',   label: 'Anúncios',   icon: Megaphone,      perm: 'anuncios' },
-      { href: '/admin/mensageria', label: 'Mensageria', icon: MessageSquare,  perm: 'anuncios' },
+      { href: '/admin/anuncios',   label: 'Anúncios',   icon: Megaphone,      perm: 'anuncios', busca: 'banner anuncio promocao divulgar' },
+      { href: '/admin/mensageria', label: 'Mensageria', icon: MessageSquare,  perm: 'anuncios', busca: 'mensagem whatsapp email avisar enviar' },
     ],
   },
   {
     label: 'Configuração',
     adminOnly: true,
     items: [
-      { href: '/admin/site',        label: 'Personalizar Site', icon: Palette, perm: null },
-      { href: '/admin/integracoes', label: 'Integrações',       icon: Plug,    perm: null },
-      { href: '/admin/perfis',      label: 'Perfis de Acesso',  icon: UserCog, perm: null },
-      { href: '/admin/funcionalidades', label: 'Mudanças com volta', icon: RotateCcw, perm: null },
-      { href: '/admin/alertas',     label: 'Alertas do sistema', icon: BellRing, perm: null, chave: 'vigia-sistema' },
+      { href: '/admin/site',        label: 'Personalizar Site', icon: Palette, perm: null, busca: 'personalizar cores logo tema site' },
+      { href: '/admin/integracoes', label: 'Integrações',       icon: Plug,    perm: null, busca: 'integracao inter pix api chave' },
+      { href: '/admin/perfis',      label: 'Perfis de Acesso',  icon: UserCog, perm: null, busca: 'operador permissao acesso funcionario perfil' },
+      { href: '/admin/funcionalidades', label: 'Mudanças com volta', icon: RotateCcw, perm: null, busca: 'chave liga desliga voltar mudanca' },
+      { href: '/admin/alertas',     label: 'Alertas do sistema', icon: BellRing, perm: null, chave: 'vigia-sistema', busca: 'alerta vigia erro sistema' },
     ],
   },
   {
     label: 'Ajuda & Sistema',
     items: [
-      { href: '/admin/manual',        label: 'Manual do Sistema', icon: BookOpen, perm: null },
-      { href: '/admin/lgpd',          label: 'LGPD & Auditoria',  icon: Shield,   perm: 'lgpd' },
-      { href: '/admin/sobre',         label: 'Sobre o Sistema',   icon: Info,     perm: null },
-      { href: '/admin/configuracoes', label: 'Configurações',     icon: Settings, perm: null },
+      { href: '/admin/manual',        label: 'Manual do Sistema', icon: BookOpen, perm: null, busca: 'ajuda manual como usar' },
+      { href: '/admin/lgpd',          label: 'LGPD & Auditoria',  icon: Shield,   perm: 'lgpd', busca: 'privacidade log auditoria' },
+      { href: '/admin/sobre',         label: 'Sobre o Sistema',   icon: Info,     perm: null, busca: 'versao changelog novidades' },
+      { href: '/admin/configuracoes', label: 'Configurações',     icon: Settings, perm: null, busca: 'configuracao preferencias som notificacao' },
     ],
   },
 ]
@@ -116,20 +119,45 @@ const FRACO  = 'rgba(255,255,255,0.5)'
 const AMARELO = '#FFE45E'
 
 const CHAVE_GRUPOS = 'admin-menu-grupos'
-/** Grupos abertos de saída (os outros abrem no título; o da tela atual abre sozinho). */
+/** Grupos abertos de saída (os outros abrem no título; o da tela atual abre ao entrar nela). */
 const GRUPOS_ABERTOS_PADRAO = ['Dia a dia']
+
+type ItemDoMenu = { href: string; label: string; icon: React.ElementType; perm: string | null; badge?: string; chave?: string; busca?: string }
 
 function lerGrupos(): Record<string, boolean> {
   try { return JSON.parse(localStorage.getItem(CHAVE_GRUPOS) ?? '{}') ?? {} } catch { return {} }
 }
 
-function NavItems({ pathname, onClose, unreadCount, collapsed = false, cor = '#1E4FD6', enxuto = false, avisos = false, pedidosAbertos = 0 }: {
+/** Minúsculo e sem acento, letra a letra (o índice continua batendo com o texto original). */
+function normalizar(texto: string) {
+  return [...texto].map(c => c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()).join('')
+}
+
+/** Todas as palavras digitadas aparecem no nome, no grupo ou nos apelidos do item? */
+function combina(item: ItemDoMenu, grupo: string, termos: string[]) {
+  const onde = normalizar(`${item.label} ${grupo} ${item.busca ?? ''}`)
+  return termos.every(t => onde.includes(t))
+}
+
+/** Nome do item com o trecho digitado em destaque. */
+function Destacar({ texto, termo }: { texto: string; termo: string }) {
+  const i = termo ? normalizar(texto).indexOf(termo) : -1
+  if (i < 0) return <>{texto}</>
+  return <>{texto.slice(0, i)}<mark className="bg-transparent font-black underline decoration-2 underline-offset-2" style={{ color: 'inherit' }}>{texto.slice(i, i + termo.length)}</mark>{texto.slice(i + termo.length)}</>
+}
+
+function NavItems({ pathname, onClose, unreadCount, collapsed = false, cor = '#1E4FD6', enxuto = false, avisos = false, pedidosAbertos = 0, atalhoBusca = false, onExpandir }: {
   pathname: string; onClose?: () => void; unreadCount: number; collapsed?: boolean; cor?: string
   enxuto?: boolean; avisos?: boolean; pedidosAbertos?: number
+  /** Só o menu do computador escuta Ctrl+K e "/" (o do celular fica escondido). */
+  atalhoBusca?: boolean
+  /** Menu recolhido: a lupa expande o menu antes de abrir a pesquisa. */
+  onExpandir?: () => void
 }) {
   // Perfil e permissões vêm de cookie: só depois de montar (senão o menu do servidor
   // sai diferente do navegador e a hidratação falha)
   const montado = useMontado()
+  const router = useRouter()
   const vigia = useFuncionalidade('vigia-sistema') !== false
   const role = montado ? getRole() : ''
   const isAdmin = role === 'Admin'
@@ -137,112 +165,223 @@ function NavItems({ pathname, onClose, unreadCount, collapsed = false, cor = '#1
   const [escolhidos, setEscolhidos] = useState<Record<string, boolean>>({})
   useEffect(() => { setEscolhidos(lerGrupos()) }, [])
 
+  // Pesquisa (chave "menu-lateral-enxuto"): filtra os itens de todos os grupos enquanto digita
+  const [busca, setBusca] = useState('')
+  const [selecionado, setSelecionado] = useState(0)
+  const [focarAoAbrir, setFocarAoAbrir] = useState(false)
+  const campoBusca = useRef<HTMLInputElement>(null)
+  const pesquisavel = enxuto
+
+  function salvarGrupos(proximo: Record<string, boolean>) {
+    try { localStorage.setItem(CHAVE_GRUPOS, JSON.stringify(proximo)) } catch {}
+    return proximo
+  }
+
   function alternarGrupo(label: string, abertoAgora: boolean) {
-    setEscolhidos(atual => {
-      const proximo = { ...atual, [label]: !abertoAgora }
-      try { localStorage.setItem(CHAVE_GRUPOS, JSON.stringify(proximo)) } catch {}
-      return proximo
-    })
+    setEscolhidos(atual => salvarGrupos({ ...atual, [label]: !abertoAgora }))
+  }
+
+  const secoesVisiveis = sections
+    .filter(s => !s.adminOnly || isAdmin)
+    .map(s => ({
+      label: s.label,
+      items: montado
+        ? (s.items as ItemDoMenu[]).filter(i => (i.perm === null || hasPermission(i.perm)) && (i.chave !== 'vigia-sistema' || vigia))
+        : [],
+    }))
+    .filter(s => s.items.length > 0)
+
+  // Entrou numa tela de outro grupo: ele abre (mesmo que tenha sido fechado antes). Dentro do
+  // grupo dá pra fechar à vontade — antes o grupo da tela atual ficava preso aberto.
+  const grupoAtivo = secoesVisiveis.find(s => s.items.some(i => pathname.startsWith(i.href)))?.label
+  const grupoAnterior = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (!grupoAtivo || grupoAtivo === grupoAnterior.current) return
+    grupoAnterior.current = grupoAtivo
+    setEscolhidos(atual => atual[grupoAtivo] === false ? salvarGrupos({ ...atual, [grupoAtivo]: true }) : atual)
+  }, [grupoAtivo])
+
+  const termo = normalizar(busca.trim())
+  const termos = termo.split(/\s+/).filter(Boolean)
+  const resultados = termos.length === 0 ? [] : secoesVisiveis
+    .map(s => ({ ...s, items: s.items.filter(i => combina(i, s.label, termos)) }))
+    .filter(s => s.items.length > 0)
+  const resultadosPlanos = resultados.flatMap(s => s.items)
+
+  useEffect(() => { setSelecionado(0) }, [termo])
+
+  function irPara(href: string) {
+    setBusca('')
+    campoBusca.current?.blur()
+    onClose?.()
+    router.push(href)
+  }
+
+  function teclaNaBusca(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelecionado(i => Math.min(i + 1, resultadosPlanos.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setSelecionado(i => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter') { const alvo = resultadosPlanos[selecionado]; if (alvo) { e.preventDefault(); irPara(alvo.href) } }
+    else if (e.key === 'Escape') { e.stopPropagation(); setBusca(''); campoBusca.current?.blur() }
+  }
+
+  // Ctrl+K ou "/" (fora de campo de texto) abre a pesquisa
+  useEffect(() => {
+    if (!atalhoBusca || !pesquisavel) return
+    function tecla(e: KeyboardEvent) {
+      const alvo = e.target as HTMLElement
+      const digitando = ['INPUT', 'TEXTAREA', 'SELECT'].includes(alvo.tagName) || alvo.isContentEditable
+      const ctrlK = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'
+      if (!ctrlK && !(e.key === '/' && !digitando && !e.ctrlKey && !e.metaKey && !e.altKey)) return
+      e.preventDefault()
+      if (collapsed) { setFocarAoAbrir(true); onExpandir?.() } else campoBusca.current?.focus()
+    }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [atalhoBusca, pesquisavel, collapsed, onExpandir])
+
+  useEffect(() => {
+    if (focarAoAbrir && !collapsed) { campoBusca.current?.focus(); setFocarAoAbrir(false) }
+  }, [focarAoAbrir, collapsed])
+
+  function renderItem({ href, label: itemLabel, icon: Icon, badge }: ItemDoMenu, destaque = false) {
+    const active   = pathname.startsWith(href)
+    const shortcut = SIDEBAR_SHORTCUT_KEYS[href]
+    // Com o sininho, a bolinha de não lidos sai de Mensageria (não tinha a ver com mensagens)
+    const hasDot   = !avisos && (href === '/admin/mensageria' && unreadCount > 0)
+    const numero   = avisos && href === '/admin/reservas' ? pedidosAbertos : 0
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={() => { setBusca(''); onClose?.() }}
+        title={collapsed ? itemLabel : undefined}
+        className={clsx(
+          'flex items-center w-full rounded-xl font-medium text-sm transition-all duration-150 group py-2.5',
+          collapsed ? 'justify-center px-0' : 'gap-4 px-4',
+          active ? 'shadow-sm' : 'hover:bg-white/10',
+          destaque && !active && 'bg-white/15 ring-1 ring-white/40',
+        )}
+        style={active ? { backgroundColor: BRANCO, color: cor } : { color: SUAVE }}
+      >
+        <div className="relative shrink-0">
+          <Icon className="w-5 h-5" style={{ color: active ? cor : SUAVE }} />
+          {hasDot && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          )}
+          {collapsed && numero > 0 && (
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-black leading-4 text-center"
+              style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>{numero > 99 ? '99+' : numero}</span>
+          )}
+        </div>
+        {!collapsed && (
+          <>
+            <span className={clsx('flex-1', active && 'font-black')}>
+              {termos.length > 0 ? <Destacar texto={itemLabel} termo={termos[0]} /> : itemLabel}
+            </span>
+            {numero > 0 && (
+              <span title={`${numero} pedido(s) pra cobrar ou entregar`}
+                className="text-[10px] min-w-[20px] text-center px-1.5 py-0.5 rounded-full font-black"
+                style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>
+                {numero > 99 ? '99+' : numero}
+              </span>
+            )}
+            {badge && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black animate-pulse-slow"
+                style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>
+                {badge}
+              </span>
+            )}
+            {shortcut && !active && (
+              <kbd className="hidden md:inline-block text-[9px] rounded px-1.5 py-0.5 font-mono font-bold leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ color: SUAVE, backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                {shortcut}
+              </kbd>
+            )}
+          </>
+        )}
+      </Link>
+    )
   }
 
   return (
-    <nav className="menu-rolagem flex-1 min-h-0 flex flex-col gap-1 px-3 pb-6 overflow-y-auto">
-      {sections.map(({ label, items, adminOnly }) => {
-        if (adminOnly && !isAdmin) return null
-        const visibleItems = montado
-          ? items.filter((i: { perm: string | null; chave?: string }) =>
-              (i.perm === null || hasPermission(i.perm)) && (i.chave !== 'vigia-sistema' || vigia))
-          : []
-        if (visibleItems.length === 0) return null
-        const temAtivo = visibleItems.some((i: { href: string }) => pathname.startsWith(i.href))
-        // Recolhida (só ícones) mostra tudo: não tem título pra clicar
-        const dobravel = enxuto && !collapsed
-        const aberto = !dobravel || temAtivo || (escolhidos[label] ?? GRUPOS_ABERTOS_PADRAO.includes(label))
-        const numeroDoGrupo = avisos && visibleItems.some((i: { href: string }) => i.href === '/admin/reservas') ? pedidosAbertos : 0
-        return (
-          <div key={label} className={dobravel ? 'mb-0.5' : 'mb-2'}>
-            {/* Recolhida: sem cabeçalho de seção (texto pequeno demais pra caber) —
-                só uma linha divisória sutil pra ainda separar os grupos visualmente. */}
-            {collapsed ? (
-              <div className="h-px mx-2 mt-3 mb-2 bg-white/15" />
-            ) : dobravel ? (
-              <button type="button" onClick={() => !temAtivo && alternarGrupo(label, aberto)}
-                aria-expanded={aberto}
-                title={temAtivo ? 'Grupo da tela atual' : aberto ? 'Fechar grupo' : 'Abrir grupo'}
-                className={clsx('w-full flex items-center gap-2 mt-2 mb-0.5 px-4 py-1.5 rounded-lg text-[11px] uppercase font-bold tracking-wider transition-colors',
-                  !temAtivo && 'hover:bg-white/10')}
-                style={{ color: aberto ? SUAVE : FRACO }}>
-                <span className="flex-1 text-left">{label}</span>
-                {!aberto && numeroDoGrupo > 0 && (
-                  <span className="text-[10px] px-1.5 rounded-full font-black" style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>{numeroDoGrupo}</span>
-                )}
-                <ChevronDown className={clsx('w-3.5 h-3.5 transition-transform', !aberto && '-rotate-90')} />
-              </button>
+    <>
+      {pesquisavel && (collapsed ? (
+        <div className="shrink-0 flex justify-center pb-1">
+          <button type="button" onClick={() => { setFocarAoAbrir(true); onExpandir?.() }}
+            title="Procurar no menu (Ctrl+K)" aria-label="Procurar no menu"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-white/15" style={{ color: SUAVE }}>
+            <Search className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="shrink-0 px-3 pb-2">
+          <label className="flex items-center gap-2 px-3 h-9 rounded-xl transition-colors focus-within:ring-2 focus-within:ring-white/40"
+            style={{ backgroundColor: 'rgba(255,255,255,0.10)', color: SUAVE }}>
+            <Search className="w-4 h-4 shrink-0" />
+            <input ref={campoBusca} value={busca} onChange={e => setBusca(e.target.value)} onKeyDown={teclaNaBusca}
+              placeholder="Procurar no menu…" aria-label="Procurar no menu"
+              className="menu-busca flex-1 min-w-0 bg-transparent border-0 outline-none text-sm p-0 focus:ring-0"
+              style={{ color: BRANCO }} />
+            {busca ? (
+              <button type="button" onClick={() => { setBusca(''); campoBusca.current?.focus() }} aria-label="Limpar pesquisa"
+                className="shrink-0 rounded hover:bg-white/15 p-0.5"><X className="w-3.5 h-3.5" /></button>
             ) : (
-              <p className="text-[10px] uppercase font-bold mt-3 mb-1 px-4 tracking-wider" style={{ color: FRACO }}>
-                {label}
-              </p>
+              <kbd className="hidden md:inline-block shrink-0 text-[9px] rounded px-1.5 py-0.5 font-mono font-bold leading-none"
+                style={{ color: SUAVE, backgroundColor: 'rgba(255,255,255,0.12)' }}>Ctrl K</kbd>
             )}
-            {aberto && visibleItems.map(({ href, label: itemLabel, icon: Icon, badge }: { href: string; label: string; icon: React.ElementType; perm: string | null; badge?: string }) => {
-              const active   = pathname.startsWith(href)
-              const shortcut = SIDEBAR_SHORTCUT_KEYS[href]
-              // Com o sininho, a bolinha de não lidos sai de Mensageria (não tinha a ver com mensagens)
-              const hasDot   = !avisos && (href === '/admin/mensageria' && unreadCount > 0)
-              const numero   = avisos && href === '/admin/reservas' ? pedidosAbertos : 0
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={onClose}
-                  title={collapsed ? itemLabel : undefined}
-                  className={clsx(
-                    'flex items-center w-full rounded-xl font-medium text-sm transition-all duration-150 group py-2.5',
-                    collapsed ? 'justify-center px-0' : 'gap-4 px-4',
-                    active ? 'shadow-sm' : 'hover:bg-white/10'
+          </label>
+        </div>
+      ))}
+      <nav className="menu-rolagem flex-1 min-h-0 flex flex-col gap-1 px-3 pb-6 overflow-y-auto">
+        {termos.length > 0 ? (
+          // Pesquisando: só o que combina, em todos os grupos, com o primeiro já marcado (Enter abre)
+          resultados.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-center" style={{ color: FRACO }}>
+              Nada no menu com &ldquo;{busca.trim()}&rdquo;.
+            </p>
+          ) : resultados.map(s => (
+            <div key={s.label} className="mb-0.5">
+              <p className="text-[10px] uppercase font-bold mt-2 mb-0.5 px-4 tracking-wider" style={{ color: FRACO }}>{s.label}</p>
+              {s.items.map(i => renderItem(i, resultadosPlanos[selecionado]?.href === i.href))}
+            </div>
+          ))
+        ) : secoesVisiveis.map(({ label, items }) => {
+          // Recolhida (só ícones) mostra tudo: não tem título pra clicar
+          const dobravel = enxuto && !collapsed
+          const aberto = !dobravel || (escolhidos[label] ?? (label === grupoAtivo || GRUPOS_ABERTOS_PADRAO.includes(label)))
+          const numeroDoGrupo = avisos && items.some(i => i.href === '/admin/reservas') ? pedidosAbertos : 0
+          return (
+            <div key={label} className={dobravel ? 'mb-0.5' : 'mb-2'}>
+              {/* Recolhida: sem cabeçalho de seção (texto pequeno demais pra caber) —
+                  só uma linha divisória sutil pra ainda separar os grupos visualmente. */}
+              {collapsed ? (
+                <div className="h-px mx-2 mt-3 mb-2 bg-white/15" />
+              ) : dobravel ? (
+                <button type="button" onClick={() => alternarGrupo(label, aberto)}
+                  aria-expanded={aberto}
+                  title={aberto ? 'Fechar grupo' : 'Abrir grupo'}
+                  className="w-full flex items-center gap-2 mt-2 mb-0.5 px-4 py-1.5 rounded-lg text-[11px] uppercase font-bold tracking-wider transition-colors hover:bg-white/10"
+                  style={{ color: aberto ? SUAVE : FRACO }}>
+                  <span className="flex-1 text-left">{label}</span>
+                  {!aberto && label === grupoAtivo && (
+                    <span title="A tela aberta é deste grupo" className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BRANCO }} />
                   )}
-                  style={active ? { backgroundColor: BRANCO, color: cor } : { color: SUAVE }}
-                >
-                  <div className="relative shrink-0">
-                    <Icon className="w-5 h-5" style={{ color: active ? cor : SUAVE }} />
-                    {hasDot && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    )}
-                    {collapsed && numero > 0 && (
-                      <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-black leading-4 text-center"
-                        style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>{numero > 99 ? '99+' : numero}</span>
-                    )}
-                  </div>
-                  {!collapsed && (
-                    <>
-                      <span className={clsx('flex-1', active && 'font-black')}>{itemLabel}</span>
-                      {numero > 0 && (
-                        <span title={`${numero} pedido(s) pra cobrar ou entregar`}
-                          className="text-[10px] min-w-[20px] text-center px-1.5 py-0.5 rounded-full font-black"
-                          style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>
-                          {numero > 99 ? '99+' : numero}
-                        </span>
-                      )}
-                      {badge && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black animate-pulse-slow"
-                          style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>
-                          {badge}
-                        </span>
-                      )}
-                      {shortcut && !active && (
-                        <kbd className="hidden md:inline-block text-[9px] rounded px-1.5 py-0.5 font-mono font-bold leading-none opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ color: SUAVE, backgroundColor: 'rgba(255,255,255,0.12)' }}>
-                          {shortcut}
-                        </kbd>
-                      )}
-                    </>
+                  {!aberto && numeroDoGrupo > 0 && (
+                    <span className="text-[10px] px-1.5 rounded-full font-black" style={{ backgroundColor: AMARELO, color: '#3D2E00' }}>{numeroDoGrupo}</span>
                   )}
-                </Link>
-              )
-            })}
-          </div>
-        )
-      })}
-    </nav>
+                  <ChevronDown className={clsx('w-3.5 h-3.5 transition-transform', !aberto && '-rotate-90')} />
+                </button>
+              ) : (
+                <p className="text-[10px] uppercase font-bold mt-3 mb-1 px-4 tracking-wider" style={{ color: FRACO }}>
+                  {label}
+                </p>
+              )}
+              {aberto && items.map(i => renderItem(i))}
+            </div>
+          )
+        })}
+      </nav>
+    </>
   )
 }
 
@@ -271,6 +410,12 @@ export default function Sidebar() {
     try {
       if (localStorage.getItem('admin-sidebar-collapsed') === 'true') setCollapsed(true)
     } catch {}
+  }, [])
+
+  // Lupa do menu recolhido / Ctrl+K: abre o menu pra pesquisar
+  const expandir = useCallback(() => {
+    setCollapsed(false)
+    try { localStorage.setItem('admin-sidebar-collapsed', 'false') } catch {}
   }, [])
 
   function toggleCollapsed() {
@@ -459,7 +604,7 @@ export default function Sidebar() {
           {avisos && <AvisosDaLoja lado="direita" />}
         </div>
         <NavItems pathname={pathname} unreadCount={unreadCount} collapsed={collapsed} cor={cor}
-          enxuto={enxuto} avisos={avisos} pedidosAbertos={pedidosAbertos} />
+          enxuto={enxuto} avisos={avisos} pedidosAbertos={pedidosAbertos} atalhoBusca onExpandir={expandir} />
         {renderFooter(collapsed)}
 
         {/* Botão de recolher/expandir — preso na borda direita, sempre visível independente

@@ -1353,6 +1353,40 @@ public class ReservationControllerTests
     }
 
     [Fact]
+    public async Task Carrinho_QuemIgnorouOTipo_RecebeJaLidoESemPush()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db, "Priscila");
+        var admin = await SeedUserAsync(db, "Maikon");
+        admin.Role = UserRole.Admin;
+        // "Ignorar este tipo" no sininho grava o começo do título nas preferências
+        admin.PreferencesJson = """{"notifications":{"soundEnabled":true,"browserEnabled":true,"silenciados":["pré-venda nova"]}}""";
+        await db.SaveChangesAsync();
+        var balcao = await SeedOperadorAsync(db, "Balcão", Permissao.Estoque);
+        var produto = await SeedProductAsync(db, stock: 3);
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: Chaves(db));
+
+        Corpo(await controller.CreateCart(Carrinho(produto)));
+
+        var doAdmin = await db.Notifications.SingleAsync(n => n.UserId == admin.Id);
+        doAdmin.Title.Should().StartWith("Pré-venda nova");
+        doAdmin.ReadAt.Should().NotBeNull("ignorado continua na lista, mas não conta no sininho");
+        (await db.Notifications.SingleAsync(n => n.UserId == balcao.Id)).ReadAt.Should().BeNull("quem não ignorou é avisado normal");
+
+        var equipe = await EquipeDaLoja.QuemRecebeAsync(db);
+        EquipeDaLoja.QuemOuve(equipe, doAdmin.Title).Select(m => m.Id).Should().BeEquivalentTo([balcao.Id], "push e e-mail pulam quem ignorou");
+        EquipeDaLoja.QuemOuve(equipe, "Fila de espera: Priscila").Should().HaveCount(2, "ignorar um tipo não cala os outros");
+    }
+
+    [Theory]
+    [InlineData("Fila de espera: Ana", "Fila de espera")]
+    [InlineData("Pix pago: pedido de Ana", "Pix pago")]
+    [InlineData("Pix pago de pedido cancelado: reembolso pendente", "Pix pago de pedido cancelado")]
+    [InlineData("Pedido pago sem venda registrada", "Pedido pago sem venda registrada")]
+    public void TipoDoAviso_EOComecoAntesDosDoisPontos(string titulo, string tipo) =>
+        EquipeDaLoja.TipoDoAviso(titulo).Should().Be(tipo);
+
+    [Fact]
     public async Task ContarAbertos_ContaPedidoNaoItem_ESoOQueFaltaCobrarOuEntregar()
     {
         var db = CreateDb(nameof(ReservationControllerTests));
