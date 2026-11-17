@@ -1378,6 +1378,28 @@ public class ReservationControllerTests
         EquipeDaLoja.QuemOuve(equipe, "Fila de espera: Priscila").Should().HaveCount(2, "ignorar um tipo não cala os outros");
     }
 
+    [Fact]
+    public async Task Push_QuemIgnorouOTipo_FicaDeFora_MesmoForaDaEquipe()
+    {
+        // O resumo do crediário (e outros) manda push direto, sem passar pelo EquipeDaLoja.Avisar:
+        // o PushService filtra por aqui, então o "Ignorar este tipo" vale pra eles também.
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var calado = await SeedUserAsync(db, "Maikon");
+        calado.PreferencesJson = """{"notifications":{"silenciados":["Crediário hoje"]}}""";
+        var outro = await SeedUserAsync(db, "Balcão");
+        var semPreferencia = await SeedUserAsync(db, "Caixa");
+        outro.PreferencesJson = """{"notifications":{"silenciados":["Fila de espera"]}}""";
+        await db.SaveChangesAsync();
+        Guid[] todos = [calado.Id, outro.Id, semPreferencia.Id];
+
+        (await EquipeDaLoja.QuemNaoSilenciouAsync(db, todos, "Crediário hoje"))
+            .Should().BeEquivalentTo([outro.Id, semPreferencia.Id]);
+        (await EquipeDaLoja.QuemNaoSilenciouAsync(db, todos, "Crediário hoje: 2 em atraso"))
+            .Should().NotContain(calado.Id, "o tipo é o começo do título");
+        (await EquipeDaLoja.QuemNaoSilenciouAsync(db, todos, "Pré-venda nova: Ana"))
+            .Should().BeEquivalentTo(todos, "ninguém ignorou esse tipo");
+    }
+
     [Theory]
     [InlineData("Fila de espera: Ana", "Fila de espera")]
     [InlineData("Pix pago: pedido de Ana", "Pix pago")]

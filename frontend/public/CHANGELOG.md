@@ -4,7 +4,7 @@
 
 ### Sininho com botão direito e pesquisa no menu
 - **Botão direito num aviso do sininho** (ou o "⋯" no celular): **Ir até**, **Marcar como lida**, **Ignorar este tipo** e **Excluir**
-- **Ignorar este tipo:** silencia avisos daquele tipo (ex.: todos de "Fila de espera") pra você. Eles continuam na lista, mas chegam já lidos, sem aviso no canto da tela e sem notificação do Windows/celular. O aviso no canto também tem "Ignorar este tipo". Pra voltar a ser avisado, clique no tipo em "Ignorados", no fim da lista
+- **Ignorar este tipo:** silencia avisos daquele tipo (ex.: todos de "Fila de espera") pra você. Eles continuam na lista, mas chegam já lidos, sem aviso no canto da tela e sem notificação do Windows/celular — vale pra todo aviso, inclusive o resumo do crediário. O aviso no canto também tem "Ignorar este tipo". Pra voltar a ser avisado, clique no tipo em "Ignorados", no fim da lista
 - **Pesquisa no menu:** campo "Procurar no menu…" no topo (atalho **Ctrl+K** ou **/**). Enquanto você digita, aparecem só as telas que combinam, de todos os grupos, e entende apelidos ("fiado" acha Crediário, "pdv" acha Frente de Caixa, "pedido" acha Pré-vendas). Setas escolhem, Enter abre, Esc limpa. Com o menu recolhido, a lupa abre o menu já na pesquisa
 - **Grupo da tela atual fecha também:** antes o grupo da tela aberta ficava preso aberto; agora fecha no título como os outros (fica um pontinho branco nele) e abre sozinho quando você entra numa tela de outro grupo
 

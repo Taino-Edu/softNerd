@@ -13,7 +13,8 @@
 // v1.89.0 — "Ignorar" no sininho: cada pessoa pode silenciar um TIPO de aviso (o começo do
 // título antes dos dois-pontos, ex. "Fila de espera"), guardado nas preferências dela
 // (notifications.silenciados). O aviso continua indo pra lista, mas já chega lido e sem
-// push/e-mail — senão o Windows apitava no canto do relógio do mesmo jeito.
+// push/e-mail — senão o Windows apitava no canto do relógio do mesmo jeito. O PushService também
+// confere (QuemNaoSilenciouAsync), então vale pros avisos que não passam por aqui.
 // =============================================================================
 
 using System.Text.Json;
@@ -100,6 +101,27 @@ public static class EquipeDaLoja
     /// <summary>Quem deve ser chamado por push/e-mail (todos menos quem silenciou o tipo).</summary>
     public static List<MembroDaEquipe> QuemOuve(IEnumerable<MembroDaEquipe> quem, string titulo) =>
         quem.Where(m => !m.Silenciou(titulo)).ToList();
+
+    /// <summary>
+    /// Dos usuários pedidos, os que NÃO ignoraram o tipo deste título. Usado pelo PushService, pra
+    /// que "Ignorar este tipo" valha pra todo push (resumo do crediário, mensageria…), não só
+    /// pros avisos que passam por aqui.
+    /// </summary>
+    public static async Task<List<Guid>> QuemNaoSilenciouAsync(AppDbContext db, IEnumerable<Guid> userIds, string titulo)
+    {
+        var ids = userIds.Distinct().ToList();
+        if (ids.Count == 0) return ids;
+        var comPreferencia = await db.Users.AsNoTracking()
+            .Where(u => ids.Contains(u.Id) && u.PreferencesJson != null && u.PreferencesJson.Contains("silenciados"))
+            .Select(u => new { u.Id, u.PreferencesJson })
+            .ToListAsync();
+        var tipo = TipoDoAviso(titulo);
+        var calados = comPreferencia
+            .Where(u => Silenciados(u.PreferencesJson)?.Contains(tipo, StringComparer.OrdinalIgnoreCase) == true)
+            .Select(u => u.Id)
+            .ToHashSet();
+        return ids.Where(id => !calados.Contains(id)).ToList();
+    }
 
     private static IReadOnlyCollection<string>? Silenciados(string? preferencesJson)
     {

@@ -31,7 +31,9 @@ public class PushService : IPushService
             return;
         }
 
-        var ids  = userIds.ToList();
+        // "Ignorar este tipo" no sininho do painel: quem silenciou não recebe o push desse tipo
+        var ids  = await EquipeDaLoja.QuemNaoSilenciouAsync(_db, userIds, title);
+        if (ids.Count == 0) return;
         var subs = await _db.PushSubscriptions.Where(s => ids.Contains(s.UserId)).ToListAsync();
         if (subs.Count == 0) return;
 
