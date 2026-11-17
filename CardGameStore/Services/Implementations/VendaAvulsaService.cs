@@ -860,6 +860,7 @@ public class VendaAvulsaService : IVendaAvulsaService
         MotivoCancelamento         = v.MotivoCancelamento,
         Items                      = v.Items.Select(i => new VendaAvulsaItemDto
         {
+            ProductId        = i.ProductId,
             ProductName      = i.ProductName,
             ProductCategory  = i.ProductCategory,
             Quantity         = i.Quantity,
