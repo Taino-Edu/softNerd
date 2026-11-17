@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-259 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+260 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -34,7 +34,7 @@
 - [Push](#push) (3)
 - [Relatorios](#relatorios) (2)
 - [RelatoriosBanco](#relatoriosbanco) (5)
-- [Reservation](#reservation) (18)
+- [Reservation](#reservation) (19)
 - [SiteConfig](#siteconfig) (2)
 - [Tcg](#tcg) (8)
 - [Timer](#timer) (4)
@@ -302,11 +302,11 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/notifications` | logado | `List` (36) | `notificationsApi.list` | `components/cliente/NotificationBell.tsx` |
-| PATCH | `/api/notifications/read-all` | logado | `MarkAllRead` (82) | `notificationsApi.markAllRead` | `components/cliente/NotificationBell.tsx` |
-| GET | `/api/notifications/unread-count` | logado | `UnreadCount` (56) | `notificationsApi.unreadCount` | `app/admin/dashboard/page.tsx`<br>`components/admin/Sidebar.tsx`<br>`components/cliente/NotificationBell.tsx` |
+| GET | `/api/notifications` | logado | `List` (36) | `notificationsApi.list` | `components/admin/AvisosDaLoja.tsx`<br>`components/cliente/NotificationBell.tsx` |
+| PATCH | `/api/notifications/read-all` | logado | `MarkAllRead` (82) | `notificationsApi.markAllRead` | `components/admin/AvisosDaLoja.tsx`<br>`components/cliente/NotificationBell.tsx` |
+| GET | `/api/notifications/unread-count` | logado | `UnreadCount` (56) | `notificationsApi.unreadCount` | `app/admin/dashboard/page.tsx`<br>`components/admin/AvisosDaLoja.tsx`<br>`components/admin/Sidebar.tsx`<br>`components/cliente/NotificationBell.tsx` |
 | DELETE | `/api/notifications/{id:guid}` | logado | `Delete` (95) | `notificationsApi.remove` | `components/cliente/NotificationBell.tsx` |
-| PATCH | `/api/notifications/{id:guid}/read` | logado | `MarkRead` (68) | `notificationsApi.markRead` | `components/cliente/NotificationBell.tsx` |
+| PATCH | `/api/notifications/{id:guid}/read` | logado | `MarkRead` (68) | `notificationsApi.markRead` | `components/admin/AvisosDaLoja.tsx`<br>`components/cliente/NotificationBell.tsx` |
 
 ## PagamentoCrediario
 
@@ -414,23 +414,24 @@
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
 | GET | `/api/products/waitlist/pre-venda/pendentes` | AdminOnly | `CountPreVendaPendentes` (31) | `reservationApi.filaPendentesCount` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/reservations` | AdminOnly | `GetAll` (71) | `reservationApi.list` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
-| POST | `/api/reservations` | logado | `Create` (42) | `reservationApi.create` | `app/cliente/page.tsx` |
-| POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (60) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
-| POST | `/api/reservations/cart` | logado | `CreateCart` (48) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (101) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/juntar` | AdminOnly | `JuntarPedidos` (113) | `reservationApi.juntar` | `app/admin/reservas/page.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pagamento` | AdminOnly | `RegistrarPagamentoGrupo` (107) | `reservationApi.registrarPagamento` | `app/admin/reservas/page.tsx` |
-| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (129) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (138) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (119) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (124) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
-| GET | `/api/reservations/mine` | logado | `GetMine` (37) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| POST | `/api/reservations/mine/juntar` | logado | `JuntarMeus` (54) | `reservationApi.juntarMeus` | `app/cliente/perfil/page.tsx` |
-| DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (66) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
-| POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (95) | — | — |
-| PUT | `/api/reservations/{id:guid}/quantity` | AdminOnly | `UpdateQuantity` (89) | `reservationApi.updateQuantity` | `app/admin/reservas/page.tsx` |
-| PUT | `/api/reservations/{id:guid}/status` | AdminOnly | `UpdateStatus` (83) | `reservationApi.updateStatus` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
+| GET | `/api/reservations` | AdminOnly | `GetAll` (77) | `reservationApi.list` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
+| POST | `/api/reservations` | logado | `Create` (48) | `reservationApi.create` | `app/cliente/page.tsx` |
+| GET | `/api/reservations/abertos/contagem` | AdminOnly | `ContarAbertos` (37) | `reservationApi.abertosCount` | `components/admin/Sidebar.tsx` |
+| POST | `/api/reservations/admin-create` | AdminOnly | `AdminCreate` (66) | `reservationApi.adminCreate` | `app/admin/reservas/page.tsx` |
+| POST | `/api/reservations/cart` | logado | `CreateCart` (54) | `reservationApi.createCart` | `app/cliente/reserva/carrinho/page.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/homologar` | AdminOnly | `HomologarGrupo` (107) | `reservationApi.homologarGrupo` | `app/admin/reservas/page.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/juntar` | AdminOnly | `JuntarPedidos` (119) | `reservationApi.juntar` | `app/admin/reservas/page.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pagamento` | AdminOnly | `RegistrarPagamentoGrupo` (113) | `reservationApi.registrarPagamento` | `app/admin/reservas/page.tsx` |
+| DELETE | `/api/reservations/group/{groupId:guid}/pix` | AdminOnly | `CancelarPixReserva` (135) | `reservationApi.cancelarPix`<br>`reservationApi.gerarPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/group/{groupId:guid}/pix` | logado | `GetPixReserva` (144) | `reservationApi.gerarPix`<br>`reservationApi.getPix` | `app/admin/reservas/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix` | logado | `GerarPixReserva` (125) | `reservationApi.gerarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| POST | `/api/reservations/group/{groupId:guid}/pix/verificar` | logado | `VerificarPixReserva` (130) | `reservationApi.verificarPix` | `app/cliente/reserva/carrinho/page.tsx`<br>`components/PixReservaModal.tsx` |
+| GET | `/api/reservations/mine` | logado | `GetMine` (43) | `reservationApi.mine` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| POST | `/api/reservations/mine/juntar` | logado | `JuntarMeus` (60) | `reservationApi.juntarMeus` | `app/cliente/perfil/page.tsx` |
+| DELETE | `/api/reservations/{id:guid}` | logado | `Cancel` (72) | `reservationApi.cancel` | `app/admin/reservas/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
+| POST | `/api/reservations/{id:guid}/homologar` | AdminOnly | `Homologar` (101) | — | — |
+| PUT | `/api/reservations/{id:guid}/quantity` | AdminOnly | `UpdateQuantity` (95) | `reservationApi.updateQuantity` | `app/admin/reservas/page.tsx` |
+| PUT | `/api/reservations/{id:guid}/status` | AdminOnly | `UpdateStatus` (89) | `reservationApi.updateStatus` | `app/admin/estoque/page.tsx`<br>`app/admin/reservas/page.tsx` |
 
 ## SiteConfig
 

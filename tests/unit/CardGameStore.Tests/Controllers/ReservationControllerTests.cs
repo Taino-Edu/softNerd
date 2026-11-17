@@ -1301,6 +1301,110 @@ public class ReservationControllerTests
         (await db.Notifications.AnyAsync(n => n.UserId == cliente.Id)).Should().BeFalse("o aviso é da loja, não do cliente");
     }
 
+    // ── Avisos pra equipe (v1.88.0, chave avisos-pra-equipe): o operador do balcão só sabia abrindo a tela ──
+
+    private static async Task<User> SeedOperadorAsync(AppDbContext db, string nome, params string[] permissoes)
+    {
+        var perfil = new Perfil { Nome = $"Perfil {nome}", PermissoesJson = System.Text.Json.JsonSerializer.Serialize(permissoes) };
+        db.Perfis.Add(perfil);
+        var op = await SeedUserAsync(db, nome);
+        op.Role = UserRole.Operator;
+        op.PerfilId = perfil.Id;
+        await db.SaveChangesAsync();
+        return op;
+    }
+
+    [Fact]
+    public async Task Carrinho_AvisaOOperadorComPreVendas_ENaoOSemPermissao()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db, "Priscila");
+        var admin = await SeedUserAsync(db, "Maikon");
+        admin.Role = UserRole.Admin; await db.SaveChangesAsync();
+        var balcao = await SeedOperadorAsync(db, "Balcão", Permissao.Estoque, Permissao.Pdv);
+        var caixa  = await SeedOperadorAsync(db, "Caixa", Permissao.Pdv);
+        var produto = await SeedProductAsync(db, stock: 3);
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: Chaves(db));
+
+        Corpo(await controller.CreateCart(Carrinho(produto)));
+
+        (await db.Notifications.CountAsync(n => n.UserId == admin.Id)).Should().Be(1);
+        (await db.Notifications.CountAsync(n => n.UserId == balcao.Id)).Should().Be(1, "quem tem Pré-vendas recebe o pedido");
+        (await db.Notifications.AnyAsync(n => n.UserId == caixa.Id)).Should().BeFalse("sem Pré-vendas, o pedido não é dele");
+    }
+
+    [Fact]
+    public async Task Carrinho_ChaveDesligada_SoOsAdminsSaoAvisados()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db, "Priscila");
+        var admin = await SeedUserAsync(db, "Maikon");
+        admin.Role = UserRole.Admin; await db.SaveChangesAsync();
+        var balcao = await SeedOperadorAsync(db, "Balcão", Permissao.Estoque);
+        var produto = await SeedProductAsync(db, stock: 3);
+        var chaves = Chaves(db);
+        await chaves.DefinirAsync(Funcionalidades.AvisosPraEquipe, false, admin.Id);
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: chaves);
+
+        Corpo(await controller.CreateCart(Carrinho(produto)));
+
+        (await db.Notifications.CountAsync(n => n.UserId == admin.Id)).Should().Be(1);
+        (await db.Notifications.AnyAsync(n => n.UserId == balcao.Id)).Should().BeFalse("jeito antigo: aviso só pra admin");
+    }
+
+    [Fact]
+    public async Task ContarAbertos_ContaPedidoNaoItem_ESoOQueFaltaCobrarOuEntregar()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db, "Priscila");
+        var a = await SeedProductAsync(db, stock: 5);
+        var b = await SeedProductAsync(db, stock: 5);
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: Chaves(db));
+        var pedido = new CreateReservationCartRequest
+        {
+            Items = [new CreateReservationCartItem { ProductId = a.Id, Quantity = 1 }, new CreateReservationCartItem { ProductId = b.Id, Quantity = 1 }],
+            PaymentMethod = "retirada",
+        };
+        Corpo(await controller.CreateCart(pedido));
+        db.ProductReservations.Add(new ProductReservation
+        {
+            ReservationGroupId = Guid.NewGuid(), UserId = cliente.Id, ProductId = a.Id,
+            Kind = "pre_venda", Status = "fulfilled",
+        });
+        await db.SaveChangesAsync();
+
+        var corpo = Corpo(await controller.ContarAbertos());
+
+        Campo<int>(corpo, "count").Should().Be(1, "o carrinho de 2 itens é um pedido só e o retirado não conta");
+    }
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task Carrinho_SoFilaDeEspera_AvisaALojaSoComAChaveLigada(bool ligada, int avisos)
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db, "Priscila");
+        var admin = await SeedUserAsync(db, "Maikon");
+        admin.Role = UserRole.Admin; await db.SaveChangesAsync();
+        var semEstoque = await SeedProductAsync(db, stock: 0);
+        semEstoque.IsPreVenda = true; await db.SaveChangesAsync(); // fila só existe em produto de pré-venda
+        var chaves = Chaves(db);
+        await chaves.DefinirAsync(Funcionalidades.AvisosPraEquipe, ligada, admin.Id);
+        var controller = CreateController(db, loggedUserId: cliente.Id, funcionalidades: chaves);
+        var pedido = new CreateReservationCartRequest
+        {
+            Items = [new CreateReservationCartItem { ProductId = semEstoque.Id, Quantity = 1 }],
+            PaymentMethod = "pix", AllowFilaFallback = true,
+        };
+
+        Corpo(await controller.CreateCart(pedido));
+
+        var recebidos = await db.Notifications.AsNoTracking().Where(n => n.UserId == admin.Id).ToListAsync();
+        recebidos.Should().HaveCount(avisos);
+        if (ligada) recebidos[0].Title.Should().Be("Fila de espera: Priscila");
+    }
+
     // ── Tela de pedidos lenta (29/10): o status de cada pedido ia ao Inter, até de Pix já vencido ──
 
     [Theory]

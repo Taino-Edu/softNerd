@@ -387,3 +387,11 @@ html.light .painel-novo .btn-primary :is(span, svg) {
   .pokemon-pula, .pokemon-coracao { animation: none; }
   .pokemon-coracao { display: none; }
 }
+
+/* ── Menu lateral do painel com rolagem própria (v1.88.0) ──
+   O menu fica preso na altura da tela e rola sozinho; a barra é fina e clara sobre o azul.
+   O menu é azul nos dois temas, então não precisa de versão html.light. */
+.menu-rolagem { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.35) transparent; overscroll-behavior: contain; }
+.menu-rolagem::-webkit-scrollbar { width: 6px; }
+.menu-rolagem::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 9999px; }
+.menu-rolagem::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.55); }

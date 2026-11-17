@@ -666,8 +666,31 @@ public class PixReconciliationServiceTests
         var reserva = await db.ProductReservations.AsNoTracking().SingleAsync();
         reserva.ExpiresAt.Should().BeNull();
         reserva.VendaAvulsaId.Should().BeNull("o Homologar continua podendo registrar a venda");
-        (await db.Notifications.Where(n => n.UserId == admin.Id).Select(n => n.Title).SingleAsync())
-            .Should().Contain("sem venda");
+        (await db.Notifications.Where(n => n.UserId == admin.Id).Select(n => n.Title).ToListAsync())
+            .Should().Contain(t => t.Contains("sem venda"));
+    }
+
+    // ── v1.88.0 (chave avisos-pra-equipe): Pix de pedido do site pago avisa a loja ──
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task Reconciliar_PedidoPago_AvisaALojaSoComAChaveLigada(bool ligada, int avisos)
+    {
+        var db = CreateDb(nameof(Reconciliar_PedidoPago_AvisaALojaSoComAChaveLigada) + ligada);
+        var (_, pix, admin) = await SeedPedidoNaoPagoAsync(db);
+        db.FuncionalidadesEstado.Add(new FuncionalidadeEstado { Codigo = Funcionalidades.AvisosPraEquipe, Ligada = ligada });
+        await db.SaveChangesAsync();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+
+        await service.ReconciliarAsync(pix);
+
+        var titulos = await db.Notifications.Where(n => n.UserId == admin.Id && n.Title.StartsWith("Pix pago")).Select(n => n.Title).ToListAsync();
+        titulos.Should().HaveCount(avisos);
+
+        // Robô e tela juntos: a segunda passada não repete o aviso
+        await service.ReconciliarAsync(pix);
+        (await db.Notifications.CountAsync(n => n.UserId == admin.Id && n.Title.StartsWith("Pix pago"))).Should().Be(avisos);
     }
 
     [Fact]
