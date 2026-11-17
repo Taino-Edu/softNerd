@@ -2020,7 +2020,7 @@ export default function FinanceiroPage() {
                   <h3 className="text-sm font-semibold text-gray-300">Meta de Faturamento</h3>
                 </div>
                 {/* Seletor margem alvo */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-xs text-gray-500">Margem alvo:</span>
                   {[30, 40, 50, 60].map(pct => (
                     <button key={pct} onClick={() => setTargetPct(pct)}
@@ -2093,7 +2093,8 @@ export default function FinanceiroPage() {
                     </div>
                     <div className="flex justify-between text-[10px] text-gray-500">
                       <span>R$ 0</span>
-                      {metaPct < 90 && <span style={{ marginLeft: `${Math.max(0, metaPct - 5)}%` }}>{fmt(d.receita)}</span>}
+                      {/* No celular não cabe entre as pontas (empurrava a régua pra fora do cartão); o valor já está acima */}
+                      {metaPct < 90 && <span className="hidden sm:inline" style={{ marginLeft: `${Math.max(0, metaPct - 5)}%` }}>{fmt(d.receita)}</span>}
                       <span>{fmt(metaFinal)}</span>
                     </div>
                   </div>
@@ -2174,12 +2175,12 @@ export default function FinanceiroPage() {
 
                 {/* Filtro por origem */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  <div className="flex rounded-lg overflow-hidden border border-surface-500 text-xs font-semibold">
+                  <div className="flex max-w-full overflow-x-auto scrollbar-none rounded-lg border border-surface-500 text-xs font-semibold">
                     {(['Todos', 'Comanda', 'PDV', 'Site', 'PréVenda'] as const).map(o => (
                       <button
                         key={o}
                         onClick={() => setTopOrigemFilter(o)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${o !== 'Todos' ? 'border-l border-surface-500' : ''} ${
+                        className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 transition-colors ${o !== 'Todos' ? 'border-l border-surface-500' : ''} ${
                           topOrigemFilter === o ? 'bg-brand-500/20 text-brand-300' : 'text-gray-400 hover:text-gray-200'
                         }`}
                       >

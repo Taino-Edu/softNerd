@@ -1796,15 +1796,16 @@ export default function VendaAvulsaPage() {
         />
       )}
 
-      {/* Mobile FAB — Começar Venda */}
+      {/* Mobile — Começar Venda: pílula no meio do rodapé. No canto direito ela ficava embaixo da mão do
+          VLibras e do botão do assistente. */}
       {tab === 'venda' && (
         <button
           onClick={() => setWizard(true)}
           disabled={loading}
-          className="md:hidden fixed bottom-6 right-4 z-30 w-14 h-14 rounded-full bg-brand-600 hover:bg-brand-500 active:scale-95 flex items-center justify-center shadow-xl shadow-brand-600/40 disabled:opacity-50 transition-all"
+          className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-30 h-12 pl-4 pr-5 rounded-full bg-brand-600 hover:bg-brand-500 active:scale-95 flex items-center gap-2 text-white text-sm font-semibold whitespace-nowrap shadow-xl shadow-brand-600/40 disabled:opacity-50 transition-all"
           aria-label="Começar venda"
         >
-          <Plus className="w-6 h-6 text-white" />
+          <Plus className="w-5 h-5" /> Começar venda
         </button>
       )}
 
