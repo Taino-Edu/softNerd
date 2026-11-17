@@ -527,7 +527,7 @@ export default function RelatoriosPage() {
                 </div>
 
                 {/* Controle + botão */}
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-surface-500">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-surface-500">
                   <div>{r.control ?? <span />}</div>
                   <button
                     onClick={r.onGenerate}

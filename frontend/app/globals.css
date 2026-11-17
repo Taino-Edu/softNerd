@@ -99,7 +99,9 @@
     from { opacity: 0; transform: translateY(10px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .animate-slide-up { animation: slideUp 0.25s ease-out forwards; }
+  /* backwards, não forwards: com o transform preso no fim da animação, o que é `fixed` lá dentro (o "+"
+     do Frente de Caixa no celular) passava a se posicionar pela página e não pela tela */
+  .animate-slide-up { animation: slideUp 0.25s ease-out backwards; }
 
   /* Flash de novo item no dashboard */
   @keyframes flash-new {
@@ -397,3 +399,8 @@ html.light .painel-novo .btn-primary :is(span, svg) {
 .menu-rolagem::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.55); }
 /* Pesquisa do menu (v1.89.0): texto claro sobre o azul nos dois temas (vence o placeholder cinza do html.light) */
 .menu-busca::placeholder { color: rgba(255,255,255,0.6) !important; }
+
+/* Selo "Alarme sem som" no celular: faixa de 36px logo abaixo da barra do painel (AvisoAlarme). */
+@media (max-width: 767px) {
+  body.com-aviso-alarme .admin-main { padding-top: calc(3.5rem + 2.25rem); }
+}

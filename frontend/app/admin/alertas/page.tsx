@@ -101,24 +101,24 @@ export default function AlertasPage() {
       )}
 
       {/* ── Filtros ── */}
-      <div className="card !p-3 flex flex-col sm:flex-row gap-2">
+      <div className="card !p-3 flex flex-col lg:flex-row gap-2">
         <label className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar: cliente, produto, tela, Pix…"
             className="input w-full pl-9" aria-label="Buscar nos alertas" />
         </label>
-        <select value={status} onChange={e => setStatus(e.target.value as Status)} className="input sm:w-36" aria-label="Situação">
+        <select value={status} onChange={e => setStatus(e.target.value as Status)} className="input lg:w-36" aria-label="Situação">
           <option value="abertos">Abertos</option>
           <option value="resolvidos">Resolvidos</option>
           <option value="todos">Todos</option>
         </select>
-        <select value={gravidade} onChange={e => setGravidade(e.target.value)} className="input sm:w-32" aria-label="Gravidade">
+        <select value={gravidade} onChange={e => setGravidade(e.target.value)} className="input lg:w-32" aria-label="Gravidade">
           <option value="">Gravidade</option>
           <option value="critico">Crítico</option>
           <option value="aviso">Aviso</option>
           <option value="info">Info</option>
         </select>
-        <select value={codigo} onChange={e => setCodigo(e.target.value)} className="input sm:w-56" aria-label="Tipo de alerta">
+        <select value={codigo} onChange={e => setCodigo(e.target.value)} className="input lg:w-56" aria-label="Tipo de alerta">
           <option value="">Todos os tipos</option>
           {resumo?.verificacoes.map(v => <option key={v.codigo} value={v.codigo}>{v.nome}</option>)}
         </select>

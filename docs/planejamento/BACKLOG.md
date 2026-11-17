@@ -5,8 +5,8 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 ficou mora no CHANGELOG e no código. "Feito" guarda só o mês corrente: na virada do mês as linhas
 vão pro [HISTORICO.md](HISTORICO.md).
 
-Atualizado em **17/11/2026** — produção na **v1.88.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
-A v1.89.0 (botão direito no sininho e pesquisa no menu) está na branch `feat/sininho-e-busca`.
+Atualizado em **17/11/2026** — produção na **v1.89.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
+A v1.89.1 (telas que cabem no celular) está na branch `feat/visual-responsivo`.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -16,7 +16,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Sininho com botão direito e pesquisa no menu** | v1.89.0 | Pedido de 17/11 depois da v1.88.0: menu de botão direito no aviso (Ir até, Marcar como lida, Ignorar este tipo, Excluir), "Ignorar" silencia o TIPO (começo do título antes dos dois-pontos) em `notifications.silenciados` das preferências — o servidor grava já lido e pula push/e-mail (`EquipeDaLoja.QuemOuve`), o front lê os de fora da equipe sem avisar; pesquisa no menu (Ctrl+K e "/", apelidos em `busca` de cada item) e o grupo da tela atual passa a fechar. Tudo atrás das chaves da v1.88.0. Falta: o ok do Taino na tela, PR e deploy |
+| **Telas que cabem no celular** | v1.89.1 | Pedido de 17/11 ("analisar o resto, melhorar o visual e ver se está responsivo"): varredura de todas as telas em 375px e 768px. Vazavam Cartas, Anúncios, LGPD, Termos/Privacidade (`LegalActions`) e Financeiro; a `TabelaTorneio` grande cortava PTS. Botões flutuantes: assistente em `FOLGA_INFERIOR`, "Começar venda" do PDV no meio do rodapé, `.animate-slide-up` com `backwards` (o `forwards` prendia o transform e o `fixed` de dentro seguia a página), selo do alarme abaixo da barra no celular. Falta: o ok do Taino na tela, PR e deploy |
+| **Sininho com botão direito e pesquisa no menu** | v1.89.0 | Em produção desde 17/11 (PR #173). Menu de botão direito no aviso (Ir até, Marcar como lida, Ignorar este tipo, Excluir); "Ignorar" silencia o TIPO em `notifications.silenciados` (servidor grava já lido e o `PushService` pula quem silenciou); pesquisa no menu (Ctrl+K e "/") e o grupo da tela atual fecha. Atrás das chaves da v1.88.0 |
 | **Menu do painel e avisos pra equipe** | v1.88.0 | Em produção desde 17/11 (PR #172). Chave `menu-lateral-enxuto`: grupos dobráveis e rodapé numa linha; menu `sticky h-screen` com `.menu-rolagem` (fora da chave). Chave `avisos-pra-equipe`: `EquipeDaLoja`, avisos de fila de espera e Pix de pedido pago, sininho `AvisosDaLoja` e contagem em Pré-vendas. Falta o teste da loja com login de operador |
 | **Liguinha e comanda juntas** | v1.87.1 | Em produção desde 17/11 (PR #171): atalho Comanda no torneio, "Abandonar torneio", "Voltar pro torneio" (jogador e organizador). Falta o Maikon testar numa liguinha com comanda aberta (vai testar 17/11) |
 | **Home que vende (fase 2)** | v1.87.0 | Em produção desde 16/11 (PR #170), falta o Maikon aprovar (Pauta 2). Chave `home-que-vende`: categorias + vantagens abaixo do topo, produtos antes de avisos/torneios, torneios somem sem evento, "+ Sacola" no `CartaoProduto` (`onAdd`) com `components/loja/AvisoSacola`; busca de Produtos sem acento (`/produtos?busca=`). **Pedido do Maikon em 16/11** (mesma chave): topo no modelo dele (título "Prepare seu próximo grande jogo!", botões Explorar produtos / Ver campeonatos, mascote = logo de Personalizar Site à direita, só depois do site-config carregar; sem a busca no topo), cabeçalho em 3 tons (faixa no `MenuLoja`), catálogo em 3 colunas com `CartaoProduto grande` → `CartaoCatalogo` (modelo de catálogo dele: tom pelo selo, `rotuloCategoria`, descrição, "Adicionar"; sem estrelas/favoritos, que não existem), Produtos com filtros + busca numa linha e grade única, página do produto com foto maior e "Ampliar", foto voando pra Sacola (`lib/voarParaSacola.ts`, `data-sacola` no `MenuLoja`). Carrossel descartado por ele ("o site está simples e assertivo"). Fase 3 na fila |
