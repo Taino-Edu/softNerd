@@ -50,6 +50,9 @@ public class PixReconciliationService : IPixReconciliationService
     /// não foi confirmado.</summary>
     private sealed record AvisoPendente(Guid UserId, string Titulo, string Corpo, string Link);
 
+    /// <summary>Push pra equipe da loja que também só sai depois do commit (pedido do site pago).</summary>
+    private sealed record AvisoDaEquipe(List<Guid> Ids, string Titulo, string Corpo);
+
     public async Task<PixReconciliationResult> ReconciliarAsync(PixCobranca pix, Guid? adminId = null)
     {
         // PagoEm preenchido = esta cobrança já foi baixada (tela ou robô) — não repete.
@@ -74,6 +77,7 @@ public class PixReconciliationService : IPixReconciliationService
 
         ComandaDto? comandaFechada = null;
         AvisoPendente? aviso = null;
+        AvisoDaEquipe? avisoEquipe = null;
         var baixaEfetuada = false;
 
         // Transação manual precisa rodar dentro da execution strategy
@@ -116,7 +120,7 @@ public class PixReconciliationService : IPixReconciliationService
                     aviso = await BaixarCampeonatoAsync(pix);
                     break;
                 case PixCobrancaOrigem.Reserva:
-                    await BaixarReservaAsync(pix);
+                    avisoEquipe = await BaixarReservaAsync(pix);
                     break;
                 // VendaAvulsa existe no enum mas nenhum fluxo gera cobrança com ela — nada a baixar.
                 case PixCobrancaOrigem.VendaAvulsa:
@@ -141,6 +145,12 @@ public class PixReconciliationService : IPixReconciliationService
         {
             try { await _pedidoVenda.RegistrarVendaDoPagamentoAsync(pix); }
             catch (Exception ex) { _logger.LogError(ex, "Venda do pedido não registrada após o Pix {TxId}.", pix.TxId); }
+        }
+
+        if (avisoEquipe is not null)
+        {
+            try { await _push.SendToManyAsync(avisoEquipe.Ids, avisoEquipe.Titulo, avisoEquipe.Corpo, "/admin/reservas"); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Push do pedido pago não saiu pra loja (tx {TxId}).", pix.TxId); }
         }
 
         if (aviso is not null)
@@ -365,9 +375,9 @@ public class PixReconciliationService : IPixReconciliationService
     //     no lançamento financeiro (o valor cobrado incluía esse item).
     // Cobranças antigas (sem snapshot, null) caem no comportamento legado: quitar
     // o grupo inteiro — é o que a tela/robô já faziam antes desta vinculação.
-    private async Task BaixarReservaAsync(PixCobranca pix)
+    private async Task<AvisoDaEquipe?> BaixarReservaAsync(PixCobranca pix)
     {
-        if (pix.ReservationGroupId is null) return;
+        if (pix.ReservationGroupId is null) return null;
         var groupId = pix.ReservationGroupId.Value;
 
         HashSet<Guid>? snapshot = null;
@@ -388,11 +398,13 @@ public class PixReconciliationService : IPixReconciliationService
         var itens = await _db.ProductReservations
             .Where(r => r.ReservationGroupId == groupId && r.Kind == "pre_venda" && r.Status == "active")
             .ToListAsync();
+        var quitados = 0;
         foreach (var r in itens)
         {
             if (snapshot is not null && !snapshot.Contains(r.Id)) continue;
             r.ExpiresAt     = null;
             r.PaymentMethod = "pix";
+            quitados++;
         }
 
         // Itens do snapshot cancelados entre a geração e o pagamento: o cliente pagou
@@ -458,6 +470,32 @@ public class PixReconciliationService : IPixReconciliationService
                 Notes       = notas,
             });
         }
+
+        return quitados > 0 ? await AvisarEquipePedidoPagoAsync(pix, groupId) : null;
+    }
+
+    /// <summary>
+    /// Chave "avisos-pra-equipe": Pix de pedido do site caiu → sininho pra loja separar o pedido
+    /// (antes só o cliente sabia; a loja descobria abrindo Pré-vendas ou pelo e-mail do Inter).
+    /// Gravado na transação da baixa; o push sai depois do commit.
+    /// </summary>
+    private async Task<AvisoDaEquipe?> AvisarEquipePedidoPagoAsync(PixCobranca pix, Guid groupId)
+    {
+        if (!await EquipeDaLoja.AvisosPraEquipeAsync(_db)) return null;
+        var equipe = await EquipeDaLoja.QuemRecebeAsync(_db);
+        if (equipe.Count == 0) return null;
+
+        var cliente = await _db.ProductReservations.AsNoTracking()
+            .Where(r => r.ReservationGroupId == groupId)
+            .Select(r => r.User!.Name)
+            .FirstOrDefaultAsync();
+        var quem   = string.IsNullOrWhiteSpace(cliente) ? "Um cliente" : cliente;
+        var valor  = (pix.ValorEmCentavos / 100m).ToString("C", new System.Globalization.CultureInfo("pt-BR"));
+        var titulo = $"Pix pago: pedido de {quem}";
+        var corpo  = $"{quem} pagou {valor} no Pix pelo site. Separe o pedido: ele aguarda retirada em Pré-vendas.";
+
+        EquipeDaLoja.Avisar(_db, equipe, titulo, corpo, "/admin/reservas");
+        return new AvisoDaEquipe(equipe.Select(m => m.Id).ToList(), titulo, corpo);
     }
 
     /// <summary>Tira do estoque de novo o item de um pedido reativado (mesmo decremento
@@ -487,9 +525,9 @@ public class PixReconciliationService : IPixReconciliationService
         var corpo = $"A comanda de {quem} recebeu {pago} no Pix, mas mudou depois do QR ({resto}). " +
                     "Ela continua aberta: feche registrando o Pix já recebido e o restante.";
 
-        var admins = await _db.Users.Where(u => u.Role == UserRole.Admin && u.IsActive).Select(u => u.Id).ToListAsync();
-        foreach (var id in admins)
-            _db.Notifications.Add(new Notification { UserId = id, Title = "Pix de comanda: conferir o fechamento", Body = corpo, Link = "/admin/dashboard" });
+        // Chave "avisos-pra-equipe": também quem cuida de comandas (desligada, só admins)
+        EquipeDaLoja.Avisar(_db, await EquipeDaLoja.QuemRecebeAsync(_db, Permissao.Comandas),
+            "Pix de comanda: conferir o fechamento", corpo, "/admin/dashboard");
     }
 
     /// <summary>Sininho pros admins: Pix caiu num pedido já cancelado (reativado ou reembolso pendente).</summary>
@@ -505,11 +543,6 @@ public class PixReconciliationService : IPixReconciliationService
             : ("Pix pago de pedido cancelado: pedido reativado",
                $"{quem} pagou {valor} num pedido que estava cancelado. O pedido voltou como pago e aguarda retirada.");
 
-        var admins = await _db.Users
-            .Where(u => u.Role == UserRole.Admin && u.IsActive)
-            .Select(u => u.Id)
-            .ToListAsync();
-        foreach (var id in admins)
-            _db.Notifications.Add(new Notification { UserId = id, Title = titulo, Body = corpo, Link = "/admin/reservas" });
+        EquipeDaLoja.Avisar(_db, await EquipeDaLoja.QuemRecebeAsync(_db), titulo, corpo, "/admin/reservas");
     }
 }

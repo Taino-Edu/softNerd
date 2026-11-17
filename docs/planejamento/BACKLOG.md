@@ -5,8 +5,8 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 ficou mora no CHANGELOG e no código. "Feito" guarda só o mês corrente: na virada do mês as linhas
 vão pro [HISTORICO.md](HISTORICO.md).
 
-Atualizado em **17/11/2026** — produção na **v1.87.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
-A v1.87.1 (Liguinha e comanda juntas) está na branch `fix/liguinha-sair-e-voltar`.
+Atualizado em **17/11/2026** — produção na **v1.87.1** (nginx 1.30.6, Node 24.22.1, .NET 10).
+A v1.88.0 (menu do painel e avisos pra equipe) está na branch `feat/menu-e-avisos`.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -16,7 +16,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Liguinha e comanda juntas** | v1.87.1 | Pedido do Maikon em 17/11 ("na hora que sai, não consegue entrar de novo"; comanda aberta + campeonato "não fica nas duas"). Causa: o "Desistir" da tela do torneio parecia "sair da tela" e travava a pessoa fora (`DesistiuNaRodada` recusava código, check-in e deck; o organizador não tinha como desfazer). Agora: atalho Comanda no topo de `/liga/jogar`, "Abandonar torneio", `POST /api/torneios/{id}/voltar` e `DELETE …/participantes/{pid}/desistencia`, código/"Estou aqui" também desfazem a saída. Falta: PR, deploy e o Maikon confirmar |
+| **Menu do painel e avisos pra equipe** | v1.88.0 | Pedido de 17/11: menu lateral "bagunçado" e sem rolagem própria; operador só sabia de pedido/reserva do site abrindo a tela (os avisos iam só pro Admin e o painel não tinha sininho). Chave `menu-lateral-enxuto`: grupos dobráveis (`admin-menu-grupos` no localStorage) e rodapé numa linha; menu `sticky h-screen` com `.menu-rolagem` (fora da chave). Chave `avisos-pra-equipe`: `EquipeDaLoja.QuemRecebeAsync` (admins + operadores com a permissão), aviso novo de fila de espera e de Pix de pedido pago, `components/admin/AvisosDaLoja.tsx` (sininho + toast), `GET /api/reservations/abertos/contagem` no item Pré-vendas. Falta: o ok do Taino na tela, PR e deploy |
+| **Liguinha e comanda juntas** | v1.87.1 | Em produção desde 17/11 (PR #171): atalho Comanda no torneio, "Abandonar torneio", "Voltar pro torneio" (jogador e organizador). Falta o Maikon testar numa liguinha com comanda aberta (vai testar 17/11) |
 | **Home que vende (fase 2)** | v1.87.0 | Em produção desde 16/11 (PR #170), falta o Maikon aprovar (Pauta 2). Chave `home-que-vende`: categorias + vantagens abaixo do topo, produtos antes de avisos/torneios, torneios somem sem evento, "+ Sacola" no `CartaoProduto` (`onAdd`) com `components/loja/AvisoSacola`; busca de Produtos sem acento (`/produtos?busca=`). **Pedido do Maikon em 16/11** (mesma chave): topo no modelo dele (título "Prepare seu próximo grande jogo!", botões Explorar produtos / Ver campeonatos, mascote = logo de Personalizar Site à direita, só depois do site-config carregar; sem a busca no topo), cabeçalho em 3 tons (faixa no `MenuLoja`), catálogo em 3 colunas com `CartaoProduto grande` → `CartaoCatalogo` (modelo de catálogo dele: tom pelo selo, `rotuloCategoria`, descrição, "Adicionar"; sem estrelas/favoritos, que não existem), Produtos com filtros + busca numa linha e grade única, página do produto com foto maior e "Ampliar", foto voando pra Sacola (`lib/voarParaSacola.ts`, `data-sacola` no `MenuLoja`). Carrossel descartado por ele ("o site está simples e assertivo"). Fase 3 na fila |
 | **App Android da Liga (Flutter)** — PIM IV | — | `mobile/`: login, meus torneios, mesa, ranking da Liga; identidade visual da loja; APK de release apontando pra produção (#166). Entrega do PIM era 14/11: **confirmar se foi entregue** e passar pro Feito. O que sobrou está na fila (Loja e app) |
 

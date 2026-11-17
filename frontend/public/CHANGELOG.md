@@ -1,5 +1,17 @@
 # Changelog — Santuário Nerd
 
+## [v1.88.0] — 2026-11-17
+
+### Menu do painel mais prático e avisos de pedido pra equipe (duas chaves novas, ligadas)
+- **Menu com rolagem própria:** no computador o menu lateral fica preso na altura da tela e rola sozinho, com uma barra fina — antes ele esticava a página e o Sair ficava lá embaixo
+- **Grupos que abrem e fecham** (chave `menu-lateral-enxuto`): Catálogo, Clientes, Financeiro, Eventos e os outros abrem no título; fica aberto o "Dia a dia" e o grupo da tela atual, e o que você abrir fica lembrado no aparelho
+- **Rodapé numa linha:** usuário, Ver Loja, tema e Sair cabem numa linha só, sobrando espaço pros itens
+- **Sininho no painel** (chave `avisos-pra-equipe`): no topo do menu (e na barra do celular), com o número de avisos não lidos; ao clicar, a lista com "Marcar todos como lidos", e cada aviso leva à tela certa. A aba do navegador mostra "(2)" quando tem aviso novo
+- **Aviso na tela quando chega pedido:** com o painel aberto, pré-venda nova, cliente na fila de espera e Pix pago pelo site aparecem no canto da tela com "Abrir"
+- **Operador também recebe:** os avisos de pedido e Pix do site, que iam só pro admin, agora vão também pra quem tem Pré-vendas no perfil (e o de Pix de comanda, pra quem tem Comandas)
+- **Novos avisos:** cliente que entra na fila de espera pelo site e Pix de pedido do site pago ("separe o pedido")
+- **Pré-vendas com número no menu:** quantos pedidos ainda falta cobrar ou entregar (um por pedido, não por item)
+
 ## [v1.87.1] — 2026-11-17
 
 ### Liguinha e comanda juntas (pedido do Maikon)

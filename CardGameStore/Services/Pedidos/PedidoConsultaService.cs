@@ -15,6 +15,9 @@ public interface IPedidoConsultaService
     /// <summary>Quantos clientes esperam na fila de pré-venda (contador do painel).</summary>
     Task<int> ContarFilaPendenteAsync();
 
+    /// <summary>Pedidos de pré-venda em aberto (sem pagar ou pagos esperando retirada), um por pedido.</summary>
+    Task<int> ContarPedidosAbertosAsync();
+
     /// <summary>Pré-vendas e fila do cliente, do mais novo pro mais antigo.</summary>
     Task<List<PedidoItemDto>> DoClienteAsync(Guid userId);
 
@@ -29,6 +32,15 @@ public class PedidoConsultaService(AppDbContext db) : IPedidoConsultaService
         // de produto que já saiu de pré-venda ou foi desativado.
         db.ProductReservations
             .Where(r => r.Kind == "fila" && r.Status == "waiting" && r.Product!.IsPreVenda && r.Product!.IsActive)
+            .CountAsync();
+
+    // Número do item Pré-vendas no menu do painel (v1.88.0): quantos pedidos a loja ainda tem que
+    // cobrar ou entregar. Conta pedido (grupo), não item — o carrinho de 3 itens é um pedido só.
+    public Task<int> ContarPedidosAbertosAsync() =>
+        db.ProductReservations
+            .Where(r => r.Kind == "pre_venda" && r.Status == "active")
+            .Select(r => r.ReservationGroupId)
+            .Distinct()
             .CountAsync();
 
     public async Task<List<PedidoItemDto>> DoClienteAsync(Guid userId)

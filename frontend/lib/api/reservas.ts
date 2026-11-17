@@ -109,4 +109,6 @@ export const reservationApi = {
   updateQuantity: (id: string, quantity: number)   => api.put<AdminReservation>(`/api/reservations/${id}/quantity`, { quantity }),
   /** Contagem de pessoas na fila (dashboard admin). Rota legada mantida no backend. */
   filaPendentesCount: () => api.get<{ count: number }>('/api/products/waitlist/pre-venda/pendentes'),
+  /** Pedidos de pré-venda em aberto (sem pagar ou esperando retirada) — número do menu do painel. */
+  abertosCount: () => api.get<{ count: number }>('/api/reservations/abertos/contagem'),
 }
