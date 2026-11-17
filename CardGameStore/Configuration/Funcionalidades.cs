@@ -44,6 +44,8 @@ public static class Funcionalidades
     public const string RelatorioPorSubcategoria = "relatorio-por-subcategoria";
     public const string PixPedidoComDesconto = "pix-pedido-com-desconto";
     public const string HomeQueVende = "home-que-vende";
+    public const string AvisosPraEquipe = "avisos-pra-equipe";
+    public const string MenuLateralEnxuto = "menu-lateral-enxuto";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -142,6 +144,28 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.87.0",
             RevisarEm:  new DateOnly(2027, 5, 6)),
+
+        new(AvisosPraEquipe,
+            Nome:       "Avisos de pedidos e Pix do site pra equipe toda, com sininho no painel",
+            OQueMuda:   "Pré-venda nova, cliente que entra na fila de espera e Pix pago de pedido do site viram aviso no sininho do painel " +
+                        "(com o número de não lidos e um aviso na tela quando chega) — pros admins e também pros operadores cujo perfil " +
+                        "tem Pré-vendas. O item Pré-vendas do menu mostra quantos pedidos esperam.",
+            SeDesligar: "Volta como antes: os avisos de pedido vão só pros admins, fila de espera e Pix pago não avisam, e o painel não tem sininho " +
+                        "(só a bolinha em Mensageria).",
+            Padrao:     true,
+            Desde:      "v1.88.0",
+            RevisarEm:  new DateOnly(2027, 5, 17)),
+
+        new(MenuLateralEnxuto,
+            Nome:       "Menu do painel enxuto: grupos que abrem e fecham e rodapé compacto",
+            OQueMuda:   "No menu lateral do painel cada grupo (Catálogo, Clientes, Financeiro…) abre e fecha no título; fica aberto o " +
+                        "\"Dia a dia\" e o grupo da tela atual, e o que você abrir fica lembrado no aparelho. O rodapé (usuário, Ver Loja, tema, " +
+                        "Sair) vira uma linha só, sobrando espaço pros itens.",
+            SeDesligar: "Volta o menu de antes: todos os grupos sempre abertos e o rodapé com o cartão do usuário e os botões um embaixo do outro. " +
+                        "(A barra de rolagem própria do menu continua.)",
+            Padrao:     true,
+            Desde:      "v1.88.0",
+            RevisarEm:  new DateOnly(2027, 5, 17)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

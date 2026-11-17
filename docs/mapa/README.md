@@ -230,6 +230,10 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
 
 ### Notificações pro cliente/admin
 - Sininho: tabela `notifications` (`Models/PostgreSQL/Notification.cs`).
+- Aviso pra loja (pedido, fila, Pix do site): mande por `EquipeDaLoja.QuemRecebeAsync` + `EquipeDaLoja.Avisar`
+  (`Services/Implementations/EquipeDaLoja.cs`), nunca filtrando `Role == Admin` na mão — com a chave `avisos-pra-equipe`
+  ligada, operador com a permissão (padrão: Pré-vendas/`estoque`) recebe junto. No painel, o sininho é
+  `components/admin/AvisosDaLoja.tsx` (uma consulta só a cada 30 s, aviso de tela pro que chegou).
 - Push no celular: `IPushService`. E-mail: `IEmailService` (`EmailService.cs`).
 - WhatsApp: não há envio automático (o WhatsApp automático saiu em 26/10/2026, tag `arquivo/whatsapp-v1.72.0`); o admin manda pelo próprio celular com o texto pronto (`wa.me`).
 

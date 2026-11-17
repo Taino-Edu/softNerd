@@ -247,38 +247,50 @@ public class PedidoCriacaoService(
     }
 
     /// <summary>
-    /// Sininho, push e e-mail pros admins quando o CLIENTE faz uma pré-venda pelo site: o Maikon só
-    /// ficava sabendo quando o Pix caía (pelo e-mail do Inter). Melhor-esforço: o pedido já vale.
+    /// Sininho, push e e-mail pra loja quando o CLIENTE faz uma pré-venda pelo site: o Maikon só
+    /// ficava sabendo quando o Pix caía (pelo e-mail do Inter). Com a chave "avisos-pra-equipe",
+    /// os operadores com Pré-vendas recebem junto e quem entra na fila de espera também avisa
+    /// (sininho e push, sem e-mail). Melhor-esforço: o pedido já vale.
     /// </summary>
     private async Task AvisarLojaAsync(Guid userId, List<ProductReservation> criadas, bool juntou)
     {
         try
         {
             var preVendas = criadas.Where(r => r.Kind == "pre_venda").ToList();
-            if (preVendas.Count == 0) return;
+            var filas     = criadas.Where(r => r.Kind == "fila").ToList();
+            var equipeToda = await EquipeDaLoja.AvisosPraEquipeAsync(db);
+            if (preVendas.Count == 0 && (filas.Count == 0 || !equipeToda)) return;
 
             var cliente = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync();
             var quem    = string.IsNullOrWhiteSpace(cliente) ? "Um cliente" : cliente;
+
+            var equipe = await EquipeDaLoja.QuemRecebeAsync(db);
+            if (equipe.Count == 0) return;
+
+            if (preVendas.Count == 0)
+            {
+                var oQueFila = filas.Count == 1 ? $"\"{filas[0].Product?.Name}\"" : $"{filas.Count} itens";
+                var tituloFila = $"Fila de espera: {quem}";
+                var corpoFila  = $"{quem} entrou na fila de espera de {oQueFila} pelo site. Avise quando chegar.";
+                EquipeDaLoja.Avisar(db, equipe, tituloFila, corpoFila, "/admin/reservas");
+                await db.SaveChangesAsync();
+                await push.SendToManyAsync(equipe.Select(a => a.Id), tituloFila, corpoFila, "/admin/reservas");
+                return;
+            }
+
             var valor   = Dinheiro.Brl(preVendas.Sum(r => PedidoVendaService.PrecoDoPedido(r) * r.Quantity) / 100m);
             var oQue    = preVendas.Count == 1 ? $"\"{preVendas[0].Product?.Name}\"" : $"{preVendas.Count} itens";
             var titulo  = $"Pré-venda nova: {quem}";
             var corpo   = $"{quem} reservou {oQue} ({valor}) pelo site" +
                           (juntou ? ", somado ao pedido que ainda não foi pago." : ". Ainda não pagou.");
 
-            var admins = await db.Users.AsNoTracking()
-                .Where(u => u.Role == UserRole.Admin && u.IsActive)
-                .Select(u => new { u.Id, u.Name, u.Email })
-                .ToListAsync();
-            if (admins.Count == 0) return;
-
-            foreach (var a in admins)
-                db.Notifications.Add(new Notification { UserId = a.Id, Title = titulo, Body = corpo, Link = "/admin/reservas" });
+            EquipeDaLoja.Avisar(db, equipe, titulo, corpo, "/admin/reservas");
             await db.SaveChangesAsync();
 
-            await push.SendToManyAsync(admins.Select(a => a.Id), titulo, corpo, "/admin/reservas");
+            await push.SendToManyAsync(equipe.Select(a => a.Id), titulo, corpo, "/admin/reservas");
             if (email is not null)
                 await email.SendAnuncioAsync(
-                    admins.Where(a => !string.IsNullOrWhiteSpace(a.Email)).Select(a => (a.Email!, a.Name)),
+                    equipe.Where(a => !string.IsNullOrWhiteSpace(a.Email)).Select(a => (a.Email!, a.Name)),
                     titulo, corpo, link: "/admin/reservas");
         }
         catch { /* aviso é melhor-esforço — o pedido já está valendo */ }

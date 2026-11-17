@@ -31,6 +31,12 @@ public class ReservationController(
     public async Task<IActionResult> CountPreVendaPendentes() =>
         Ok(new { Count = await consulta.ContarFilaPendenteAsync() });
 
+    // GET /api/reservations/abertos/contagem — número do item Pré-vendas no menu do painel
+    [HttpGet("abertos/contagem")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> ContarAbertos() =>
+        Ok(new { Count = await consulta.ContarPedidosAbertosAsync() });
+
     // GET /api/reservations/mine — pré-vendas e fila do cliente logado
     [HttpGet("mine")]
     [Authorize]
