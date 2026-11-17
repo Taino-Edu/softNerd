@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.88.1] — 2026-11-17
+## [v1.89.1] — 2026-11-17
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.89.0] — 2026-11-17
+
+### Sininho com botão direito e pesquisa no menu
+- **Botão direito num aviso do sininho** (ou o "⋯" no celular): **Ir até**, **Marcar como lida**, **Ignorar este tipo** e **Excluir**
+- **Ignorar este tipo:** silencia avisos daquele tipo (ex.: todos de "Fila de espera") pra você. Eles continuam na lista, mas chegam já lidos, sem aviso no canto da tela e sem notificação do Windows/celular — vale pra todo aviso, inclusive o resumo do crediário. O aviso no canto também tem "Ignorar este tipo". Pra voltar a ser avisado, clique no tipo em "Ignorados", no fim da lista
+- **Pesquisa no menu:** campo "Procurar no menu…" no topo (atalho **Ctrl+K** ou **/**). Enquanto você digita, aparecem só as telas que combinam, de todos os grupos, e entende apelidos ("fiado" acha Crediário, "pdv" acha Frente de Caixa, "pedido" acha Pré-vendas). Setas escolhem, Enter abre, Esc limpa. Com o menu recolhido, a lupa abre o menu já na pesquisa
+- **Grupo da tela atual fecha também:** antes o grupo da tela aberta ficava preso aberto; agora fecha no título como os outros (fica um pontinho branco nele) e abre sozinho quando você entra numa tela de outro grupo
 
 ## [v1.88.0] — 2026-11-17
 

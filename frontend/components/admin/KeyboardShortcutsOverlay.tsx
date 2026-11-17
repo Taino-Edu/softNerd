@@ -20,6 +20,7 @@ const SHORTCUTS: Shortcut[] = [
   { key: 'f', label: 'F', description: 'Financeiro',                  category: 'Navegação' },
   { key: 'r', label: 'R', description: 'Relatórios',                  category: 'Navegação' },
   { key: 'a', label: 'A', description: 'Campeonatos',                 category: 'Navegação' },
+  { key: 'k', label: 'Ctrl K ou /', description: 'Procurar no menu', category: 'Geral' },
   { key: '?', label: '?', description: 'Mostrar / esconder esta ajuda', category: 'Geral'    },
   { key: 'Escape', label: 'Esc', description: 'Fechar modal ou painel aberto', category: 'Geral' },
 ]

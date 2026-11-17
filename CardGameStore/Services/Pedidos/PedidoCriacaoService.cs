@@ -274,7 +274,7 @@ public class PedidoCriacaoService(
                 var corpoFila  = $"{quem} entrou na fila de espera de {oQueFila} pelo site. Avise quando chegar.";
                 EquipeDaLoja.Avisar(db, equipe, tituloFila, corpoFila, "/admin/reservas");
                 await db.SaveChangesAsync();
-                await push.SendToManyAsync(equipe.Select(a => a.Id), tituloFila, corpoFila, "/admin/reservas");
+                await push.SendToManyAsync(EquipeDaLoja.QuemOuve(equipe, tituloFila).Select(a => a.Id), tituloFila, corpoFila, "/admin/reservas");
                 return;
             }
 
@@ -287,10 +287,11 @@ public class PedidoCriacaoService(
             EquipeDaLoja.Avisar(db, equipe, titulo, corpo, "/admin/reservas");
             await db.SaveChangesAsync();
 
-            await push.SendToManyAsync(equipe.Select(a => a.Id), titulo, corpo, "/admin/reservas");
+            var ouvem = EquipeDaLoja.QuemOuve(equipe, titulo); // quem não silenciou "Pré-venda nova"
+            await push.SendToManyAsync(ouvem.Select(a => a.Id), titulo, corpo, "/admin/reservas");
             if (email is not null)
                 await email.SendAnuncioAsync(
-                    equipe.Where(a => !string.IsNullOrWhiteSpace(a.Email)).Select(a => (a.Email!, a.Name)),
+                    ouvem.Where(a => !string.IsNullOrWhiteSpace(a.Email)).Select(a => (a.Email!, a.Name)),
                     titulo, corpo, link: "/admin/reservas");
         }
         catch { /* aviso é melhor-esforço — o pedido já está valendo */ }

@@ -305,7 +305,7 @@
 | GET | `/api/notifications` | logado | `List` (36) | `notificationsApi.list` | `components/admin/AvisosDaLoja.tsx`<br>`components/cliente/NotificationBell.tsx` |
 | PATCH | `/api/notifications/read-all` | logado | `MarkAllRead` (82) | `notificationsApi.markAllRead` | `components/admin/AvisosDaLoja.tsx`<br>`components/cliente/NotificationBell.tsx` |
 | GET | `/api/notifications/unread-count` | logado | `UnreadCount` (56) | `notificationsApi.unreadCount` | `app/admin/dashboard/page.tsx`<br>`components/admin/AvisosDaLoja.tsx`<br>`components/admin/Sidebar.tsx`<br>`components/cliente/NotificationBell.tsx` |
-| DELETE | `/api/notifications/{id:guid}` | logado | `Delete` (95) | `notificationsApi.remove` | `components/cliente/NotificationBell.tsx` |
+| DELETE | `/api/notifications/{id:guid}` | logado | `Delete` (95) | `notificationsApi.remove` | `components/admin/AvisosDaLoja.tsx`<br>`components/cliente/NotificationBell.tsx` |
 | PATCH | `/api/notifications/{id:guid}/read` | logado | `MarkRead` (68) | `notificationsApi.markRead` | `components/admin/AvisosDaLoja.tsx`<br>`components/cliente/NotificationBell.tsx` |
 
 ## PagamentoCrediario
