@@ -107,8 +107,9 @@ public class TorneioService
 
         var p = await _db.ChampionshipParticipants.FirstOrDefaultAsync(x => x.ChampionshipId == championshipId && x.UserId == userId)
             ?? throw new TorneioException("Você não está inscrito neste torneio.", 404);
-        if (p.DesistiuNaRodada is not null) throw new TorneioException("Você saiu deste torneio. Fale com o organizador.");
-
+        // Quem tocou em "sair" e voltou (foi à comanda, fechou o celular) volta a ser pareado na próxima
+        // rodada; as partidas que já jogou ficam como estão. Antes ficava preso fora (Maikon, 17/11).
+        p.DesistiuNaRodada = null;
         p.CheckInEm ??= DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await AvisarAsync(championshipId, "checkin");
@@ -311,6 +312,25 @@ public class TorneioService
     }
 
     /// <summary>
+    /// Desfaz a desistência (organizador, ou o próprio jogador pelo celular): volta a ser pareado a partir
+    /// da próxima rodada; as partidas já jogadas não mudam. Não vale depois de encerrado.
+    /// </summary>
+    public async Task VoltarAoTorneioAsync(Guid championshipId, Guid participantId)
+    {
+        var ch = await CampeonatoAsync(championshipId);
+        if (ch.Status is ChampionshipStatus.Finalizado or ChampionshipStatus.Cancelado)
+            throw new TorneioException("Esse torneio já foi encerrado.");
+        var p = await _db.ChampionshipParticipants
+            .FirstOrDefaultAsync(x => x.Id == participantId && x.ChampionshipId == championshipId)
+            ?? throw new TorneioException("Participante não encontrado.", 404);
+        if (p.DesistiuNaRodada is null) return;
+        p.DesistiuNaRodada = null;
+        p.CheckInEm ??= DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await AvisarAsync(championshipId, "checkin");
+    }
+
+    /// <summary>
     /// Encerra: classificação final vira Placement (e pódio), status Finalizado.
     /// A Liga Mensal lê o Placement — nada mais a fazer pra ela.
     /// </summary>
@@ -397,7 +417,7 @@ public class TorneioService
             throw new TorneioException("Sua inscrição ainda não está paga. Pague pela página do campeonato ou no balcão.", 402);
         }
 
-        if (p.DesistiuNaRodada is not null) throw new TorneioException("Você desistiu deste torneio. Fale com o organizador.");
+        p.DesistiuNaRodada = null; // entrar de novo pelo código desfaz a saída (ver CheckInProprioAsync)
         // Mesma trava do TrocarMeuDeckAsync: depois da 1ª rodada o deck não muda (entrar de novo pelo
         // código com outro deck só faz o check-in). Quem ainda está sem deck pode escolher.
         if (deckNome is not null && (ch.RodadaAtual == 0 || string.IsNullOrWhiteSpace(p.DeckName)))
@@ -464,7 +484,7 @@ public class TorneioService
         var p = await _db.ChampionshipParticipants.FirstOrDefaultAsync(x => x.ChampionshipId == championshipId && x.UserId == userId)
             ?? throw new TorneioException("Você não está neste torneio.", 404);
         if (p.DesistiuNaRodada is not null)
-            throw new TorneioException("Você saiu deste torneio. Fale com o organizador.", 409);
+            throw new TorneioException("Você saiu deste torneio. Toque em \"Voltar pro torneio\" antes de trocar o deck.", 409);
         var semDeck = string.IsNullOrWhiteSpace(p.DeckName);
         if (ch.RodadaAtual > 0 && !semDeck)
             throw new TorneioException("O torneio já começou — o deck não muda mais. Fale com o organizador se precisar.", 409);
@@ -509,6 +529,13 @@ public class TorneioService
         var p = await _db.ChampionshipParticipants.FirstOrDefaultAsync(x => x.ChampionshipId == championshipId && x.UserId == userId)
             ?? throw new TorneioException("Você não está neste torneio.", 404);
         await DesistenciaAsync(championshipId, p.Id);
+    }
+
+    public async Task VoltarAsync(Guid userId, Guid championshipId)
+    {
+        var p = await _db.ChampionshipParticipants.FirstOrDefaultAsync(x => x.ChampionshipId == championshipId && x.UserId == userId)
+            ?? throw new TorneioException("Você não está neste torneio.", 404);
+        await VoltarAoTorneioAsync(championshipId, p.Id);
     }
 
     // =========================================================================

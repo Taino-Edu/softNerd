@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-258 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+260 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -38,7 +38,7 @@
 - [SiteConfig](#siteconfig) (2)
 - [Tcg](#tcg) (8)
 - [Timer](#timer) (4)
-- [Torneio](#torneio) (22)
+- [Torneio](#torneio) (24)
 - [Upload](#upload) (3)
 - [User](#user) (15)
 - [VendaAvulsa](#vendaavulsa) (6)
@@ -155,7 +155,7 @@
 | POST | `/api/comanda/admin-open` | AdminOnly | `AdminOpenComanda` (64) | `comandaApi.adminOpen` | `app/admin/dashboard/page.tsx` |
 | GET | `/api/comanda/dashboard` | AdminOnly | `GetDashboard` (101) | `comandaApi.dashboard` | `app/admin/dashboard/page.tsx`<br>`app/admin/relatorios/page.tsx` |
 | GET | `/api/comanda/history` | AdminOnly | `GetHistory` (111) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/my` | logado | `GetMyComanda` (142) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
+| GET | `/api/comanda/my` | logado | `GetMyComanda` (142) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
 | GET | `/api/comanda/my-history` | logado | `GetMyHistory` (131) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
 | GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (422) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
 | POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (435) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
@@ -474,28 +474,30 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/torneios/ativos` | logado | `Ativos` (145) | `torneioApi.ativos` | `app/liga/jogar/page.tsx` |
-| POST | `/api/torneios/entrar` | logado | `Entrar` (128) | `torneioApi.entrar` | `app/liga/jogar/page.tsx` |
-| POST | `/api/torneios/etapa-externa` | AdminOnly | `LancarEtapaExterna` (119) | `torneioApi.lancarEtapaExterna` | `components/liga/admin/LancarEtapa.tsx` |
-| POST | `/api/torneios/etapa-externa/simular` | AdminOnly | `SimularEtapaExterna` (113) | `torneioApi.simularEtapaExterna` | `components/liga/admin/LancarEtapa.tsx` |
-| GET | `/api/torneios/{id:guid}` | público | `Publico` (189) | `torneioApi.publico` | `app/liga/torneio/[id]/page.tsx` |
-| POST | `/api/torneios/{id:guid}/check-in` | logado | `CheckInProprio` (137) | `torneioApi.checkInProprio` | `app/liga/jogar/page.tsx` |
+| GET | `/api/torneios/ativos` | logado | `Ativos` (154) | `torneioApi.ativos` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/entrar` | logado | `Entrar` (137) | `torneioApi.entrar` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/etapa-externa` | AdminOnly | `LancarEtapaExterna` (128) | `torneioApi.lancarEtapaExterna` | `components/liga/admin/LancarEtapa.tsx` |
+| POST | `/api/torneios/etapa-externa/simular` | AdminOnly | `SimularEtapaExterna` (122) | `torneioApi.simularEtapaExterna` | `components/liga/admin/LancarEtapa.tsx` |
+| GET | `/api/torneios/{id:guid}` | público | `Publico` (207) | `torneioApi.publico` | `app/liga/torneio/[id]/page.tsx` |
+| POST | `/api/torneios/{id:guid}/check-in` | logado | `CheckInProprio` (146) | `torneioApi.checkInProprio` | `app/liga/jogar/page.tsx` |
 | POST | `/api/torneios/{id:guid}/codigo` | AdminOnly | `NovoCodigo` (49) | `torneioApi.novoCodigo` | `components/liga/PainelTorneio.tsx` |
-| POST | `/api/torneios/{id:guid}/desistir` | logado | `Desistir` (179) | `torneioApi.desistir` | `app/liga/jogar/page.tsx` |
-| POST | `/api/torneios/{id:guid}/encerrar` | AdminOnly | `Encerrar` (106) | `torneioApi.encerrar` | `components/liga/PainelTorneio.tsx` |
-| PUT | `/api/torneios/{id:guid}/meu-deck` | logado | `MeuDeck` (162) | `torneioApi.meuDeck` | `app/liga/jogar/page.tsx` |
-| GET | `/api/torneios/{id:guid}/minha-mesa` | logado | `MinhaMesa` (149) | `torneioApi.minhaMesa` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/{id:guid}/desistir` | logado | `Desistir` (188) | `torneioApi.desistir` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/{id:guid}/encerrar` | AdminOnly | `Encerrar` (115) | `torneioApi.encerrar` | `components/liga/PainelTorneio.tsx` |
+| PUT | `/api/torneios/{id:guid}/meu-deck` | logado | `MeuDeck` (171) | `torneioApi.meuDeck` | `app/liga/jogar/page.tsx` |
+| GET | `/api/torneios/{id:guid}/minha-mesa` | logado | `MinhaMesa` (158) | `torneioApi.minhaMesa` | `app/liga/jogar/page.tsx` |
 | GET | `/api/torneios/{id:guid}/painel` | AdminOnly | `Painel` (36) | `torneioApi.painel` | `app/admin/liguinha/[id]/page.tsx`<br>`components/liga/PainelTorneio.tsx` |
 | PUT | `/api/torneios/{id:guid}/participantes/{participantId:guid}/check-in` | AdminOnly | `CheckIn` (54) | `torneioApi.checkIn` | `components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| DELETE | `/api/torneios/{id:guid}/participantes/{participantId:guid}/desistencia` | AdminOnly | `DesfazerDesistencia` (106) | `torneioApi.desfazerDesistencia` | `components/liga/PainelTorneio.tsx` |
 | POST | `/api/torneios/{id:guid}/participantes/{participantId:guid}/desistencia` | AdminOnly | `Desistencia` (97) | `torneioApi.desistencia` | `components/liga/PainelTorneio.tsx` |
 | PUT | `/api/torneios/{id:guid}/partidas/{partidaId:guid}` | AdminOnly | `Resolver` (80) | `torneioApi.resolver` | `components/liga/PainelTorneio.tsx` |
 | PUT | `/api/torneios/{id:guid}/partidas/{partidaId:guid}/pronto` | AdminOnly | `MesaPronta` (89) | `torneioApi.mesaPronta` | `components/liga/PainelTorneio.tsx` |
-| POST | `/api/torneios/{id:guid}/partidas/{partidaId:guid}/resultado` | logado | `LancarResultado` (153) | `torneioApi.lancar` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/{id:guid}/partidas/{partidaId:guid}/resultado` | logado | `LancarResultado` (162) | `torneioApi.lancar` | `app/liga/jogar/page.tsx` |
 | POST | `/api/torneios/{id:guid}/preparar` | AdminOnly | `Preparar` (41) | `torneioApi.preparar` | `components/liga/PainelTorneio.tsx`<br>`components/liga/admin/CriarTorneio.tsx` |
-| POST | `/api/torneios/{id:guid}/pronto` | logado | `Pronto` (171) | `torneioApi.pronto` | `app/liga/jogar/page.tsx` |
+| POST | `/api/torneios/{id:guid}/pronto` | logado | `Pronto` (180) | `torneioApi.pronto` | `app/liga/jogar/page.tsx` |
 | POST | `/api/torneios/{id:guid}/rodadas` | AdminOnly | `GerarRodada` (72) | `torneioApi.gerarRodada` | `components/liga/PainelTorneio.tsx` |
 | POST | `/api/torneios/{id:guid}/rodadas/atual/comecar` | AdminOnly | `ComecarRodada` (63) | `torneioApi.comecarRodada` | `components/liga/PainelTorneio.tsx` |
-| GET | `/api/torneios/{id:guid}/rodadas/{numero:int}` | público | `Rodada` (193) | `torneioApi.rodada` | `components/liga/admin/HistoricoRodadas.tsx` |
+| GET | `/api/torneios/{id:guid}/rodadas/{numero:int}` | público | `Rodada` (211) | `torneioApi.rodada` | `components/liga/admin/HistoricoRodadas.tsx` |
+| POST | `/api/torneios/{id:guid}/voltar` | logado | `Voltar` (197) | `torneioApi.voltar` | `app/liga/jogar/page.tsx` |
 
 ## Upload
 

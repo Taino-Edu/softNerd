@@ -5,8 +5,8 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 ficou mora no CHANGELOG e no código. "Feito" guarda só o mês corrente: na virada do mês as linhas
 vão pro [HISTORICO.md](HISTORICO.md).
 
-Atualizado em **16/11/2026** — produção na **v1.86.1** (nginx 1.30.6, Node 24.22.1, .NET 10).
-A v1.87.0 está pronta na branch `feat/home-que-vende`, ainda sem PR.
+Atualizado em **17/11/2026** — produção na **v1.87.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
+A v1.87.1 (Liguinha e comanda juntas) está na branch `fix/liguinha-sair-e-voltar`.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -16,7 +16,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Home que vende (fase 2)** | v1.87.0 | Feita na branch `feat/home-que-vende` (já com o `main` da v1.86.1), falta abrir o PR. Chave `home-que-vende`: categorias + vantagens abaixo do topo, produtos antes de avisos/torneios, torneios somem sem evento, "+ Sacola" no `CartaoProduto` (`onAdd`) com `components/loja/AvisoSacola`; busca de Produtos sem acento (`/produtos?busca=`). **Pedido do Maikon em 16/11** (mesma chave): topo no modelo dele (título "Prepare seu próximo grande jogo!", botões Explorar produtos / Ver campeonatos, mascote = logo de Personalizar Site à direita, só depois do site-config carregar; sem a busca no topo), cabeçalho em 3 tons (faixa no `MenuLoja`), catálogo em 3 colunas com `CartaoProduto grande` → `CartaoCatalogo` (modelo de catálogo dele: tom pelo selo, `rotuloCategoria`, descrição, "Adicionar"; sem estrelas/favoritos, que não existem), Produtos com filtros + busca numa linha e grade única, página do produto com foto maior e "Ampliar", foto voando pra Sacola (`lib/voarParaSacola.ts`, `data-sacola` no `MenuLoja`). Carrossel descartado por ele ("o site está simples e assertivo"). Fase 3 na fila |
+| **Liguinha e comanda juntas** | v1.87.1 | Pedido do Maikon em 17/11 ("na hora que sai, não consegue entrar de novo"; comanda aberta + campeonato "não fica nas duas"). Causa: o "Desistir" da tela do torneio parecia "sair da tela" e travava a pessoa fora (`DesistiuNaRodada` recusava código, check-in e deck; o organizador não tinha como desfazer). Agora: atalho Comanda no topo de `/liga/jogar`, "Abandonar torneio", `POST /api/torneios/{id}/voltar` e `DELETE …/participantes/{pid}/desistencia`, código/"Estou aqui" também desfazem a saída. Falta: PR, deploy e o Maikon confirmar |
+| **Home que vende (fase 2)** | v1.87.0 | Em produção desde 16/11 (PR #170), falta o Maikon aprovar (Pauta 2). Chave `home-que-vende`: categorias + vantagens abaixo do topo, produtos antes de avisos/torneios, torneios somem sem evento, "+ Sacola" no `CartaoProduto` (`onAdd`) com `components/loja/AvisoSacola`; busca de Produtos sem acento (`/produtos?busca=`). **Pedido do Maikon em 16/11** (mesma chave): topo no modelo dele (título "Prepare seu próximo grande jogo!", botões Explorar produtos / Ver campeonatos, mascote = logo de Personalizar Site à direita, só depois do site-config carregar; sem a busca no topo), cabeçalho em 3 tons (faixa no `MenuLoja`), catálogo em 3 colunas com `CartaoProduto grande` → `CartaoCatalogo` (modelo de catálogo dele: tom pelo selo, `rotuloCategoria`, descrição, "Adicionar"; sem estrelas/favoritos, que não existem), Produtos com filtros + busca numa linha e grade única, página do produto com foto maior e "Ampliar", foto voando pra Sacola (`lib/voarParaSacola.ts`, `data-sacola` no `MenuLoja`). Carrossel descartado por ele ("o site está simples e assertivo"). Fase 3 na fila |
 | **App Android da Liga (Flutter)** — PIM IV | — | `mobile/`: login, meus torneios, mesa, ranking da Liga; identidade visual da loja; APK de release apontando pra produção (#166). Entrega do PIM era 14/11: **confirmar se foi entregue** e passar pro Feito. O que sobrou está na fila (Loja e app) |
 
 ## ⏳ Esperando alguém
@@ -25,16 +26,17 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 Tudo que depende dele, pra resolver numa conversa só:
 
-1. **"Sistema cai com comanda aberta durante o campeonato"** — a causa provável foi corrigida na v1.84.1 (07/11: ao trocar de tela a conexão em tempo real caía e a tela ficava sem receber comanda/Pix/fechamento, com o selo "Conectado"); a v1.79.7 pôs o botão "Abrir o torneio" (quem abria a comanda pelo QR da mesa não voltava pro campeonato). **Perguntar se voltou a acontecer.** Se sim: qual tela, o que aparece, hora (print ou vídeo) — o Vigia já registra o erro de tela.
+1. **"Sistema cai com comanda aberta durante o campeonato"** — em 17/11 ele explicou: a pessoa sai do torneio pra ir à comanda e não consegue voltar. Corrigido na v1.87.1 (era o botão "Desistir"). **Confirmar com ele depois do deploy.** Histórico: a v1.84.1 (07/11: ao trocar de tela a conexão em tempo real caía e a tela ficava sem receber comanda/Pix/fechamento, com o selo "Conectado"); a v1.79.7 pôs o botão "Abrir o torneio" (quem abria a comanda pelo QR da mesa não voltava pro campeonato).
 2. **Aprovar a home nova** (v1.87.0, já com o que ele pediu em 16/11: topo sem arte, 3 tons, fotos maiores) — substitui o antigo "ajustes visuais da home (v1.66.0)". Atenção: os 3 tons desfazem o "um azul só" que ele mesmo pediu na v1.66.0/v1.82.0 — ele confirmou a troca em 16/11.
-3. **Regras da Liga**: prêmios por posição, desempate, mínimo de etapas, fechamento do mês. Sem isso o ranking não define prêmio. Já decidido em 22/10: premiação só por mês, sem temporada anual.
-4. **Prazo de pagamento dos pedidos** (Pix 1h / balcão 3 dias) — ele pediu pra tirar o robô que cancelava; confirmar. Enquanto isso o Vigia mostra os pedidos parados.
-5. **% no Pix de 21 produtos** de outras categorias — desde a v1.86.1 é só texto da vitrine (o Pix cobra preço cheio). Zerar ou manter como anúncio?
-6. **Check-in por QR Code** (igual Bandai) — mandar prints do app da Bandai.
-7. **Etapas de outubro jogadas no app externo** — lançar pela Central → "Lançar etapa de fora".
-8. **Cor adicional em "Personalizar Site"** — qual elemento.
-9. **Pietro: "sem baixa no estoque e fora do Financeiro"** — o único pedido dele foi cancelado em 20/10, sem venda. Item digitado na edição do crediário é só texto (não mexe em estoque nem no Financeiro); pra baixar estoque, lançar pela comanda ou pelo balcão como crediário. Confirmar como o item entrou.
-10. **1º pedido real pago no Pix** — o pedido de 13/11 (o da v1.86.1) foi pago no Pix: conferir se aparece no Financeiro do dia como Pix e fechar o item.
+3. **Liguinha: "uns ajustes visuais"** (17/11) — quais? Pedir print da tela e o que mudar.
+4. **Regras da Liga**: prêmios por posição, desempate, mínimo de etapas, fechamento do mês. Sem isso o ranking não define prêmio. Já decidido em 22/10: premiação só por mês, sem temporada anual.
+5. **Prazo de pagamento dos pedidos** (Pix 1h / balcão 3 dias) — ele pediu pra tirar o robô que cancelava; confirmar. Enquanto isso o Vigia mostra os pedidos parados.
+6. **% no Pix de 21 produtos** de outras categorias — desde a v1.86.1 é só texto da vitrine (o Pix cobra preço cheio). Zerar ou manter como anúncio?
+7. **Check-in por QR Code** (igual Bandai) — mandar prints do app da Bandai.
+8. **Etapas de outubro jogadas no app externo** — lançar pela Central → "Lançar etapa de fora".
+9. **Cor adicional em "Personalizar Site"** — qual elemento.
+10. **Pietro: "sem baixa no estoque e fora do Financeiro"** — o único pedido dele foi cancelado em 20/10, sem venda. Item digitado na edição do crediário é só texto (não mexe em estoque nem no Financeiro); pra baixar estoque, lançar pela comanda ou pelo balcão como crediário. Confirmar como o item entrou.
+11. **1º pedido real pago no Pix** — o pedido de 13/11 (o da v1.86.1) foi pago no Pix: conferir se aparece no Financeiro do dia como Pix e fechar o item.
 
 ### Outros
 
@@ -99,7 +101,8 @@ Meses anteriores: [HISTORICO.md](HISTORICO.md).
 
 | Versão | Data | O quê |
 |---|---|---|
-| v1.88.0 | 16/11 | **CHECKs e conferência de integridade (PIM IV, etapa 7)**: 11 restrições CHECK `NOT VALID` no fim de `postgres.sql`, `pr_conferir_integridade` e `POST /api/relatorios/banco/conferencia-integridade` (dono). Teste SQL no CI; reverter com `scripts/reverter-procedures-triggers.sql` |
+| v1.88.0 | 17/11 | **CHECKs e conferência de integridade (PIM IV, etapa 7)**: 11 restrições CHECK `NOT VALID` no fim de `postgres.sql`, `pr_conferir_integridade` e `POST /api/relatorios/banco/conferencia-integridade` (dono). Teste SQL no CI; reverter com `scripts/reverter-procedures-triggers.sql` |
+| v1.87.0 | 16/11 | **Home que vende** (chave `home-que-vende`, PR #170): topo no modelo do Maikon com o mascote, cabeçalho em 3 tons, catálogo em 3 colunas com o cartão novo e "Adicionar", Produtos com filtros + busca numa linha, foto maior com "Ampliar", foto voando pra Sacola |
 | v1.86.1 | 13/11 | **Desconto só na finalização** (Maikon: pedido saiu R$ 41,22 mais barato "sem eu pedir"): chave `pix-pedido-com-desconto` nasce desligada — Pix do pedido cobra o preço cheio, desconto só no "Registrar pagamento"/comanda/caixa. Ficha do cliente mostra soma dos itens e o desconto. No banco: Pokémon e One Piece com 0% no Pix e produtos delas sem % própria (21 produtos de outras categorias ainda têm % só como texto da vitrine) |
 | v1.86.0 | 07/11 | **Procedures e triggers (PIM IV, etapa 7)**: bloco novo no fim de `postgres.sql` (idempotente): trigger `updated_at` em 12 tabelas, auditoria de estoque em `estoque_movimentos`, `fn_estoque_baixo`, `fn_fechamento_comandas`, `fn_saldo_crediario`, `pr_manutencao_banco`. `RelatoriosBancoController` (`/api/relatorios/banco`, 501 no SQLite). Teste SQL no CI; reverter com `scripts/reverter-procedures-triggers.sql` |
 | v1.85.0 | 07/11 | **Modais de venda com rascunho**: `lib/useRascunho.ts` (localStorage, 12 h, só o que difere do padrão), `lib/useDispensarModal.ts` (Esc/clique fora só no modal do topo), `components/PagamentoIcone.tsx`. Fechar comanda e Nova Venda do PDV guardam pagamento/desconto/carrinho/cliente e fecham por Esc/clique fora; banner "Começar do zero"; confirmar mostra a forma de pagamento |
