@@ -96,6 +96,28 @@ public class MaisVendidosTests
     }
 
     [Fact]
+    public async Task ForaDaVitrine_NaoOcupaVaga()
+    {
+        var db = CreateDb();
+        var u = new User { Name = "C", Email = "c@t.com", PasswordHash = "h", Role = UserRole.Customer };
+        db.Users.Add(u);
+        var esgotado = NovoProduto(db, "Esgotado");   esgotado.StockQuantity = 0;
+        var inativo  = NovoProduto(db, "Inativo");    inativo.IsActive = false;
+        var escondido = NovoProduto(db, "Escondido"); escondido.ShowOnMarketplace = false;
+        var variacao = NovoProduto(db, "Camiseta");   variacao.HasVariants = true; variacao.StockQuantity = 0;
+        db.Set<ProductVariant>().Add(new ProductVariant { ProductId = variacao.Id, Size = "M", StockQuantity = 2 });
+        var normal   = NovoProduto(db, "Normal");
+        Comanda(db, u, ComandaStatus.Fechada, Agora.AddDays(-1),
+            (esgotado, 9), (inativo, 8), (escondido, 7), (variacao, 2), (normal, 1));
+        await db.SaveChangesAsync();
+
+        // Limite 2: os três de fora não gastam vaga; a camiseta tem estoque nas variações
+        var ids = await MaisVendidos.CalcularAsync(db, Balcao(), 2, Agora);
+
+        ids.Should().Equal(variacao.Id, normal.Id);
+    }
+
+    [Fact]
     public async Task RespeitaOLimite()
     {
         var db = CreateDb();

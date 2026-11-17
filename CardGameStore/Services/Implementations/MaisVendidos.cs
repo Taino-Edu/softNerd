@@ -7,6 +7,8 @@
 //
 // Só devolve a ORDEM dos produtos (ids), nunca quantidade nem receita: o endpoint é público e
 // faturamento por produto é dado da loja. O site cruza os ids com a vitrine que já carregou.
+// Só entra quem a vitrine mostra (ativo, no site e com estoque, somando as variações como o
+// ProductService): senão os campeões esgotados ocupavam as vagas e a seção sumia (revisão do PR #175).
 // =============================================================================
 
 using CardGameStore.Data;
@@ -33,21 +35,48 @@ public static class MaisVendidos
             .Select(g => new { Id = g.Key, Qtd = g.Sum(i => i.Quantity), Ultima = g.Max(i => i.Comanda.ClosedAt) })
             .ToListAsync();
 
-        var doBalcao = (await vendas.GetRecentAsync(5000, desde))
+        // A janela inteira, sem teto de quantidade: com um teto (era 5000), loja movimentada perdia o começo
+        // dos 90 dias no balcão e comparava com as comandas do período todo (revisão do PR #175)
+        var doBalcao = (await vendas.GetRecentAsync(int.MaxValue, desde))
             .Where(v => !v.Cancelada)
             .SelectMany(v => v.Items.Select(i => new { i.ProductId, i.Quantity, v.SoldAt }))
             .Where(i => i.ProductId != Guid.Empty)
             .GroupBy(i => i.ProductId)
             .Select(g => new { Id = g.Key, Qtd = g.Sum(i => i.Quantity), Ultima = (DateTime?)g.Max(i => i.SoldAt) });
 
-        return daComanda.Concat(doBalcao)
+        var ranking = daComanda.Concat(doBalcao)
             .GroupBy(x => x.Id)
             .Select(g => new { Id = g.Key, Qtd = g.Sum(x => x.Qtd), Ultima = g.Max(x => x.Ultima) })
             .Where(x => x.Qtd > 0)
             .OrderByDescending(x => x.Qtd)
             .ThenByDescending(x => x.Ultima)
-            .Take(limite)
             .Select(x => x.Id)
             .ToList();
+
+        var naVitrine = await NaVitrineAsync(db, ranking);
+        return ranking.Where(naVitrine.Contains).Take(limite).ToList();
+    }
+
+    /// <summary>Dos ids pedidos, os que a vitrine do site mostra: ativo, no site e com estoque.</summary>
+    private static async Task<HashSet<Guid>> NaVitrineAsync(AppDbContext db, List<Guid> ids)
+    {
+        if (ids.Count == 0) return [];
+        var produtos = await db.Products.AsNoTracking()
+            .Where(p => ids.Contains(p.Id) && p.IsActive && p.ShowOnMarketplace)
+            .Select(p => new { p.Id, p.HasVariants, p.StockQuantity })
+            .ToListAsync();
+
+        var comVariacao = produtos.Where(p => p.HasVariants).Select(p => p.Id).ToList();
+        var estoqueDasVariacoes = comVariacao.Count == 0 ? new Dictionary<Guid, int>() : await db.Set<ProductVariant>().AsNoTracking()
+            .Where(v => comVariacao.Contains(v.ProductId))
+            .GroupBy(v => v.ProductId)
+            .Select(g => new { g.Key, Total = g.Sum(v => v.StockQuantity) })
+            .ToDictionaryAsync(x => x.Key, x => x.Total);
+
+        // Mesma regra do ProductService.ApplyVariantStockAsync: com variações, vale a soma delas
+        return produtos
+            .Where(p => (p.HasVariants && estoqueDasVariacoes.TryGetValue(p.Id, out var soma) ? soma : p.StockQuantity) > 0)
+            .Select(p => p.Id)
+            .ToHashSet();
     }
 }
