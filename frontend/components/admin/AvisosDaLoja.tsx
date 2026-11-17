@@ -41,9 +41,11 @@ function publicar(n: number) {
 async function consultar() {
   try {
     const { data } = await notificationsApi.unreadCount()
-    // A primeira consulta só marca o ponto de partida: o que já estava lá não vira aviso de tela
-    if (!iniciado) { await avisarNovos(false); iniciado = true }
-    else if (data.count > naoLidos) await avisarNovos(true)
+    // A primeira consulta só marca o ponto de partida: o que já estava lá não vira aviso de tela.
+    // Depois, a lista é olhada em toda volta (são no máximo 50): comparar só o número de não lidos
+    // perdia o pedido novo quando, no mesmo intervalo, outro aviso era lido em outra aba/aparelho.
+    await avisarNovos(iniciado)
+    iniciado = true
     publicar(data.count)
   } catch { /* sem rede: tenta na próxima volta */ }
 }
