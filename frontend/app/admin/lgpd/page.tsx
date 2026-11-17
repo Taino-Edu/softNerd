@@ -348,7 +348,7 @@ export default function LgpdAdminPage() {
       {tab === 'requests' && (
         <div>
           {/* Filtro */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
             {['', 'Recebido', 'EmAnalise', 'Concluido', 'Negado'].map(s => (
               <button
                 key={s}

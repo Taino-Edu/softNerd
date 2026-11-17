@@ -746,7 +746,7 @@ export default function CartasPage() {
 
       {/* Busca */}
       <div className="card flex flex-col gap-3">
-        <p className="text-xs text-amber-400 flex items-center gap-1.5">
+        <p className="text-xs text-amber-400 leading-relaxed">
           {isPokemon ? (
             <>🔍 Busca em <strong>português ou inglês</strong> — ex: <em>Pikachu</em>, <em>Transmissor da Equipe Rocket</em>. Código: <code className="bg-surface-700 px-1 rounded">PAL 058</code> ou <code className="bg-surface-700 px-1 rounded">ex6 12</code></>
           ) : game === 'MTG' ? (

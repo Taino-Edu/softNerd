@@ -68,7 +68,16 @@ export default function AvisoAlarme() {
   }, [])
 
   const bloqueado = !somLiberado
-  if (!disponivel || (!bloqueado && !emRodada)) return null
+  const aparece = disponivel && (bloqueado || emRodada)
+
+  // Faixa no celular: avisa o layout pra empurrar o conteúdo (só na posição padrão; arrastado, ele flutua)
+  useEffect(() => {
+    const faixa = aparece && !pos
+    document.body.classList.toggle('com-aviso-alarme', faixa)
+    return () => document.body.classList.remove('com-aviso-alarme')
+  }, [aparece, pos])
+
+  if (!aparece) return null
 
   function ativarSom() {
     // O próprio clique já libera o som; o bipe curto confirma que está saindo na caixa
@@ -84,7 +93,12 @@ export default function AvisoAlarme() {
       className={clsx(
         'fixed z-[9999] flex items-center gap-1.5 rounded-full border shadow-2xl select-none',
         'pl-1 pr-3 py-1.5 text-xs font-semibold',
-        !pos && 'left-1/2 -translate-x-1/2 top-3',
+        // No celular vira uma faixa logo abaixo da barra do painel, e o conteúdo desce pra caber
+        // (body.com-aviso-alarme no globals.css). Flutuando, ele cobria o logo, o sininho ou o título.
+        !pos && [
+          'max-md:inset-x-0 max-md:top-14 max-md:h-9 max-md:justify-center max-md:rounded-none max-md:border-x-0 max-md:shadow-md',
+          'md:left-1/2 md:-translate-x-1/2 md:top-3',
+        ],
         !bloqueado && 'bg-surface-800 border-surface-500',
       )}
       // Bloqueado: vermelho cheio com texto branco — chama a atenção igual no tema claro e no escuro
@@ -113,7 +127,8 @@ export default function AvisoAlarme() {
             </span>
           )}
           <VolumeX className="w-4 h-4 shrink-0" />
-          <span>Alarme sem som — <u>clique aqui pra ativar</u></span>
+          <span className="md:hidden">Alarme sem som — <u>toque aqui pra ativar</u></span>
+          <span className="hidden md:inline">Alarme sem som — <u>clique aqui pra ativar</u></span>
         </button>
       ) : (
         <span className="flex items-center gap-1.5">
