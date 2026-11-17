@@ -6,13 +6,17 @@
 // PUT    /api/product/{id}       → atualiza (Admin)
 // DELETE /api/product/{id}       → desativa (Admin)
 // PATCH  /api/product/{id}/stock → ajusta estoque (Admin)
+// GET    /api/product/mais-vendidos → ids dos que mais saem (público, seção da home)
 // =============================================================================
 
+using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
+using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace CardGameStore.Controllers;
 
@@ -65,6 +69,26 @@ public class ProductController : ControllerBase
     {
         var products = await _service.GetAllForAdminAsync();
         return Ok(products);
+    }
+
+    /// <summary>
+    /// Ids dos produtos mais vendidos nos últimos 90 dias (seção "Mais vendidos" da home). Só a ordem —
+    /// sem quantidade nem receita, que são da loja. Guardado 10 minutos: a home é aberta por qualquer um.
+    /// </summary>
+    [HttpGet("mais-vendidos")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(List<Guid>), 200)]
+    public async Task<IActionResult> MaisVendidosDaLoja(
+        [FromServices] AppDbContext db, [FromServices] IVendaAvulsaService vendas, [FromServices] IMemoryCache cache,
+        [FromQuery] int limite = 12)
+    {
+        limite = Math.Clamp(limite, 1, 24);
+        var ids = await cache.GetOrCreateAsync($"mais-vendidos:{limite}", e =>
+        {
+            e.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+            return MaisVendidos.CalcularAsync(db, vendas, limite, DateTime.UtcNow);
+        });
+        return Ok(ids ?? []);
     }
 
     /// <summary>Busca produto por ID.</summary>

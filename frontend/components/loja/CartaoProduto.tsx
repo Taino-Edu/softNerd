@@ -16,6 +16,7 @@ import type { Product, ProductCategory } from '@/lib/api'
 import { brl } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { voarParaSacola } from '@/lib/voarParaSacola'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 export type CoresVitrine = {
   card: string; cardAlt: string; border: string
@@ -34,16 +35,31 @@ export function rotuloCategoria(nome: string, categorias: ProductCategory[]): st
   return pai ? `${pai.name} · ${nome}` : nome
 }
 
-/** Selo do canto da foto: pré-venda > promoção > destaque. */
-function seloDe(p: Product): 'Pré-venda' | 'Promoção' | 'Destaque' | null {
-  return p.isPreVenda ? 'Pré-venda' : p.isOnPromo ? 'Promoção' : p.isFeatured ? 'Destaque' : null
+/** Dias que um produto recém-cadastrado fica com o selo "Novo" e na seção Novidades da home. */
+export const DIAS_DE_NOVIDADE = 30
+
+/** Cadastrado nos últimos DIAS_DE_NOVIDADE dias? (chave home-vitrines — pedido do Maikon, 17/11) */
+export function ehNovidade(p: Product, agora = Date.now()): boolean {
+  const criado = Date.parse(p.createdAt)
+  return Number.isFinite(criado) && agora - criado <= DIAS_DE_NOVIDADE * 86_400_000
 }
 
-function Selo({ p }: { p: Product }) {
-  const texto = seloDe(p)
+type TextoSelo = 'Pré-venda' | 'Promoção' | 'Novo' | 'Destaque'
+
+/** Selo do canto da foto: pré-venda > promoção > novo > destaque. */
+function seloDe(p: Product, novo: boolean): TextoSelo | null {
+  return p.isPreVenda ? 'Pré-venda' : p.isOnPromo ? 'Promoção' : novo ? 'Novo' : p.isFeatured ? 'Destaque' : null
+}
+
+/** Cor do selo "Novo": o verde do modelo do Maikon, nos dois desenhos de cartão. */
+const VERDE_NOVO = '#21825D'
+
+function Selo({ p, novo }: { p: Product; novo: boolean }) {
+  const texto = seloDe(p, novo)
   const [fundo, cor] =
     texto === 'Pré-venda' ? ['#1E4FD6', '#FFFFFF']
     : texto === 'Promoção' ? ['#EF4444', '#FFFFFF']
+    : texto === 'Novo' ? [VERDE_NOVO, '#FFFFFF']
     : ['#FFE45E', '#3D2E00']
   if (!texto) return null
   return (
@@ -72,8 +88,12 @@ type Props = {
   categoria?: string
 }
 
+type PropsComSelo = Props & { novo: boolean }
+
 export default function CartaoProduto(props: Props) {
-  return props.grande ? <CartaoCatalogo {...props} /> : <Cartao {...props} />
+  // Selo "Novo" só com a chave home-vitrines (desligada, os selos ficam como na v1.89)
+  const novo = useFuncionalidade('home-vitrines') !== false && ehNovidade(props.p)
+  return props.grande ? <CartaoCatalogo {...props} novo={novo} /> : <Cartao {...props} novo={novo} />
 }
 
 // ─── Catálogo (modelo de 16/11) ──────────────────────────────────────────────
@@ -83,13 +103,14 @@ const TOM_DO_SELO: Record<string, string> = {
   'Pré-venda': 'rgba(91,111,255,0.20)',
   'Promoção':  'rgba(255,196,46,0.30)',
   'Destaque':  'rgba(45,212,160,0.22)',
+  'Novo':      'rgba(33,130,93,0.20)',
 }
 
-function CartaoCatalogo({ p, C, pix, cartao, href, onClick, onAdd, categoria }: Props) {
+function CartaoCatalogo({ p, C, pix, cartao, href, onClick, onAdd, categoria, novo }: PropsComSelo) {
   const promo   = p.isOnPromo && p.discountPriceInReais != null
   const preco   = promo ? p.discountPriceInReais! : p.priceInReais
   const ultimas = p.stockQuantity > 0 && p.isLowStock
-  const selo    = seloDe(p)
+  const selo    = seloDe(p, novo)
   const [posto, setPosto] = useState(false)
   const fotoRef = useRef<HTMLImageElement>(null)
   const tom = selo ? TOM_DO_SELO[selo] : `${C.blue}14`
@@ -112,7 +133,7 @@ function CartaoCatalogo({ p, C, pix, cartao, href, onClick, onAdd, categoria }: 
         <div className="absolute -left-10 -bottom-14 w-36 h-36 lg:w-44 lg:h-44 rounded-full opacity-30" aria-hidden style={{ backgroundColor: C.card }} />
         {selo && (
           <span className="absolute top-3 left-3 lg:top-4 lg:left-4 z-10 text-[10px] lg:text-[11px] font-black uppercase tracking-wide px-2.5 lg:px-3 py-1 rounded-full shadow-sm"
-            style={{ backgroundColor: '#FFD84D', color: '#3D2E00' }}>
+            style={selo === 'Novo' ? { backgroundColor: VERDE_NOVO, color: '#FFFFFF' } : { backgroundColor: '#FFD84D', color: '#3D2E00' }}>
             {selo}
           </span>
         )}
@@ -180,7 +201,7 @@ function CartaoCatalogo({ p, C, pix, cartao, href, onClick, onAdd, categoria }: 
 
 // ─── Cartão de antes (chave desligada) ───────────────────────────────────────
 
-function Cartao({ p, C, pix, cartao, href, onClick, onAdd }: Props) {
+function Cartao({ p, C, pix, cartao, href, onClick, onAdd, novo }: PropsComSelo) {
   const promo   = p.isOnPromo && p.discountPriceInReais != null
   const preco   = promo ? p.discountPriceInReais! : p.priceInReais
   // "Últimas N" segue o estoque mínimo de cada produto (isLowStock do servidor), não um número fixo
@@ -190,7 +211,7 @@ function Cartao({ p, C, pix, cartao, href, onClick, onAdd }: Props) {
 
   const conteudo = (
     <>
-      <Selo p={p} />
+      <Selo p={p} novo={novo} />
       {/* Foto: fundo suave com um círculo de enfeite, foto inteira (object-contain) */}
       <div className="relative w-full aspect-square overflow-hidden" style={{ backgroundColor: C.cardAlt }}>
         <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full opacity-60 pointer-events-none" aria-hidden
