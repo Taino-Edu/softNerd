@@ -46,6 +46,7 @@ public static class Funcionalidades
     public const string HomeQueVende = "home-que-vende";
     public const string AvisosPraEquipe = "avisos-pra-equipe";
     public const string MenuLateralEnxuto = "menu-lateral-enxuto";
+    public const string HomeVitrines = "home-vitrines";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -165,6 +166,19 @@ public static class Funcionalidades
                         "(A barra de rolagem própria do menu continua.)",
             Padrao:     true,
             Desde:      "v1.88.0",
+            RevisarEm:  new DateOnly(2027, 5, 17)),
+
+        new(HomeVitrines,
+            Nome:       "Home com agenda, Mais vendidos e Novidades (modelo do Maikon de 17/11)",
+            OQueMuda:   "Na página inicial: logo abaixo do topo vêm os 3 cartões (Produtos pra jogar, Feito pra comunidade, Uma loja de quem joga) " +
+                        "e a agenda \"Campeonatos & eventos\" (campeonato semanal, liga mensal, torneios especiais), que aparece mesmo sem campeonato " +
+                        "marcado. As categorias saem da home (ficam só em Produtos). Depois de Em Destaque entram \"Mais vendidos\" (o que mais saiu " +
+                        "em comanda e no Frente de Caixa nos últimos 90 dias) e \"Novidades\" (cadastrados nos últimos 30 dias, que ganham o selo " +
+                        "\"Novo\" no cartão). O topo fica mais baixo (arte com 390px) e a home usa as cores do modelo do Maikon.",
+            SeDesligar: "Volta a home da v1.87: categorias e vantagens logo abaixo do topo, só a vitrine Em Destaque, topo mais alto, cores de " +
+                        "Personalizar Site e sem o selo \"Novo\".",
+            Padrao:     true,
+            Desde:      "v1.90.0",
             RevisarEm:  new DateOnly(2027, 5, 17)),
     ];
 

@@ -1,12 +1,23 @@
 # Changelog — Santuário Nerd
 
-## [v1.89.2] — 2026-11-17
+## [v1.90.1] — 2026-11-17
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.90.0] — 2026-11-17
+
+### Home no modelo do Maikon: agenda, Mais vendidos e Novidades (chave nova, ligada)
+- **Logo abaixo do topo:** os 3 cartões (Produtos pra jogar, Feito pra comunidade, Uma loja de quem joga) e a agenda **Campeonatos & eventos** (campeonato semanal, liga mensal e torneios especiais). A agenda aparece mesmo sem campeonato marcado, então some aquele bloco branco de "Nenhum evento agendado". Com campeonato marcado, o cartão do semanal mostra o próximo
+- **Categorias só em Produtos:** na home elas apareciam repetidas
+- **Mais vendidos:** os produtos que mais saíram no balcão e nas mesas nos últimos 3 meses (comanda estornada ou venda cancelada não contam). O site recebe só a ordem, nunca quantidade nem valor
+- **Novidades e selo "Novo":** produto cadastrado nos últimos 30 dias ganha o selo verde "Novo" no cartão (na home e em Produtos) e entra em Novidades, os mais novos primeiro
+- **Topo mais baixo:** a arte fica com 390px de altura (antes 448) e o título diminui um pouco
+- **Cores do modelo:** fundo, textos, bordas, amarelo e os 3 azuis do topo seguem a paleta que o Maikon mandou
+- Chave **home-vitrines** em Funcionalidades: desligada, a home volta a ser a da v1.87
 
 ## [v1.89.1] — 2026-11-17
 
