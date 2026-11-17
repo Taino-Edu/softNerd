@@ -253,6 +253,8 @@ export default function TimerWidget() {
             'bg-surface-800 border border-surface-500 text-white hover:bg-surface-700',
             esquerda ? 'rounded-r-2xl border-l-0' : 'rounded-l-2xl border-r-0',
             temAlarme && 'animate-pulse border-red-500 bg-red-950',
+            // Parada no celular: aba mais fina e um pouco transparente, pra não esconder a borda das listas
+            !destaque && !temAlarme && 'max-md:py-2 max-md:px-1.5 max-md:opacity-80',
             ANCORAS[corner] ?? ANCORAS['bottom-right'],
           )}
         >

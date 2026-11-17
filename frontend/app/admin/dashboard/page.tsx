@@ -1877,7 +1877,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Tabs + controles */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2">
         <div className="flex gap-1 bg-surface-800 p-1 rounded-lg w-full sm:w-auto">
           <button
             onClick={() => setTab('ativas')}

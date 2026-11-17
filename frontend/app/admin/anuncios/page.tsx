@@ -198,7 +198,7 @@ export default function AnunciosPage() {
 
       {/* ── Carrossel de Banners ── */}
       <div className="card space-y-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <h2 className="font-bold text-white flex items-center gap-2">
               <Images className="w-5 h-5 text-blue-400" /> Carrossel de Banners
@@ -207,7 +207,7 @@ export default function AnunciosPage() {
               Imagens exibidas em rotação logo abaixo do hero. Recomendado: 1920×600px.
             </p>
           </div>
-          <div className="shrink-0">
+          <div className="w-full sm:w-auto sm:shrink-0">
             <ImageUpload
               label={addingBanner ? 'Enviando…' : 'Adicionar banner'}
               hint="1920×600px"

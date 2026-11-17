@@ -111,7 +111,8 @@ function TorneioCentral() {
           <ArrowLeft className="w-4 h-4" /> Central da Liguinha
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-0 flex-1">
+          {/* Título numa linha só até o lg: antes, no celular, os botões espremiam o nome em "Liguin…" */}
+          <div className="min-w-0 flex-1 basis-full lg:basis-0">
             <h1 className="text-2xl font-bold text-white truncate">{p.nome}</h1>
             <p className="text-sm text-gray-400">
               {ch ? `${dataBR(ch.startDate, { weekday: 'long', day: '2-digit', month: 'long' })} · ${ch.game} · ` : ''}

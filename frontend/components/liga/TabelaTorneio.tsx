@@ -6,7 +6,9 @@ export default function TabelaTorneio({ linhas, destaque, grande = false }: { li
   return (
     <section className="bg-surface-800 border border-surface-500 rounded-2xl overflow-hidden">
       <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider px-4 pt-3 pb-2">Classificação</h2>
-      <table className={`w-full ${grande ? 'text-lg' : 'text-sm'}`}>
+      {/* No celular o telão (grande) não cabe em 375px: fonte menor e rolagem lateral se precisar. */}
+      <div className="overflow-x-auto">
+      <table className={`w-full ${grande ? 'text-sm sm:text-lg' : 'text-sm'}`}>
         <thead>
           <tr className="text-xs text-gray-500 border-b border-surface-500">
             <th className="text-left px-4 py-1.5 w-8">#</th>
@@ -33,6 +35,7 @@ export default function TabelaTorneio({ linhas, destaque, grande = false }: { li
           ))}
         </tbody>
       </table>
+      </div>
     </section>
   )
 }

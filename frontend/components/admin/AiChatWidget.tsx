@@ -29,9 +29,13 @@ const SUGGESTIONS = [
 const BTN_SIZE = 52
 const STORAGE_KEY = 'ai-btn-pos'
 
+// Nos cantos de baixo o botão fica um andar acima: o canto mesmo é da mão do VLibras (bottom 10px,
+// 40px de altura). Antes um ficava em cima do outro.
+const FOLGA_INFERIOR = 64
+
 const CORNER_STYLES: Record<string, { bottom?: number | string; top?: number | string; left?: number | string; right?: number | string }> = {
-  'bottom-right': { bottom: 20, right: 16 },
-  'bottom-left':  { bottom: 20, left:  16 },
+  'bottom-right': { bottom: FOLGA_INFERIOR, right: 16 },
+  'bottom-left':  { bottom: FOLGA_INFERIOR, left:  16 },
   'top-right':    { top:    16, right: 16 },
   'top-left':     { top:    16, left:  16 },
 }
@@ -107,7 +111,7 @@ export default function AiChatWidget() {
         posRef.current = p; setPos(p); return
       }
     } catch {}
-    const p = { x: window.innerWidth - BTN_SIZE - 16, y: window.innerHeight - BTN_SIZE - 20 }
+    const p = { x: window.innerWidth - BTN_SIZE - 16, y: window.innerHeight - BTN_SIZE - FOLGA_INFERIOR }
     posRef.current = p; setPos(p)
   }, [])
 

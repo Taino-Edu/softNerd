@@ -267,7 +267,8 @@ export default function AvisosDaLoja({ lado = 'direita' }: { lado?: 'direita' | 
       {aberto && (
         <div className={clsx(
           'z-[60] w-[340px] max-w-[calc(100vw-1rem)] rounded-2xl border border-surface-500 bg-surface-800 shadow-2xl overflow-hidden',
-          lado === 'direita' ? 'absolute left-0 top-full mt-2' : 'fixed right-2 top-14',
+          // avisos-lista-celular: com a faixa do alarme no celular, a lista desce pra baixo dela (globals.css)
+          lado === 'direita' ? 'absolute left-0 top-full mt-2' : 'avisos-lista-celular fixed right-2 top-14',
         )}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-surface-500">
             <p className="text-sm font-black text-white">Avisos da loja</p>

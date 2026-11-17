@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.89.1] — 2026-11-17
+
+### Telas que cabem no celular
+- **Nada mais passa da borda no celular:** Busca de Cartas (a dica com os códigos), Anúncios (o botão de enviar banner), LGPD (os filtros de status), Termos e Privacidade (os botões do topo viram só ícone) e Financeiro (o filtro por origem rola de lado e a régua da meta não sai do cartão)
+- **Classificação da liguinha no celular:** a tabela do painel do torneio usava letra de telão e cortava a coluna de pontos; agora diminui no celular e rola de lado se precisar. O nome do torneio ganhou linha própria (antes os botões espremiam em "Liguin…")
+- **No tablet (menu lateral aberto):** Relatórios ("Gerar PDF"), Alertas (filtros) e Dashboard (busca das comandas) também passavam da borda
+- **Botões flutuantes sem um em cima do outro:** o do assistente sobe um pouco e deixa o canto pra mão do Libras; o "+" do Frente de Caixa virou a pílula "Começar venda" no meio do rodapé, e não fica mais preso no fim da página
+- **Aviso "Alarme sem som" no celular:** vira uma faixa vermelha logo abaixo da barra, e a tela desce pra dar lugar — antes flutuava em cima do logo, do sininho ou do título. No computador continua no alto, no meio
+- **Aba do timer no celular:** parada, fica mais fina e um pouco transparente, pra não esconder a borda das listas
+
 ## [v1.89.0] — 2026-11-17
 
 ### Sininho com botão direito e pesquisa no menu
