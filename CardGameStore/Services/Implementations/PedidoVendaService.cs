@@ -161,11 +161,10 @@ public class PedidoVendaService
             .Where(r => ids.Contains(r.Id) && r.VendaAvulsaId == marca)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.VendaAvulsaId, (string?)null));
 
+    // Chave "avisos-pra-equipe": vai também pros operadores com Pré-vendas (desligada, só admins).
     private async Task AvisarAdminsAsync(string titulo, string corpo)
     {
-        var admins = await _db.Users.Where(u => u.Role == UserRole.Admin && u.IsActive).Select(u => u.Id).ToListAsync();
-        foreach (var id in admins)
-            _db.Notifications.Add(new Notification { UserId = id, Title = titulo, Body = corpo, Link = "/admin/reservas" });
+        EquipeDaLoja.Avisar(_db, await EquipeDaLoja.QuemRecebeAsync(_db), titulo, corpo, "/admin/reservas");
         await _db.SaveChangesAsync();
     }
 }
