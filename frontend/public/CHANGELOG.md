@@ -1,12 +1,18 @@
 # Changelog — Santuário Nerd
 
-## [v1.91.0] — 2026-11-17
+## [v1.91.0] — 2026-11-18
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.90.1] — 2026-11-18
+
+### Produtos: busca em cima, categorias inteiras embaixo (pedido do Maikon)
+- **Busca ao lado do título:** no computador o "Buscar na loja…" sobe pra direita do "Todos os produtos"; no celular fica logo abaixo do título
+- **Categorias numa linha só delas:** antes dividiam a linha com a busca e as últimas ficavam cortadas. No computador quebram em mais de uma linha, sem cortar nenhuma; no celular rolam de lado
 
 ## [v1.90.0] — 2026-11-17
 
