@@ -99,6 +99,20 @@ export default function ProdutosPage() {
       .filter(([, items]) => items.length > 0)
   }, [filtered, categories, catFilter])
 
+  const campoBusca = (
+    <div className={vende ? 'relative w-full lg:w-80 shrink-0' : 'relative mb-6'}>
+      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: C.muted }} />
+      <input
+        className={`w-full pl-10 pr-4 py-3 rounded-2xl border text-sm ${vende ? 'lg:text-base shadow-sm' : ''} focus:outline-none transition-all`}
+        style={{ backgroundColor: C.card, borderColor: C.border, color: C.navy }}
+        placeholder={vende ? 'Buscar na loja…' : 'Buscar produto...'}
+        aria-label="Buscar na loja"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
+    </div>
+  )
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 
@@ -111,32 +125,27 @@ export default function ProdutosPage() {
 
       <div className={`max-w-6xl mx-auto px-5 pb-16 pt-8`}>
 
-        <div className="mb-6">
-          <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: CN.blue }}>Catálogo completo</p>
-          <h1 className={`text-3xl md:text-4xl ${vende ? 'lg:text-5xl' : ''} font-black`} style={{ color: C.navy }}>Todos os produtos</h1>
-          <p className={`text-sm ${vende ? 'lg:text-base' : ''} mt-1`} style={{ color: CN.text }}>
-            Busque e filtre pra achar o que precisa pra próxima partida{products.length ? ` — ${products.length} itens em estoque` : ''}.
-          </p>
+        {/* Catálogo (pedido do Maikon, 18/11): a busca sobe pro lado do título e as categorias ficam numa linha
+            só delas, embaixo — dividindo a linha com a busca, as últimas ficavam cortadas. No celular a busca vem
+            logo abaixo do título. Chave home-que-vende desligada: busca e filtros um embaixo do outro, como antes. */}
+        <div className={vende ? 'flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 lg:gap-8 mb-5' : 'mb-6'}>
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: CN.blue }}>Catálogo completo</p>
+            <h1 className={`text-3xl md:text-4xl ${vende ? 'lg:text-5xl' : ''} font-black`} style={{ color: C.navy }}>Todos os produtos</h1>
+            <p className={`text-sm ${vende ? 'lg:text-base' : ''} mt-1`} style={{ color: CN.text }}>
+              Busque e filtre pra achar o que precisa pra próxima partida{products.length ? ` — ${products.length} itens em estoque` : ''}.
+            </p>
+          </div>
+          {vende && campoBusca}
         </div>
 
-        {/* Catálogo (modelo do Maikon, 16/11): filtros à esquerda e busca à direita na mesma linha no
-            computador; no celular a busca vem em cima. Chave desligada: busca e filtros um embaixo do outro. */}
-        <div className={vende ? 'flex flex-col lg:flex-row-reverse lg:items-center gap-3 lg:gap-6 mb-8' : ''}>
-          {/* Busca */}
-          <div className={vende ? 'relative lg:w-80 shrink-0' : 'relative mb-6'}>
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: C.muted }} />
-            <input
-              className={`w-full pl-10 pr-4 py-3 rounded-2xl border text-sm ${vende ? 'lg:text-base shadow-sm' : ''} focus:outline-none transition-all`}
-              style={{ backgroundColor: C.card, borderColor: C.border, color: C.navy }}
-              placeholder={vende ? 'Buscar na loja…' : 'Buscar produto...'}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+        <div className={vende ? 'mb-8' : ''}>
+          {!vende && campoBusca}
 
           {/* Filtro de categorias */}
           {categories.length > 1 && (
-            <div className={vende ? 'flex-1 min-w-0 flex gap-2 overflow-x-auto pb-1' : 'flex gap-2 overflow-x-auto pb-2 mb-8'} style={{ scrollbarWidth: 'none' }}>
+            // Celular: uma linha que rola de lado; do tablet pra cima as categorias quebram linha (nenhuma cortada)
+            <div className={vende ? 'flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible' : 'flex gap-2 overflow-x-auto pb-2 mb-8'} style={{ scrollbarWidth: 'none' }}>
               {[null, ...categories].map(cat => {
                 const ativo = catFilter === cat
                 return (
