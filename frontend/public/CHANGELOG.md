@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.90.1] — 2026-11-18
+
+### Produtos: busca em cima, categorias inteiras embaixo (pedido do Maikon)
+- **Busca ao lado do título:** no computador o "Buscar na loja…" sobe pra direita do "Todos os produtos"; no celular fica logo abaixo do título
+- **Categorias numa linha só delas:** antes dividiam a linha com a busca e as últimas ficavam cortadas. No computador quebram em mais de uma linha, sem cortar nenhuma; no celular rolam de lado
+
 ## [v1.90.0] — 2026-11-17
 
 ### Home no modelo do Maikon: agenda, Mais vendidos e Novidades (chave nova, ligada)

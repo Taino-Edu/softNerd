@@ -5,8 +5,8 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 ficou mora no CHANGELOG e no código. "Feito" guarda só o mês corrente: na virada do mês as linhas
 vão pro [HISTORICO.md](HISTORICO.md).
 
-Atualizado em **17/11/2026** — produção na **v1.89.1** (nginx 1.30.6, Node 24.22.1, .NET 10).
-A v1.90.0 (home com agenda, Mais vendidos e Novidades) está no PR #175 (`feat/home-maikon`).
+Atualizado em **18/11/2026** — produção na **v1.90.0** (nginx 1.30.6, Node 24.22.1, .NET 10).
+A v1.90.1 (busca em cima e categorias inteiras em Produtos) está na branch `feat/produtos-busca-em-cima`.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -16,7 +16,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Home com agenda, Mais vendidos e Novidades** | v1.90.0 | Pedido do Maikon de 17/11 (prints do modelo + paleta do index.html dele): chave `home-vitrines` sobre a `home-que-vende`. Cartões e agenda "Campeonatos & eventos" logo abaixo do topo, categorias só em Produtos, arte do topo com 390px, `PALETA_MAIKON` no tema claro. Mais vendidos: `GET /api/product/mais-vendidos` (`MaisVendidos.CalcularAsync`: comanda Fechada + Frente de Caixa não cancelada, 90 dias, só ids, cache de 10 min). Novidades: `createdAt` nos últimos 30 dias, com selo "Novo" no `CartaoProduto`. Falta: o ok do Taino e do Maikon na tela, PR e deploy |
+| **Produtos: busca em cima, categorias embaixo** | v1.90.1 | Pedido do Maikon de 18/11: com busca e categorias na mesma linha as últimas categorias ficavam cortadas. Busca (`campoBusca`) sobe pro lado do título no `lg`; categorias numa linha própria, com `sm:flex-wrap` (celular rola de lado). Dentro da `home-que-vende`. Falta: o ok do Taino na tela, PR e deploy |
+| **Home com agenda, Mais vendidos e Novidades** | v1.90.0 | Pedido do Maikon de 17/11 (prints do modelo + paleta do index.html dele): chave `home-vitrines` sobre a `home-que-vende`. Cartões e agenda "Campeonatos & eventos" logo abaixo do topo, categorias só em Produtos, arte do topo com 390px, `PALETA_MAIKON` no tema claro. Mais vendidos: `GET /api/product/mais-vendidos` (`MaisVendidos.CalcularAsync`: comanda Fechada + Frente de Caixa não cancelada, 90 dias, só ids, cache de 10 min). Novidades: `createdAt` nos últimos 30 dias, com selo "Novo" no `CartaoProduto`. Em produção desde 17/11 (PR #175); o Maikon aprovou ("ficou do jeito que eu queria") |
 | **Telas que cabem no celular** | v1.89.1 | Pedido de 17/11 ("analisar o resto, melhorar o visual e ver se está responsivo"): varredura de todas as telas em 375px e 768px. Vazavam Cartas, Anúncios, LGPD, Termos/Privacidade (`LegalActions`) e Financeiro; a `TabelaTorneio` grande cortava PTS. Botões flutuantes: assistente em `FOLGA_INFERIOR`, "Começar venda" do PDV no meio do rodapé, `.animate-slide-up` com `backwards` (o `forwards` prendia o transform e o `fixed` de dentro seguia a página), selo do alarme abaixo da barra no celular. Em produção desde 17/11 (PR #174) |
 | **Sininho com botão direito e pesquisa no menu** | v1.89.0 | Em produção desde 17/11 (PR #173). Menu de botão direito no aviso (Ir até, Marcar como lida, Ignorar este tipo, Excluir); "Ignorar" silencia o TIPO em `notifications.silenciados` (servidor grava já lido e o `PushService` pula quem silenciou); pesquisa no menu (Ctrl+K e "/") e o grupo da tela atual fecha. Atrás das chaves da v1.88.0 |
 | **Menu do painel e avisos pra equipe** | v1.88.0 | Em produção desde 17/11 (PR #172). Chave `menu-lateral-enxuto`: grupos dobráveis e rodapé numa linha; menu `sticky h-screen` com `.menu-rolagem` (fora da chave). Chave `avisos-pra-equipe`: `EquipeDaLoja`, avisos de fila de espera e Pix de pedido pago, sininho `AvisosDaLoja` e contagem em Pré-vendas. Falta o teste da loja com login de operador |
