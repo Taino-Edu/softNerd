@@ -5,8 +5,8 @@ Documento vivo: **toda versão atualiza este arquivo** junto com o `frontend/pub
 ficou mora no CHANGELOG e no código. "Feito" guarda só o mês corrente: na virada do mês as linhas
 vão pro [HISTORICO.md](HISTORICO.md).
 
-Atualizado em **19/11/2026** — produção na **v1.90.1** (nginx 1.30.6, Node 24.22.1, .NET 10).
-A v1.90.2 (Liguinha no celular: comanda direto, atalho sem piscar, folga do botão flutuante) está na branch `fix/liguinha-celular`.
+Atualizado em **19/11/2026** — produção na **v1.90.2** (nginx 1.30.6, Node 24.22.1, .NET 10).
+A v1.90.3 (mensagem do Mercado de Cartas vazio) está na branch `fix/mercado-vazio`.
 
 Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
@@ -16,7 +16,8 @@ Legenda: 🔨 em andamento · ⏳ esperando alguém · 📋 na fila · ✅ feito
 
 | Item | Versão | Observação |
 |---|---|---|
-| **Liguinha no celular: comanda, atalho e botão flutuante** | v1.90.2 | Conferência de 19/11 da v1.87.1 (tudo funcionou; achados no celular): atalho "Comanda" vai pra `/cliente#comanda` e a tela rola até o cartão; atalho espera a conferência da comanda (sem piscar "Conta"); `.admin-main` ganhou folga no pé no celular pro AiChatWidget não cobrir a última linha. Falta: o ok do Taino na tela, PR e deploy |
+| **Mercado de Cartas vazio** | v1.90.3 | Conferência de 19/11 em produção: o Mercado está com 0 cartas à venda, o menu da loja leva até ele e a tela dizia "tente outro nome ou jogo". Agora, sem busca nem jogo escolhido, mostra "Ainda não tem carta avulsa à venda" + "Ver produtos da loja" e esconde os filtros; busca sem resultado ganhou "Limpar busca". Esconder o Mercado do menu quando vazio foi descartado (Taino, 19/11). Falta: o ok do Taino na tela, PR e deploy. À parte: o Maikon precisa anunciar cartas em /admin/marketplace |
+| **Liguinha no celular: comanda, atalho e botão flutuante** | v1.90.2 | Conferência de 19/11 da v1.87.1 (tudo funcionou; achados no celular): atalho "Comanda" vai pra `/cliente#comanda` e a tela rola até o cartão; atalho espera a conferência da comanda (sem piscar "Conta"); `.admin-main` ganhou folga no pé no celular pro AiChatWidget não cobrir a última linha. Em produção desde 19/11 (PR #177) |
 | **Produtos: busca em cima, categorias embaixo** | v1.90.1 | Pedido do Maikon de 18/11: com busca e categorias na mesma linha as últimas categorias ficavam cortadas. Busca (`campoBusca`) sobe pro lado do título no `lg`; categorias numa linha própria, com `sm:flex-wrap` (celular rola de lado). Dentro da `home-que-vende`. Em produção desde 18/11 (PR #176) |
 | **Home com agenda, Mais vendidos e Novidades** | v1.90.0 | Pedido do Maikon de 17/11 (prints do modelo + paleta do index.html dele): chave `home-vitrines` sobre a `home-que-vende`. Cartões e agenda "Campeonatos & eventos" logo abaixo do topo, categorias só em Produtos, arte do topo com 390px, `PALETA_MAIKON` no tema claro. Mais vendidos: `GET /api/product/mais-vendidos` (`MaisVendidos.CalcularAsync`: comanda Fechada + Frente de Caixa não cancelada, 90 dias, só ids, cache de 10 min). Novidades: `createdAt` nos últimos 30 dias, com selo "Novo" no `CartaoProduto`. Em produção desde 17/11 (PR #175); o Maikon aprovou ("ficou do jeito que eu queria") |
 | **Telas que cabem no celular** | v1.89.1 | Pedido de 17/11 ("analisar o resto, melhorar o visual e ver se está responsivo"): varredura de todas as telas em 375px e 768px. Vazavam Cartas, Anúncios, LGPD, Termos/Privacidade (`LegalActions`) e Financeiro; a `TabelaTorneio` grande cortava PTS. Botões flutuantes: assistente em `FOLGA_INFERIOR`, "Começar venda" do PDV no meio do rodapé, `.animate-slide-up` com `backwards` (o `forwards` prendia o transform e o `fixed` de dentro seguia a página), selo do alarme abaixo da barra no celular. Em produção desde 17/11 (PR #174) |

@@ -12,7 +12,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   Search, Heart, HeartOff, Package, Loader2,
-  X, ChevronLeft, ChevronRight, User as UserIcon,
+  X, ChevronLeft, ChevronRight, User as UserIcon, Layers, ShoppingBag,
 } from 'lucide-react'
 
 /** Paleta clara da loja (cores no style: o tema claro do site remapeia classes text-white/surface). */
@@ -242,6 +242,12 @@ export default function MercadoPage() {
 
   useEffect(() => { load() }, [load])
 
+  // Mercado vazio de verdade (sem busca nem jogo escolhido) ≠ busca sem resultado. Vazio, a tela dizia
+  // "Tente outro nome ou jogo" — parecia erro pra quem chegou pelo menu (19/11).
+  const comFiltro = search.trim() !== '' || gameFilter !== ''
+  const mercadoVazio = !loading && items.length === 0 && !comFiltro && page === 1
+  function limparFiltros() { setSearch(''); setGameFilter(''); setPage(1) }
+
   function requestInterest(listing: CardListingDto) {
     if (!myId) { toast.error('Faça login para marcar interesse'); return }
     if (listing.myInterest) {
@@ -270,8 +276,8 @@ export default function MercadoPage() {
       <CabecalhoCliente titulo="Mercado de Cartas" subtitulo="Cartas avulsas da loja" voltar={voltar} />
 
       <div className="max-w-5xl mx-auto px-4 pt-5">
-      {/* Filtros */}
-      <div className="flex gap-2 mb-5">
+      {/* Filtros (somem com o mercado vazio: não há o que filtrar) */}
+      <div className={clsx('flex gap-2 mb-5', (mercadoVazio || (loading && items.length === 0 && !comFiltro)) && 'hidden')}>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: L.suave }} />
           <input
@@ -298,11 +304,32 @@ export default function MercadoPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin" style={{ color: L.azul }} />
         </div>
+      ) : mercadoVazio ? (
+        <div className="text-center py-14 px-6 rounded-2xl border" style={{ backgroundColor: L.card, borderColor: L.borda }}>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ backgroundColor: L.foto }}>
+            <Layers className="w-8 h-8" style={{ color: L.azul }} />
+          </div>
+          <p className="text-lg font-black" style={{ color: L.texto }}>Ainda não tem carta avulsa à venda</p>
+          <p className="text-sm mt-1.5 max-w-sm mx-auto" style={{ color: L.suave }}>
+            A loja anuncia as cartas avulsas aqui assim que chegam. Enquanto isso, dá uma olhada nos boosters, decks e acessórios.
+          </p>
+          <Link href="/produtos"
+            className="inline-flex items-center gap-2 mt-5 rounded-xl px-5 py-2.5 text-sm font-black transition-all active:scale-95"
+            style={{ backgroundColor: L.azul, color: '#FFFFFF' }}>
+            <ShoppingBag className="w-4 h-4" /> Ver produtos da loja
+          </Link>
+        </div>
       ) : items.length === 0 ? (
-        <div className="text-center py-16 rounded-2xl border" style={{ backgroundColor: L.card, borderColor: L.borda }}>
+        <div className="text-center py-16 px-6 rounded-2xl border" style={{ backgroundColor: L.card, borderColor: L.borda }}>
           <Package className="w-12 h-12 mx-auto mb-3" style={{ color: L.suave, opacity: 0.4 }} />
           <p className="text-lg font-black" style={{ color: L.texto }}>Nenhuma carta encontrada</p>
-          <p className="text-sm mt-1" style={{ color: L.suave }}>Tente outro nome ou jogo — a loja põe cartas novas toda semana.</p>
+          <p className="text-sm mt-1" style={{ color: L.suave }}>Nada com essa busca. Tente outro nome ou outro jogo.</p>
+          {comFiltro && (
+            <button onClick={limparFiltros} className="mt-4 rounded-xl border px-4 py-2 text-sm font-bold"
+              style={{ borderColor: L.borda, color: L.azul, backgroundColor: L.card }}>
+              Limpar busca
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
