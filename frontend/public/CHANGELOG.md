@@ -1,12 +1,23 @@
 # Changelog — Santuário Nerd
 
-## [v1.90.4] — 2026-11-19
+## [v1.91.1] — 2026-11-19
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.91.0] — 2026-11-19
+
+### Mercado de Cartas vende: a carta avulsa vira produto com reserva (pedido do Maikon)
+- **Reserva da carta:** no Mercado de Cartas o cliente toca em "Adicionar", a carta vai pra sacola e ele reserva e paga no Pix (ou na retirada) como qualquer produto. O estoque baixa sozinho e a carta também sai no Frente de Caixa
+- **Cadastro de carta no painel:** Marketplace → "Nova carta" com foto, nome, jogo, idioma, estado (NM/LP/MP/HP/DMG), quantidade, coleção, número, raridade e preço. A coleção sugere as que já existem (pro Mercado agrupar certo) e a raridade sugere as do jogo. Cópias iguais entram como quantidade; a lista mostra o que está à venda, as cópias e as esgotadas
+- **Mercado no jeito do catálogo:** o desenho que o Maikon mandou (catálogo do Paulinho), no fundo branco do site — abas por jogo e por coleção com a contagem, cartas agrupadas por coleção, número · raridade · bandeira do idioma · estado em cada carta, a quantidade no canto da foto, filtros de raridade e idioma, ordem por numeração, preço, raridade ou chegada, galeria ou lista e "Ver na Liga" embaixo da carta. Sem o valor somado das cartas. O endereço guarda a aba (ex.: `/cliente/mercado#pokemon--escarlate-e-violeta-151`), dá pra mandar o link da coleção
+- **"Ver na Liga":** ao lado do preço, abre a busca da carta na Liga do jogo (LigaPokemon, LigaMagic, LigaYugioh, LigaOnePiece...) numa aba nova, pra conferir o menor preço sem digitar o nome de novo
+- **Página da carta:** caminho pelo Mercado, jogo, estado, coleção, número, raridade, idioma e quantas cópias tem; "Você também pode gostar" mostra outras cartas do mesmo jogo
+- **Só no Mercado:** as cartas avulsas não aparecem em Produtos nem na home
+- **Com volta:** chave "Mercado de Cartas vende" em Mudanças com volta. Desligada, o Mercado volta a ser vitrine com "Tenho interesse"
 
 ## [v1.90.3] — 2026-11-19
 
