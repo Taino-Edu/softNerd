@@ -1,6 +1,7 @@
 // =============================================================================
 // ProductService.cs — Implementação de Produtos (estoque físico)
 // =============================================================================
+using CardGameStore.Configuration;
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
@@ -14,14 +15,24 @@ public class ProductService : IProductService
     private readonly IPushService  _push;
     private readonly IEmailService _email;
     private readonly ILogger<ProductService> _logger;
+    private readonly FuncionalidadesService? _funcionalidades;
 
-    public ProductService(AppDbContext db, IPushService push, IEmailService email, ILogger<ProductService> logger)
-    { _db = db; _push = push; _email = email; _logger = logger; }
+    public ProductService(AppDbContext db, IPushService push, IEmailService email, ILogger<ProductService> logger,
+        FuncionalidadesService? funcionalidades = null)
+    { _db = db; _push = push; _email = email; _logger = logger; _funcionalidades = funcionalidades; }
+
+    /// <summary>
+    /// Chave "cartas-como-produto" ligada: carta avulsa fica só no Mercado de Cartas, fora de Produtos e da home.
+    /// Desligada (o jeito antigo), a lista volta a ser a de antes — a carta aparece como produto comum.
+    /// </summary>
+    private async Task<bool> CartasSoNoMercadoAsync() =>
+        _funcionalidades is not null && await _funcionalidades.LigadaAsync(Funcionalidades.CartasComoProduto);
 
     public async Task<IEnumerable<Product>> GetAllActiveAsync()
     {
+        var soNoMercado = await CartasSoNoMercadoAsync();
         var list = await _db.Products
-            .Where(p => p.IsActive && p.ShowOnMarketplace)
+            .Where(p => p.IsActive && p.ShowOnMarketplace && !(soNoMercado && p.CartaAvulsa))
             .OrderBy(p => p.Name)
             .AsNoTracking()
             .ToListAsync();
@@ -42,13 +53,36 @@ public class ProductService : IProductService
 
     public async Task<IEnumerable<Product>> GetByCategoryAsync(string category)
     {
+        var soNoMercado = await CartasSoNoMercadoAsync();
         var list = await _db.Products
-            .Where(p => p.IsActive && p.ShowOnMarketplace && p.Category == category)
+            .Where(p => p.IsActive && p.ShowOnMarketplace && p.Category == category && !(soNoMercado && p.CartaAvulsa))
             .AsNoTracking()
             .ToListAsync();
         await ApplyVariantStockAsync(list);
         return list;
     }
+
+    /// <summary>
+    /// Cartas avulsas à venda no Mercado de Cartas: ativas, na loja digital e com estoque. Mais novas primeiro.
+    /// Jogo exato (lista do Mercado); busca no nome e na coleção ("151", "199/165").
+    /// </summary>
+    public async Task<List<Product>> ListarCartasAsync(string? jogo, string? busca)
+    {
+        var q = _db.Products.Where(p => p.IsActive && p.ShowOnMarketplace && p.CartaAvulsa && p.StockQuantity > 0);
+        if (!string.IsNullOrWhiteSpace(jogo))
+            q = q.Where(p => p.CartaJogo == jogo.Trim());
+        if (!string.IsNullOrWhiteSpace(busca))
+        {
+            var termo = busca.Trim().ToLower();
+            q = q.Where(p => p.Name.ToLower().Contains(termo)
+                          || (p.CartaColecao != null && p.CartaColecao.ToLower().Contains(termo)));
+        }
+        return await q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Name)
+            .Take(MaxCartasNoMercado).AsNoTracking().ToListAsync();
+    }
+
+    /// <summary>Teto da lista do Mercado — a vitrine não pagina; a busca e o filtro de jogo refinam.</summary>
+    internal const int MaxCartasNoMercado = 500;
 
     public async Task<Product?> GetByIdAsync(Guid id)
     {
@@ -127,6 +161,11 @@ public class ProductService : IProductService
         // desconto da categoria"), não campo omitido.
         existing.MaxInstallments      = updated.MaxInstallments;
         existing.PixDiscountPercent   = updated.PixDiscountPercent;
+        existing.CartaAvulsa          = updated.CartaAvulsa;
+        existing.CartaJogo            = updated.CartaJogo;
+        existing.CartaCondicao        = updated.CartaCondicao;
+        existing.CartaColecao         = updated.CartaColecao;
+        existing.CartaIdioma          = updated.CartaIdioma;
         existing.UpdatedAt            = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -363,5 +402,27 @@ public class ProductService : IProductService
             throw new ArgumentException("Parcelamento deve ficar entre 1x e 24x (ou vazio, pra não parcelar).");
         if (product.PixDiscountPercent is < 0 or > 100)
             throw new ArgumentException("Desconto do Pix deve ficar entre 0 e 100% (ou vazio, pra herdar da categoria).");
+        NormalizarCarta(product);
+    }
+
+    /// <summary>Estados de carta aceitos (mesma lista do cadastro e do Mercado).</summary>
+    internal static readonly string[] CondicoesDeCarta = ["NM", "LP", "MP", "HP", "DMG"];
+
+    /// <summary>Dados de carta avulsa: texto aparado, vazio vira null, estado da lista e tamanhos do banco.</summary>
+    private static void NormalizarCarta(Product p)
+    {
+        static string? Limpo(string? v, int max, string campo)
+        {
+            var t = string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+            if (t is { Length: var n } && n > max)
+                throw new ArgumentException($"{campo} da carta: no máximo {max} caracteres.");
+            return t;
+        }
+        p.CartaJogo     = Limpo(p.CartaJogo, 40, "Jogo");
+        p.CartaColecao  = Limpo(p.CartaColecao, 120, "Coleção");
+        p.CartaIdioma   = Limpo(p.CartaIdioma, 10, "Idioma")?.ToUpperInvariant();
+        p.CartaCondicao = Limpo(p.CartaCondicao, 10, "Estado")?.ToUpperInvariant();
+        if (p.CartaCondicao is not null && !CondicoesDeCarta.Contains(p.CartaCondicao))
+            throw new ArgumentException($"Estado da carta deve ser um destes: {string.Join(", ", CondicoesDeCarta)}.");
     }
 }

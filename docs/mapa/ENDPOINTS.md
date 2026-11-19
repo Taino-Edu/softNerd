@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-261 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+262 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -28,7 +28,7 @@
 - [PagamentoCrediario](#pagamentocrediario) (3)
 - [Perfis](#perfis) (6)
 - [PokemonFavorito](#pokemonfavorito) (1)
-- [Product](#product) (11)
+- [Product](#product) (12)
 - [ProductVariant](#productvariant) (5)
 - [PublicProfile](#publicprofile) (1)
 - [Push](#push) (3)
@@ -345,17 +345,18 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/product` | público | `GetAll` (46) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`app/sitemap.ts` |
-| POST | `/api/product` | AdminOnly | `Create` (129) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts` |
-| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (68) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
-| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (110) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
-| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (119) | — | — |
-| GET | `/api/product/mais-vendidos` | público | `MaisVendidosDaLoja` (81) | `productApi.maisVendidos` | `app/page.tsx` |
-| GET | `/api/product/store` | logado | `GetAllStore` (58) | `productApi.listStore` | `app/cliente/page.tsx` |
-| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (157) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
-| GET | `/api/product/{id:guid}` | público | `GetById` (99) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
-| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (146) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx` |
-| PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (169) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
+| GET | `/api/product` | público | `GetAll` (47) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`app/sitemap.ts` |
+| POST | `/api/product` | AdminOnly | `Create` (143) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts`<br>`components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (69) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (124) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
+| GET | `/api/product/cartas` | público | `CartasAvulsas` (102) | `productApi.cartas` | `app/produtos/[id]/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
+| GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (133) | — | — |
+| GET | `/api/product/mais-vendidos` | público | `MaisVendidosDaLoja` (82) | `productApi.maisVendidos` | `app/page.tsx` |
+| GET | `/api/product/store` | logado | `GetAllStore` (59) | `productApi.listStore` | `app/cliente/page.tsx` |
+| DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (171) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/{id:guid}` | público | `GetById` (113) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
+| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (160) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
+| PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (183) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
 ## ProductVariant
 
@@ -506,7 +507,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/upload/image` | AdminOnly | `UploadImage` (57) | `uploadApi.image` | `app/admin/campeonatos/page.tsx`<br>`app/admin/site/page.tsx`<br>`components/admin/ImageUpload.tsx` |
+| POST | `/api/upload/image` | AdminOnly | `UploadImage` (57) | `uploadApi.image` | `app/admin/campeonatos/page.tsx`<br>`app/admin/site/page.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ImageUpload.tsx` |
 | POST | `/api/upload/marketplace-image` | logado | `UploadMarketplaceImage` (70) | `marketplaceApi.uploadImage` | `app/admin/marketplace/page.tsx` |
 | POST | `/api/upload/profile-image` | logado | `UploadProfileImage` (80) | `authApi.uploadProfileImage` | `app/cliente/perfil/page.tsx` |
 

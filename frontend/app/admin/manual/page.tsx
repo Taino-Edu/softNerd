@@ -283,15 +283,16 @@ const SECOES: Secao[] = [
   },
   {
     grupo: 'Catálogo',
-    titulo: 'Mercado de Cartas (Vitrine)',
+    titulo: 'Mercado de Cartas (cartas avulsas)',
     cor: '#F472B6',
     itens: [
-      { t: 'O que é', d: 'Vitrine de cartas avulsas do próprio Maikon — só o Admin anuncia. Clientes só navegam e marcam interesse, não postam anúncios (não é C2C).' },
-      { t: 'Anunciar carta', d: 'Admin → Mercado de Cartas → "Novo anúncio". Foto, jogo, condição (NM/LP/MP/HP/DMG), preço e descrição.' },
+      { t: 'O que é', d: 'As cartas avulsas (singles) da loja — só a loja vende, não é mercado entre jogadores. Desde a v1.91.0 cada carta é um produto: o cliente põe na sacola, reserva e paga no Pix (ou na retirada) como qualquer produto, e o estoque baixa sozinho.' },
+      { t: 'Cadastrar carta', d: 'Painel → Marketplace → "Nova carta". Foto, nome, jogo, idioma, estado (NM/LP/MP/HP/DMG), quantidade, coleção e número, preço. Cópias iguais (mesmo estado e idioma) entram como quantidade.' },
+      { t: 'Ver na Liga', d: 'Ao lado do preço, "Ver na Liga" abre a busca da carta na Liga do jogo (LigaPokemon, LigaMagic...) numa aba nova, pra conferir o menor preço sem digitar o nome de novo. O preço você digita — a Liga não deixa o sistema ler sozinho.' },
       { t: 'Condições de carta', d: 'NM = Near Mint (perfeita) • LP = Light Played (levemente usada) • MP = Moderate Played • HP = Heavy Played • DMG = Damaged (danificada).' },
-      { t: 'Interesse', d: 'Cliente clica "Tenho interesse" na carta e pode deixar uma mensagem. Pode autorizar (ou não) compartilhar o WhatsApp com o Maikon.' },
-      { t: 'Ver interessados', d: 'Em Admin → Mercado de Cartas, clique no número de interesses da carta. Se o cliente autorizou o contato, aparece botão de WhatsApp direto pra combinar a venda.' },
-      { t: 'Gestão', d: 'Admin edita, remove ou muda o status do anúncio (Disponível / Reservado / Vendido) direto na tabela do Mercado de Cartas.' },
+      { t: 'Onde a carta aparece', d: 'Só no Mercado de Cartas (fora de Produtos e da home) e no Frente de Caixa, como qualquer produto. Esgotou: some do Mercado e fica na lista do painel como "Esgotada" — é só editar a quantidade quando chegar outra.' },
+      { t: 'Reservas', d: 'A reserva de carta cai em Pedidos/Reservas igual às de produto: mesmo Pix, mesma homologação na retirada, mesmo cancelamento.' },
+      { t: 'Chave', d: 'Configuração → Mudanças com volta → "Mercado de Cartas vende". Desligada, o Mercado volta a ser vitrine com "Tenho interesse" (os anúncios antigos) e as cartas aparecem em Produtos como produto comum.' },
     ],
     dicas: [
       'LGPD: o WhatsApp do cliente só aparece pro Admin se o próprio cliente autorizou explicitamente ao marcar interesse.',

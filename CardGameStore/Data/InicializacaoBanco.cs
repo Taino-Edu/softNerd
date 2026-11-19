@@ -55,6 +55,12 @@ public static class InicializacaoBanco
         "ALTER TABLE users ADD COLUMN pokemon_favorito TEXT NULL;",
         "ALTER TABLE torneio_rodadas ADD COLUMN comecada_em TEXT NULL;",
         "ALTER TABLE users ADD COLUMN pokemon_favorito_shiny INTEGER NOT NULL DEFAULT 0;",
+        // Cartas avulsas como produto (v1.91.0)
+        "ALTER TABLE products ADD COLUMN carta_avulsa INTEGER NOT NULL DEFAULT 0;",
+        "ALTER TABLE products ADD COLUMN carta_jogo TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_condicao TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_colecao TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_idioma TEXT NULL;",
     ];
 
     public static async Task ExecutarAsync(IServiceProvider services, bool useSqlite)

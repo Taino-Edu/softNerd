@@ -47,6 +47,7 @@ public static class Funcionalidades
     public const string AvisosPraEquipe = "avisos-pra-equipe";
     public const string MenuLateralEnxuto = "menu-lateral-enxuto";
     public const string HomeVitrines = "home-vitrines";
+    public const string CartasComoProduto = "cartas-como-produto";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -180,6 +181,18 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.90.0",
             RevisarEm:  new DateOnly(2027, 5, 17)),
+
+        new(CartasComoProduto,
+            Nome:       "Mercado de Cartas vende: carta avulsa vira produto com reserva (pedido do Maikon de 19/11)",
+            OQueMuda:   "As cartas avulsas da loja são cadastradas como produto (em Marketplace → Nova carta, com jogo, estado, coleção, " +
+                        "idioma, quantidade e o botão \"Ver na Liga\" pra conferir o menor preço). No Mercado de Cartas o cliente põe a carta " +
+                        "na sacola e reserva/paga no Pix como qualquer produto; o estoque baixa sozinho e a carta também sai no Frente de Caixa. " +
+                        "As cartas avulsas não aparecem em Produtos nem na home — só no Mercado.",
+            SeDesligar: "O Mercado volta a ser só vitrine com \"Tenho interesse\" (os anúncios antigos) e o Marketplace do painel volta a cadastrar " +
+                        "anúncios. As cartas cadastradas como produto passam a aparecer em Produtos como produto comum (continuam no estoque e no PDV).",
+            Padrao:     true,
+            Desde:      "v1.91.0",
+            RevisarEm:  new DateOnly(2027, 5, 19)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

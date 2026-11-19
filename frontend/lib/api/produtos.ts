@@ -18,6 +18,16 @@ export interface Product {
   maxInstallments: number | null
   /** Desconto do Pix anunciado neste item, em %. Null = herda da categoria / do padrão da loja. */
   pixDiscountPercent: number | null
+  /** Carta avulsa (v1.91.0, chave cartas-como-produto): fica no Mercado de Cartas, fora de Produtos. */
+  cartaAvulsa?: boolean
+  /** "Pokémon", "Magic"... (lista JOGOS_DE_CARTA). */
+  cartaJogo?: string | null
+  /** NM, LP, MP, HP ou DMG. */
+  cartaCondicao?: string | null
+  /** Coleção e número, como o Maikon escrever ("151 · 199/165"). */
+  cartaColecao?: string | null
+  /** PT, EN, JP... */
+  cartaIdioma?: string | null
   updatedAt: string; createdAt: string
 }
 
@@ -50,6 +60,9 @@ export const productApi = {
   get:         (id: string)         => api.get<Product>(`/api/product/${id}`),
   /** Ids dos mais vendidos dos últimos 90 dias, em ordem (seção da home — só a ordem, sem números). */
   maisVendidos:(limite = 12)        => api.get<string[]>('/api/product/mais-vendidos', { params: { limite } }),
+  /** Cartas avulsas à venda (Mercado de Cartas): ativas, na loja e com estoque, mais novas primeiro. */
+  cartas:      (f: { jogo?: string; busca?: string } = {}) =>
+                 api.get<Product[]>('/api/product/cartas', { params: { jogo: f.jogo || undefined, busca: f.busca || undefined } }),
   getByBarcode:(barcode: string)    => api.get<Product>(`/api/product/barcode/${encodeURIComponent(barcode)}`),
   create:      (p: Partial<Product>) => api.post<Product>('/api/product', p),
   update:      (id: string, p: Partial<Product>) => api.put<Product>(`/api/product/${id}`, p),

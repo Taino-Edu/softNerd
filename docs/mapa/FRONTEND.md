@@ -29,7 +29,7 @@
 | `/admin/liguinha/liga` | `app/admin/liguinha/liga/page.tsx` | `liga/SpriteDeck`, `liga/admin/nomes`, `ui/PageHeader` |
 | `/admin/liguinha` | `app/admin/liguinha/page.tsx` | `liga/admin/CriarTorneio`, `liga/admin/EscolherEntrada`, `liga/admin/LancarEtapa`, `liga/admin/nomes`, `ui/Badge`, `ui/PageHeader` |
 | `/admin/manual` | `app/admin/manual/page.tsx` | — |
-| `/admin/marketplace` | `app/admin/marketplace/page.tsx` | `ui/PageHeader`, `ui/Table` |
+| `/admin/marketplace` | `app/admin/marketplace/page.tsx` | `admin/CartasDaLoja`, `ui/PageHeader`, `ui/Table` |
 | `/admin/mensageria` | `app/admin/mensageria/page.tsx` | `ui/PageHeader` |
 | `/admin/perfis` | `app/admin/perfis/page.tsx` | `ui/PageHeader` |
 | `/admin/qrcodes` | `app/admin/qrcodes/page.tsx` | — |
@@ -47,7 +47,7 @@
 | `/cliente/configuracoes` | `app/cliente/configuracoes/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/decks/[id]` | `app/cliente/decks/[id]/page.tsx` | — |
 | `/cliente/decks` | `app/cliente/decks/page.tsx` | `cliente/CabecalhoCliente` |
-| `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente` |
+| `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente`, `loja/MercadoCartasLoja` |
 | `/cliente` | `app/cliente/page.tsx` | `cliente/AvatarCliente`, `cliente/NotificationBell` |
 | `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga`, `pokemon/EscolherPokemon`, `pokemon/ParceiroDaConta` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | `loja/MenuLoja` |
@@ -92,6 +92,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `VLibrasController` | `abrirVLibras`, `VLibrasController` | `app/layout.tsx`<br>`components/loja/MenuLoja.tsx` |
 | `admin/AiChatWidget` | `AiChatWidget` | `app/admin/layout.tsx` |
 | `admin/AvisosDaLoja` | `tipoDoAviso`, `AvisosDaLoja` | `components/admin/Sidebar.tsx` |
+| `admin/CartasDaLoja` | `CartasDaLoja` | `app/admin/marketplace/page.tsx` |
 | `admin/CobrancaPixModal` | `CobrancaPixModal` | `app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/ConferenciaButton` | `ConferenciaButton` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
 | `admin/ConferenciaDecksModal` | `ConferenciaDecksModal` | `app/admin/campeonatos/page.tsx` |
@@ -106,7 +107,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/VariantPicker` | `VariantPicker` | `app/admin/venda-avulsa/page.tsx` |
 | `auth/Moldura` | `useMarca`, `MolduraEntrada`, `TituloEntrada`, `AbasEntrada`, `CampoEntrada`, `BotaoEntrada`, `LinhaEntrada`, `LinkEntrada` | `app/cadastro/page.tsx`<br>`app/entrar/page.tsx`<br>`app/login/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/reset-password/page.tsx` |
 | `cliente/AvatarCliente` | `AvatarCliente` | `app/cliente/page.tsx`<br>`app/produtos/[id]/page.tsx` |
-| `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx` |
+| `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
 | `cliente/MinhaLiga` | `MinhaLiga` | `app/cliente/perfil/page.tsx` |
 | `cliente/NotificationBell` | `NotificationBell` | `app/cliente/page.tsx` |
@@ -125,16 +126,17 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/admin/Janela` | `Janela` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/JogadoresTorneio` | `JogadoresTorneio` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/LancarEtapa` | `LancarEtapa` | `app/admin/liguinha/page.tsx` |
-| `loja/AvisoSacola` | `usePorNaSacola`, `AvisoSacola` | `app/page.tsx`<br>`app/produtos/page.tsx` |
-| `loja/CartaoProduto` | `rotuloCategoria`, `ehNovidade`, `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
+| `loja/AvisoSacola` | `usePorNaSacola`, `AvisoSacola` | `app/page.tsx`<br>`app/produtos/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
+| `loja/CartaoProduto` | `rotuloCategoria`, `ehNovidade`, `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
 | `loja/MenuLoja` | `alturaFaixa`, `azulDoMenu`, `MenuLoja` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
+| `loja/MercadoCartasLoja` | `MercadoCartasLoja` | `app/cliente/mercado/page.tsx` |
 | `pokemon/EscolherPokemon` | `EscolherPokemon` | `app/cliente/perfil/page.tsx` |
 | `pokemon/ParceiroDaConta` | `ParceiroDaConta` | `app/cliente/perfil/page.tsx`<br>`app/perfil/[id]/page.tsx` |
 | `pokemon/PokemonParceiro` | `PokemonParceiro` | `components/liga/AvatarJogador.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/alertas/page.tsx`<br>`app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
-| `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
+| `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 | `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx`<br>`components/pokemon/EscolherPokemon.tsx` |
-| `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx` |
+| `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 
 ## Bibliotecas (`frontend/lib`)
 
@@ -160,6 +162,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/vigia.ts` | `vigiaApi` |
 | `lib/auth.ts` | `saveAuth`, `clearAuth`, `getRole`, `getUserName`, `getUserId`, `isAdmin`, `isOperator`, `isLoggedIn`, `getPermissions`, `hasPermission` |
 | `lib/caminhosTorneio.ts` | `rotasDoEvento`, `modalidadeDoEndereco` |
+| `lib/cartasAvulsas.ts` | `JOGOS_DE_CARTA`, `CONDICOES_DE_CARTA`, `IDIOMAS_DE_CARTA`, `CATEGORIA_CARTA_AVULSA`, `resumoCarta`, `linkDaLiga` |
 | `lib/colors.ts` | `mixHex`, `isDark`, `getContrastText` |
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |
 | `lib/crediario.ts` | `agruparItens`, `totalUnidades` |

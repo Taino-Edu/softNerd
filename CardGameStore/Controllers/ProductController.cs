@@ -7,6 +7,7 @@
 // DELETE /api/product/{id}       → desativa (Admin)
 // PATCH  /api/product/{id}/stock → ajusta estoque (Admin)
 // GET    /api/product/mais-vendidos → ids dos que mais saem (público, seção da home)
+// GET    /api/product/cartas    → cartas avulsas à venda (público, Mercado de Cartas)
 // =============================================================================
 
 using CardGameStore.Data;
@@ -89,6 +90,19 @@ public class ProductController : ControllerBase
             return MaisVendidos.CalcularAsync(db, vendas, limite, DateTime.UtcNow);
         });
         return Ok(ids ?? []);
+    }
+
+    /// <summary>
+    /// Cartas avulsas à venda no Mercado de Cartas (chave cartas-como-produto): ativas, na loja digital e com
+    /// estoque. Filtro por jogo e busca no nome/coleção. Sempre no formato público (sem custo).
+    /// </summary>
+    [HttpGet("cartas")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(List<ProdutoPublicoDto>), 200)]
+    public async Task<IActionResult> CartasAvulsas([FromQuery] string? jogo, [FromQuery] string? busca)
+    {
+        var cartas = await _service.ListarCartasAsync(jogo, busca);
+        return Ok(cartas.Select(ProdutoPublicoDto.De).ToList());
     }
 
     /// <summary>Busca produto por ID.</summary>

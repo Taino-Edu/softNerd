@@ -44,7 +44,13 @@ public sealed record ProdutoPublicoDto(
     // "Últimas unidades" na vitrine — só o sim/não, sem o estoque mínimo
     bool IsLowStock,
     DateTime? PreVendaReleaseDate,
-    IReadOnlyList<VariantePublicaDto> Variants)
+    IReadOnlyList<VariantePublicaDto> Variants,
+    // Carta avulsa (v1.91.0): o Mercado de Cartas e a página do produto mostram jogo, estado, coleção e idioma
+    bool CartaAvulsa,
+    string? CartaJogo,
+    string? CartaCondicao,
+    string? CartaColecao,
+    string? CartaIdioma)
 {
     public static ProdutoPublicoDto De(Product p) => new(
         p.Id, p.Name, p.Description, p.Category, p.Barcode, p.PriceInCents, p.StockQuantity,
@@ -53,5 +59,6 @@ public sealed record ProdutoPublicoDto(
         p.PixDiscountPercent, p.HasVariants, p.CreatedAt, p.UpdatedAt, p.PriceInReais,
         p.DiscountPriceInReais, p.IsOnPromo, p.IsLowStock, p.PreVendaReleaseDate,
         p.Variants.Select(v => new VariantePublicaDto(
-            v.Id, v.ProductId, v.Size, v.Color, v.StockQuantity, v.PriceInCents, v.Sku, v.Label)).ToList());
+            v.Id, v.ProductId, v.Size, v.Color, v.StockQuantity, v.PriceInCents, v.Sku, v.Label)).ToList(),
+        p.CartaAvulsa, p.CartaJogo, p.CartaCondicao, p.CartaColecao, p.CartaIdioma);
 }

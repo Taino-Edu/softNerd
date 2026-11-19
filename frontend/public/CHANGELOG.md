@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.91.0] — 2026-11-19
+
+### Mercado de Cartas vende: a carta avulsa vira produto com reserva (pedido do Maikon)
+- **Reserva da carta:** no Mercado de Cartas o cliente toca em "Adicionar", a carta vai pra sacola e ele reserva e paga no Pix (ou na retirada) como qualquer produto. O estoque baixa sozinho e a carta também sai no Frente de Caixa
+- **Cadastro de carta no painel:** Marketplace → "Nova carta" com foto, nome, jogo, idioma, estado (NM/LP/MP/HP/DMG), quantidade, coleção e número e preço. Cópias iguais entram como quantidade; a lista mostra o que está à venda, as cópias e as esgotadas
+- **"Ver na Liga":** ao lado do preço, abre a busca da carta na Liga do jogo (LigaPokemon, LigaMagic, LigaYugioh, LigaOnePiece...) numa aba nova, pra conferir o menor preço sem digitar o nome de novo
+- **Página da carta:** caminho pelo Mercado, jogo, estado, coleção, idioma e quantas cópias tem; "Você também pode gostar" mostra outras cartas do mesmo jogo
+- **Só no Mercado:** as cartas avulsas não aparecem em Produtos nem na home
+- **Com volta:** chave "Mercado de Cartas vende" em Mudanças com volta. Desligada, o Mercado volta a ser vitrine com "Tenho interesse"
+
 ## [v1.90.3] — 2026-11-19
 
 ### Mercado de Cartas: mensagem própria quando não tem carta à venda
