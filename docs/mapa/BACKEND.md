@@ -12,6 +12,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | `announcements` | `Announcement` | `Announcements` | — | `CardGameStore/Models/PostgreSQL/Announcement.cs` |
 | `audit_logs` | `AuditLog` | `AuditLogs` | — | `CardGameStore/Models/PostgreSQL/AuditLog.cs` |
 | `card_listings` | `CardListing` | `CardListings` | criada | `CardGameStore/Models/PostgreSQL/CardListing.cs` |
+| `carta_regra_preco` | `CartaRegraPreco` | `CartaRegraPreco` | criada | `CardGameStore/Models/PostgreSQL/CartaPreco.cs` |
 | `championship_participants` | `ChampionshipParticipant` | `ChampionshipParticipants` | colunas | `CardGameStore/Models/PostgreSQL/Championship.cs` |
 | `championship_preinscricoes` | `ChampionshipPreInscricao` | `ChampionshipPreInscricoes` | colunas | `CardGameStore/Models/PostgreSQL/Championship.cs` |
 | `championships` | `Championship` | `Championships` | colunas | `CardGameStore/Models/PostgreSQL/Championship.cs` |
@@ -67,6 +68,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | `CardGameStore.Services.Vigia.VigiaBackgroundService` | roda o Vigia a cada 10 minutos (chave "vigia-sistema") | `CardGameStore/Services/Vigia/VigiaBackgroundService.cs` |
 | `PixReconciliationBackgroundService` | Robô de confirmação de Pix. | `CardGameStore/Services/Implementations/PixReconciliationBackgroundService.cs` |
 | `CrediarioAvisoBackgroundService` | Roda os lembretes de vencimento do | `CardGameStore/Services/Implementations/CrediarioAvisoBackgroundService.cs` |
+| `PrecoCartasBackgroundService` | robô "Preço das cartas" (v1.92.0, chave "preco-referencia-cartas") | `CardGameStore/Services/Implementations/PrecoCartasBackgroundService.cs` |
 
 ## Serviços registrados (injeção de dependência)
 
@@ -94,6 +96,8 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Singleton | `ITcgApiClient → TcgApiClient` | `CardGameStore/Services/Implementations/TcgApiClient.cs` |
 | Singleton | `ITcgService → TcgService` | `CardGameStore/Services/Implementations/TcgService.cs` |
 | Singleton | `CurrencyService` | `CardGameStore/Services/Implementations/CurrencyService.cs` |
+| Singleton | `ICatalogoCartas → CatalogoCartasService` | `CardGameStore/Services/Implementations/CatalogoCartasService.cs` |
+| Scoped | `PrecoCartasService` | `CardGameStore/Services/Implementations/PrecoCartasService.cs` |
 | Scoped | `IAuditService → AuditService` | `CardGameStore/Services/Implementations/AuditService.cs` |
 | Singleton | `EncryptionService` | `CardGameStore/Services/Implementations/EncryptionService.cs` |
 | Scoped | `InterSyncService` | `CardGameStore/Services/Implementations/InterSyncService.cs` |
