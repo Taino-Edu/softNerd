@@ -12,7 +12,7 @@ import { brlDeCentavos } from '@/lib/format'
 import { Table } from '@/components/ui/Table'
 import { PageHeader } from '@/components/ui/PageHeader'
 import {
-  JOGOS_DE_CARTA, CONDICOES_DE_CARTA, IDIOMAS_DE_CARTA, CATEGORIA_CARTA_AVULSA, resumoCarta, linkDaLiga,
+  JOGOS_DE_CARTA, CONDICOES_DE_CARTA, IDIOMAS_DE_CARTA, CATEGORIA_CARTA_AVULSA, resumoCarta, linkDaLiga, raridadesDoJogo,
 } from '@/lib/cartasAvulsas'
 import {
   Search, Package, Loader2, Trash2, Eye, Plus, Pencil, X, ImagePlus, ExternalLink, Layers,
@@ -20,7 +20,7 @@ import {
 
 type Form = {
   nome: string; jogo: string; condicao: string; idioma: string; colecao: string
-  preco: string; quantidade: string; descricao: string
+  numero: string; raridade: string; preco: string; quantidade: string; descricao: string
 }
 
 function centavosDe(texto: string) {
@@ -28,8 +28,10 @@ function centavosDe(texto: string) {
 }
 
 // ── Modal criar / editar carta ────────────────────────────────────────────────
-function CartaModal({ inicial, onClose, onSalvo }: {
+function CartaModal({ inicial, colecoes, onClose, onSalvo }: {
   inicial?: Product
+  /** Coleções já cadastradas por jogo — sugeridas no campo pro Mercado agrupar certo (mesmo nome, mesma coleção). */
+  colecoes: Record<string, string[]>
   onClose: () => void
   onSalvo: (p: Product) => void
 }) {
@@ -39,6 +41,8 @@ function CartaModal({ inicial, onClose, onSalvo }: {
     condicao:   inicial?.cartaCondicao ?? 'NM',
     idioma:     inicial?.cartaIdioma ?? 'PT',
     colecao:    inicial?.cartaColecao ?? '',
+    numero:     inicial?.cartaNumero ?? '',
+    raridade:   inicial?.cartaRaridade ?? '',
     preco:      inicial ? (inicial.priceInCents / 100).toFixed(2).replace('.', ',') : '',
     quantidade: String(inicial?.stockQuantity ?? 1),
     descricao:  inicial?.description ?? '',
@@ -87,6 +91,8 @@ function CartaModal({ inicial, onClose, onSalvo }: {
         cartaCondicao: form.condicao,
         cartaIdioma: form.idioma,
         cartaColecao: form.colecao.trim() || null,
+        cartaNumero: form.numero.trim() || null,
+        cartaRaridade: form.raridade.trim() || null,
       }
       const { data } = inicial ? await productApi.update(inicial.id, corpo) : await productApi.create(corpo)
       onSalvo(data)
@@ -156,9 +162,29 @@ function CartaModal({ inicial, onClose, onSalvo }: {
           </div>
         </div>
 
+        {/* Coleção, número e raridade: o Mercado separa as cartas por coleção e filtra/ordena pelo resto */}
+        <div className="grid grid-cols-[1fr_6.5rem] gap-3">
+          <div className="min-w-0">
+            <label className="label">Coleção</label>
+            <input className="input" list="colecoes-da-carta" value={form.colecao} onChange={e => set('colecao', e.target.value)}
+              placeholder="Ex: Escarlate e Violeta 151" />
+            <datalist id="colecoes-da-carta">
+              {(colecoes[form.jogo] ?? []).map(c => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+          <div>
+            <label className="label">Número</label>
+            <input className="input" value={form.numero} onChange={e => set('numero', e.target.value)} placeholder="199/165" />
+          </div>
+        </div>
+
         <div>
-          <label className="label">Coleção e número</label>
-          <input className="input" value={form.colecao} onChange={e => set('colecao', e.target.value)} placeholder="Ex: 151 · 199/165" />
+          <label className="label">Raridade</label>
+          <input className="input" list="raridades-da-carta" value={form.raridade} onChange={e => set('raridade', e.target.value)}
+            placeholder="Escolha ou escreva (ex: Rara Dupla)" />
+          <datalist id="raridades-da-carta">
+            {raridadesDoJogo(form.jogo).map(r => <option key={r} value={r} />)}
+          </datalist>
         </div>
 
         <div>
@@ -224,8 +250,16 @@ export default function CartasDaLoja() {
     const t = busca.trim().toLowerCase()
     return cartas.filter(c =>
       (!jogo || c.cartaJogo === jogo) &&
-      (!t || c.name.toLowerCase().includes(t) || (c.cartaColecao ?? '').toLowerCase().includes(t)))
+      (!t || c.name.toLowerCase().includes(t) || (c.cartaColecao ?? '').toLowerCase().includes(t)
+          || (c.cartaNumero ?? '').toLowerCase().includes(t)))
   }, [cartas, busca, jogo])
+
+  // Coleções já usadas, por jogo — o cadastro sugere pra não nascer "151" e "Coleção 151" separadas no Mercado
+  const colecoes = useMemo(() => {
+    const m: Record<string, Set<string>> = {}
+    for (const c of cartas) if (c.cartaJogo && c.cartaColecao) (m[c.cartaJogo] ??= new Set()).add(c.cartaColecao)
+    return Object.fromEntries(Object.entries(m).map(([j, s]) => [j, [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))]))
+  }, [cartas])
 
   const aVenda    = cartas.filter(c => c.stockQuantity > 0)
   const copias    = aVenda.reduce((s, c) => s + c.stockQuantity, 0)
@@ -277,7 +311,7 @@ export default function CartasDaLoja() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input className="input pl-9" placeholder="Buscar por nome ou coleção..." value={busca} onChange={e => setBusca(e.target.value)} />
+          <input className="input pl-9" placeholder="Buscar por nome, coleção ou número..." value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
         <select className="input sm:w-48" value={jogo} onChange={e => setJogo(e.target.value)}>
           <option value="">Todos os jogos</option>
@@ -319,7 +353,11 @@ export default function CartasDaLoja() {
                     <div className="min-w-0">
                       <p className="font-semibold text-white truncate max-w-[150px] sm:max-w-[240px]">{c.name}</p>
                       <p className="text-xs text-brand-400">{resumoCarta(c)}</p>
-                      {c.cartaColecao && <p className="text-xs text-gray-400 truncate max-w-[240px]">{c.cartaColecao}</p>}
+                      {(c.cartaColecao || c.cartaNumero || c.cartaRaridade) && (
+                        <p className="text-xs text-gray-400 truncate max-w-[150px] sm:max-w-[240px]">
+                          {[c.cartaColecao, c.cartaNumero, c.cartaRaridade].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
                       {/* Celular: preço e quantidade aqui (as colunas só aparecem do tablet pra cima) */}
                       <p className="sm:hidden text-xs mt-0.5">
                         <span className="font-bold text-brand-300">{brlDeCentavos(c.priceInCents)}</span>
@@ -356,8 +394,8 @@ export default function CartasDaLoja() {
         </Table>
       )}
 
-      {nova && <CartaModal onClose={() => setNova(false)} onSalvo={salvo} />}
-      {editando && <CartaModal inicial={editando} onClose={() => setEditando(null)} onSalvo={salvo} />}
+      {nova && <CartaModal colecoes={colecoes} onClose={() => setNova(false)} onSalvo={salvo} />}
+      {editando && <CartaModal inicial={editando} colecoes={colecoes} onClose={() => setEditando(null)} onSalvo={salvo} />}
     </div>
   )
 }

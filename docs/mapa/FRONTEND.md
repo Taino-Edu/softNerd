@@ -127,7 +127,8 @@ Mudou um componente? Confira as telas da última coluna.
 | `liga/admin/JogadoresTorneio` | `JogadoresTorneio` | `app/admin/liguinha/[id]/page.tsx` |
 | `liga/admin/LancarEtapa` | `LancarEtapa` | `app/admin/liguinha/page.tsx` |
 | `loja/AvisoSacola` | `usePorNaSacola`, `AvisoSacola` | `app/page.tsx`<br>`app/produtos/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
-| `loja/CartaoProduto` | `rotuloCategoria`, `ehNovidade`, `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
+| `loja/BandeiraIdioma` | `BandeiraIdioma` | `components/loja/MercadoCartasLoja.tsx` |
+| `loja/CartaoProduto` | `rotuloCategoria`, `ehNovidade`, `CartaoProduto` | `app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
 | `loja/MenuLoja` | `alturaFaixa`, `azulDoMenu`, `MenuLoja` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
 | `loja/MercadoCartasLoja` | `MercadoCartasLoja` | `app/cliente/mercado/page.tsx` |
 | `pokemon/EscolherPokemon` | `EscolherPokemon` | `app/cliente/perfil/page.tsx` |
@@ -162,7 +163,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/vigia.ts` | `vigiaApi` |
 | `lib/auth.ts` | `saveAuth`, `clearAuth`, `getRole`, `getUserName`, `getUserId`, `isAdmin`, `isOperator`, `isLoggedIn`, `getPermissions`, `hasPermission` |
 | `lib/caminhosTorneio.ts` | `rotasDoEvento`, `modalidadeDoEndereco` |
-| `lib/cartasAvulsas.ts` | `JOGOS_DE_CARTA`, `CONDICOES_DE_CARTA`, `IDIOMAS_DE_CARTA`, `CATEGORIA_CARTA_AVULSA`, `resumoCarta`, `linkDaLiga` |
+| `lib/cartasAvulsas.ts` | `JOGOS_DE_CARTA`, `CONDICOES_DE_CARTA`, `IDIOMAS_DE_CARTA`, `RARIDADES_DE_CARTA`, `raridadesDoJogo`, `pesoDaRaridade`, `compararNumero`, `CATEGORIA_CARTA_AVULSA`, `resumoCarta`, `linkDaLiga` |
 | `lib/colors.ts` | `mixHex`, `isDark`, `getContrastText` |
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |
 | `lib/crediario.ts` | `agruparItens`, `totalUnidades` |

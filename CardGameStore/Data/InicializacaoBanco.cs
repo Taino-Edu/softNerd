@@ -61,6 +61,8 @@ public static class InicializacaoBanco
         "ALTER TABLE products ADD COLUMN carta_condicao TEXT NULL;",
         "ALTER TABLE products ADD COLUMN carta_colecao TEXT NULL;",
         "ALTER TABLE products ADD COLUMN carta_idioma TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_numero TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_raridade TEXT NULL;",
     ];
 
     public static async Task ExecutarAsync(IServiceProvider services, bool useSqlite)

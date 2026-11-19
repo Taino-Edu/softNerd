@@ -287,7 +287,8 @@ const SECOES: Secao[] = [
     cor: '#F472B6',
     itens: [
       { t: 'O que é', d: 'As cartas avulsas (singles) da loja — só a loja vende, não é mercado entre jogadores. Desde a v1.91.0 cada carta é um produto: o cliente põe na sacola, reserva e paga no Pix (ou na retirada) como qualquer produto, e o estoque baixa sozinho.' },
-      { t: 'Cadastrar carta', d: 'Painel → Marketplace → "Nova carta". Foto, nome, jogo, idioma, estado (NM/LP/MP/HP/DMG), quantidade, coleção e número, preço. Cópias iguais (mesmo estado e idioma) entram como quantidade.' },
+      { t: 'Cadastrar carta', d: 'Painel → Marketplace → "Nova carta". Foto, nome, jogo, idioma, estado (NM/LP/MP/HP/DMG), quantidade, coleção, número, raridade e preço. Cópias iguais (mesmo estado e idioma) entram como quantidade. Escreva a coleção sempre igual (o campo sugere as que já existem): o Mercado separa as cartas por ela.' },
+      { t: 'Como o cliente vê', d: 'Abas por jogo e por coleção, cartas agrupadas por coleção com número, raridade, idioma e estado; filtros de raridade e idioma, ordem por numeração, preço ou raridade, galeria ou lista e "Ver na Liga" embaixo de cada carta. O link da aba dá pra mandar (ex.: /cliente/mercado#pokemon--escarlate-e-violeta-151).' },
       { t: 'Ver na Liga', d: 'Ao lado do preço, "Ver na Liga" abre a busca da carta na Liga do jogo (LigaPokemon, LigaMagic...) numa aba nova, pra conferir o menor preço sem digitar o nome de novo. O preço você digita — a Liga não deixa o sistema ler sozinho.' },
       { t: 'Condições de carta', d: 'NM = Near Mint (perfeita) • LP = Light Played (levemente usada) • MP = Moderate Played • HP = Heavy Played • DMG = Damaged (danificada).' },
       { t: 'Onde a carta aparece', d: 'Só no Mercado de Cartas (fora de Produtos e da home) e no Frente de Caixa, como qualquer produto. Esgotou: some do Mercado e fica na lista do painel como "Esgotada" — é só editar a quantidade quando chegar outra.' },

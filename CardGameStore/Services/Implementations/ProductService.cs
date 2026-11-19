@@ -64,7 +64,7 @@ public class ProductService : IProductService
 
     /// <summary>
     /// Cartas avulsas à venda no Mercado de Cartas: ativas, na loja digital e com estoque. Mais novas primeiro.
-    /// Jogo exato (lista do Mercado); busca no nome e na coleção ("151", "199/165").
+    /// Jogo exato (lista do Mercado); busca no nome, na coleção e no número ("151", "199/165").
     /// </summary>
     public async Task<List<Product>> ListarCartasAsync(string? jogo, string? busca)
     {
@@ -75,7 +75,8 @@ public class ProductService : IProductService
         {
             var termo = busca.Trim().ToLower();
             q = q.Where(p => p.Name.ToLower().Contains(termo)
-                          || (p.CartaColecao != null && p.CartaColecao.ToLower().Contains(termo)));
+                          || (p.CartaColecao != null && p.CartaColecao.ToLower().Contains(termo))
+                          || (p.CartaNumero != null && p.CartaNumero.ToLower().Contains(termo)));
         }
         return await q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Name)
             .Take(MaxCartasNoMercado).AsNoTracking().ToListAsync();
@@ -166,6 +167,8 @@ public class ProductService : IProductService
         existing.CartaCondicao        = updated.CartaCondicao;
         existing.CartaColecao         = updated.CartaColecao;
         existing.CartaIdioma          = updated.CartaIdioma;
+        existing.CartaNumero          = updated.CartaNumero;
+        existing.CartaRaridade        = updated.CartaRaridade;
         existing.UpdatedAt            = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -421,6 +424,8 @@ public class ProductService : IProductService
         p.CartaJogo     = Limpo(p.CartaJogo, 40, "Jogo");
         p.CartaColecao  = Limpo(p.CartaColecao, 120, "Coleção");
         p.CartaIdioma   = Limpo(p.CartaIdioma, 10, "Idioma")?.ToUpperInvariant();
+        p.CartaNumero   = Limpo(p.CartaNumero, 20, "Número");
+        p.CartaRaridade = Limpo(p.CartaRaridade, 40, "Raridade");
         p.CartaCondicao = Limpo(p.CartaCondicao, 10, "Estado")?.ToUpperInvariant();
         if (p.CartaCondicao is not null && !CondicoesDeCarta.Contains(p.CartaCondicao))
             throw new ArgumentException($"Estado da carta deve ser um destes: {string.Join(", ", CondicoesDeCarta)}.");

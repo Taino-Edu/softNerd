@@ -50,7 +50,9 @@ public sealed record ProdutoPublicoDto(
     string? CartaJogo,
     string? CartaCondicao,
     string? CartaColecao,
-    string? CartaIdioma)
+    string? CartaIdioma,
+    string? CartaNumero,
+    string? CartaRaridade)
 {
     public static ProdutoPublicoDto De(Product p) => new(
         p.Id, p.Name, p.Description, p.Category, p.Barcode, p.PriceInCents, p.StockQuantity,
@@ -60,5 +62,6 @@ public sealed record ProdutoPublicoDto(
         p.DiscountPriceInReais, p.IsOnPromo, p.IsLowStock, p.PreVendaReleaseDate,
         p.Variants.Select(v => new VariantePublicaDto(
             v.Id, v.ProductId, v.Size, v.Color, v.StockQuantity, v.PriceInCents, v.Sku, v.Label)).ToList(),
-        p.CartaAvulsa, p.CartaJogo, p.CartaCondicao, p.CartaColecao, p.CartaIdioma);
+        p.CartaAvulsa, p.CartaJogo, p.CartaCondicao, p.CartaColecao, p.CartaIdioma,
+        p.CartaNumero, p.CartaRaridade);
 }

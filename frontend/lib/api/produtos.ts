@@ -24,10 +24,14 @@ export interface Product {
   cartaJogo?: string | null
   /** NM, LP, MP, HP ou DMG. */
   cartaCondicao?: string | null
-  /** Coleção e número, como o Maikon escrever ("151 · 199/165"). */
+  /** Coleção ("Escarlate e Violeta 151") — o Mercado agrupa por ela. */
   cartaColecao?: string | null
   /** PT, EN, JP... */
   cartaIdioma?: string | null
+  /** Número na coleção ("199/165"). */
+  cartaNumero?: string | null
+  /** Raridade como vem na carta ("Rara Dupla", "Promo"...). */
+  cartaRaridade?: string | null
   updatedAt: string; createdAt: string
 }
 

@@ -21,6 +21,40 @@ export const IDIOMAS_DE_CARTA = [
   { valor: 'ES', rotulo: 'Espanhol' },
 ] as const
 
+/**
+ * Raridades sugeridas no cadastro (texto livre — cada jogo tem as suas). A ordem é da mais comum pra mais rara:
+ * o Mercado usa essa posição pra "Ordenar por raridade"; raridade fora da lista vai pro fim.
+ */
+export const RARIDADES_DE_CARTA: Record<string, readonly string[]> = {
+  'Pokémon':     ['Comum', 'Incomum', 'Rara', 'Rara Holo', 'Rara Dupla', 'Ultra Rara', 'Rara Ilustração',
+                  'Rara Ilustração Especial', 'Hiper Rara', 'Promo'],
+  'Magic':       ['Comum', 'Incomum', 'Rara', 'Mítica', 'Especial'],
+  'Yu-Gi-Oh!':   ['Comum', 'Rara', 'Super Rara', 'Ultra Rara', 'Secreta', 'Ultimate', 'Starlight'],
+  'One Piece':   ['Comum', 'Incomum', 'Rara', 'Super Rara', 'Secreta', 'Líder', 'Promo'],
+  'Dragon Ball': ['Comum', 'Incomum', 'Rara', 'Super Rara', 'Secreta', 'Líder', 'Promo'],
+  'Digimon':     ['Comum', 'Incomum', 'Rara', 'Super Rara', 'Secreta', 'Promo'],
+  'Outro':       ['Comum', 'Incomum', 'Rara', 'Épica', 'Lendária', 'Promo'],
+}
+
+/** Lista de raridades do jogo (jogo sem lista própria usa a de "Outro"). */
+export function raridadesDoJogo(jogo: string | null | undefined): readonly string[] {
+  return (jogo && RARIDADES_DE_CARTA[jogo]) || RARIDADES_DE_CARTA['Outro']
+}
+
+/** Posição da raridade na lista do jogo (pra ordenar); sem raridade = -1; fora da lista = depois de todas. */
+export function pesoDaRaridade(jogo: string | null | undefined, raridade: string | null | undefined): number {
+  if (!raridade) return -1
+  const lista = raridadesDoJogo(jogo)
+  const i = lista.findIndex(r => r.toLowerCase() === raridade.toLowerCase())
+  return i >= 0 ? i : lista.length
+}
+
+/** Compara "015/128" com "199/165" pelo número de verdade; sem número vai pro fim. */
+export function compararNumero(a: string | null | undefined, b: string | null | undefined): number {
+  if (!a || !b) return a ? -1 : b ? 1 : 0
+  return a.localeCompare(b, 'pt-BR', { numeric: true })
+}
+
 /** Categoria gravada no produto da carta (o produto exige uma; não entra nos filtros de Produtos). */
 export const CATEGORIA_CARTA_AVULSA = 'Cartas avulsas'
 

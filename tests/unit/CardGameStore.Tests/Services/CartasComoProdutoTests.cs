@@ -42,10 +42,11 @@ public class CartasComoProdutoTests
     };
 
     private static Product Carta(string nome, string jogo = "Pokémon", string? colecao = null, int estoque = 1,
-        DateTime? criada = null) => new()
+        DateTime? criada = null, string? numero = null) => new()
     {
         Name = nome, Category = "Cartas avulsas", PriceInCents = 1500, StockQuantity = estoque, MinimumStock = 0,
         CartaAvulsa = true, CartaJogo = jogo, CartaCondicao = "NM", CartaColecao = colecao, CartaIdioma = "PT",
+        CartaNumero = numero,
         CreatedAt = criada ?? DateTime.UtcNow,
     };
 
@@ -112,11 +113,11 @@ public class CartasComoProdutoTests
     }
 
     [Fact]
-    public async Task Mercado_FiltraPorJogoEBuscaNoNomeENaColecao()
+    public async Task Mercado_FiltraPorJogoEBuscaNoNomeNaColecaoENoNumero()
     {
         var db = CreateDb();
         db.Products.AddRange(
-            Carta("Charizard ex", colecao: "151 · 199/165"),
+            Carta("Charizard ex", colecao: "151", numero: "199/165"),
             Carta("Pikachu", colecao: "Base Set"),
             Carta("Lightning Bolt", jogo: "Magic", colecao: "Alpha"));
         await db.SaveChangesAsync();
@@ -125,6 +126,7 @@ public class CartasComoProdutoTests
         (await servico.ListarCartasAsync("Magic", null)).Select(c => c.Name).Should().Equal("Lightning Bolt");
         (await servico.ListarCartasAsync(null, "199/165")).Select(c => c.Name).Should().Equal("Charizard ex");
         (await servico.ListarCartasAsync("Pokémon", "PIKA")).Select(c => c.Name).Should().Equal("Pikachu");
+        (await servico.ListarCartasAsync(null, "base")).Select(c => c.Name).Should().Equal("Pikachu");
     }
 
     [Fact]
@@ -137,12 +139,15 @@ public class CartasComoProdutoTests
         {
             Name = "Mew ex", Category = "Cartas avulsas", PriceInCents = 1500, StockQuantity = 1,
             CartaAvulsa = true, CartaJogo = "  Pokémon ", CartaCondicao = "lp", CartaColecao = "  ", CartaIdioma = "pt",
+            CartaNumero = " 199/165 ", CartaRaridade = "   ",
         });
 
         criada.CartaJogo.Should().Be("Pokémon");
         criada.CartaCondicao.Should().Be("LP");
         criada.CartaColecao.Should().BeNull();
         criada.CartaIdioma.Should().Be("PT");
+        criada.CartaNumero.Should().Be("199/165");
+        criada.CartaRaridade.Should().BeNull();
 
         var errada = async () => await servico.CreateAsync(new Product
         {
@@ -163,11 +168,14 @@ public class CartasComoProdutoTests
         var editada = await servico.UpdateAsync(new Product
         {
             Id = carta.Id, Name = "Mew ex", Category = "Cartas avulsas", PriceInCents = 1800, StockQuantity = 2,
-            CartaAvulsa = true, CartaJogo = "Pokémon", CartaCondicao = "MP", CartaColecao = "151 · 151/165", CartaIdioma = "EN",
+            CartaAvulsa = true, CartaJogo = "Pokémon", CartaCondicao = "MP", CartaColecao = "151", CartaIdioma = "EN",
+            CartaNumero = "151/165", CartaRaridade = "Rara Ilustração",
         });
 
         editada.CartaCondicao.Should().Be("MP");
-        editada.CartaColecao.Should().Be("151 · 151/165");
+        editada.CartaColecao.Should().Be("151");
+        editada.CartaNumero.Should().Be("151/165");
+        editada.CartaRaridade.Should().Be("Rara Ilustração");
         editada.CartaIdioma.Should().Be("EN");
         editada.StockQuantity.Should().Be(2);
     }

@@ -156,7 +156,7 @@ public class Product
     [MaxLength(10)]
     public string? CartaCondicao { get; set; }
 
-    /// <summary>Coleção e número, como o Maikon escrever ("151 · 199/165").</summary>
+    /// <summary>Coleção ("Escarlate e Violeta 151"). O Mercado agrupa as cartas por ela.</summary>
     [Column("carta_colecao")]
     [MaxLength(120)]
     public string? CartaColecao { get; set; }
@@ -165,6 +165,16 @@ public class Product
     [Column("carta_idioma")]
     [MaxLength(10)]
     public string? CartaIdioma { get; set; }
+
+    /// <summary>Número na coleção ("199/165"). O Mercado ordena por ele.</summary>
+    [Column("carta_numero")]
+    [MaxLength(20)]
+    public string? CartaNumero { get; set; }
+
+    /// <summary>Raridade como vem na carta ("Rara Dupla", "Promo"...). Texto livre: cada jogo tem as suas.</summary>
+    [Column("carta_raridade")]
+    [MaxLength(40)]
+    public string? CartaRaridade { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

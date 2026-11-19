@@ -483,6 +483,8 @@ export default function ProductPage() {
                 product.cartaJogo ? ['Jogo', product.cartaJogo] : null,
                 product.cartaCondicao ? ['Estado', CONDICOES_DE_CARTA.find(c => c.valor === product.cartaCondicao)?.rotulo ?? product.cartaCondicao] : null,
                 product.cartaColecao ? ['Coleção', product.cartaColecao] : null,
+                product.cartaNumero ? ['Número', product.cartaNumero] : null,
+                product.cartaRaridade ? ['Raridade', product.cartaRaridade] : null,
                 product.cartaIdioma ? ['Idioma', IDIOMAS_DE_CARTA.find(i => i.valor === product.cartaIdioma)?.rotulo ?? product.cartaIdioma] : null,
                 ['Disponibilidade', emEstoque ? (product.stockQuantity === 1 ? 'Última cópia' : `${product.stockQuantity} cópias`) : 'Vendida'],
               ] : [

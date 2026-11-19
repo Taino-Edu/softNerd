@@ -486,6 +486,8 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_jogo     VARCHAR(40)  NULL;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_condicao VARCHAR(10)  NULL;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_colecao  VARCHAR(120) NULL;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_idioma   VARCHAR(10)  NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_numero   VARCHAR(20)  NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_raridade VARCHAR(40)  NULL;
 -- Banco criado pelo EnsureCreated (CI, instalação nova) tem a coluna NOT NULL sem default; INSERT em SQL que não
 -- cita carta_avulsa (procedures, tests/sql) quebrava com null. O default vale pros dois jeitos de criar o banco.
 ALTER TABLE products ALTER COLUMN carta_avulsa SET DEFAULT FALSE;
