@@ -580,6 +580,26 @@ export default function ClientePage() {
     return () => clearInterval(id)
   }, [pix, fetchComanda])
 
+  // Atalho "Comanda" da tela do torneio chega com #comanda: rola até o cartão, que fica abaixo dos pontos e
+  // dos campeonatos (no celular, fora da tela). Rola de novo um pouco depois porque "Meus Campeonatos"
+  // carrega em paralelo e empurra a comanda pra baixo — só se a pessoa ainda não rolou por conta própria.
+  useEffect(() => {
+    if (loading || !comanda || window.location.hash !== '#comanda') return
+    const rolar = () => document.getElementById('comanda')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    rolar()
+    let mexeu = false
+    const marcar = () => { mexeu = true }
+    window.addEventListener('touchstart', marcar, { passive: true, once: true })
+    window.addEventListener('wheel', marcar, { passive: true, once: true })
+    const t = setTimeout(() => { if (!mexeu) rolar() }, 900)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('touchstart', marcar)
+      window.removeEventListener('wheel', marcar)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, !!comanda])
+
   useEffect(() => {
     fetchComanda()
     fetchPix()
@@ -1016,7 +1036,7 @@ export default function ClientePage() {
             )}
 
             {/* ── COMANDA ───────────────────────────────────────────── */}
-            <div className="rounded-2xl overflow-hidden"
+            <div id="comanda" className="rounded-2xl overflow-hidden scroll-mt-4"
               style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(12,61,90,0.06)' }}>
 
               {/* Header da comanda */}
