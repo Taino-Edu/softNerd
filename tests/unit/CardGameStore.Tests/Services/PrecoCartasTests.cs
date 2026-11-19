@@ -42,15 +42,18 @@ public class PrecoCartasTests
     {
         public Dictionary<(int, int), Dictionary<int, IReadOnlyList<PrecoCatalogo>>> Precos { get; } = new();
         public int Leituras { get; private set; }
+        /// <summary>Roda no meio da leitura de preços (simula outra rodada gravando ao mesmo tempo).</summary>
+        public Func<Task>? AoLer { get; set; }
         public Task<IReadOnlyList<ColecaoCatalogo>> ColecoesAsync(string jogo, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<ColecaoCatalogo>>([]);
         public Task<IReadOnlyList<CartaCatalogo>> CartasAsync(int categoria, int grupo, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<CartaCatalogo>>([]);
-        public Task<IReadOnlyDictionary<int, IReadOnlyList<PrecoCatalogo>>> PrecosAsync(int categoria, int grupo, CancellationToken ct = default)
+        public async Task<IReadOnlyDictionary<int, IReadOnlyList<PrecoCatalogo>>> PrecosAsync(int categoria, int grupo, CancellationToken ct = default)
         {
             Leituras++;
+            if (AoLer is not null) await AoLer();
             if (!Precos.TryGetValue((categoria, grupo), out var p)) throw new HttpRequestException("fora do ar");
-            return Task.FromResult<IReadOnlyDictionary<int, IReadOnlyList<PrecoCatalogo>>>(p);
+            return p;
         }
     }
 
@@ -224,6 +227,39 @@ public class PrecoCartasTests
 
         r.Atualizadas.Should().Be(1);
         r.ColecoesComErro.Should().Be(1);
+        // Coleção fora do ar: o dia não fica marcado como feito — o robô tenta de novo na próxima hora
+        (await db.MarcosOperacao.AnyAsync(m => m.Chave == PrecoCartasService.MarcoRodada)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Rodada_OutraRodadaGravouOHistoricoJunto_ViraAtualizacao()
+    {
+        var conexao = new SqliteConnection("Filename=:memory:");
+        conexao.Open();
+        AppDbContext NovoDb() => new(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(conexao).Options);
+        var db = NovoDb();
+        db.Database.EnsureCreated();
+        var carta = Carta("Mew ex", 502700, precoCentavos: 1000, automatico: true);
+        db.Products.Add(carta);
+        await db.SaveChangesAsync();
+        var hoje = DateTime.SpecifyKind(Brasilia.Hoje(), DateTimeKind.Utc);
+        var catalogo = new CatalogoFalso();
+        catalogo.Precos[(3, 23237)] = new() { [502700] = [Preco("Holofoil", 4m)] };
+        // Depois que esta rodada leu o histórico (vazio), "outra" grava a linha de hoje da mesma carta
+        catalogo.AoLer = async () =>
+        {
+            await using var outro = NovoDb();
+            outro.CartaPrecoHistorico.Add(new CartaPrecoHistorico { ProductId = carta.Id, Dia = hoje, MercadoUsd = 3, Cotacao = 5, ReferenciaCentavos = 1500 });
+            await outro.SaveChangesAsync();
+        };
+        var (servico, _) = Servico(db, catalogo, new CotacaoFixa(5.40m));
+
+        var r = await servico.AtualizarAsync();
+
+        r.Rodou.Should().BeTrue();
+        await using var conferir = NovoDb();
+        conferir.CartaPrecoHistorico.Should().ContainSingle().Which.ReferenciaCentavos.Should().Be(2160);
+        (await conferir.Products.FindAsync(carta.Id))!.PriceInCents.Should().Be(2200, "o resto da rodada também foi salvo");
     }
 
     [Fact]

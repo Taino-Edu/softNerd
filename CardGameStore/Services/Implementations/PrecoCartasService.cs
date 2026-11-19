@@ -127,6 +127,7 @@ public class PrecoCartasService
             .ToDictionaryAsync(h => h.ProductId, ct);
 
         int atualizadas = 0, trocados = 0, semPreco = 0, erros = 0;
+        var novos = new List<CartaPrecoHistorico>();
         foreach (var colecao in cartas.GroupBy(c => (Categoria: c.CartaTcgCategoria!.Value, Grupo: c.CartaTcgGrupo!.Value)))
         {
             IReadOnlyDictionary<int, IReadOnlyList<PrecoCatalogo>> precos;
@@ -156,6 +157,7 @@ public class PrecoCartasService
                     h = new CartaPrecoHistorico { ProductId = carta.Id, Dia = dia, MercadoUsd = usd, Cotacao = cot.Valor, ReferenciaCentavos = referencia };
                     _db.CartaPrecoHistorico.Add(h);
                     historicoHoje[carta.Id] = h;
+                    novos.Add(h);
                 }
 
                 if (carta.CartaPrecoAutomatico)
@@ -173,8 +175,10 @@ public class PrecoCartasService
             }
         }
 
-        // Rodada inteira (sem filtro) marca o dia — o robô não roda de novo hoje
-        if (soEstas is null or { Count: 0 })
+        // Rodada inteira (sem filtro) e sem coleção fora do ar marca o dia — o robô não roda de novo hoje.
+        // Com coleção que não respondeu, o marco fica onde estava e o robô tenta de novo na próxima hora
+        // (achado do Codex no PR #180: antes, um tcgcsv fora do ar às 20h30 deixava o dia inteiro sem preço).
+        if (soEstas is null or { Count: 0 } && erros == 0)
         {
             var marco = await _db.MarcosOperacao.FirstOrDefaultAsync(m => m.Chave == MarcoRodada, ct);
             if (marco is null) { marco = new MarcoOperacao { Chave = MarcoRodada }; _db.MarcosOperacao.Add(marco); }
@@ -182,12 +186,42 @@ public class PrecoCartasService
             marco.Detalhe = $"{atualizadas}/{cartas.Count} cartas, {trocados} preços trocados, cotação {cot.Valor:0.0000}";
         }
 
-        await _db.SaveChangesAsync(ct);
+        await SalvarComHistoricoConcorrenteAsync(novos, dia, ct);
         var msg = $"{atualizadas} de {cartas.Count} cartas com referência nova" +
                   (trocados > 0 ? $", {trocados} preços ajustados" : "") +
                   (semPreco > 0 ? $", {semPreco} sem preço no catálogo" : "") +
                   (erros > 0 ? $", {erros} coleções não responderam" : "") + ".";
         return new(true, msg, cartas.Count, atualizadas, trocados, semPreco, erros, cot.Valor);
+    }
+
+    /// <summary>
+    /// Salva a rodada. Se outra rodada (o robô, o "Atualizar preços" ou o salvar de uma carta) criou a linha de hoje
+    /// de alguma carta depois que esta leu o histórico, o índice único (carta, dia) recusa o insert: as linhas novas
+    /// viram atualização das que já existem e salva de novo (achado do Codex no PR #180). O resto da rodada
+    /// (referência e preço das cartas) continua rastreado e vai junto na segunda tentativa.
+    /// </summary>
+    private async Task SalvarComHistoricoConcorrenteAsync(List<CartaPrecoHistorico> novos, DateTime dia, CancellationToken ct)
+    {
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (novos.Count > 0)
+        {
+            foreach (var n in novos) _db.Entry(n).State = EntityState.Detached;
+            var ids = novos.Select(n => n.ProductId).ToList();
+            var existentes = await _db.CartaPrecoHistorico.Where(h => ids.Contains(h.ProductId) && h.Dia == dia)
+                .ToDictionaryAsync(h => h.ProductId, ct);
+            foreach (var n in novos)
+            {
+                if (existentes.TryGetValue(n.ProductId, out var e))
+                { e.MercadoUsd = n.MercadoUsd; e.Cotacao = n.Cotacao; e.ReferenciaCentavos = n.ReferenciaCentavos; e.CriadoEm = n.CriadoEm; }
+                else
+                    _db.CartaPrecoHistorico.Add(n);
+            }
+            _logger.LogInformation("Preço das cartas: outra rodada gravou o histórico de hoje junto — virou atualização");
+            await _db.SaveChangesAsync(ct);
+        }
     }
 
     // ── Variação ────────────────────────────────────────────────────────────────
