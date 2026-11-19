@@ -1,4 +1,4 @@
-<!-- Gerado do catálogo do PostgreSQL 16 (banco criado pela API v1.91.0 em banco vazio). Não editar à mão. -->
+<!-- Gerado do catálogo do PostgreSQL 16 (banco criado pela API v1.90.3 em banco vazio). Não editar à mão. -->
 
 # Modelo lógico
 

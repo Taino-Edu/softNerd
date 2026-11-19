@@ -479,6 +479,20 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS max_installments INTEGER NULL;
 -- Desconto do Pix do item; null = herda da categoria / do padrão da loja.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS pix_discount_percent NUMERIC(5,2) NULL;
 
+-- Cartas avulsas como produto (v1.91.0, chave cartas-como-produto): a single é um produto marcado,
+-- reservada pela sacola e paga no Pix como os outros. Fica no Mercado de Cartas, fora de Produtos.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_avulsa   BOOLEAN      NOT NULL DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_jogo     VARCHAR(40)  NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_condicao VARCHAR(10)  NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_colecao  VARCHAR(120) NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_idioma   VARCHAR(10)  NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_numero   VARCHAR(20)  NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_raridade VARCHAR(40)  NULL;
+-- Banco criado pelo EnsureCreated (CI, instalação nova) tem a coluna NOT NULL sem default; INSERT em SQL que não
+-- cita carta_avulsa (procedures, tests/sql) quebrava com null. O default vale pros dois jeitos de criar o banco.
+ALTER TABLE products ALTER COLUMN carta_avulsa SET DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS ix_products_carta_avulsa ON products (carta_avulsa) WHERE carta_avulsa;
+
 -- Liga Mensal: lançamentos manuais (jogador + pontos digitados direto pelo admin,
 -- sem precisar cadastrar Championship — pra migrar histórico anotado à mão).
 CREATE TABLE IF NOT EXISTS liga_mensal_manual_entries (

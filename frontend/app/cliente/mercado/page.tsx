@@ -7,6 +7,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { marketplaceApi, CardListingDto } from '@/lib/api'
 import { getUserId, isLoggedIn } from '@/lib/auth'
 import CabecalhoCliente from '@/components/cliente/CabecalhoCliente'
+import MercadoCartasLoja from '@/components/loja/MercadoCartasLoja'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import clsx from 'clsx'
@@ -217,7 +219,22 @@ function InterestConsentModal({ listing, onClose, onConfirm }: {
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
+// Chave cartas-como-produto (v1.91.0): a carta é produto e o cliente reserva pela sacola (MercadoCartasLoja).
+// Desligada, volta a vitrine de anúncios com "Tenho interesse".
 export default function MercadoPage() {
+  const cartasComoProduto = useFuncionalidade('cartas-como-produto')
+  if (cartasComoProduto === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: L.fundo }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: L.azul }} />
+      </div>
+    )
+  }
+  return cartasComoProduto === false ? <MercadoLegado /> : <MercadoCartasLoja />
+}
+
+// FALLBACK da chave "cartas-como-produto" — apagar junto com a chave
+function MercadoLegado() {
   const myId = getUserId() || null
 
   const [items,          setItems]          = useState<CardListingDto[]>([])

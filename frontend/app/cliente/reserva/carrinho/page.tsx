@@ -66,11 +66,28 @@ export default function ReservationCartPage() {
   // Quanto o carrinho inteiro sai no Pix — é aqui que o cliente decide como vai pagar.
   // O percentual pode ser diferente item a item (Pokémon 3%, resto no padrão), então a
   // conta é feita por item e somada; nada disso trava a tela se a API não responder.
+  const [catalogoCarregado, setCatalogoCarregado] = useState(false)
   useEffect(() => {
-    productApi.list().then(r => setCatalogo(r.data)).catch(() => {})
+    productApi.list().then(r => setCatalogo(r.data)).catch(() => {}).finally(() => setCatalogoCarregado(true))
     siteConfigApi.get().then(r => setSiteCfg(r.data)).catch(() => {})
     categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [])
+
+  // Carta avulsa (v1.91.0, chave cartas-como-produto) não está na lista de Produtos: o que está na sacola e não
+  // veio nela é buscado pelo id — senão a carta ficava sem limite de estoque e com o desconto do Pix errado.
+  const idsFaltando = catalogoCarregado
+    ? [...new Set(items.map(i => i.productId))].filter(id => !catalogo.some(p => p.id === id)).sort().join(',')
+    : ''
+  useEffect(() => {
+    if (!idsFaltando) return
+    let vivo = true
+    Promise.all(idsFaltando.split(',').map(id => productApi.get(id).then(r => r.data).catch(() => null)))
+      .then(achados => {
+        if (!vivo) return
+        setCatalogo(c => [...c, ...achados.filter((p): p is Product => !!p && !c.some(x => x.id === p.id))])
+      })
+    return () => { vivo = false }
+  }, [idsFaltando])
 
   const pixTotalCents = siteCfg && catalogo.length > 0
     ? items.reduce((soma, i) => {

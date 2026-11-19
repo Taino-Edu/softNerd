@@ -13,6 +13,8 @@ public interface IProductService
     Task<IEnumerable<Product>> GetAllForAdminAsync();
     Task<IEnumerable<Product>> GetByCategoryAsync(string category);
     Task<Product?>             GetByIdAsync(Guid id);
+    /// <summary>Cartas avulsas à venda no Mercado de Cartas (chave cartas-como-produto).</summary>
+    Task<List<Product>>        ListarCartasAsync(string? jogo, string? busca);
     Task<Product?>             GetByBarcodeAsync(string barcode);
     Task<Product>              CreateAsync(Product product);
     Task<Product>              UpdateAsync(Product product);
