@@ -493,6 +493,39 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_raridade VARCHAR(40)  NULL;
 ALTER TABLE products ALTER COLUMN carta_avulsa SET DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS ix_products_carta_avulsa ON products (carta_avulsa) WHERE carta_avulsa;
 
+-- Preço de referência das cartas (v1.92.0, chave preco-referencia-cartas): a carta escolhida no catálogo
+-- (tcgcsv.com = TCGplayer) guarda o produto de lá; o robô "Preço das cartas" lê o mercado todo dia.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_tcg_produto_id   INTEGER       NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_tcg_categoria    INTEGER       NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_tcg_grupo        INTEGER       NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_tcg_variante     VARCHAR(40)   NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_ref_usd          NUMERIC(10,2) NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_ref_centavos     INTEGER       NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_ref_em           TIMESTAMPTZ   NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS carta_preco_automatico BOOLEAN       NOT NULL DEFAULT FALSE;
+ALTER TABLE products ALTER COLUMN carta_preco_automatico SET DEFAULT FALSE;
+
+-- Uma linha por carta por dia (Brasília): mercado em dólar, cotação e referência em reais. Sem FK de propósito.
+CREATE TABLE IF NOT EXISTS carta_preco_historico (
+    id                  UUID          PRIMARY KEY,
+    product_id          UUID          NOT NULL,
+    dia                 TIMESTAMPTZ   NOT NULL,
+    mercado_usd         NUMERIC(10,2) NOT NULL,
+    cotacao             NUMERIC(10,4) NOT NULL,
+    referencia_centavos INTEGER       NOT NULL,
+    criado_em           TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_carta_preco_historico_product_id_dia" ON carta_preco_historico (product_id, dia);
+
+-- Regra da loja pra sugerir o preço de venda a partir da referência (uma linha só, id = 1)
+CREATE TABLE IF NOT EXISTS carta_regra_preco (
+    id                  INTEGER       PRIMARY KEY,
+    fator_percent       NUMERIC(6,2)  NOT NULL DEFAULT 100,
+    arredondar_centavos INTEGER       NOT NULL DEFAULT 50,
+    minimo_centavos     INTEGER       NOT NULL DEFAULT 100,
+    atualizada_em       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
 -- Liga Mensal: lançamentos manuais (jogador + pontos digitados direto pelo admin,
 -- sem precisar cadastrar Championship — pra migrar histórico anotado à mão).
 CREATE TABLE IF NOT EXISTS liga_mensal_manual_entries (

@@ -80,6 +80,10 @@ public class AppDbContext : DbContext
     // "Rodou por último em…" de coisas fora da API (backup.sh) — Vigia confere a idade
     public DbSet<MarcoOperacao> MarcosOperacao { get; set; }
 
+    // ── Preço de referência das cartas avulsas (v1.92.0, chave preco-referencia-cartas) ──
+    public DbSet<CartaPrecoHistorico> CartaPrecoHistorico { get; set; }
+    public DbSet<CartaRegraPreco> CartaRegraPreco { get; set; }
+
     // -------------------------------------------------------------------------
     // OnModelCreating — Fluent API para configurações avançadas
     // -------------------------------------------------------------------------

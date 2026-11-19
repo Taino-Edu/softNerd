@@ -93,6 +93,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/AiChatWidget` | `AiChatWidget` | `app/admin/layout.tsx` |
 | `admin/AvisosDaLoja` | `tipoDoAviso`, `AvisosDaLoja` | `components/admin/Sidebar.tsx` |
 | `admin/CartasDaLoja` | `CartasDaLoja` | `app/admin/marketplace/page.tsx` |
+| `admin/CatalogoCartaPicker` | `CatalogoCartaPicker` | `components/admin/CartasDaLoja.tsx` |
 | `admin/CobrancaPixModal` | `CobrancaPixModal` | `app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx` |
 | `admin/ConferenciaButton` | `ConferenciaButton` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
 | `admin/ConferenciaDecksModal` | `ConferenciaDecksModal` | `app/admin/campeonatos/page.tsx` |
@@ -136,7 +137,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `pokemon/PokemonParceiro` | `PokemonParceiro` | `components/liga/AvatarJogador.tsx` |
 | `ui/Badge` | `Badge` | `app/admin/alertas/page.tsx`<br>`app/admin/campeonatos/page.tsx`<br>`app/admin/categorias/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liguinha/[id]/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/usuarios/page.tsx` |
 | `ui/PageHeader` | `PageHeader` | `app/admin/alertas/page.tsx`<br>`app/admin/anuncios/page.tsx`<br>`app/admin/changelog/page.tsx`<br>`app/admin/configuracoes/page.tsx`<br>`app/admin/contas-receber/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/integracoes/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/liga-mensal/page.tsx`<br>`app/admin/liguinha/liga/page.tsx`<br>`app/admin/liguinha/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`app/admin/mensageria/page.tsx`<br>`app/admin/perfis/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/admin/sobre/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/CartasDaLoja.tsx` |
-| `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx`<br>`components/pokemon/EscolherPokemon.tsx` |
+| `ui/Switch` | `Switch` | `app/admin/configuracoes/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/funcionalidades/page.tsx`<br>`app/admin/timer/page.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/CrediarioAvisos.tsx`<br>`components/liga/PainelTorneio.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx`<br>`components/pokemon/EscolherPokemon.tsx` |
 | `ui/Table` | `Table` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/lgpd/page.tsx`<br>`app/admin/marketplace/page.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 
 ## Bibliotecas (`frontend/lib`)
@@ -154,7 +155,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/api/index.ts` | — |
 | `lib/api/lgpd.ts` | `lgpdApi`, `lgpdAdminApi` |
 | `lib/api/liga.ts` | `mesasDeSetup`, `torneioApi`, `rodadaComecou`, `segundosRestantes` |
-| `lib/api/produtos.ts` | `categoryApi`, `productApi`, `variantApi`, `uploadApi` |
+| `lib/api/produtos.ts` | `categoryApi`, `productApi`, `catalogoCartasApi`, `variantApi`, `uploadApi` |
 | `lib/api/relatorios.ts` | `analyticsApi`, `relatorioApi` |
 | `lib/api/reservas.ts` | `reservationApi` |
 | `lib/api/site.ts` | `ANNOUNCEMENT_TYPES`, `announcementApi`, `siteConfigApi` |

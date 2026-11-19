@@ -1,12 +1,24 @@
 # Changelog — Santuário Nerd
 
-## [v1.91.1] — 2026-11-19
+## [v1.92.1] — 2026-11-19
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.92.0] — 2026-11-19
+
+### Preço de referência das cartas: catálogo de todos os jogos e preço de mercado todo dia
+- **Buscar no catálogo:** no cadastro da carta (Mercado de Cartas → Nova carta), escolha jogo → coleção → carta e o sistema preenche nome, coleção, número, raridade e foto. Funciona pra Pokémon (inclusive japonesa), Magic, Yu-Gi-Oh!, One Piece, Riftbound, Dragon Ball e Digimon. A coleção acha pelo nome ou pela sigla impressa na carta (ex.: MEW = 151)
+- **Referência e sugestão:** a carta escolhida mostra o preço de mercado lá fora (TCGplayer, em dólar) × a cotação do dia (Banco Central) e a sugestão de preço pela regra da loja, com o botão "Usar". Carta com mais de um acabamento (Normal, Holo, Reverse) escolhe qual vale
+- **Atualiza sozinho todo dia:** depois das 17h30 o robô "Preço das cartas" lê o preço do dia de todas as cartas ligadas ao catálogo e guarda o histórico. A lista mostra a referência e a variação de 7 e 30 dias. O botão "Atualizar preços" faz isso na hora
+- **Quem decide é a loja:** por padrão o sistema só sugere. Só a carta marcada com "Ajustar o preço sozinho" tem o preço de venda trocado todo dia pela regra (selo AUTO na lista)
+- **Regra de preço:** porcentagem da referência (ex.: 90%), arredondamento pra cima (centavo, R$ 0,50, R$ 1, R$ 5) e preço mínimo
+- **Limites ditos na tela:** o preço é dos EUA, em dólar, de carta em inglês e sem diferença por estado. O mercado brasileiro continua no "Ver na Liga" (a Liga não tem API). Dólar fora do ar: o robô não mexe em nada
+- **Riftbound** entra na lista de jogos do Mercado
+- **Com volta:** chave "Preço de referência das cartas" em Mudanças com volta. Desligada, some o catálogo e a referência, o robô para e nenhum preço muda sozinho
 
 ## [v1.91.0] — 2026-11-19
 

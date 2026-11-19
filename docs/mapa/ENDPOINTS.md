@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-262 endpoints em 36 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+269 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -12,6 +12,7 @@
 - [Announcement](#announcement) (5)
 - [Audit](#audit) (1)
 - [Auth](#auth) (15)
+- [CatalogoCartas](#catalogocartas) (7)
 - [Category](#category) (4)
 - [Championship](#championship) (22)
 - [Comanda](#comanda) (20)
@@ -104,6 +105,20 @@
 | POST | `/api/auth/reset-password` | público | `ResetPassword` (483) | `authApi.resetPassword` | `app/reset-password/page.tsx` |
 | POST | `/api/auth/setup-account` | público | `SetupAccount` (314) | `authApi.setupAccount` | `app/primeiro-acesso/page.tsx` |
 | POST | `/api/auth/test-email` | AdminOnly | `TestEmail` (531) | — | — |
+
+## CatalogoCartas
+
+`CardGameStore/Controllers/CatalogoCartasController.cs`
+
+| Método | Rota | Quem | Ação (linha) | Função no front | Telas |
+|---|---|---|---|---|---|
+| POST | `/api/product/catalogo-cartas/atualizar` | papéis Admin,Operator | `Atualizar` (76) | `catalogoCartasApi.atualizar` | `components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/catalogo-cartas/cartas` | papéis Admin,Operator | `Cartas` (45) | `catalogoCartasApi.cartas` | `components/admin/CatalogoCartaPicker.tsx` |
+| GET | `/api/product/catalogo-cartas/colecoes` | papéis Admin,Operator | `Colecoes` (38) | `catalogoCartasApi.colecoes` | `components/admin/CatalogoCartaPicker.tsx` |
+| GET | `/api/product/catalogo-cartas/referencia` | papéis Admin,Operator | `Referencia` (53) | `catalogoCartasApi.referencia` | `components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/catalogo-cartas/regra` | papéis Admin,Operator | `Regra` (65) | `catalogoCartasApi.regra` | `components/admin/CartasDaLoja.tsx` |
+| PUT | `/api/product/catalogo-cartas/regra` | AdminOnly | `SalvarRegra` (69) | `catalogoCartasApi.salvarRegra` | `components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/catalogo-cartas/variacoes` | papéis Admin,Operator | `Variacoes` (62) | `catalogoCartasApi.variacoes` | `components/admin/CartasDaLoja.tsx` |
 
 ## Category
 
