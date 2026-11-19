@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import clsx from 'clsx'
 import { Search, Loader2, Layers, ShoppingBag, Package } from 'lucide-react'
-import { productApi, Product } from '@/lib/api'
+import { productApi, categoryApi, Product, ProductCategory } from '@/lib/api'
 import { isLoggedIn } from '@/lib/auth'
 import { useSiteConfig } from '@/lib/useSiteConfig'
 import { calcPrecoVitrine, resolvePixPercent } from '@/lib/precoVitrine'
@@ -32,6 +32,10 @@ export default function MercadoCartasLoja() {
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca]           = useState('')
   const [jogo, setJogo]             = useState('')
+  // Desconto do Pix herda da categoria (e da categoria pai) — sem elas o Mercado anunciava o padrão da loja
+  // e o valor cobrado no Pix podia ser outro (achado do Codex no PR #179)
+  const [categorias, setCategorias] = useState<ProductCategory[]>([])
+  useEffect(() => { categoryApi.list().then(r => setCategorias(r.data)).catch(() => {}) }, [])
   // Visitante (veio pelo menu da página inicial) volta pra página inicial; cliente volta pra área dele
   const [voltar, setVoltar] = useState('/')
   useEffect(() => { if (isLoggedIn()) setVoltar('/cliente') }, [])
@@ -57,7 +61,7 @@ export default function MercadoCartasLoja() {
   function precos(p: Product) {
     if (!site) return { pix: null, cartao: null }
     const preco = p.isOnPromo && p.discountPriceInReais != null ? p.discountPriceInReais : p.priceInReais
-    const v = calcPrecoVitrine(preco, p.maxInstallments, site, resolvePixPercent(p, [], site.pixDiscountPercent))
+    const v = calcPrecoVitrine(preco, p.maxInstallments, site, resolvePixPercent(p, categorias, site.pixDiscountPercent))
     return {
       pix: v.pixPercent > 0 ? { precoPix: v.precoPix, pixPercent: v.pixPercent } : null,
       cartao: v.parcelas >= 2 ? { parcelas: v.parcelas, valorParcela: v.valorParcela } : null,
