@@ -176,6 +176,46 @@ public class Product
     [MaxLength(40)]
     public string? CartaRaridade { get; set; }
 
+    // -------------------------------------------------------------------------
+    // Preço de referência da carta (v1.92.0, chave "preco-referencia-cartas"): a carta escolhida no catálogo
+    // (tcgcsv.com, espelho diário do TCGplayer — todos os jogos) guarda o produto do TCGplayer; o robô
+    // "Preço das cartas" lê o preço de mercado todo dia, converte pela cotação do dólar (PTAX) e guarda
+    // o histórico. Referência é dos EUA (dólar, carta em inglês) — o Brasil confere no "Ver na Liga".
+    // -------------------------------------------------------------------------
+
+    /// <summary>Produto da carta no TCGplayer (productId do tcgcsv). Null = carta cadastrada à mão.</summary>
+    [Column("carta_tcg_produto_id")]
+    public int? CartaTcgProdutoId { get; set; }
+
+    /// <summary>Categoria do TCGplayer (3 = Pokémon, 1 = Magic, 68 = One Piece...).</summary>
+    [Column("carta_tcg_categoria")]
+    public int? CartaTcgCategoria { get; set; }
+
+    /// <summary>Coleção (groupId) do TCGplayer — o robô lê os preços por coleção.</summary>
+    [Column("carta_tcg_grupo")]
+    public int? CartaTcgGrupo { get; set; }
+
+    /// <summary>Acabamento do preço ("Normal", "Holofoil", "Reverse Holofoil"...). Null = o primeiro com preço.</summary>
+    [Column("carta_tcg_variante")]
+    [MaxLength(40)]
+    public string? CartaTcgVariante { get; set; }
+
+    /// <summary>Último preço de mercado lido, em dólar. Gravado só pelo robô.</summary>
+    [Column("carta_ref_usd")]
+    public decimal? CartaRefUsd { get; set; }
+
+    /// <summary>Referência em reais (dólar × cotação), em centavos. Gravado só pelo robô.</summary>
+    [Column("carta_ref_centavos")]
+    public int? CartaRefCentavos { get; set; }
+
+    /// <summary>Quando a referência foi lida (UTC).</summary>
+    [Column("carta_ref_em")]
+    public DateTime? CartaRefEm { get; set; }
+
+    /// <summary>True = o robô troca o preço de venda pela sugestão da regra da loja todo dia. Padrão: só sugere.</summary>
+    [Column("carta_preco_automatico")]
+    public bool CartaPrecoAutomatico { get; set; } = false;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

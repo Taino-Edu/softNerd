@@ -48,6 +48,7 @@ public static class Funcionalidades
     public const string MenuLateralEnxuto = "menu-lateral-enxuto";
     public const string HomeVitrines = "home-vitrines";
     public const string CartasComoProduto = "cartas-como-produto";
+    public const string PrecoReferenciaCartas = "preco-referencia-cartas";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -193,6 +194,18 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.91.0",
             RevisarEm:  new DateOnly(2027, 5, 19)),
+
+        new(PrecoReferenciaCartas,
+            Nome:       "Preço de referência das cartas: catálogo de todos os jogos e preço de mercado todo dia",
+            OQueMuda:   "No cadastro da carta avulsa, \"Buscar no catálogo\" (jogo → coleção → carta) preenche nome, coleção, número, raridade " +
+                        "e foto e mostra o preço de mercado (TCGplayer, em dólar) convertido pela cotação do dia, com a sugestão de preço " +
+                        "pela regra da loja. Todo dia, depois das 17h30, o robô \"Preço das cartas\" atualiza a referência e guarda o histórico " +
+                        "(variação de 7 e 30 dias na lista). Só as cartas marcadas com \"Ajustar o preço sozinho\" têm o preço de venda trocado.",
+            SeDesligar: "Some o \"Buscar no catálogo\" e a coluna de referência; o robô para e nenhum preço muda sozinho. " +
+                        "As cartas continuam à venda com o preço que tinham; o cadastro volta a ser só à mão.",
+            Padrao:     true,
+            Desde:      "v1.92.0",
+            RevisarEm:  new DateOnly(2027, 5, 20)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

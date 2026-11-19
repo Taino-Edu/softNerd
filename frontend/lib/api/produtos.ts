@@ -32,6 +32,19 @@ export interface Product {
   cartaNumero?: string | null
   /** Raridade como vem na carta ("Rara Dupla", "Promo"...). */
   cartaRaridade?: string | null
+  // Preço de referência (v1.92.0, chave preco-referencia-cartas) — só na lista do painel (não sai no público)
+  /** Produto da carta no TCGplayer (catálogo tcgcsv). Null = cadastrada à mão. */
+  cartaTcgProdutoId?: number | null
+  cartaTcgCategoria?: number | null
+  cartaTcgGrupo?: number | null
+  /** Acabamento do preço: "Normal", "Holofoil", "Reverse Holofoil"... */
+  cartaTcgVariante?: string | null
+  /** Último preço de mercado lido (dólar) e a referência em reais (centavos) — gravados pelo robô. */
+  cartaRefUsd?: number | null
+  cartaRefCentavos?: number | null
+  cartaRefEm?: string | null
+  /** O robô troca o preço de venda pela sugestão da regra todo dia. */
+  cartaPrecoAutomatico?: boolean
   updatedAt: string; createdAt: string
 }
 
@@ -72,6 +85,47 @@ export const productApi = {
   update:      (id: string, p: Partial<Product>) => api.put<Product>(`/api/product/${id}`, p),
   deactivate:  (id: string)         => api.delete(`/api/product/${id}`),
   adjustStock: (id: string, delta: number) => api.patch(`/api/product/${id}/stock`, { delta }),
+}
+
+// ── Catálogo e preço de referência das cartas (v1.92.0, chave preco-referencia-cartas) ──
+export interface ColecaoCatalogo {
+  categoria: number; grupo: number; nome: string; nomeCompleto: string
+  sigla: string | null; lancamento: string | null; japonesa: boolean
+}
+export interface PrecoCatalogo {
+  variante: string; mercadoUsd: number | null; baixoUsd: number | null; medioUsd: number | null; altoUsd: number | null
+  /** Mercado, senão médio, senão o mais baixo. */
+  referencia: number | null
+}
+export interface CartaCatalogo {
+  produtoId: number; categoria: number; grupo: number; nome: string
+  numero: string | null; raridade: string | null; imagem: string | null; imagemGrande: string | null
+  precos: PrecoCatalogo[]
+}
+export interface ReferenciaAgora {
+  mercadoUsd: number | null; variante: string | null; cotacao: number; cotacaoDegradada: boolean
+  avisoCotacao: string | null; referenciaCentavos: number | null; sugestaoCentavos: number | null
+  precos: PrecoCatalogo[]
+}
+export interface RegraPrecoCarta { fatorPercent: number; arredondarCentavos: number; minimoCentavos: number; atualizadaEm: string }
+export interface VariacaoPreco {
+  productId: string; referenciaCentavos: number | null; referenciaEm: string | null; ha7Dias: number | null; ha30Dias: number | null
+}
+export interface ResultadoRodadaPreco {
+  rodou: boolean; mensagem: string; cartas: number; atualizadas: number; precosTrocados: number
+  semPreco: number; colecoesComErro: number; cotacao: number | null
+}
+
+export const catalogoCartasApi = {
+  colecoes:   (jogo: string) => api.get<ColecaoCatalogo[]>(`/api/product/catalogo-cartas/colecoes`, { params: { jogo } }),
+  cartas:     (categoria: number, grupo: number) => api.get<CartaCatalogo[]>(`/api/product/catalogo-cartas/cartas`, { params: { categoria, grupo } }),
+  referencia: (c: { categoria: number; grupo: number; produtoId: number; variante?: string | null }) =>
+                api.get<ReferenciaAgora>(`/api/product/catalogo-cartas/referencia`, { params: { ...c, variante: c.variante || undefined } }),
+  variacoes:  () => api.get<VariacaoPreco[]>(`/api/product/catalogo-cartas/variacoes`),
+  regra:      () => api.get<RegraPrecoCarta>(`/api/product/catalogo-cartas/regra`),
+  salvarRegra:(r: Pick<RegraPrecoCarta, 'fatorPercent' | 'arredondarCentavos' | 'minimoCentavos'>) =>
+                api.put<RegraPrecoCarta>(`/api/product/catalogo-cartas/regra`, r),
+  atualizar:  (ids?: string[]) => api.post<ResultadoRodadaPreco>(`/api/product/catalogo-cartas/atualizar`, { ids: ids ?? null }),
 }
 
 export const variantApi = {

@@ -3,7 +3,7 @@
 import type { Product } from '@/lib/api'
 
 /** Jogos do Mercado (os mesmos dos anúncios antigos). */
-export const JOGOS_DE_CARTA = ['Pokémon', 'Magic', 'Yu-Gi-Oh!', 'One Piece', 'Dragon Ball', 'Digimon', 'Outro'] as const
+export const JOGOS_DE_CARTA = ['Pokémon', 'Magic', 'Yu-Gi-Oh!', 'One Piece', 'Riftbound', 'Dragon Ball', 'Digimon', 'Outro'] as const
 
 /** Estados aceitos pela API (ProductService.CondicoesDeCarta). */
 export const CONDICOES_DE_CARTA = [
@@ -33,6 +33,7 @@ export const RARIDADES_DE_CARTA: Record<string, readonly string[]> = {
   'One Piece':   ['Comum', 'Incomum', 'Rara', 'Super Rara', 'Secreta', 'Líder', 'Promo'],
   'Dragon Ball': ['Comum', 'Incomum', 'Rara', 'Super Rara', 'Secreta', 'Líder', 'Promo'],
   'Digimon':     ['Comum', 'Incomum', 'Rara', 'Super Rara', 'Secreta', 'Promo'],
+  'Riftbound':   ['Comum', 'Incomum', 'Rara', 'Épica', 'Lendária', 'Promo'],
   'Outro':       ['Comum', 'Incomum', 'Rara', 'Épica', 'Lendária', 'Promo'],
 }
 
