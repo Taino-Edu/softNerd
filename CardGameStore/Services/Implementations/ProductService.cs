@@ -169,6 +169,16 @@ public class ProductService : IProductService
         existing.CartaIdioma          = updated.CartaIdioma;
         existing.CartaNumero          = updated.CartaNumero;
         existing.CartaRaridade        = updated.CartaRaridade;
+        // Preço de referência (v1.92.0): trocou a carta do catálogo (ou o acabamento) → a referência antiga não vale mais
+        if (existing.CartaTcgProdutoId != updated.CartaTcgProdutoId || existing.CartaTcgVariante != updated.CartaTcgVariante)
+        {
+            existing.CartaRefUsd = null; existing.CartaRefCentavos = null; existing.CartaRefEm = null;
+        }
+        existing.CartaTcgProdutoId    = updated.CartaTcgProdutoId;
+        existing.CartaTcgCategoria    = updated.CartaTcgCategoria;
+        existing.CartaTcgGrupo        = updated.CartaTcgGrupo;
+        existing.CartaTcgVariante     = updated.CartaTcgVariante;
+        existing.CartaPrecoAutomatico = updated.CartaPrecoAutomatico && updated.CartaTcgProdutoId != null;
         existing.UpdatedAt            = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -426,6 +436,9 @@ public class ProductService : IProductService
         p.CartaIdioma   = Limpo(p.CartaIdioma, 10, "Idioma")?.ToUpperInvariant();
         p.CartaNumero   = Limpo(p.CartaNumero, 20, "Número");
         p.CartaRaridade = Limpo(p.CartaRaridade, 40, "Raridade");
+        p.CartaTcgVariante = Limpo(p.CartaTcgVariante, 40, "Acabamento");
+        // Carta sem ligação com o catálogo não tem referência — então não tem como ajustar o preço sozinha
+        if (p.CartaTcgProdutoId is null) { p.CartaTcgCategoria = null; p.CartaTcgGrupo = null; p.CartaPrecoAutomatico = false; }
         p.CartaCondicao = Limpo(p.CartaCondicao, 10, "Estado")?.ToUpperInvariant();
         if (p.CartaCondicao is not null && !CondicoesDeCarta.Contains(p.CartaCondicao))
             throw new ArgumentException($"Estado da carta deve ser um destes: {string.Join(", ", CondicoesDeCarta)}.");

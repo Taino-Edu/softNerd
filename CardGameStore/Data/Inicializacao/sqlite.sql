@@ -124,3 +124,23 @@ CREATE TABLE IF NOT EXISTS marcos_operacao (
     quando  TEXT NOT NULL,
     detalhe TEXT NULL
 );
+
+-- Preço de referência das cartas (v1.92.0)
+CREATE TABLE IF NOT EXISTS carta_preco_historico (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    product_id          TEXT    NOT NULL,
+    dia                 TEXT    NOT NULL,
+    mercado_usd         TEXT    NOT NULL,
+    cotacao             TEXT    NOT NULL,
+    referencia_centavos INTEGER NOT NULL,
+    criado_em           TEXT    NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_carta_preco_historico_product_id_dia" ON carta_preco_historico (product_id, dia);
+
+CREATE TABLE IF NOT EXISTS carta_regra_preco (
+    id                  INTEGER NOT NULL PRIMARY KEY,
+    fator_percent       TEXT    NOT NULL,
+    arredondar_centavos INTEGER NOT NULL,
+    minimo_centavos     INTEGER NOT NULL,
+    atualizada_em       TEXT    NOT NULL
+);

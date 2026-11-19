@@ -44,6 +44,16 @@ public static class ServicosDaLoja
         // Oficial, pública, sem chave e sem limite prático de requisição. Virou primária depois
         // que a AwesomeAPI passou a devolver HTTP 429 pro IP do VPS (confirmado em 30/07/2026):
         // o código antigo batia nela a cada requisição sem cachear falha, e o IP foi bloqueado.
+        // tcgcsv.com — espelho público e gratuito do catálogo e dos preços do TCGplayer (todos os jogos, sem chave).
+        // Preço de referência das cartas avulsas (v1.92.0). A lista de cartas de uma coleção passa de 300 KB.
+        services.AddHttpClient(CatalogoCartasService.ClienteHttp, client =>
+        {
+            client.BaseAddress = new Uri("https://tcgcsv.com/");
+            client.Timeout     = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SantuarioNerd-Mercado/1.0");
+        });
+
         services.AddHttpClient("BcbPtax", client =>
         {
             client.BaseAddress = new Uri("https://olinda.bcb.gov.br/");
@@ -135,6 +145,10 @@ public static class ServicosDaLoja
         services.AddSingleton<ITcgApiClient,     TcgApiClient>();
         services.AddSingleton<ITcgService,       TcgService>();
         services.AddSingleton<CurrencyService>();
+        services.AddSingleton<IFonteCotacao>(sp => sp.GetRequiredService<CurrencyService>());
+        // Preço de referência das cartas avulsas (v1.92.0): catálogo tcgcsv + robô diário
+        services.AddSingleton<ICatalogoCartas, CatalogoCartasService>();
+        services.AddScoped<PrecoCartasService>();
         services.AddMemoryCache();
 
         // LGPD — Auditoria e privacidade
@@ -174,6 +188,7 @@ public static class ServicosDaLoja
         services.AddScoped<CrediarioAvisoService>();
         services.AddScoped<CrediarioPixService>();
         services.AddHostedService<CrediarioAvisoBackgroundService>();
+        services.AddHostedService<PrecoCartasBackgroundService>();
 
         // Entrar com Google: confere o ID token (sem chave secreta)
         services.AddSingleton<IValidadorGoogle, ValidadorGoogle>();

@@ -63,6 +63,15 @@ public static class InicializacaoBanco
         "ALTER TABLE products ADD COLUMN carta_idioma TEXT NULL;",
         "ALTER TABLE products ADD COLUMN carta_numero TEXT NULL;",
         "ALTER TABLE products ADD COLUMN carta_raridade TEXT NULL;",
+        // Preço de referência das cartas (v1.92.0)
+        "ALTER TABLE products ADD COLUMN carta_tcg_produto_id INTEGER NULL;",
+        "ALTER TABLE products ADD COLUMN carta_tcg_categoria INTEGER NULL;",
+        "ALTER TABLE products ADD COLUMN carta_tcg_grupo INTEGER NULL;",
+        "ALTER TABLE products ADD COLUMN carta_tcg_variante TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_ref_usd TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_ref_centavos INTEGER NULL;",
+        "ALTER TABLE products ADD COLUMN carta_ref_em TEXT NULL;",
+        "ALTER TABLE products ADD COLUMN carta_preco_automatico INTEGER NOT NULL DEFAULT 0;",
     ];
 
     public static async Task ExecutarAsync(IServiceProvider services, bool useSqlite)
