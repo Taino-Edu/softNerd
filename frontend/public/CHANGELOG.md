@@ -8,6 +8,12 @@
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
 
+## [v1.90.3] — 2026-11-19
+
+### Mercado de Cartas: mensagem própria quando não tem carta à venda
+- **Mercado vazio:** em vez de "Nenhuma carta encontrada — tente outro nome ou jogo" (que parecia erro pra quem chegou pelo menu), aparece "Ainda não tem carta avulsa à venda" com o botão "Ver produtos da loja". A busca e o filtro de jogo somem enquanto não há o que filtrar
+- **Busca sem resultado:** continua "Nenhuma carta encontrada", agora com o botão "Limpar busca"
+
 ## [v1.90.2] — 2026-11-19
 
 ### Liguinha no celular: comanda direto, atalho sem piscar e painel sem botão por cima
