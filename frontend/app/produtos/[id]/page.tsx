@@ -18,6 +18,7 @@ import { brl as fmt } from '@/lib/format'
 import { fotoLeve } from '@/lib/fotoLeve'
 import { mixHex } from '@/lib/colors'
 import CartaoProduto, { rotuloCategoria } from '@/components/loja/CartaoProduto'
+import { resumoCarta, CONDICOES_DE_CARTA, IDIOMAS_DE_CARTA } from '@/lib/cartasAvulsas'
 
 const NAVY = '#0C3D5A'
 const BLUE = '#3EC2F2'
@@ -63,6 +64,7 @@ export default function ProductPage() {
   // Catálogo (chave home-que-vende): foto maior no computador, clique amplia na tela toda e a foto
   // voa até a Sacola ao adicionar — "pra Figure/Funko Pop tem que ver os detalhes" (Maikon, 16/11)
   const vende = useFuncionalidade('home-que-vende') !== false
+  const cartasComoProduto = useFuncionalidade('cartas-como-produto') !== false
   const fotoRef = useRef<HTMLImageElement>(null)
   const [ampliada, setAmpliada] = useState(false)
   useEffect(() => {
@@ -124,11 +126,24 @@ export default function ProductPage() {
     categoryApi.list().then(r => setCategorias(r.data)).catch(() => {})
   }, [id, router])
 
+  // Carta avulsa (v1.91.0): a página vira a da carta — caminho pelo Mercado, jogo/estado/coleção/idioma e
+  // "Você também pode gostar" com cartas do mesmo jogo (as cartas não estão na lista de Produtos)
+  const ehCarta = cartasComoProduto && product?.cartaAvulsa === true
+  const jogoDaCarta = ehCarta ? product?.cartaJogo ?? '' : null
+
   // "Você também pode gostar": até 4 da mesma categoria
   const produtoId = product?.id
   const categoria = product?.category
   useEffect(() => {
-    if (!produtoId || !categoria) return
+    if (!produtoId || jogoDaCarta === null) return
+    let vivo = true
+    productApi.cartas({ jogo: jogoDaCarta })
+      .then(rs => { if (vivo) setRelacionados(rs.data.filter(x => x.id !== produtoId).slice(0, 4)) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [produtoId, jogoDaCarta])
+  useEffect(() => {
+    if (!produtoId || !categoria || ehCarta) return
     let vivo = true
     productApi.list(categoria)
       .then(rs => { if (vivo) setRelacionados(rs.data
@@ -137,7 +152,7 @@ export default function ProductPage() {
         .slice(0, 4)) })
       .catch(() => {})
     return () => { vivo = false }
-  }, [produtoId, categoria])
+  }, [produtoId, categoria, ehCarta])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -235,10 +250,14 @@ export default function ProductPage() {
         <nav aria-label="Caminho" className="flex items-center flex-wrap gap-1 text-xs mb-4" style={{ color: C.muted }}>
           <Link href="/" className="hover:underline">Início</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href="/produtos" className="hover:underline">Produtos</Link>
-          <ChevronRight className="w-3 h-3" />
-          <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`} className="hover:underline font-semibold"
-            style={{ color: destaque }}>{product.category}</Link>
+          {ehCarta ? (
+            <Link href="/cliente/mercado" className="hover:underline font-semibold" style={{ color: destaque }}>Mercado de Cartas</Link>
+          ) : (<>
+            <Link href="/produtos" className="hover:underline">Produtos</Link>
+            <ChevronRight className="w-3 h-3" />
+            <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`} className="hover:underline font-semibold"
+              style={{ color: destaque }}>{product.category}</Link>
+          </>)}
           <button title="Compartilhar" aria-label="Compartilhar produto"
             onClick={() => navigator.share?.({ title: product.name, url: window.location.href }).catch(() => navigator.clipboard?.writeText(window.location.href))}
             className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold hover:underline" style={{ color: destaque }}>
@@ -300,7 +319,7 @@ export default function ProductPage() {
               )}
               <span className="text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1"
                 style={{ backgroundColor: C.chip, color: C.text }}>
-                <Tag className="w-3 h-3" />{product.category}
+                <Tag className="w-3 h-3" />{ehCarta ? (resumoCarta(product) || 'Carta avulsa') : product.category}
               </span>
             </div>
 
@@ -460,12 +479,20 @@ export default function ProductPage() {
             )}
 
             <div className="rounded-2xl border divide-y text-sm" style={{ backgroundColor: C.card, borderColor: C.border }}>
-              {([
+              {((ehCarta ? [
+                product.cartaJogo ? ['Jogo', product.cartaJogo] : null,
+                product.cartaCondicao ? ['Estado', CONDICOES_DE_CARTA.find(c => c.valor === product.cartaCondicao)?.rotulo ?? product.cartaCondicao] : null,
+                product.cartaColecao ? ['Coleção', product.cartaColecao] : null,
+                product.cartaNumero ? ['Número', product.cartaNumero] : null,
+                product.cartaRaridade ? ['Raridade', product.cartaRaridade] : null,
+                product.cartaIdioma ? ['Idioma', IDIOMAS_DE_CARTA.find(i => i.valor === product.cartaIdioma)?.rotulo ?? product.cartaIdioma] : null,
+                ['Disponibilidade', emEstoque ? (product.stockQuantity === 1 ? 'Última cópia' : `${product.stockQuantity} cópias`) : 'Vendida'],
+              ] : [
                 ['Categoria', product.category],
                 ['Disponibilidade', emEstoque ? (ehPreVenda ? 'Em pré-venda' : 'Em estoque') : 'Esgotado'],
                 dataRua ? ['Lançamento', fmtData(dataRua)] : null,
                 product.barcode ? ['Código', product.barcode] : null,
-              ].filter(Boolean) as string[][]).map(([label, value]) => (
+              ]).filter(Boolean) as string[][]).map(([label, value]) => (
                 <div key={label as string} className="flex items-center justify-between px-5 py-3">
                   <span style={{ color: C.muted }}>{label}</span>
                   <span className="font-semibold" style={{ color: C.navy }}>{value}</span>
@@ -479,7 +506,7 @@ export default function ProductPage() {
           <section className="mt-12">
             <div className="flex items-end justify-between gap-3 mb-4">
               <h2 className="text-xl md:text-2xl font-black" style={{ color: C.navy }}>Você também pode gostar</h2>
-              <Link href={`/produtos?categoria=${encodeURIComponent(product.category)}`}
+              <Link href={ehCarta ? '/cliente/mercado' : `/produtos?categoria=${encodeURIComponent(product.category)}`}
                 className="text-sm font-black inline-flex items-center gap-0.5 hover:underline shrink-0" style={{ color: destaque }}>
                 Ver mais <ChevronRight className="w-4 h-4" />
               </Link>
@@ -488,7 +515,7 @@ export default function ProductPage() {
               {relacionados.map(r => {
                 const { pix, cartao } = precosDe(r)
                 return <CartaoProduto key={r.id} p={r} C={CN} pix={pix} cartao={cartao} href={`/produtos/${r.id}`}
-                  grande={vende} categoria={rotuloCategoria(r.category, categorias)} />
+                  grande={vende} categoria={ehCarta ? (resumoCarta(r) || 'Carta avulsa') : rotuloCategoria(r.category, categorias)} />
               })}
             </div>
           </section>

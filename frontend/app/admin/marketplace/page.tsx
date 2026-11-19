@@ -7,6 +7,8 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { Table } from '@/components/ui/Table'
 import { PageHeader } from '@/components/ui/PageHeader'
+import CartasDaLoja from '@/components/admin/CartasDaLoja'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import {
   Search, Package, Loader2, Trash2, Eye, ChevronLeft, ChevronRight,
   User as UserIcon, ShoppingBag, CheckCircle, XCircle, Clock,
@@ -272,7 +274,18 @@ function InterestsModal({ listing, onClose }: { listing: CardListingDto; onClose
   )
 }
 
+// Chave cartas-como-produto (v1.91.0): carta avulsa vira produto com reserva (CartasDaLoja). Desligada, volta o
+// cadastro de anúncios com "Tenho interesse" de antes.
 export default function AdminMarketplacePage() {
+  const cartasComoProduto = useFuncionalidade('cartas-como-produto')
+  if (cartasComoProduto === undefined) {
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>
+  }
+  return cartasComoProduto === false ? <MarketplaceLegado /> : <CartasDaLoja />
+}
+
+// FALLBACK da chave "cartas-como-produto" — apagar junto com a chave
+function MarketplaceLegado() {
   const [items,       setItems]       = useState<CardListingDto[]>([])
   const [loading,     setLoading]     = useState(true)
   const [search,      setSearch]      = useState('')

@@ -136,6 +136,46 @@ public class Product
     [Column("has_variants")]
     public bool HasVariants { get; set; } = false;
 
+    // -------------------------------------------------------------------------
+    // Carta avulsa (v1.91.0, chave "cartas-como-produto"): as singles da loja são produtos — o cliente
+    // reserva pela sacola e paga no Pix como qualquer produto (pedido do Maikon, 19/11). Elas aparecem
+    // no Mercado de Cartas, não em Produtos nem na home. Uma linha por carta; cópias iguais = estoque.
+    // -------------------------------------------------------------------------
+
+    /// <summary>True = carta avulsa (single). Fica no Mercado de Cartas, fora da lista de Produtos.</summary>
+    [Column("carta_avulsa")]
+    public bool CartaAvulsa { get; set; } = false;
+
+    /// <summary>Jogo da carta: "Pokémon", "Magic", "One Piece"... (mesma lista do Mercado).</summary>
+    [Column("carta_jogo")]
+    [MaxLength(40)]
+    public string? CartaJogo { get; set; }
+
+    /// <summary>Estado: NM, LP, MP, HP ou DMG.</summary>
+    [Column("carta_condicao")]
+    [MaxLength(10)]
+    public string? CartaCondicao { get; set; }
+
+    /// <summary>Coleção ("Escarlate e Violeta 151"). O Mercado agrupa as cartas por ela.</summary>
+    [Column("carta_colecao")]
+    [MaxLength(120)]
+    public string? CartaColecao { get; set; }
+
+    /// <summary>Idioma da carta: PT, EN, JP...</summary>
+    [Column("carta_idioma")]
+    [MaxLength(10)]
+    public string? CartaIdioma { get; set; }
+
+    /// <summary>Número na coleção ("199/165"). O Mercado ordena por ele.</summary>
+    [Column("carta_numero")]
+    [MaxLength(20)]
+    public string? CartaNumero { get; set; }
+
+    /// <summary>Raridade como vem na carta ("Rara Dupla", "Promo"...). Texto livre: cada jogo tem as suas.</summary>
+    [Column("carta_raridade")]
+    [MaxLength(40)]
+    public string? CartaRaridade { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
