@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.93.0] — 2026-11-19
+
+### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
+- **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
+- **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
+- **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
+- Volta: `scripts/reverter-procedures-triggers.sql`
+
 ## [v1.92.0] — 2026-11-19
 
 ### Preço de referência das cartas: catálogo de todos os jogos e preço de mercado todo dia

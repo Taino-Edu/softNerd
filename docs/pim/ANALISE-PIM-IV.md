@@ -1,5 +1,8 @@
 # PIM IV × softNerd (Santuário Nerd) — o que já atende e o que falta
 
+> **DESATUALIZADA desde 09/11/2026.** Para escrever o trabalho, use [GUIA-ESCRITA-PIM-IV.md](GUIA-ESCRITA-PIM-IV.md).
+> Aqui ficam só o histórico e as decisões técnicas de 23/10.
+
 > Análise de 23/10/2026 contra o `manual-pim-iv.md` (extraído de `Manual_PIM_IV_ADS_v2.docx`, nesta pasta),
 > **revisada em 07/11/2026** (ver "O que mudou desde 23/10" logo abaixo — o texto das etapas já está corrigido).
 > Só levantamento: nada foi implementado por causa do PIM ainda.
