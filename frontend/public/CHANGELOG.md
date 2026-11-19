@@ -1,12 +1,18 @@
 # Changelog — Santuário Nerd
 
-## [v1.90.3] — 2026-11-19
+## [v1.90.4] — 2026-11-19
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.90.3] — 2026-11-19
+
+### Mercado de Cartas: mensagem própria quando não tem carta à venda
+- **Mercado vazio:** em vez de "Nenhuma carta encontrada — tente outro nome ou jogo" (que parecia erro pra quem chegou pelo menu), aparece "Ainda não tem carta avulsa à venda" com o botão "Ver produtos da loja". A busca e o filtro de jogo somem enquanto não há o que filtrar
+- **Busca sem resultado:** continua "Nenhuma carta encontrada", agora com o botão "Limpar busca"
 
 ## [v1.90.2] — 2026-11-19
 
