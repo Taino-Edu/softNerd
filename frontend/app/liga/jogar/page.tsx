@@ -48,8 +48,9 @@ function Jogar() {
   const modo = modalidadeDoEndereco(usePathname())
   const rotas = rotasDoEvento(modo, separado)
 
-  /** Comanda aberta nesta conta: o atalho do topo vira "Comanda". Torneio e comanda andam juntos. */
-  const [temComanda, setTemComanda] = useState(false)
+  /** Comanda aberta nesta conta: o atalho do topo vira "Comanda". Torneio e comanda andam juntos.
+   *  null = ainda conferindo — o atalho espera em vez de mostrar "Conta" e trocar pra "Comanda" na cara do jogador. */
+  const [temComanda, setTemComanda] = useState<boolean | null>(null)
 
   useEffect(() => {
     const ok = isLoggedIn()
@@ -75,9 +76,15 @@ function Jogar() {
         {/* Ir à comanda não tira ninguém do torneio: antes não havia caminho daqui pra lá, e quem tocava
             em "Desistir" pra sair da tela ficava fora do torneio (Maikon, 17/11) */}
         {logado && (
-          <Link href="/cliente" className="flex items-center gap-1.5 text-sm text-gray-300 pl-3 border-l border-surface-500">
-            {temComanda ? <><Receipt className="w-4 h-4" /> Comanda</> : <><UserRound className="w-4 h-4" /> Conta</>}
-          </Link>
+          temComanda === null ? (
+            // Espaço guardado do tamanho do atalho: o título "Liguinha" não pula quando ele aparece
+            <span aria-hidden className="pl-3 border-l border-surface-500 w-[6.5rem] h-5" />
+          ) : (
+            <Link href={temComanda ? '/cliente#comanda' : '/cliente'}
+              className="flex items-center gap-1.5 text-sm text-gray-300 pl-3 border-l border-surface-500">
+              {temComanda ? <><Receipt className="w-4 h-4" /> Comanda</> : <><UserRound className="w-4 h-4" /> Conta</>}
+            </Link>
+          )
         )}
       </nav>
 
