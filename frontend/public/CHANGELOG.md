@@ -1,5 +1,12 @@
 # Changelog — Santuário Nerd
 
+## [v1.90.2] — 2026-11-19
+
+### Liguinha no celular: comanda direto, atalho sem piscar e painel sem botão por cima
+- **"Comanda" leva direto à comanda:** o atalho da tela do torneio abria a área do cliente lá no topo, e a comanda ficava embaixo dos pontos e dos campeonatos. Agora a tela já desce até ela
+- **Atalho sem piscar:** enquanto confere se há comanda aberta, o atalho espera em vez de mostrar "Conta" e trocar pra "Comanda" na frente do jogador
+- **Painel sem botão por cima:** no celular, o botão do assistente cobria a última linha das listas (ex.: "Voltar pro torneio" e remover jogador na Central da Liguinha). Toda tela do painel ganhou uma folga no fim pra rolar a lista acima dele
+
 ## [v1.90.1] — 2026-11-18
 
 ### Produtos: busca em cima, categorias inteiras embaixo (pedido do Maikon)
