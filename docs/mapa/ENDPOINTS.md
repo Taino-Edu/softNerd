@@ -111,7 +111,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/category` | público | `GetAll` (34) | `categoryApi.list` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx` |
+| GET | `/api/category` | público | `GetAll` (34) | `categoryApi.list` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
 | POST | `/api/category` | AdminOnly | `Create` (39) | `categoryApi.create` | `app/admin/categorias/page.tsx` |
 | DELETE | `/api/category/{id:guid}` | AdminOnly | `Delete` (78) | `categoryApi.delete` | `app/admin/categorias/page.tsx` |
 | PUT | `/api/category/{id:guid}` | AdminOnly | `Update` (59) | `categoryApi.update` | `app/admin/categorias/page.tsx` |
@@ -354,7 +354,7 @@
 | GET | `/api/product/mais-vendidos` | público | `MaisVendidosDaLoja` (82) | `productApi.maisVendidos` | `app/page.tsx` |
 | GET | `/api/product/store` | logado | `GetAllStore` (59) | `productApi.listStore` | `app/cliente/page.tsx` |
 | DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (171) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/{id:guid}` | público | `GetById` (113) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
+| GET | `/api/product/{id:guid}` | público | `GetById` (113) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
 | PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (160) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 | PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (183) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
