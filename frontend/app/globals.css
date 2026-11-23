@@ -400,6 +400,10 @@ html.light .painel-novo .btn-primary :is(span, svg) {
 /* Fileira de abas que rola de lado (Mercado de Cartas): rola no dedo, sem a barrinha */
 .abas-rolagem { scrollbar-width: none; }
 .abas-rolagem::-webkit-scrollbar { display: none; }
+/* Gaveta/modal/fundo escuro (position: fixed) dentro de um pai com space-y-*: o Tailwind 3 dá margin-top a TODO
+   irmão, inclusive ao fixed — a gaveta "Detalhes do Produto" do Estoque descia 24px e o fim dela ficava fora da tela
+   (a Fila de espera cortada, 23/11). Elemento fixed não ocupa lugar na pilha, então nunca leva essa margem. */
+[class*="space-y-"] > .fixed { margin-top: 0 !important; }
 /* Pesquisa do menu (v1.89.0): texto claro sobre o azul nos dois temas (vence o placeholder cinza do html.light) */
 .menu-busca::placeholder { color: rgba(255,255,255,0.6) !important; }
 
