@@ -169,16 +169,22 @@ public class ProductService : IProductService
         existing.CartaIdioma          = updated.CartaIdioma;
         existing.CartaNumero          = updated.CartaNumero;
         existing.CartaRaridade        = updated.CartaRaridade;
-        // Preço de referência (v1.92.0): trocou a carta do catálogo (ou o acabamento) → a referência antiga não vale mais
-        if (existing.CartaTcgProdutoId != updated.CartaTcgProdutoId || existing.CartaTcgVariante != updated.CartaTcgVariante)
+        // Preço de referência (v1.92.0): a ligação com o catálogo vem junto só no formulário de CARTA AVULSA. Produto
+        // do Estoque (selado) liga pelo PUT /api/product/catalogo-cartas/ligacao/{id} (v1.94.0) — o formulário do
+        // Estoque pode vir da busca por código de barras, sem esses campos, e apagaria a ligação ao salvar.
+        if (updated.CartaAvulsa)
         {
-            existing.CartaRefUsd = null; existing.CartaRefCentavos = null; existing.CartaRefEm = null;
+            // Trocou a carta do catálogo (ou o acabamento) → a referência antiga não vale mais
+            if (existing.CartaTcgProdutoId != updated.CartaTcgProdutoId || existing.CartaTcgVariante != updated.CartaTcgVariante)
+            {
+                existing.CartaRefUsd = null; existing.CartaRefCentavos = null; existing.CartaRefEm = null;
+            }
+            existing.CartaTcgProdutoId    = updated.CartaTcgProdutoId;
+            existing.CartaTcgCategoria    = updated.CartaTcgCategoria;
+            existing.CartaTcgGrupo        = updated.CartaTcgGrupo;
+            existing.CartaTcgVariante     = updated.CartaTcgVariante;
+            existing.CartaPrecoAutomatico = updated.CartaPrecoAutomatico && updated.CartaTcgProdutoId != null;
         }
-        existing.CartaTcgProdutoId    = updated.CartaTcgProdutoId;
-        existing.CartaTcgCategoria    = updated.CartaTcgCategoria;
-        existing.CartaTcgGrupo        = updated.CartaTcgGrupo;
-        existing.CartaTcgVariante     = updated.CartaTcgVariante;
-        existing.CartaPrecoAutomatico = updated.CartaPrecoAutomatico && updated.CartaTcgProdutoId != null;
         existing.UpdatedAt            = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
