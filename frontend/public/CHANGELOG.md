@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.95.1] — 2026-11-23
+
+### Buscar no catálogo: fotos, coleções grandes e coleções sem carta
+- **Foto que não carrega:** quando a foto do TCGplayer falha, o quadro mantém o tamanho da carta, tenta a foto menor e, se não vier, mostra um ícone — antes ele encolhia e desmontava a grade
+- **Coleção grande:** a lista mostra 60 cartas por vez com "Mostrando 60 de 159" e o botão "Mostrar mais" (antes passava das 60 só buscando)
+- **Coleção que ainda vai sair:** aparece com "sai 29/01/2027" na lista; aberta, explica que o catálogo ainda só tem os lacrados
+- **Coleção sem carta avulsa** (deck pronto, kit de evento): explica em vez de só "Nenhuma carta"
+
 ## [v1.95.0] — 2026-11-23
 
 ### Preço de referência em reais, com o dólar de agora
