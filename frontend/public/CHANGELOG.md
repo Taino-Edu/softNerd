@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.95.1] — 2026-11-23
+## [v1.95.2] — 2026-11-23
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.95.1] — 2026-11-23
+
+### Buscar no catálogo: fotos, coleções grandes e coleções sem carta
+- **Foto que não carrega:** quando a foto do TCGplayer falha, o quadro mantém o tamanho da carta, tenta a foto menor e, se não vier, mostra um ícone — antes ele encolhia e desmontava a grade
+- **Coleção grande:** a lista mostra 60 cartas por vez com "Mostrando 60 de 159" e o botão "Mostrar mais" (antes passava das 60 só buscando)
+- **Coleção que ainda vai sair:** aparece com "sai 29/01/2027" na lista; aberta, explica que o catálogo ainda só tem os lacrados
+- **Coleção sem carta avulsa** (deck pronto, kit de evento): explica em vez de só "Nenhuma carta"
 
 ## [v1.95.0] — 2026-11-23
 
