@@ -1,12 +1,18 @@
 # Changelog — Santuário Nerd
 
-## [v1.93.0] — 2026-11-19
+## [v1.94.0] — 2026-11-23
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.93.0] — 2026-11-23
+
+### Home: torneios e pontos lá em cima
+- **Próximos Torneios e Ganhe pontos sobem:** na página inicial, os torneios (com o calendário dos dias) e os pontos vêm logo depois da agenda "Campeonatos & eventos", antes das vitrines de produto. O cliente vê os dias e os pontos sem descer a página toda (no computador, os torneios saem de ~4.700px pra ~1.000px do topo)
+- **Com volta:** chave "Home: torneios e pontos lá em cima" em Mudanças com volta. Desligada, volta a ordem anterior (produtos primeiro, torneios e pontos no fim)
 
 ## [v1.92.0] — 2026-11-19
 
