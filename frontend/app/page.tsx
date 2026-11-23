@@ -165,6 +165,11 @@ export default function LandingPage() {
   // 390px) e as cores do modelo dele. Vale em cima da home que vende. Desligada = a home da v1.87.
   const chaveVitrines = useFuncionalidade('home-vitrines')
   const vitrines = vende && chaveVitrines !== false
+  // Eventos e pontos lá em cima (chave "home-eventos-no-topo", v1.93.0 — pedido do Taino, 19/11: "o cliente não vai
+  // descer a tela toda pra ler pontos e nem ver os dias"): Próximos Torneios (com o calendário) e Ganhe pontos vêm logo
+  // depois da agenda, antes das vitrines de produto. Vale em cima da home com vitrines. Desligada = a ordem da v1.90.
+  const chaveEventosNoTopo = useFuncionalidade('home-eventos-no-topo')
+  const eventosNoTopo = vitrines && chaveEventosNoTopo !== false
   const { porNaSacola, nome: naSacola } = usePorNaSacola()
   const marcaEscura = mixHex(site.colorHero, '#000000', 0.55)
   const Cbase = !uniforme ? C0 : isDark ? {
@@ -708,6 +713,70 @@ export default function LandingPage() {
     return () => window.removeEventListener('hashchange', irPraLiga)
   }, [mostraTorneios, router])
 
+  const secPontos = (
+    <>
+      {/* ── PONTOS / FIDELIDADE ─────────────────────────────────────────── */}
+      <section id="pontos" className="py-16 px-5 border-t" style={{ borderColor: C.border }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="rounded-2xl overflow-hidden border"
+            style={{ backgroundColor: C.card, borderColor: `${C.blue}25` }}>
+            <div className="p-8 md:p-12 flex flex-col md:flex-row gap-8 md:gap-16 items-center">
+
+              {/* Texto */}
+              <div className="flex-1 text-center md:text-left">
+                <p className="text-xs font-black uppercase tracking-widest mb-3"
+                  style={{ color: C.yellow }}>{site.pontosEyebrow}</p>
+                <h2 className="text-2xl md:text-3xl font-black mb-4 leading-tight" style={{ color: C.navy }}>
+                  {site.pontosTitle}
+                </h2>
+                <p className="text-sm leading-relaxed max-w-sm mb-6" style={{ color: C.text }}>
+                  {site.pontosParagraph}
+                </p>
+                <a href="#" className="inline-flex items-center gap-2 text-sm font-bold hover:gap-3 transition-all"
+                  style={{ color: C.blue }}>
+                  Saiba mais <ChevronRight className="w-4 h-4" />
+                </a>
+              </div>
+
+              {/* Cards de benefício */}
+              <div className="grid grid-cols-3 gap-3 w-full md:w-auto md:min-w-[340px]">
+                {[
+                  { icon: QrCode, label: 'Sem senha', sub: 'Login só com CPF' },
+                  { icon: Star,   label: 'Pontos válidos', sub: 'Enquanto você for ativo' },
+                  { icon: Award,  label: '100pts = R$1', sub: 'Desconto na comanda' },
+                ].map(({ icon: Icon, label, sub }) => (
+                  <div key={label} className="flex flex-col items-center text-center p-4 rounded-xl border"
+                    style={{ backgroundColor: `${C.blue}08`, borderColor: `${C.blue}20` }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                      style={{ backgroundColor: `${C.blue}18` }}>
+                      <Icon className="w-5 h-5" style={{ color: C.blue }} />
+                    </div>
+                    <p className="text-xs font-black leading-snug" style={{ color: C.navy }}>{label}</p>
+                    <p className="text-[10px] mt-0.5 leading-snug" style={{ color: C.text }}>{sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Strip de garantia */}
+            <div className="border-t px-8 py-4 flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2"
+              style={{ borderColor: C.border }}>
+              {[
+                { icon: Shield, text: 'Dados protegidos — LGPD' },
+                { icon: CheckCircle, text: 'Sem aplicativo necessário' },
+                { icon: MessageCircle, text: `Suporte via WhatsApp` },
+              ].map(({ icon: Icon, text }) => (
+                <span key={text} className="flex items-center gap-2 text-xs font-medium" style={{ color: C.text }}>
+                  <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: C.blue }} /> {text}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+
   return (
     <div className={`site-shell min-h-screen ${uniforme ? 'home-uniforme' : ''}`} style={{ backgroundColor: C.bg, color: C.navy }}>
       {/* Retematiza os cantos (cards/botões/imagens) sem precisar editar cada className —
@@ -894,72 +963,17 @@ export default function LandingPage() {
         )}
       </section>
 
-      {vitrines
+      {eventosNoTopo
+        // Pedido do Taino de 19/11: torneios (os dias) e pontos logo depois da agenda, antes das vitrines
+        ? <>{secCartoes}{secAgenda}{temCampeonatos && secTorneios}{secPontos}{secVitrineTopo}{secProdutos}{secMaisVendidos}{secNovidades}{secAvisos}</>
+        : vitrines
         // Modelo do Maikon de 17/11: cartões e agenda logo abaixo do topo, depois vantagens e as vitrines
         ? <>{secCartoes}{secAgenda}{secVitrineTopo}{secProdutos}{secMaisVendidos}{secNovidades}{secAvisos}{temCampeonatos && secTorneios}</>
         : vende
         ? <>{secVitrineTopo}{secProdutos}{secAvisos}{mostraTorneios && secTorneios}</>
         : <>{secCartoes}{secAvisos}{secTorneios}{secProdutos}</>}
 
-      {/* ── PONTOS / FIDELIDADE ─────────────────────────────────────────── */}
-      <section id="pontos" className="py-16 px-5 border-t" style={{ borderColor: C.border }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="rounded-2xl overflow-hidden border"
-            style={{ backgroundColor: C.card, borderColor: `${C.blue}25` }}>
-            <div className="p-8 md:p-12 flex flex-col md:flex-row gap-8 md:gap-16 items-center">
-
-              {/* Texto */}
-              <div className="flex-1 text-center md:text-left">
-                <p className="text-xs font-black uppercase tracking-widest mb-3"
-                  style={{ color: C.yellow }}>{site.pontosEyebrow}</p>
-                <h2 className="text-2xl md:text-3xl font-black mb-4 leading-tight" style={{ color: C.navy }}>
-                  {site.pontosTitle}
-                </h2>
-                <p className="text-sm leading-relaxed max-w-sm mb-6" style={{ color: C.text }}>
-                  {site.pontosParagraph}
-                </p>
-                <a href="#" className="inline-flex items-center gap-2 text-sm font-bold hover:gap-3 transition-all"
-                  style={{ color: C.blue }}>
-                  Saiba mais <ChevronRight className="w-4 h-4" />
-                </a>
-              </div>
-
-              {/* Cards de benefício */}
-              <div className="grid grid-cols-3 gap-3 w-full md:w-auto md:min-w-[340px]">
-                {[
-                  { icon: QrCode, label: 'Sem senha', sub: 'Login só com CPF' },
-                  { icon: Star,   label: 'Pontos válidos', sub: 'Enquanto você for ativo' },
-                  { icon: Award,  label: '100pts = R$1', sub: 'Desconto na comanda' },
-                ].map(({ icon: Icon, label, sub }) => (
-                  <div key={label} className="flex flex-col items-center text-center p-4 rounded-xl border"
-                    style={{ backgroundColor: `${C.blue}08`, borderColor: `${C.blue}20` }}>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                      style={{ backgroundColor: `${C.blue}18` }}>
-                      <Icon className="w-5 h-5" style={{ color: C.blue }} />
-                    </div>
-                    <p className="text-xs font-black leading-snug" style={{ color: C.navy }}>{label}</p>
-                    <p className="text-[10px] mt-0.5 leading-snug" style={{ color: C.text }}>{sub}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Strip de garantia */}
-            <div className="border-t px-8 py-4 flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2"
-              style={{ borderColor: C.border }}>
-              {[
-                { icon: Shield, text: 'Dados protegidos — LGPD' },
-                { icon: CheckCircle, text: 'Sem aplicativo necessário' },
-                { icon: MessageCircle, text: `Suporte via WhatsApp` },
-              ].map(({ icon: Icon, text }) => (
-                <span key={text} className="flex items-center gap-2 text-xs font-medium" style={{ color: C.text }}>
-                  <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: C.blue }} /> {text}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      {!eventosNoTopo && secPontos}
 
       {/* ── CHAMADA "QUERO JOGAR" (modelo do Maikon) ──────────────────────── */}
       <section className="px-5 pb-16">

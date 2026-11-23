@@ -49,6 +49,7 @@ public static class Funcionalidades
     public const string HomeVitrines = "home-vitrines";
     public const string CartasComoProduto = "cartas-como-produto";
     public const string PrecoReferenciaCartas = "preco-referencia-cartas";
+    public const string HomeEventosNoTopo = "home-eventos-no-topo";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -205,6 +206,16 @@ public static class Funcionalidades
                         "As cartas continuam à venda com o preço que tinham; o cadastro volta a ser só à mão.",
             Padrao:     true,
             Desde:      "v1.92.0",
+            RevisarEm:  new DateOnly(2027, 5, 20)),
+
+        new(HomeEventosNoTopo,
+            Nome:       "Home: torneios e pontos lá em cima",
+            OQueMuda:   "Na página inicial, \"Próximos Torneios\" (com o calendário dos dias) e \"Ganhe pontos a cada visita\" vêm logo " +
+                        "depois da agenda \"Campeonatos & eventos\", antes das vitrines de produto — o cliente vê os dias e os pontos sem " +
+                        "descer a página toda.",
+            SeDesligar: "Volta a ordem da v1.90: vitrines de produto primeiro, torneios e pontos no fim da página.",
+            Padrao:     true,
+            Desde:      "v1.93.0",
             RevisarEm:  new DateOnly(2027, 5, 20)),
     ];
 

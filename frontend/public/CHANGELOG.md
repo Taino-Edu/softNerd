@@ -1,12 +1,18 @@
 # Changelog — Santuário Nerd
 
-## [v1.92.1] — 2026-11-19
+## [v1.93.1] — 2026-11-23
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.93.0] — 2026-11-23
+
+### Home: torneios e pontos lá em cima
+- **Próximos Torneios e Ganhe pontos sobem:** na página inicial, os torneios (com o calendário dos dias) e os pontos vêm logo depois da agenda "Campeonatos & eventos", antes das vitrines de produto. O cliente vê os dias e os pontos sem descer a página toda (no computador, os torneios saem de ~4.700px pra ~1.000px do topo)
+- **Com volta:** chave "Home: torneios e pontos lá em cima" em Mudanças com volta. Desligada, volta a ordem anterior (produtos primeiro, torneios e pontos no fim)
 
 ## [v1.92.0] — 2026-11-19
 
