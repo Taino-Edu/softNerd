@@ -126,6 +126,8 @@ export const catalogoCartasApi = {
   cartas:     (categoria: number, grupo: number) => api.get<CartaCatalogo[]>(`/api/product/catalogo-cartas/cartas`, { params: { categoria, grupo } }),
   selados:    (categoria: number, grupo: number) => api.get<SeladoCatalogo[]>(`/api/product/catalogo-cartas/selados`, { params: { categoria, grupo } }),
   /** Liga (produtoId preenchido) ou desliga (null) um produto do Estoque ao catálogo; devolve o produto com a referência. */
+  /** "Usar" a sugestão: troca só o preço de venda (não reescreve estoque nem outros campos). */
+  trocarPreco:(id: string, priceInCents: number) => api.put<Product>(`/api/product/catalogo-cartas/preco/${id}`, { priceInCents }),
   ligar:      (id: string, l: { produtoId: number | null; categoria: number | null; grupo: number | null; variante?: string | null; automatico: boolean }) =>
                 api.put<Product>(`/api/product/catalogo-cartas/ligacao/${id}`, l),
   referencia: (c: { categoria: number; grupo: number; produtoId: number; variante?: string | null }) =>

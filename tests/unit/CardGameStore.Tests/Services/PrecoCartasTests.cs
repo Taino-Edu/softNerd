@@ -469,6 +469,28 @@ public class PrecoCartasTests
     }
 
     [Fact]
+    public async Task UsarSugestao_TrocaSoOPreco_NaoVoltaOEstoque()
+    {
+        var db = CreateDb();
+        var box = Selado("Booster Bundle", 503000, precoCentavos: 19999);
+        db.Products.Add(box);
+        await db.SaveChangesAsync();
+        // Venda no meio do caminho: a gaveta abriu com 3, agora são 2
+        await db.Products.Where(p => p.Id == box.Id).ExecuteUpdateAsync(u => u.SetProperty(p => p.StockQuantity, 2));
+        db.ChangeTracker.Clear();
+        var (servico, _) = Servico(db, new CatalogoFalso(), new CotacaoFixa(5m));
+
+        var p = await servico.TrocarPrecoAsync(box.Id, 23550);
+
+        p!.PriceInCents.Should().Be(23550);
+        p.StockQuantity.Should().Be(2, "só o preço muda");
+        p.CartaTcgProdutoId.Should().Be(503000);
+        var zero = () => servico.TrocarPrecoAsync(box.Id, 0);
+        await zero.Should().ThrowAsync<ArgumentException>();
+        (await servico.TrocarPrecoAsync(Guid.NewGuid(), 100)).Should().BeNull();
+    }
+
+    [Fact]
     public async Task SalvarProdutoDoEstoque_SemOsCamposDoCatalogo_NaoApagaALigacao()
     {
         // O formulário do Estoque pode vir da busca por código de barras (dados públicos, sem a ligação)

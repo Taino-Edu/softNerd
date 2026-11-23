@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { Loader2, TrendingUp, TrendingDown, Link2 } from 'lucide-react'
-import { catalogoCartasApi, productApi, Product, ReferenciaAgora, VariacaoPreco, CartaCatalogo, ColecaoCatalogo } from '@/lib/api'
+import { catalogoCartasApi, Product, ReferenciaAgora, VariacaoPreco, CartaCatalogo, ColecaoCatalogo } from '@/lib/api'
 import { brl } from '@/lib/format'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { JOGOS_DE_CARTA } from '@/lib/cartasAvulsas'
@@ -83,8 +83,9 @@ export default function ReferenciaEstoque({ product, onAtualizado }: {
   async function usarSugestao(centavos: number) {
     setSalvando(true)
     try {
-      await productApi.update(product.id, { ...product, priceInCents: centavos })
-      onAtualizado({ ...product, priceInCents: centavos, priceInReais: centavos / 100 })
+      // Só o preço: o produto inteiro da gaveta pode ter estoque velho (venda no meio do caminho) — achado do Codex no PR #187
+      const { data } = await catalogoCartasApi.trocarPreco(product.id, centavos)
+      onAtualizado(data)
       toast.success('Preço de venda atualizado')
     } catch { toast.error('Não deu pra trocar o preço') }
     finally { setSalvando(false) }

@@ -132,6 +132,22 @@ public class PrecoCartasService
         return p;
     }
 
+    /// <summary>
+    /// "Usar" a sugestão na gaveta do Estoque: troca SÓ o preço de venda. Mandar o produto inteiro pelo PUT gravava de
+    /// volta o estoque que a gaveta tinha aberto — uma venda no meio do caminho "voltava" (achado do Codex no PR #187).
+    /// </summary>
+    public async Task<Product?> TrocarPrecoAsync(Guid productId, int precoCentavos, CancellationToken ct = default)
+    {
+        if (precoCentavos <= 0) throw new ArgumentException("O preço precisa ser maior que zero.");
+        if (precoCentavos > 100_000_000) throw new ArgumentException("Preço alto demais.");
+        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId, ct);
+        if (p is null) return null;
+        p.PriceInCents = precoCentavos;
+        p.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return p;
+    }
+
     // ── Rodada (robô diário e botão "Atualizar agora") ──────────────────────────
 
     public async Task<ResultadoRodadaPreco> AtualizarAsync(IReadOnlyCollection<Guid>? soEstas = null, CancellationToken ct = default)
