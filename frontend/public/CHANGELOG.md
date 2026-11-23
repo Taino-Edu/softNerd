@@ -1,12 +1,22 @@
 # Changelog — Santuário Nerd
 
-## [v1.94.1] — 2026-11-23
+## [v1.95.1] — 2026-11-23
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.95.0] — 2026-11-23
+
+### Preço de referência em reais, com o dólar de agora
+- **Reais primeiro em todo lugar:** no "Buscar no catálogo" (cartas e lacrados), no cadastro da carta, na lista do Mercado de Cartas do painel e na gaveta do Estoque, o valor em reais vem em destaque e o dólar fica ao lado, menor
+- **Dólar de agora, não o do último dia útil:** a conversão usa o dólar comercial (lido no máximo a cada 10 minutos) em vez da PTAX do Banco Central, que só muda em dia útil. Ex.: segunda de manhã a PTAX ainda era a de sexta (R$ 5,8889) e o mercado estava em R$ 5,975
+- **Com a hora:** a tela diz qual dólar usou ("dólar R$ 5,975 · mercado às 09:30")
+- **Convertido ao vivo:** o preço em dólar do catálogo é lido uma vez por dia (é quando o TCGplayer publica); a referência em reais acompanha o dólar ao longo do dia. O ajuste automático do preço de venda continua uma vez por dia (17h30), pra o preço não mudar com o cliente com a carta na sacola
+- **Se o mercado não responder:** usa a PTAX oficial e avisa na tela; nunca um número inventado
+- **Com volta:** chave "Preço de referência em reais com o dólar de agora". Desligada, volta a converter pela PTAX
 
 ## [v1.94.0] — 2026-11-23
 

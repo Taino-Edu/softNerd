@@ -27,7 +27,7 @@ namespace CardGameStore.Services.Implementations;
 /// </summary>
 public record CotacaoUsdBrl(decimal Valor, DateTime? ObtidaEm, string? Fonte, bool Degradada, string? Aviso);
 
-public class CurrencyService : IFonteCotacao
+public class CurrencyService : IFonteCotacao, ICotacaoOficial
 {
     private readonly IHttpClientFactory       _factory;
     private readonly IMemoryCache             _cache;

@@ -111,7 +111,11 @@ export interface ReferenciaAgora {
   mercadoUsd: number | null; variante: string | null; cotacao: number; cotacaoDegradada: boolean
   avisoCotacao: string | null; referenciaCentavos: number | null; sugestaoCentavos: number | null
   precos: PrecoCatalogo[]
+  /** Hora e fonte do dólar usado (v1.95.0: mercado; PTAX de reserva). */
+  cotacaoEm?: string | null; cotacaoFonte?: string | null
 }
+/** Dólar da conversão agora (v1.95.0, chave dolar-tempo-real-cartas). */
+export interface CotacaoCartas { valor: number; obtidaEm: string | null; fonte: string | null; degradada: boolean; aviso: string | null }
 export interface RegraPrecoCarta { fatorPercent: number; arredondarCentavos: number; minimoCentavos: number; atualizadaEm: string }
 export interface VariacaoPreco {
   productId: string; referenciaCentavos: number | null; referenciaEm: string | null; ha7Dias: number | null; ha30Dias: number | null
@@ -133,6 +137,7 @@ export const catalogoCartasApi = {
   referencia: (c: { categoria: number; grupo: number; produtoId: number; variante?: string | null }) =>
                 api.get<ReferenciaAgora>(`/api/product/catalogo-cartas/referencia`, { params: { ...c, variante: c.variante || undefined } }),
   variacoes:  () => api.get<VariacaoPreco[]>(`/api/product/catalogo-cartas/variacoes`),
+  cotacao:    () => api.get<CotacaoCartas>(`/api/product/catalogo-cartas/cotacao`),
   regra:      () => api.get<RegraPrecoCarta>(`/api/product/catalogo-cartas/regra`),
   salvarRegra:(r: Pick<RegraPrecoCarta, 'fatorPercent' | 'arredondarCentavos' | 'minimoCentavos'>) =>
                 api.put<RegraPrecoCarta>(`/api/product/catalogo-cartas/regra`, r),

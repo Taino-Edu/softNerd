@@ -145,7 +145,9 @@ public static class ServicosDaLoja
         services.AddSingleton<ITcgApiClient,     TcgApiClient>();
         services.AddSingleton<ITcgService,       TcgService>();
         services.AddSingleton<CurrencyService>();
-        services.AddSingleton<IFonteCotacao>(sp => sp.GetRequiredService<CurrencyService>());
+        services.AddSingleton<ICotacaoOficial>(sp => sp.GetRequiredService<CurrencyService>());
+        // Preço de referência usa o dólar de mercado (v1.95.0); a PTAX oficial fica de reserva
+        services.AddScoped<IFonteCotacao, CotacaoMercadoService>();
         // Preço de referência das cartas avulsas (v1.92.0): catálogo tcgcsv + robô diário
         services.AddSingleton<ICatalogoCartas, CatalogoCartasService>();
         services.AddScoped<PrecoCartasService>();

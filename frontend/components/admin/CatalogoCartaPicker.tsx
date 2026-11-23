@@ -9,10 +9,8 @@ import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Search, Loader2, ChevronLeft, BookOpen } from 'lucide-react'
 import { catalogoCartasApi, ColecaoCatalogo, CartaCatalogo } from '@/lib/api'
-
-function usd(v: number | null | undefined) {
-  return v == null ? '—' : `US$ ${v.toFixed(2).replace('.', ',')}`
-}
+import { brlDeCentavos } from '@/lib/format'
+import { useCotacaoCartas, emCentavos, usd, rotuloCotacao } from '@/lib/cotacaoCartas'
 
 export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas', rotulo, abertoDeInicio = false }: {
   jogo: string
@@ -24,6 +22,8 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
   abertoDeInicio?: boolean
 }) {
   const selados = tipo === 'selados'
+  // Reais primeiro (v1.95.0): o preço do catálogo vem em dólar e a tela converte pelo dólar de agora
+  const cotacao = useCotacaoCartas()
   const [aberto, setAberto]         = useState(abertoDeInicio)
   const [colecoes, setColecoes]     = useState<ColecaoCatalogo[] | null>(null)
   const [erro, setErro]             = useState<string | null>(null)
@@ -144,7 +144,13 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
                       : <div className="w-full aspect-[63/88] rounded bg-surface-700" />}
                     <p className="text-[11px] font-semibold text-white leading-tight mt-1 line-clamp-2">{c.nome}</p>
                     <p className="text-[10px] text-gray-400">{c.numero}{c.raridade ? ` · ${c.raridade}` : ''}</p>
-                    <p className="text-[10px] font-bold text-brand-300">{usd(preco?.referencia)}</p>
+                    {(() => {
+                      const reais = emCentavos(preco?.referencia, cotacao)
+                      return reais != null
+                        ? <><p className="text-[11px] font-black text-brand-300">{brlDeCentavos(reais)}</p>
+                            <p className="text-[9px] text-gray-500">{usd(preco?.referencia)}</p></>
+                        : <p className="text-[10px] font-bold text-brand-300">{usd(preco?.referencia)}</p>
+                    })()}
                   </button>
                 )
               })}
@@ -158,7 +164,7 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
         </>
       )}
       <p className="text-[10px] text-gray-500 leading-snug">
-        Catálogo e preços do TCGplayer (EUA, em dólar, carta em inglês), atualizados todo dia. Pra o mercado brasileiro, confira no &quot;Ver na Liga&quot;.
+        Preço do TCGplayer (EUA, carta em inglês) em reais pelo {rotuloCotacao(cotacao) || 'dólar do dia'}. Pro mercado brasileiro, confira no &quot;Ver na Liga&quot;.
       </p>
     </div>
   )
