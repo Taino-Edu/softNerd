@@ -134,7 +134,7 @@ export default function ReferenciaEstoque({ product, onAtualizado }: {
             <span className="text-lg font-black font-mono text-white">{referencia != null ? brl(referencia / 100) : '—'}</span>
           </div>
           <p className="text-gray-400">
-            {usd(product.cartaRefUsd ?? ref?.mercadoUsd)} × {rotuloCotacao(cotacao) || (ref ? `dólar R$ ${ref.cotacao.toFixed(3).replace('.', ',')}` : 'dólar do dia')}
+            {usd(product.cartaRefUsd ?? ref?.mercadoUsd)} × {rotuloCotacao(cotacao) || (ref && !ref.cotacaoDegradada ? `dólar R$ ${ref.cotacao.toFixed(3).replace('.', ',')}` : 'dólar indisponível agora')}
             {product.cartaRefEm && ` · preço lido em ${new Date(product.cartaRefEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}
           </p>
           <div className="flex gap-3">

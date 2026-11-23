@@ -301,7 +301,7 @@ function CartaModal({ inicial, colecoes, comCatalogo, onClose, onSalvo }: {
                         <button key={p.variante} type="button" onClick={() => setVariante(p.variante)}
                           className={clsx('rounded-lg border px-2 py-1 font-semibold',
                             (variante ?? ref.variante) === p.variante ? 'border-brand-500 bg-brand-500/20 text-white' : 'border-surface-500 text-gray-400')}>
-                          {p.variante} · {p.referencia != null ? brlDeCentavos(Math.round(p.referencia * ref.cotacao * 100)) : '—'}
+                          {p.variante} · {p.referencia == null ? '—' : ref.cotacaoDegradada ? usd(p.referencia) : brlDeCentavos(Math.round(p.referencia * ref.cotacao * 100))}
                         </button>
                       ))}
                     </div>
@@ -312,7 +312,7 @@ function CartaModal({ inicial, colecoes, comCatalogo, onClose, onSalvo }: {
                     <b className="text-base font-black text-white">{ref.referenciaCentavos != null ? brlDeCentavos(ref.referenciaCentavos) : '—'}</b>
                   </div>
                   <p className="text-gray-400">
-                    {usd(ref.mercadoUsd)} × {rotuloCotacao({ valor: ref.cotacao, obtidaEm: ref.cotacaoEm ?? null, fonte: ref.cotacaoFonte ?? null })}
+                    {usd(ref.mercadoUsd)}{!ref.cotacaoDegradada && <> × {rotuloCotacao({ valor: ref.cotacao, obtidaEm: ref.cotacaoEm ?? null, fonte: ref.cotacaoFonte ?? null })}</>}
                   </p>
                   {ref.cotacaoDegradada && <p className="text-yellow-400">{ref.avisoCotacao ?? 'Cotação do dólar desatualizada — confira antes de precificar.'}</p>}
                   {ref.sugestaoCentavos != null && (
