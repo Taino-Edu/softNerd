@@ -8,6 +8,12 @@
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
 
+## [v1.93.1] — 2026-11-23
+
+### Painel: gaveta e janelas sem o fim cortado
+- **Detalhes do Produto (Estoque):** a gaveta descia 16–24px e o fim dela ficava fora da tela — a "Fila de espera" aparecia cortada embaixo. Agora ela ocupa a tela certinho e o último quadro rola até acima dos botões flutuantes (assistente e VLibras), que cobriam o "0 pessoas"
+- **Em todo o painel:** a mesma causa (a margem entre blocos da tela pegando também nas janelas por cima dela) foi corrigida de uma vez pra todas as gavetas, janelas e fundos escuros
+
 ## [v1.93.0] — 2026-11-23
 
 ### Home: torneios e pontos lá em cima
