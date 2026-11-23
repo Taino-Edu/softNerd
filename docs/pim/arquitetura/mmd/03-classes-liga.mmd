@@ -1,0 +1,63 @@
+classDiagram
+  direction LR
+  class TorneioController {
+    +Entrar(codigo)
+    +CheckIn(id)
+    +LancarResultado(partidaId)
+    +Resolver(partidaId)
+    +GerarRodada(id)
+    +Encerrar(id)
+  }
+  class LigaMensalController
+  class TorneioHub {
+    +Acompanhar(championshipId)
+    +Sair(championshipId)
+    +Grupo(id)$ string
+  }
+  class TorneioService {
+    +PrepararAsync()
+    +EntrarAsync()
+    +CheckInProprioAsync()
+    +GerarRodadaAsync()
+    +ComecarRodadaAsync()
+    +LancarResultadoAsync()
+    +ResolverAsync()
+    +EncerrarAsync()
+    +ClassificacaoAsync()
+  }
+  class Suico {
+    <<static>>
+    +RodadasSugeridas(jogadores)$
+    +Emparelhar()$
+    +Classificar()$
+  }
+  class LigaMensalService {
+    +RankingAsync(ano, mes)
+    +PontosPorColocacao(col)$
+  }
+  class LigaEstatisticasService {
+    +MinhaLigaAsync()
+    +EstatisticasAsync()
+  }
+  class EtapaExternaService {
+    +SimularAsync()
+    +LancarAsync()
+  }
+  class AppDbContext
+  class Championship
+  class ChampionshipParticipant
+  class TorneioRodada
+  class TorneioPartida
+  TorneioController --> TorneioService
+  LigaMensalController --> LigaMensalService
+  LigaMensalController --> LigaEstatisticasService
+  TorneioController --> EtapaExternaService
+  TorneioService ..> Suico : emparelha e classifica
+  TorneioService ..> TorneioHub : avisa TorneioAtualizado
+  TorneioService --> AppDbContext
+  LigaMensalService --> AppDbContext
+  LigaEstatisticasService --> AppDbContext
+  EtapaExternaService --> AppDbContext
+  Championship "1" --> "*" ChampionshipParticipant : inscritos
+  Championship "1" --> "*" TorneioRodada : rodadas
+  TorneioRodada "1" --> "*" TorneioPartida : mesas

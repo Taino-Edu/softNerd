@@ -1,0 +1,33 @@
+flowchart TB
+  REQ["Requisição HTTP / WebSocket"] --> MW
+  subgraph MW["Middleware"]
+    M1["Cabeçalhos do proxy"] --> M2["CORS"] --> M3["Timeouts"] --> M4["Autenticação JWT (cookie)"] --> M5["Permissão do operador"]
+  end
+  MW --> CTRL
+  MW --> HUB
+  subgraph CTRL["Controllers (35)"]
+    C1["Comanda, Product, Auth, User"]
+    C2["Torneio, Championship, LigaMensal"]
+    C3["Crediarios, ContasReceber, Relatorios"]
+    C4["Vigia, Funcionalidades, Lgpd"]
+  end
+  HUB["Hubs SignalR<br/>ComandaHub e TorneioHub"]
+  CTRL --> SVC
+  HUB --> SVC
+  subgraph SVC["Serviços (regras de negócio)"]
+    S1["Interfaces + Implementations<br/>Comanda, Product, Auth, Pix, Push..."]
+    S2["Módulos por assunto<br/>Pedidos, Crediarios, Campeonatos, Liga, Vigia"]
+    S3["Robôs em segundo plano<br/>Vigia, Reconciliação Pix, Aviso de crediário"]
+  end
+  SVC --> DATA
+  subgraph DATA["Acesso a dados"]
+    D1["AppDbContext (EF Core)"]
+    D2["Inicializacao/postgres.sql<br/>tabelas, funções, triggers"]
+    D3["Driver MongoDB"]
+  end
+  D1 --> PG[("PostgreSQL")]
+  D2 --> PG
+  D3 --> MG[("MongoDB")]
+  CTRL -. "usa" .-> DTO["DTOs e Validation"]
+  SVC -. "usa" .-> MOD["Models (entidades)"]
+  D1 -. "mapeia" .-> MOD

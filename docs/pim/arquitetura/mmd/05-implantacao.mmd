@@ -1,0 +1,19 @@
+flowchart LR
+  DEV["Desenvolvedor"] -- "branch + Pull Request" --> GH["GitHub"]
+  subgraph CI["CI (GitHub Actions)"]
+    T1["Testes do back"]
+    T2["Front: tipos e build"]
+    T3["API sobe no Postgres real<br/>2x + smoke + carga + SQL de triggers"]
+    T4["Docker constrói as imagens"]
+    T5["CodeQL e dependências"]
+    T6["Mapa do sistema atualizado"]
+  end
+  GH --> CI
+  CI -- "merge no main" --> DEP["deploy.yml"]
+  DEP --> APR{"Aprovação<br/>do responsável"}
+  APR --> BK["Backup dos bancos"]
+  BK --> ROLL["rollout.sh<br/>troca sem queda"]
+  ROLL --> SM["Smoke"]
+  SM --> PROD["Produção<br/>VPS + Docker Compose"]
+  ROBO["Robô de smoke<br/>a cada 30 min"] -. "vigia" .-> PROD
+  VIGIA["Vigia (dentro da API)"] -. "alertas" .-> PROD

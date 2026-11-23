@@ -1,0 +1,23 @@
+sequenceDiagram
+  autonumber
+  actor J as Jogador (app / PWA)
+  participant API as TorneioController
+  participant S as TorneioService
+  participant DB as PostgreSQL
+  participant H as TorneioHub
+  actor A as Telão e painel do admin
+  A->>H: Acompanhar(championshipId)
+  J->>API: POST /api/torneios/{id}/partidas/{partidaId}/resultado
+  API->>S: LancarResultadoAsync(userId, ...)
+  S->>DB: confere que a mesa é do jogador e que ainda está aberta
+  S->>DB: grava o relato dele (ReportA ou ReportB)
+  alt os dois relatos são iguais
+    S->>DB: fecha a partida (Resultado) e confere se a rodada acabou
+  else relatos diferentes ou só um lançou
+    Note over S,DB: a partida continua aberta e o organizador resolve (ResolverAsync)
+  end
+  S->>H: SendAsync("TorneioAtualizado", motivo)
+  H-->>A: TorneioAtualizado
+  H-->>J: TorneioAtualizado
+  A->>API: GET /api/torneios/{id}/painel
+  API-->>A: classificação e mesas atualizadas
