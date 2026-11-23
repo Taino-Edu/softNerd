@@ -1,0 +1,61 @@
+erDiagram
+  CAMPEONATO ||--o{ PARTICIPANTE : reune
+  USUARIO ||--o{ PARTICIPANTE : "se inscreve como"
+  CAMPEONATO ||--o{ PRE_INSCRICAO : "recebe"
+  CAMPEONATO ||--o{ RODADA : "se divide em"
+  RODADA ||--o{ PARTIDA : tem
+  PARTICIPANTE ||--o{ PARTIDA : "joga como A"
+  PARTICIPANTE ||--o{ PARTIDA : "joga como B"
+  USUARIO ||--o{ DECK : monta
+  DECK }o..o| PARTICIPANTE : "usado por (sem FK)"
+  CAMPEONATO |o--o{ COMANDA : "consome em"
+  PARTICIPANTE |o--o{ COMANDA : "abre"
+  PARTICIPANTE ||--o{ COBRANCA_PIX : "paga inscrição por"
+  CAMPEONATO |o..o{ CRONOMETRO : "marca tempo de (sem FK)"
+  CAMPEONATO {
+    uuid id PK
+    string nome
+    string jogo
+    string modalidade "Liga ou Campeonato"
+    int vagas
+    decimal taxa
+    string situacao
+    int rodada_atual
+  }
+  PARTICIPANTE {
+    uuid id PK
+    bool pago
+    datetime check_in
+    int desistiu_na_rodada
+    int colocacao
+  }
+  RODADA {
+    uuid id PK
+    int numero
+    datetime iniciada_em
+  }
+  PARTIDA {
+    uuid id PK
+    int mesa
+    string relatorio_a
+    string relatorio_b
+    string resultado
+  }
+  DECK {
+    uuid id PK
+    string nome
+  }
+  CRONOMETRO {
+    uuid id PK
+    int duracao_segundos
+    string estado
+  }
+  LANCAMENTO_LIGA {
+    uuid id PK
+    string jogador
+    int pontos
+  }
+  PRE_INSCRICAO {
+    uuid id PK
+    string nome
+  }

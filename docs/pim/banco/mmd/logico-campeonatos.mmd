@@ -1,0 +1,144 @@
+erDiagram
+  championships ||--o{ championship_participants : "championship_id"
+  comandas |o--o{ championship_participants : "comanda_id"
+  users ||--o{ championship_participants : "user_id"
+  championships ||--o{ championship_preinscricoes : "championship_id"
+  championships |o--o{ comandas : "championship_id"
+  users ||--o{ decks : "user_id"
+  championship_participants |o--o{ pix_cobrancas : "championship_participant_id"
+  championship_participants ||--o{ torneio_partidas : "participante_a_id"
+  championship_participants |o--o{ torneio_partidas : "participante_b_id"
+  torneio_rodadas ||--o{ torneio_partidas : "rodada_id"
+  championships ||--o{ torneio_rodadas : "championship_id"
+  championships {
+    uuid id PK
+    varchar(200) name
+    varchar(1000) description "null"
+    varchar(100) game
+    timestamptz start_date
+    timestamptz end_date "null"
+    timestamptz registration_deadline "null"
+    int max_participants "null"
+    int entry_fee_in_cents
+    int minutos_para_pagar
+    text status
+    text formato
+    varchar(20) modalidade
+    varchar(8) codigo_entrada "null"
+    int melhor_de
+    int minutos_rodada
+    int numero_rodadas "null"
+    int rodada_atual
+    int lugares
+    varchar(500) image_url "null"
+    timestamptz created_at
+    uuid created_by_admin_id
+    varchar(1000) podio_json "null"
+  }
+  championship_participants {
+    uuid id PK
+    uuid championship_id FK
+    uuid user_id FK
+    int player_number
+    varchar(200) deck_name "null"
+    uuid deck_id "null"
+    int placement "null"
+    timestamptz registered_at
+    timestamptz entry_fee_paid_at "null"
+    timestamptz inscricao_expira_em "null"
+    varchar(20) entry_fee_payment_method "null"
+    uuid comanda_id FK
+    timestamptz check_in_em "null"
+    int desistiu_na_rodada "null"
+  }
+  championship_preinscricoes {
+    uuid id PK
+    uuid championship_id FK
+    varchar(200) nome
+    varchar(30) whatsapp
+    uuid deck_id "null"
+    varchar(200) deck_name "null"
+    bool is_lista_espera
+    timestamptz created_at
+  }
+  torneio_rodadas {
+    uuid id PK
+    uuid championship_id FK
+    int numero
+    text status
+    timestamptz iniciada_em
+    timestamptz fechada_em "null"
+    timestamptz comecada_em "null"
+  }
+  torneio_partidas {
+    uuid id PK
+    uuid rodada_id FK
+    int mesa
+    uuid participante_a_id FK
+    uuid participante_b_id FK
+    uuid deck_a_id "null"
+    varchar(200) deck_a_nome "null"
+    uuid deck_b_id "null"
+    varchar(200) deck_b_nome "null"
+    text report_a "null"
+    text report_b "null"
+    text resultado "null"
+    int vitorias_a
+    int vitorias_b
+    uuid resolvido_por_admin_id "null"
+    timestamptz fechada_em "null"
+    timestamptz pronto_a_em "null"
+    timestamptz pronto_b_em "null"
+  }
+  decks {
+    uuid id PK
+    uuid user_id FK
+    varchar(100) name
+    varchar(50) game
+    varchar(20) format
+    text cards_json
+    bool is_public
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  timers {
+    uuid id PK
+    varchar(100) name
+    int duration_seconds
+    int paused_remaining "null"
+    int state
+    timestamptz started_at "null"
+    varchar(50) sound_preset
+    int warn_at_seconds
+    uuid championship_id "null"
+    int rodada "null"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  liga_mensal_manual_entries {
+    uuid id PK
+    int ano
+    int mes
+    varchar(200) player_name
+    int total_points
+    varchar(500) decks "null"
+    varchar(500) observacao "null"
+    uuid created_by_admin_id
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  comandas {
+    uuid id PK
+    uuid user_id FK
+    uuid championship_id FK
+  }
+  pix_cobrancas {
+    uuid id PK
+    uuid crediario_id FK
+    uuid comanda_id FK
+    uuid championship_participant_id FK
+  }
+  users {
+    uuid id PK
+    uuid perfil_id FK
+  }

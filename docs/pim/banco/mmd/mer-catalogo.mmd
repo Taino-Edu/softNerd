@@ -1,0 +1,42 @@
+erDiagram
+  CATEGORIA |o--o{ CATEGORIA : "tem subcategorias"
+  CATEGORIA ||..o{ PRODUTO : "classifica (pelo nome)"
+  PRODUTO ||--o{ VARIANTE : "tem grade de"
+  PRODUTO ||--o{ LISTA_ESPERA : "tem fila de"
+  PRODUTO ||..o{ MOVIMENTO_ESTOQUE : "tem histórico (trigger)"
+  USUARIO |o--o{ LISTA_ESPERA : "entra na"
+  CATEGORIA {
+    uuid id PK
+    string nome
+    decimal desconto_pix
+  }
+  MOVIMENTO_ESTOQUE {
+    bigint id PK
+    int estoque_antes
+    int estoque_depois
+    int delta
+    string origem
+  }
+  PRODUTO {
+    uuid id PK
+    string nome
+    string categoria
+    decimal preco
+    decimal custo
+    int estoque
+    bool pre_venda
+  }
+  VARIANTE {
+    uuid id PK
+    string tamanho
+    string cor
+    int estoque
+  }
+  LISTA_ESPERA {
+    uuid id PK
+    datetime entrou_em
+  }
+  USUARIO {
+    uuid id PK
+    string nome
+  }

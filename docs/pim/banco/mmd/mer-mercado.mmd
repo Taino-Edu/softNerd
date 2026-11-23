@@ -1,0 +1,19 @@
+erDiagram
+  USUARIO ||--o{ ANUNCIO_CARTA : anuncia
+  ANUNCIO_CARTA ||--o{ INTERESSE : "desperta"
+  USUARIO ||--o{ INTERESSE : demonstra
+  ANUNCIO_CARTA {
+    uuid id PK
+    string carta
+    decimal preco
+    string estado
+  }
+  INTERESSE {
+    uuid id PK
+    string mensagem
+    datetime criado_em
+  }
+  USUARIO {
+    uuid id PK
+    string nome
+  }

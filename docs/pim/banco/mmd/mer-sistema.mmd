@@ -1,0 +1,36 @@
+erDiagram
+  USUARIO |o..o{ AUDITORIA : "é autor de (sem FK)"
+  AUDITORIA {
+    string id PK
+    string acao
+    string entidade
+    datetime quando
+  }
+  ALERTA_SISTEMA {
+    uuid id PK
+    string gravidade
+    string titulo
+    int ocorrencias
+  }
+  COMUNICADO {
+    uuid id PK
+    string titulo
+    bool ativo
+  }
+  FUNCIONALIDADE {
+    string codigo PK
+    bool ligada
+  }
+  MARCO_OPERACAO {
+    string chave PK
+    datetime quando
+  }
+  CONFIG_SITE {
+    uuid id PK
+    string nome_do_site
+    string cores
+  }
+  CONTROLE_AJUSTES {
+    string chave PK
+    datetime aplicado_em
+  }

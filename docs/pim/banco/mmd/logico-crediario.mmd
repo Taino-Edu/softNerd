@@ -1,0 +1,81 @@
+erDiagram
+  crediarios ||--o{ crediario_avisos : "crediario_id"
+  crediarios ||--o{ crediario_lancamentos : "crediario_id"
+  comandas |o--o{ crediarios : "comanda_id"
+  users ||--o{ crediarios : "user_id"
+  crediarios ||--o{ pagamentos_crediario : "crediario_id"
+  crediarios |o--o{ pix_cobrancas : "crediario_id"
+  crediarios {
+    uuid id PK
+    uuid user_id FK
+    uuid comanda_id FK
+    int valor_em_centavos
+    int valor_pago_em_centavos
+    timestamptz data_abertura
+    timestamptz data_vencimento
+    timestamptz data_pagamento "null"
+    text status
+    varchar(500) observacao "null"
+    uuid aberto_por_admin_id
+    uuid pago_por_admin_id "null"
+    varchar(64) pagamento_token "null"
+    text itens_json "null"
+  }
+  crediario_lancamentos {
+    uuid id PK
+    uuid crediario_id FK
+    varchar(20) origem
+    uuid comanda_id "null"
+    varchar(50) venda_avulsa_id "null"
+    int valor_em_centavos
+    text itens_json "null"
+    varchar(500) descricao "null"
+    timestamptz created_at
+    timestamptz estornado_em "null"
+  }
+  pagamentos_crediario {
+    uuid id PK
+    uuid crediario_id FK
+    int valor_em_centavos
+    varchar(50) forma_pagamento
+    varchar(500) observacao "null"
+    uuid admin_id
+    timestamptz created_at
+  }
+  crediario_avisos {
+    uuid id PK
+    uuid crediario_id FK
+    int marco "null"
+    timestamptz vencimento_referencia
+    varchar(60) canais
+    varchar(500) falhas "null"
+    uuid enviado_por_admin_id "null"
+    timestamptz enviado_em
+  }
+  crediario_aviso_config {
+    uuid id PK
+    bool ativo
+    int hora_envio
+    text marcos_json
+    bool canal_app
+    bool canal_email
+    bool resumo_admin
+    varchar(300) mensagem_extra "null"
+    timestamptz ultimo_resumo_em "null"
+    timestamptz updated_at
+  }
+  comandas {
+    uuid id PK
+    uuid user_id FK
+    uuid championship_id FK
+  }
+  pix_cobrancas {
+    uuid id PK
+    uuid crediario_id FK
+    uuid comanda_id FK
+    uuid championship_participant_id FK
+  }
+  users {
+    uuid id PK
+    uuid perfil_id FK
+  }

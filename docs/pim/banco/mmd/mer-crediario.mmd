@@ -1,0 +1,35 @@
+erDiagram
+  USUARIO ||--o{ CREDIARIO : deve
+  COMANDA ||--o{ CREDIARIO : "origina"
+  CREDIARIO ||--o{ LANCAMENTO : "é composto por"
+  CREDIARIO ||--o{ PAGAMENTO : "é quitado por"
+  CREDIARIO ||--o{ AVISO_COBRANCA : "gera"
+  CREDIARIO ||--o{ COBRANCA_PIX : "pode ser pago por"
+  COMANDA ||..o{ LANCAMENTO : "origina (sem FK)"
+  VENDA_AVULSA ||..o{ LANCAMENTO : "origina (MongoDB)"
+  CREDIARIO {
+    uuid id PK
+    decimal valor
+    date vencimento
+    string situacao
+  }
+  LANCAMENTO {
+    uuid id PK
+    decimal valor
+    string observacao
+  }
+  PAGAMENTO {
+    uuid id PK
+    decimal valor
+    datetime pago_em
+  }
+  AVISO_COBRANCA {
+    uuid id PK
+    string canal
+    datetime enviado_em
+  }
+  CONFIG_AVISO {
+    uuid id PK
+    bool ativo
+    string horario
+  }
