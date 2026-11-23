@@ -1,12 +1,21 @@
 # Changelog — Santuário Nerd
 
-## [v1.93.2] — 2026-11-23
+## [v1.94.1] — 2026-11-23
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.94.0] — 2026-11-23
+
+### Preço de referência também nos produtos do Estoque (boosters, boxes, decks)
+- **Ligar ao catálogo:** na gaveta "Detalhes do Produto" do Estoque, o bloco "Preço de referência" escolhe jogo → coleção → produto lacrado (Booster Box, Elite Trainer Box, Booster Bundle, deck, blister...) no mesmo catálogo das cartas avulsas (TCGplayer)
+- **O que a gaveta mostra:** o preço de mercado lá fora em dólar × o dólar do dia = a referência em reais, a variação de 7 e 30 dias, quanto o seu preço está acima ou abaixo dela e a sugestão pela regra da loja, com o botão "Usar"
+- **Atualiza todo dia:** o robô "Preço das cartas" lê esses produtos junto com as cartas. Só muda o preço de venda sozinho no produto marcado com "Ajustar o preço sozinho"
+- **Seguro:** a ligação é salva à parte — editar o produto no Estoque (inclusive pela busca por código de barras) não apaga a ligação nem a referência
+- **Com volta:** chave "Preço de referência também nos produtos do Estoque" em Mudanças com volta. Desligada, some o bloco da gaveta e o robô volta a ler só as cartas avulsas
 
 ## [v1.93.1] — 2026-11-23
 

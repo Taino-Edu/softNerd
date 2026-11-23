@@ -4,6 +4,9 @@
 //
 // GET  /api/product/catalogo-cartas/colecoes?jogo=Pokémon               → coleções do jogo (mais nova primeiro)
 // GET  /api/product/catalogo-cartas/cartas?categoria=3&grupo=23237      → cartas da coleção, com preços em dólar
+// GET  /api/product/catalogo-cartas/selados?categoria=3&grupo=23237     → produtos selados da coleção (v1.94.0)
+// PUT  /api/product/catalogo-cartas/ligacao/{id}                         → liga/desliga produto do Estoque (v1.94.0)
+// PUT  /api/product/catalogo-cartas/preco/{id}                           → "Usar" a sugestão: troca só o preço de venda
 // GET  /api/product/catalogo-cartas/referencia?categoria=&grupo=&produtoId=&variante= → referência e sugestão agora
 // GET  /api/product/catalogo-cartas/variacoes                            → referência atual, 7 e 30 dias, por carta
 // GET  /api/product/catalogo-cartas/regra   ·  PUT .../regra              → regra da loja
@@ -18,6 +21,8 @@ namespace CardGameStore.Controllers;
 
 public sealed record RegraPrecoRequest(decimal FatorPercent, int ArredondarCentavos, int MinimoCentavos);
 public sealed record AtualizarPrecosRequest(List<Guid>? Ids);
+public sealed record PrecoVendaRequest(int PriceInCents);
+public sealed record LigacaoCatalogoRequest(int? ProdutoId, int? Categoria, int? Grupo, string? Variante, bool Automatico);
 
 [ApiController]
 [Route("api/product/catalogo-cartas")]
@@ -47,6 +52,38 @@ public class CatalogoCartasController : ControllerBase
         if (!CatalogoCartasService.CategoriaConhecida(categoria)) return BadRequest(new { message = "Jogo fora do catálogo." });
         try { return Ok(await _catalogo.CartasAsync(categoria, grupo, ct)); }
         catch (HttpRequestException ex) { return StatusCode(502, new { message = ex.Message }); }
+    }
+
+    [HttpGet("selados")]
+    public async Task<IActionResult> Selados([FromQuery] int categoria, [FromQuery] int grupo, CancellationToken ct)
+    {
+        if (!CatalogoCartasService.CategoriaConhecida(categoria)) return BadRequest(new { message = "Jogo fora do catálogo." });
+        try { return Ok(await _catalogo.SeladosAsync(categoria, grupo, ct)); }
+        catch (HttpRequestException ex) { return StatusCode(502, new { message = ex.Message }); }
+    }
+
+    /// <summary>Liga (ProdutoId preenchido) ou desliga (ProdutoId null) um produto do Estoque ao catálogo e lê a referência.</summary>
+    [HttpPut("ligacao/{id:guid}")]
+    public async Task<IActionResult> Ligar(Guid id, [FromBody] LigacaoCatalogoRequest req, CancellationToken ct)
+    {
+        try
+        {
+            var p = await _precos.LigarAsync(id, req.ProdutoId, req.Categoria, req.Grupo, req.Variante, req.Automatico, ct);
+            return p is null ? NotFound(new { message = "Produto não encontrado." }) : Ok(p);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Troca só o preço de venda (o "Usar" da gaveta do Estoque) — não reescreve estoque nem outros campos.</summary>
+    [HttpPut("preco/{id:guid}")]
+    public async Task<IActionResult> TrocarPreco(Guid id, [FromBody] PrecoVendaRequest req, CancellationToken ct)
+    {
+        try
+        {
+            var p = await _precos.TrocarPrecoAsync(id, req.PriceInCents, ct);
+            return p is null ? NotFound(new { message = "Produto não encontrado." }) : Ok(p);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     [HttpGet("referencia")]
