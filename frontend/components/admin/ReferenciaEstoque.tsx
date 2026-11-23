@@ -14,8 +14,7 @@ import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { JOGOS_DE_CARTA } from '@/lib/cartasAvulsas'
 import { Switch } from '@/components/ui/Switch'
 import CatalogoCartaPicker from '@/components/admin/CatalogoCartaPicker'
-
-const usd = (v: number | null | undefined) => (v == null ? '—' : `US$ ${v.toFixed(2).replace('.', ',')}`)
+import { useCotacaoCartas, emCentavos, usd, rotuloCotacao } from '@/lib/cotacaoCartas'
 const sem = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /** Jogo do catálogo pelo nome da categoria do produto ("Pokémon", "One Piece"...). */
@@ -50,6 +49,8 @@ export default function ReferenciaEstoque({ product, onAtualizado }: {
   const [salvando, setSalvando]   = useState(false)
   const [ref, setRef]             = useState<ReferenciaAgora | null>(null)
   const [variacao, setVariacao]   = useState<VariacaoPreco | null>(null)
+  // Reais pelo dólar de agora (v1.95.0); o robô guarda o preço em dólar do dia
+  const cotacao = useCotacaoCartas(ligada && ligadoAoCatalogo)
 
   useEffect(() => {
     if (!ligada || !ligadoAoCatalogo) { setRef(null); setVariacao(null); return }
@@ -91,7 +92,7 @@ export default function ReferenciaEstoque({ product, onAtualizado }: {
     finally { setSalvando(false) }
   }
 
-  const referencia = product.cartaRefCentavos ?? ref?.referenciaCentavos ?? null
+  const referencia = emCentavos(product.cartaRefUsd, cotacao) ?? ref?.referenciaCentavos ?? product.cartaRefCentavos ?? null
   const diferenca = referencia ? Math.round(((product.priceInCents - referencia) / referencia) * 100) : null
 
   return (
@@ -133,8 +134,8 @@ export default function ReferenciaEstoque({ product, onAtualizado }: {
             <span className="text-lg font-black font-mono text-white">{referencia != null ? brl(referencia / 100) : '—'}</span>
           </div>
           <p className="text-gray-400">
-            {usd(product.cartaRefUsd ?? ref?.mercadoUsd)}{ref ? ` × dólar R$ ${ref.cotacao.toFixed(2).replace('.', ',')}` : ''}
-            {product.cartaRefEm && ` · lido em ${new Date(product.cartaRefEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}
+            {usd(product.cartaRefUsd ?? ref?.mercadoUsd)} × {rotuloCotacao(cotacao) || (ref ? `dólar R$ ${ref.cotacao.toFixed(3).replace('.', ',')}` : 'dólar do dia')}
+            {product.cartaRefEm && ` · preço lido em ${new Date(product.cartaRefEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}
           </p>
           <div className="flex gap-3">
             <Variacao v={pct(referencia, variacao?.ha7Dias)} rotulo="7d" />
@@ -146,7 +147,7 @@ export default function ReferenciaEstoque({ product, onAtualizado }: {
               <b className={diferenca >= 0 ? 'txt-ok' : 'text-red-400'}>{Math.abs(diferenca)}% {diferenca >= 0 ? 'acima' : 'abaixo'}</b> da referência
             </p>
           )}
-          {ref?.cotacaoDegradada && <p className="text-yellow-400">{ref.avisoCotacao ?? 'Cotação do dólar desatualizada.'}</p>}
+          {(cotacao?.aviso || ref?.avisoCotacao) && <p className="text-yellow-400">{cotacao?.aviso ?? ref?.avisoCotacao}</p>}
           {ref?.sugestaoCentavos != null && (
             <div className="flex items-center justify-between gap-2">
               <span className="text-gray-300">Sugestão pela regra: <b className="text-brand-300">{brl(ref.sugestaoCentavos / 100)}</b></span>

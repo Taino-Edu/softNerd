@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-272 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+273 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -12,7 +12,7 @@
 - [Announcement](#announcement) (5)
 - [Audit](#audit) (1)
 - [Auth](#auth) (15)
-- [CatalogoCartas](#catalogocartas) (10)
+- [CatalogoCartas](#catalogocartas) (11)
 - [Category](#category) (4)
 - [Championship](#championship) (22)
 - [Comanda](#comanda) (20)
@@ -112,16 +112,17 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/product/catalogo-cartas/atualizar` | papéis Admin,Operator | `Atualizar` (113) | `catalogoCartasApi.atualizar` | `components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/catalogo-cartas/cartas` | papéis Admin,Operator | `Cartas` (50) | `catalogoCartasApi.cartas` | `components/admin/CatalogoCartaPicker.tsx` |
-| GET | `/api/product/catalogo-cartas/colecoes` | papéis Admin,Operator | `Colecoes` (43) | `catalogoCartasApi.colecoes` | `components/admin/CatalogoCartaPicker.tsx` |
-| PUT | `/api/product/catalogo-cartas/ligacao/{id:guid}` | papéis Admin,Operator | `Ligar` (67) | `catalogoCartasApi.ligar` | `components/admin/ReferenciaEstoque.tsx` |
-| PUT | `/api/product/catalogo-cartas/preco/{id:guid}` | papéis Admin,Operator | `TrocarPreco` (79) | `catalogoCartasApi.trocarPreco` | `components/admin/ReferenciaEstoque.tsx` |
-| GET | `/api/product/catalogo-cartas/referencia` | papéis Admin,Operator | `Referencia` (90) | `catalogoCartasApi.referencia` | `components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
-| GET | `/api/product/catalogo-cartas/regra` | papéis Admin,Operator | `Regra` (102) | `catalogoCartasApi.regra` | `components/admin/CartasDaLoja.tsx` |
-| PUT | `/api/product/catalogo-cartas/regra` | AdminOnly | `SalvarRegra` (106) | `catalogoCartasApi.salvarRegra` | `components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/catalogo-cartas/selados` | papéis Admin,Operator | `Selados` (58) | `catalogoCartasApi.selados` | `components/admin/CatalogoCartaPicker.tsx` |
-| GET | `/api/product/catalogo-cartas/variacoes` | papéis Admin,Operator | `Variacoes` (99) | `catalogoCartasApi.variacoes` | `components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
+| POST | `/api/product/catalogo-cartas/atualizar` | papéis Admin,Operator | `Atualizar` (122) | `catalogoCartasApi.atualizar` | `components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/catalogo-cartas/cartas` | papéis Admin,Operator | `Cartas` (51) | `catalogoCartasApi.cartas` | `components/admin/CatalogoCartaPicker.tsx` |
+| GET | `/api/product/catalogo-cartas/colecoes` | papéis Admin,Operator | `Colecoes` (44) | `catalogoCartasApi.colecoes` | `components/admin/CatalogoCartaPicker.tsx` |
+| GET | `/api/product/catalogo-cartas/cotacao` | papéis Admin,Operator | `Cotacao` (101) | `catalogoCartasApi.cotacao` | `lib/cotacaoCartas.ts` |
+| PUT | `/api/product/catalogo-cartas/ligacao/{id:guid}` | papéis Admin,Operator | `Ligar` (68) | `catalogoCartasApi.ligar` | `components/admin/ReferenciaEstoque.tsx` |
+| PUT | `/api/product/catalogo-cartas/preco/{id:guid}` | papéis Admin,Operator | `TrocarPreco` (80) | `catalogoCartasApi.trocarPreco` | `components/admin/ReferenciaEstoque.tsx` |
+| GET | `/api/product/catalogo-cartas/referencia` | papéis Admin,Operator | `Referencia` (91) | `catalogoCartasApi.referencia` | `components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
+| GET | `/api/product/catalogo-cartas/regra` | papéis Admin,Operator | `Regra` (111) | `catalogoCartasApi.regra` | `components/admin/CartasDaLoja.tsx` |
+| PUT | `/api/product/catalogo-cartas/regra` | AdminOnly | `SalvarRegra` (115) | `catalogoCartasApi.salvarRegra` | `components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/catalogo-cartas/selados` | papéis Admin,Operator | `Selados` (59) | `catalogoCartasApi.selados` | `components/admin/CatalogoCartaPicker.tsx` |
+| GET | `/api/product/catalogo-cartas/variacoes` | papéis Admin,Operator | `Variacoes` (108) | `catalogoCartasApi.variacoes` | `components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
 
 ## Category
 

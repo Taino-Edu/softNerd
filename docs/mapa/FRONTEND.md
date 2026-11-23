@@ -168,6 +168,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/cartasAvulsas.ts` | `JOGOS_DE_CARTA`, `CONDICOES_DE_CARTA`, `IDIOMAS_DE_CARTA`, `RARIDADES_DE_CARTA`, `raridadesDoJogo`, `pesoDaRaridade`, `compararNumero`, `CATEGORIA_CARTA_AVULSA`, `resumoCarta`, `linkDaLiga` |
 | `lib/colors.ts` | `mixHex`, `isDark`, `getContrastText` |
 | `lib/cookieConsent.ts` | `CONSENT_KEY`, `CONSENT_VERSION`, `CONSENT_EVENT`, `OPEN_SETTINGS_EVENT`, `OPTIONAL_STORAGE_KEYS`, `createConsent`, `parseConsent`, `readConsent`, `saveConsent`, `allowsPreferences`, `setOptionalItem` |
+| `lib/cotacaoCartas.ts` | `useCotacaoCartas`, `emCentavos`, `usd`, `rotuloCotacao` |
 | `lib/crediario.ts` | `agruparItens`, `totalUnidades` |
 | `lib/deckRules.ts` | `MAX_CARDS`, `MAX_COPIES`, `copyLimit`, `analisarDeck`, `resumoDaAnalise` |
 | `lib/fontePixel.ts` | `pixel` |

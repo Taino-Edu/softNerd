@@ -18,6 +18,7 @@ import { brlDeCentavos } from '@/lib/format'
 import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { Switch } from '@/components/ui/Switch'
 import CatalogoCartaPicker from '@/components/admin/CatalogoCartaPicker'
+import { useCotacaoCartas, emCentavos, rotuloCotacao } from '@/lib/cotacaoCartas'
 import { Table } from '@/components/ui/Table'
 import { PageHeader } from '@/components/ui/PageHeader'
 import {
@@ -300,15 +301,18 @@ function CartaModal({ inicial, colecoes, comCatalogo, onClose, onSalvo }: {
                         <button key={p.variante} type="button" onClick={() => setVariante(p.variante)}
                           className={clsx('rounded-lg border px-2 py-1 font-semibold',
                             (variante ?? ref.variante) === p.variante ? 'border-brand-500 bg-brand-500/20 text-white' : 'border-surface-500 text-gray-400')}>
-                          {p.variante} · {usd(p.referencia)}
+                          {p.variante} · {p.referencia != null ? brlDeCentavos(Math.round(p.referencia * ref.cotacao * 100)) : '—'}
                         </button>
                       ))}
                     </div>
                   )}
-                  <p className="text-gray-300">
-                    Mercado lá fora (TCGplayer): <b className="text-white">{usd(ref.mercadoUsd)}</b>
-                    {' × '}dólar R$ {ref.cotacao.toFixed(2).replace('.', ',')}
-                    {ref.referenciaCentavos != null && <> = <b className="text-white">{brlDeCentavos(ref.referenciaCentavos)}</b></>}
+                  {/* Reais primeiro, dólar ao lado (v1.95.0) */}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-gray-300">Referência (mercado lá fora)</span>
+                    <b className="text-base font-black text-white">{ref.referenciaCentavos != null ? brlDeCentavos(ref.referenciaCentavos) : '—'}</b>
+                  </div>
+                  <p className="text-gray-400">
+                    {usd(ref.mercadoUsd)} × {rotuloCotacao({ valor: ref.cotacao, obtidaEm: ref.cotacaoEm ?? null, fonte: ref.cotacaoFonte ?? null })}
                   </p>
                   {ref.cotacaoDegradada && <p className="text-yellow-400">{ref.avisoCotacao ?? 'Cotação do dólar desatualizada — confira antes de precificar.'}</p>}
                   {ref.sugestaoCentavos != null && (
@@ -441,6 +445,9 @@ function RegraModal({ onClose }: { onClose: () => void }) {
 
 export default function CartasDaLoja() {
   const comCatalogo = useFuncionalidade('preco-referencia-cartas') === true
+  // Referência em reais pelo dólar de agora (v1.95.0): o robô guarda o preço em dólar do dia; a tela converte ao vivo
+  const cotacao = useCotacaoCartas(comCatalogo)
+  const refAoVivo = (c: Product) => emCentavos(c.cartaRefUsd, cotacao) ?? c.cartaRefCentavos ?? null
   const [variacoes, setVariacoes] = useState<Map<string, VariacaoPreco>>(new Map())
   const [regraAberta, setRegraAberta] = useState(false)
   const [atualizando, setAtualizando] = useState(false)
@@ -612,10 +619,10 @@ export default function CartasDaLoja() {
                         <span className="font-bold text-brand-300">{brlDeCentavos(c.priceInCents)}</span>
                         <span className="text-gray-400"> · {c.stockQuantity > 0 ? `${c.stockQuantity} ${c.stockQuantity === 1 ? 'cópia' : 'cópias'}` : 'esgotada'}</span>
                       </p>
-                      {comCatalogo && c.cartaRefCentavos != null && (
+                      {comCatalogo && refAoVivo(c) != null && (
                         <p className="md:hidden text-[11px] text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                          ref. {brlDeCentavos(c.cartaRefCentavos)}
-                          <Variacao pct={variacao(c.cartaRefCentavos, variacoes.get(c.id)?.ha7Dias)} rotulo="7d" />
+                          ref. {brlDeCentavos(refAoVivo(c))}
+                          <Variacao pct={variacao(refAoVivo(c), variacoes.get(c.id)?.ha7Dias)} rotulo="7d" />
                           {c.cartaPrecoAutomatico && <span className="text-[10px] font-black text-brand-300">AUTO</span>}
                         </p>
                       )}
@@ -625,16 +632,17 @@ export default function CartasDaLoja() {
                 <td className="hidden sm:table-cell p-4 font-bold text-brand-300 whitespace-nowrap">{brlDeCentavos(c.priceInCents)}</td>
                 {comCatalogo && (
                   <td className="hidden md:table-cell p-4 whitespace-nowrap">
-                    {c.cartaRefCentavos != null ? (
-                      <div title={`Mercado lá fora: ${usd(c.cartaRefUsd)}${c.cartaRefEm ? ` · lido em ${new Date(c.cartaRefEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`}>
+                    {refAoVivo(c) != null ? (
+                      <div title={`${usd(c.cartaRefUsd)} × ${rotuloCotacao(cotacao) || 'dólar do dia'}${c.cartaRefEm ? ` · preço lido em ${new Date(c.cartaRefEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`}>
                         <p className="font-semibold text-white flex items-center gap-1.5">
-                          {brlDeCentavos(c.cartaRefCentavos)}
+                          {brlDeCentavos(refAoVivo(c))}
                           {c.cartaPrecoAutomatico && <span className="text-[10px] font-black px-1.5 rounded bg-brand-500/20 text-brand-300" title="O preço de venda acompanha a referência todo dia">AUTO</span>}
                         </p>
                         <div className="flex gap-2">
-                          <Variacao pct={variacao(c.cartaRefCentavos, variacoes.get(c.id)?.ha7Dias)} rotulo="7d" />
-                          <Variacao pct={variacao(c.cartaRefCentavos, variacoes.get(c.id)?.ha30Dias)} rotulo="30d" />
+                          <Variacao pct={variacao(refAoVivo(c), variacoes.get(c.id)?.ha7Dias)} rotulo="7d" />
+                          <Variacao pct={variacao(refAoVivo(c), variacoes.get(c.id)?.ha30Dias)} rotulo="30d" />
                         </div>
+                        <p className="text-[10px] text-gray-500">{usd(c.cartaRefUsd)}</p>
                       </div>
                     ) : (
                       <span className="text-xs text-gray-500">{c.cartaTcgProdutoId ? 'sem preço hoje' : 'à mão'}</span>

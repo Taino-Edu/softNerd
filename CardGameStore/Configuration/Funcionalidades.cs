@@ -51,6 +51,7 @@ public static class Funcionalidades
     public const string PrecoReferenciaCartas = "preco-referencia-cartas";
     public const string HomeEventosNoTopo = "home-eventos-no-topo";
     public const string PrecoReferenciaEstoque = "preco-referencia-estoque";
+    public const string DolarTempoRealCartas = "dolar-tempo-real-cartas";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -229,6 +230,16 @@ public static class Funcionalidades
                         "com o preço que tinham; a ligação fica guardada e volta se ligar de novo.",
             Padrao:     true,
             Desde:      "v1.94.0",
+            RevisarEm:  new DateOnly(2027, 5, 23)),
+
+        new(DolarTempoRealCartas,
+            Nome:       "Preço de referência em reais com o dólar de agora (mercado)",
+            OQueMuda:   "O preço de referência das cartas e dos lacrados é convertido pelo dólar comercial de agora (AwesomeAPI, lido no " +
+                        "máximo a cada 10 minutos), não mais pela PTAX do último dia útil. Reais vêm primeiro em todo lugar, com o dólar ao lado e " +
+                        "a hora da cotação. Se o mercado não responder, usa a PTAX oficial do Banco Central e avisa na tela.",
+            SeDesligar: "Volta a converter pela PTAX oficial do Banco Central (só muda em dia útil). O resto continua igual.",
+            Padrao:     true,
+            Desde:      "v1.95.0",
             RevisarEm:  new DateOnly(2027, 5, 23)),
     ];
 
