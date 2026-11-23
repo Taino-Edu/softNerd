@@ -1,12 +1,18 @@
 # Changelog — Santuário Nerd
 
-## [v1.93.1] — 2026-11-23
+## [v1.93.2] — 2026-11-23
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.93.1] — 2026-11-23
+
+### Painel: gaveta e janelas sem o fim cortado
+- **Detalhes do Produto (Estoque):** a gaveta descia 16–24px e o fim dela ficava fora da tela — a "Fila de espera" aparecia cortada embaixo. Agora ela ocupa a tela certinho e o último quadro rola até acima dos botões flutuantes (assistente e VLibras), que cobriam o "0 pessoas"
+- **Em todo o painel:** a mesma causa (a margem entre blocos da tela pegando também nas janelas por cima dela) foi corrigida de uma vez pra todas as gavetas, janelas e fundos escuros
 
 ## [v1.93.0] — 2026-11-23
 
