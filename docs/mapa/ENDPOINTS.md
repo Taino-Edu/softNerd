@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-269 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+271 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -12,7 +12,7 @@
 - [Announcement](#announcement) (5)
 - [Audit](#audit) (1)
 - [Auth](#auth) (15)
-- [CatalogoCartas](#catalogocartas) (7)
+- [CatalogoCartas](#catalogocartas) (9)
 - [Category](#category) (4)
 - [Championship](#championship) (22)
 - [Comanda](#comanda) (20)
@@ -112,13 +112,15 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/product/catalogo-cartas/atualizar` | papéis Admin,Operator | `Atualizar` (76) | `catalogoCartasApi.atualizar` | `components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/catalogo-cartas/cartas` | papéis Admin,Operator | `Cartas` (45) | `catalogoCartasApi.cartas` | `components/admin/CatalogoCartaPicker.tsx` |
-| GET | `/api/product/catalogo-cartas/colecoes` | papéis Admin,Operator | `Colecoes` (38) | `catalogoCartasApi.colecoes` | `components/admin/CatalogoCartaPicker.tsx` |
-| GET | `/api/product/catalogo-cartas/referencia` | papéis Admin,Operator | `Referencia` (53) | `catalogoCartasApi.referencia` | `components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/catalogo-cartas/regra` | papéis Admin,Operator | `Regra` (65) | `catalogoCartasApi.regra` | `components/admin/CartasDaLoja.tsx` |
-| PUT | `/api/product/catalogo-cartas/regra` | AdminOnly | `SalvarRegra` (69) | `catalogoCartasApi.salvarRegra` | `components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/catalogo-cartas/variacoes` | papéis Admin,Operator | `Variacoes` (62) | `catalogoCartasApi.variacoes` | `components/admin/CartasDaLoja.tsx` |
+| POST | `/api/product/catalogo-cartas/atualizar` | papéis Admin,Operator | `Atualizar` (99) | `catalogoCartasApi.atualizar` | `components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/catalogo-cartas/cartas` | papéis Admin,Operator | `Cartas` (48) | `catalogoCartasApi.cartas` | `components/admin/CatalogoCartaPicker.tsx` |
+| GET | `/api/product/catalogo-cartas/colecoes` | papéis Admin,Operator | `Colecoes` (41) | `catalogoCartasApi.colecoes` | `components/admin/CatalogoCartaPicker.tsx` |
+| PUT | `/api/product/catalogo-cartas/ligacao/{id:guid}` | papéis Admin,Operator | `Ligar` (65) | `catalogoCartasApi.ligar` | `components/admin/ReferenciaEstoque.tsx` |
+| GET | `/api/product/catalogo-cartas/referencia` | papéis Admin,Operator | `Referencia` (76) | `catalogoCartasApi.referencia` | `components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
+| GET | `/api/product/catalogo-cartas/regra` | papéis Admin,Operator | `Regra` (88) | `catalogoCartasApi.regra` | `components/admin/CartasDaLoja.tsx` |
+| PUT | `/api/product/catalogo-cartas/regra` | AdminOnly | `SalvarRegra` (92) | `catalogoCartasApi.salvarRegra` | `components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/catalogo-cartas/selados` | papéis Admin,Operator | `Selados` (56) | `catalogoCartasApi.selados` | `components/admin/CatalogoCartaPicker.tsx` |
+| GET | `/api/product/catalogo-cartas/variacoes` | papéis Admin,Operator | `Variacoes` (85) | `catalogoCartasApi.variacoes` | `components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
 
 ## Category
 
@@ -370,7 +372,7 @@
 | GET | `/api/product/store` | logado | `GetAllStore` (59) | `productApi.listStore` | `app/cliente/page.tsx` |
 | DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (171) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 | GET | `/api/product/{id:guid}` | público | `GetById` (113) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
-| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (160) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
+| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (160) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
 | PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (183) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
 ## ProductVariant

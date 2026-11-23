@@ -101,6 +101,37 @@ public class PrecoCartasService
         return new ReferenciaAgora(preco?.Referencia, preco?.Variante, cot.Valor, cot.Degradada, cot.Aviso, referencia, sugestao, precos);
     }
 
+    // ── Produto do Estoque ligado ao catálogo (v1.94.0, chave "preco-referencia-estoque") ────────────
+
+    /// <summary>
+    /// Liga (ou desliga, com produtoId null) um produto ao catálogo e já lê a referência de hoje. É o caminho do Estoque:
+    /// o PUT do produto não mexe nesses campos fora do formulário de carta avulsa (ver ProductService.UpdateAsync).
+    /// </summary>
+    public async Task<Product?> LigarAsync(Guid productId, int? produtoTcg, int? categoria, int? grupo, string? variante,
+        bool automatico, CancellationToken ct = default)
+    {
+        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId, ct);
+        if (p is null) return null;
+        if (produtoTcg is not null && (categoria is null || grupo is null || !CatalogoCartasService.CategoriaConhecida(categoria.Value)))
+            throw new ArgumentException("Escolha o produto no catálogo (jogo e coleção).");
+        variante = string.IsNullOrWhiteSpace(variante) ? null : variante.Trim();
+        if (variante is { Length: > 40 }) throw new ArgumentException("Acabamento: no máximo 40 caracteres.");
+
+        if (p.CartaTcgProdutoId != produtoTcg || p.CartaTcgVariante != variante)
+        { p.CartaRefUsd = null; p.CartaRefCentavos = null; p.CartaRefEm = null; }
+        p.CartaTcgProdutoId    = produtoTcg;
+        p.CartaTcgCategoria    = produtoTcg is null ? null : categoria;
+        p.CartaTcgGrupo        = produtoTcg is null ? null : grupo;
+        p.CartaTcgVariante     = produtoTcg is null ? null : variante;
+        p.CartaPrecoAutomatico = produtoTcg is not null && automatico;
+        p.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        if (produtoTcg is not null) await AtualizarAsync([productId], ct);
+        await _db.Entry(p).ReloadAsync(ct);
+        return p;
+    }
+
     // ── Rodada (robô diário e botão "Atualizar agora") ──────────────────────────
 
     public async Task<ResultadoRodadaPreco> AtualizarAsync(IReadOnlyCollection<Guid>? soEstas = null, CancellationToken ct = default)
@@ -108,7 +139,9 @@ public class PrecoCartasService
         if (!await _funcionalidades.LigadaAsync(Funcionalidades.PrecoReferenciaCartas))
             return new(false, "Chave \"Preço de referência das cartas\" desligada.", 0, 0, 0, 0, 0, null);
 
-        var q = _db.Products.Where(p => p.CartaAvulsa && p.IsActive && p.CartaTcgProdutoId != null
+        // Carta avulsa sempre; produto do Estoque (selado) só com a chave "preco-referencia-estoque" (v1.94.0)
+        var comEstoque = await _funcionalidades.LigadaAsync(Funcionalidades.PrecoReferenciaEstoque);
+        var q = _db.Products.Where(p => (p.CartaAvulsa || comEstoque) && p.IsActive && p.CartaTcgProdutoId != null
                                         && p.CartaTcgCategoria != null && p.CartaTcgGrupo != null);
         if (soEstas is { Count: > 0 }) q = q.Where(p => soEstas.Contains(p.Id));
         var cartas = await q.ToListAsync(ct);
@@ -232,7 +265,7 @@ public class PrecoCartasService
     /// </summary>
     public async Task<IReadOnlyList<VariacaoPreco>> VariacoesAsync(CancellationToken ct = default)
     {
-        var cartas = await _db.Products.AsNoTracking().Where(p => p.CartaAvulsa && p.CartaTcgProdutoId != null)
+        var cartas = await _db.Products.AsNoTracking().Where(p => p.CartaTcgProdutoId != null)
             .Select(p => new { p.Id, p.CartaRefCentavos, p.CartaRefEm }).ToListAsync(ct);
         if (cartas.Count == 0) return [];
         var hoje = DateTime.SpecifyKind(Brasilia.Hoje(), DateTimeKind.Utc);

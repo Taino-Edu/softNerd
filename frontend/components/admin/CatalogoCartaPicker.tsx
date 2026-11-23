@@ -4,6 +4,7 @@
 // escolher a carta preenche nome, coleção, número, raridade e foto, e liga a carta ao preço de mercado do dia.
 // A coleção vem do catálogo por coleção (não há busca por nome no jogo inteiro): a sigla ajuda a achar
 // (ex.: MEW = 151), é o código impresso no canto da carta.
+// tipo="selados" (v1.94.0, Estoque): a mesma escolha, mas lista os produtos selados da coleção (booster, box, deck).
 import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Search, Loader2, ChevronLeft, BookOpen } from 'lucide-react'
@@ -13,11 +14,17 @@ function usd(v: number | null | undefined) {
   return v == null ? '—' : `US$ ${v.toFixed(2).replace('.', ',')}`
 }
 
-export default function CatalogoCartaPicker({ jogo, onEscolher }: {
+export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas', rotulo, abertoDeInicio = false }: {
   jogo: string
   onEscolher: (carta: CartaCatalogo, colecao: ColecaoCatalogo) => void
+  /** cartas (Mercado de Cartas) ou selados (Estoque: booster, box, deck). */
+  tipo?: 'cartas' | 'selados'
+  /** Texto do botão fechado (padrão: "Buscar no catálogo de {jogo}"). */
+  rotulo?: string
+  abertoDeInicio?: boolean
 }) {
-  const [aberto, setAberto]         = useState(false)
+  const selados = tipo === 'selados'
+  const [aberto, setAberto]         = useState(abertoDeInicio)
   const [colecoes, setColecoes]     = useState<ColecaoCatalogo[] | null>(null)
   const [erro, setErro]             = useState<string | null>(null)
   const [buscaColecao, setBuscaColecao] = useState('')
@@ -38,10 +45,14 @@ export default function CatalogoCartaPicker({ jogo, onEscolher }: {
   useEffect(() => {
     if (!colecao) return
     setCartas(null); setBuscaCarta('')
-    catalogoCartasApi.cartas(colecao.categoria, colecao.grupo)
-      .then(r => setCartas(r.data))
+    const pedido: Promise<CartaCatalogo[]> = selados
+      // Selado não tem número nem raridade: entra no mesmo formato da lista
+      ? catalogoCartasApi.selados(colecao.categoria, colecao.grupo).then(r => r.data.map(s => ({ ...s, numero: null, raridade: null })))
+      : catalogoCartasApi.cartas(colecao.categoria, colecao.grupo).then(r => r.data)
+    pedido
+      .then(setCartas)
       .catch(e => setErro(e?.response?.data?.message ?? 'O catálogo não respondeu.'))
-  }, [colecao])
+  }, [colecao, selados])
 
   const colecoesVisiveis = useMemo(() => {
     const t = buscaColecao.trim().toLowerCase()
@@ -62,7 +73,7 @@ export default function CatalogoCartaPicker({ jogo, onEscolher }: {
     return (
       <button type="button" onClick={() => setAberto(true)}
         className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-brand-500/50 py-2.5 text-sm font-semibold text-brand-300 hover:bg-brand-500/10">
-        <BookOpen className="w-4 h-4" /> Buscar no catálogo de {jogo}
+        <BookOpen className="w-4 h-4" /> {rotulo ?? `Buscar no catálogo de ${jogo}`}
       </button>
     )
   }
@@ -117,7 +128,7 @@ export default function CatalogoCartaPicker({ jogo, onEscolher }: {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input className="input pl-9" autoFocus value={buscaCarta} onChange={e => setBuscaCarta(e.target.value)}
-              placeholder="Nome ou número (ex.: Charizard, 199)" />
+              placeholder={selados ? 'Nome (ex.: Booster Box, Elite Trainer, Bundle)' : 'Nome ou número (ex.: Charizard, 199)'} />
           </div>
           {!cartas && !erro ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-brand-400" /></div>
@@ -137,7 +148,11 @@ export default function CatalogoCartaPicker({ jogo, onEscolher }: {
                   </button>
                 )
               })}
-              {cartas && cartasVisiveis.length === 0 && <p className="col-span-full text-xs text-gray-400 py-3">Nenhuma carta com essa busca.</p>}
+              {cartas && cartasVisiveis.length === 0 && (
+                <p className="col-span-full text-xs text-gray-400 py-3">
+                  {selados && cartas.length === 0 ? 'Esta coleção não tem produto selado no catálogo.' : selados ? 'Nenhum produto com essa busca.' : 'Nenhuma carta com essa busca.'}
+                </p>
+              )}
             </div>
           )}
         </>

@@ -102,6 +102,11 @@ export interface CartaCatalogo {
   numero: string | null; raridade: string | null; imagem: string | null; imagemGrande: string | null
   precos: PrecoCatalogo[]
 }
+/** Produto selado da coleção (booster, box, deck...) — v1.94.0, Estoque. */
+export interface SeladoCatalogo {
+  produtoId: number; categoria: number; grupo: number; nome: string
+  imagem: string | null; imagemGrande: string | null; precos: PrecoCatalogo[]
+}
 export interface ReferenciaAgora {
   mercadoUsd: number | null; variante: string | null; cotacao: number; cotacaoDegradada: boolean
   avisoCotacao: string | null; referenciaCentavos: number | null; sugestaoCentavos: number | null
@@ -119,6 +124,10 @@ export interface ResultadoRodadaPreco {
 export const catalogoCartasApi = {
   colecoes:   (jogo: string) => api.get<ColecaoCatalogo[]>(`/api/product/catalogo-cartas/colecoes`, { params: { jogo } }),
   cartas:     (categoria: number, grupo: number) => api.get<CartaCatalogo[]>(`/api/product/catalogo-cartas/cartas`, { params: { categoria, grupo } }),
+  selados:    (categoria: number, grupo: number) => api.get<SeladoCatalogo[]>(`/api/product/catalogo-cartas/selados`, { params: { categoria, grupo } }),
+  /** Liga (produtoId preenchido) ou desliga (null) um produto do Estoque ao catálogo; devolve o produto com a referência. */
+  ligar:      (id: string, l: { produtoId: number | null; categoria: number | null; grupo: number | null; variante?: string | null; automatico: boolean }) =>
+                api.put<Product>(`/api/product/catalogo-cartas/ligacao/${id}`, l),
   referencia: (c: { categoria: number; grupo: number; produtoId: number; variante?: string | null }) =>
                 api.get<ReferenciaAgora>(`/api/product/catalogo-cartas/referencia`, { params: { ...c, variante: c.variante || undefined } }),
   variacoes:  () => api.get<VariacaoPreco[]>(`/api/product/catalogo-cartas/variacoes`),

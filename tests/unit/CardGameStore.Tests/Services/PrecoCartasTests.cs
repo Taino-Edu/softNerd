@@ -48,6 +48,8 @@ public class PrecoCartasTests
             Task.FromResult<IReadOnlyList<ColecaoCatalogo>>([]);
         public Task<IReadOnlyList<CartaCatalogo>> CartasAsync(int categoria, int grupo, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<CartaCatalogo>>([]);
+        public Task<IReadOnlyList<SeladoCatalogo>> SeladosAsync(int categoria, int grupo, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<SeladoCatalogo>>([]);
         public async Task<IReadOnlyDictionary<int, IReadOnlyList<PrecoCatalogo>>> PrecosAsync(int categoria, int grupo, CancellationToken ct = default)
         {
             Leituras++;
@@ -343,7 +345,8 @@ public class PrecoCartasTests
                 {"success":true,"results":[
                   {"productId":502558,"name":"Charizard ex - 006/165","imageUrl":"https://tcgplayer-cdn.tcgplayer.com/product/502558_200w.jpg",
                    "extendedData":[{"name":"Number","value":"006/165"},{"name":"Rarity","value":"Double Rare"}]},
-                  {"productId":1,"name":"Booster Box","imageUrl":null,"extendedData":[]}
+                  {"productId":1,"name":"Booster Box","imageUrl":null,"extendedData":[]},
+                  {"productId":2,"name":"Code Card - Booster Box","imageUrl":null,"extendedData":[]}
                 ]}
                 """,
             ["tcgplayer/3/23237/prices"] = """
@@ -377,10 +380,117 @@ public class PrecoCartasTests
         colecoes[1].Sigla.Should().Be("MEW");
         (await catalogo.ColecoesAsync("Outro")).Should().BeEmpty();
         (await catalogo.CartasAsync(999, 1)).Should().BeEmpty("categoria fora da lista não sai pra rede");
+        // O que não tem número é selado: vai pro Estoque (v1.94.0)
+        (await catalogo.SeladosAsync(3, 23237)).Should().ContainSingle().Which.Nome.Should().Be("Booster Box");
 
         // Sem acabamento escolhido vale o Normal, não o Reverse Holo (o tcgcsv manda em qualquer ordem)
         var precos = await catalogo.PrecosAsync(3, 23237);
         precos[502559].Select(p => p.Variante).Should().Equal("Normal", "Reverse Holofoil");
         PrecoCartasService.PrecoDaVariante(precos[502559], null)!.Referencia.Should().Be(0.25m);
+    }
+
+    // ── Produtos do Estoque (v1.94.0, chave "preco-referencia-estoque") ───────────
+
+    private static Product Selado(string nome, int tcgId, int precoCentavos = 20000, bool automatico = false) => new()
+    {
+        Name = nome, Category = "Pokémon", PriceInCents = precoCentavos, StockQuantity = 3, MinimumStock = 1,
+        CartaTcgProdutoId = tcgId, CartaTcgCategoria = 3, CartaTcgGrupo = 23237, CartaPrecoAutomatico = automatico,
+    };
+
+    [Fact]
+    public async Task Rodada_ProdutoDoEstoqueLigado_GanhaReferencia()
+    {
+        var db = CreateDb();
+        var box = Selado("Booster Box 151", 502000);
+        db.Products.Add(box);
+        await db.SaveChangesAsync();
+        var catalogo = new CatalogoFalso();
+        catalogo.Precos[(3, 23237)] = new() { [502000] = [Preco("Normal", 150m)] };
+        var (servico, _) = Servico(db, catalogo, new CotacaoFixa(5m));
+
+        var r = await servico.AtualizarAsync();
+
+        r.Atualizadas.Should().Be(1);
+        db.ChangeTracker.Clear();
+        (await db.Products.FindAsync(box.Id))!.CartaRefCentavos.Should().Be(75000);
+        (await servico.VariacoesAsync()).Should().ContainSingle(v => v.ProductId == box.Id);
+    }
+
+    [Fact]
+    public async Task Rodada_ChaveDoEstoqueDesligada_SoAsCartas()
+    {
+        var db = CreateDb();
+        var box = Selado("Booster Box 151", 502000, automatico: true);
+        var carta = Carta("Charizard ex", 502558);
+        db.Products.AddRange(box, carta);
+        await db.SaveChangesAsync();
+        var catalogo = new CatalogoFalso();
+        catalogo.Precos[(3, 23237)] = new() { [502000] = [Preco("Normal", 150m)], [502558] = [Preco("Holofoil", 8m)] };
+        var (servico, chaves) = Servico(db, catalogo, new CotacaoFixa(5m));
+        await chaves.DefinirAsync(Funcionalidades.PrecoReferenciaEstoque, false, Guid.NewGuid());
+
+        var r = await servico.AtualizarAsync();
+
+        r.Atualizadas.Should().Be(1);
+        db.ChangeTracker.Clear();
+        var b = await db.Products.FindAsync(box.Id);
+        b!.CartaRefCentavos.Should().BeNull();
+        b.PriceInCents.Should().Be(20000, "com a chave desligada o robô não mexe no Estoque");
+        (await db.Products.FindAsync(carta.Id))!.CartaRefCentavos.Should().Be(4000);
+    }
+
+    [Fact]
+    public async Task Ligar_GravaALigacaoELeAReferencia_EDesligarLimpa()
+    {
+        var db = CreateDb();
+        var box = new Product { Name = "Elite Trainer Box", Category = "Pokémon", PriceInCents = 40000, StockQuantity = 2, MinimumStock = 1 };
+        db.Products.Add(box);
+        await db.SaveChangesAsync();
+        var catalogo = new CatalogoFalso();
+        catalogo.Precos[(3, 23237)] = new() { [503000] = [Preco("Normal", 60m)] };
+        var (servico, _) = Servico(db, catalogo, new CotacaoFixa(5m));
+
+        var ligado = await servico.LigarAsync(box.Id, 503000, 3, 23237, null, automatico: false);
+
+        ligado!.CartaTcgProdutoId.Should().Be(503000);
+        ligado.CartaRefCentavos.Should().Be(30000, "já lê a referência de hoje ao ligar");
+        ligado.PriceInCents.Should().Be(40000, "ligar só sugere");
+
+        var desligado = await servico.LigarAsync(box.Id, null, null, null, null, automatico: true);
+
+        desligado!.CartaTcgProdutoId.Should().BeNull();
+        desligado.CartaTcgGrupo.Should().BeNull();
+        desligado.CartaRefCentavos.Should().BeNull();
+        desligado.CartaPrecoAutomatico.Should().BeFalse();
+
+        var semColecao = () => servico.LigarAsync(box.Id, 503000, null, null, null, false);
+        await semColecao.Should().ThrowAsync<ArgumentException>();
+        (await servico.LigarAsync(Guid.NewGuid(), null, null, null, null, false)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SalvarProdutoDoEstoque_SemOsCamposDoCatalogo_NaoApagaALigacao()
+    {
+        // O formulário do Estoque pode vir da busca por código de barras (dados públicos, sem a ligação)
+        var db = CreateDb();
+        var box = Selado("Booster Box 151", 502000, automatico: true);
+        box.CartaRefCentavos = 75000;
+        db.Products.Add(box);
+        await db.SaveChangesAsync();
+        var chaves = new FuncionalidadesService(db, new MemoryCache(new MemoryCacheOptions()));
+        var produtos = new ProductService(db, new Mock<CardGameStore.Services.Interfaces.IPushService>().Object,
+            new Mock<CardGameStore.Services.Interfaces.IEmailService>().Object, new Mock<ILogger<ProductService>>().Object, chaves);
+
+        await produtos.UpdateAsync(new Product
+        {
+            Id = box.Id, Name = "Booster Box 151 (36 boosters)", Category = "Pokémon", PriceInCents = 21000, StockQuantity = 3, MinimumStock = 1,
+        });
+
+        db.ChangeTracker.Clear();
+        var salvo = await db.Products.FindAsync(box.Id);
+        salvo!.Name.Should().Be("Booster Box 151 (36 boosters)");
+        salvo.CartaTcgProdutoId.Should().Be(502000);
+        salvo.CartaRefCentavos.Should().Be(75000);
+        salvo.CartaPrecoAutomatico.Should().BeTrue();
     }
 }
