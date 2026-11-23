@@ -30,11 +30,17 @@ public sealed record PrecoCatalogo(string Variante, decimal? MercadoUsd, decimal
 public sealed record CartaCatalogo(int ProdutoId, int Categoria, int Grupo, string Nome, string? Numero, string? Raridade,
     string? Imagem, string? ImagemGrande, IReadOnlyList<PrecoCatalogo> Precos);
 
+/// <summary>Produto selado da coleção (booster, box, Elite Trainer Box, deck...) — o que não tem número de carta.</summary>
+public sealed record SeladoCatalogo(int ProdutoId, int Categoria, int Grupo, string Nome, string? Imagem, string? ImagemGrande,
+    IReadOnlyList<PrecoCatalogo> Precos);
+
 /// <summary>Leitura do catálogo de cartas (interface pra os testes trocarem a rede por dados prontos).</summary>
 public interface ICatalogoCartas
 {
     Task<IReadOnlyList<ColecaoCatalogo>> ColecoesAsync(string jogo, CancellationToken ct = default);
     Task<IReadOnlyList<CartaCatalogo>> CartasAsync(int categoria, int grupo, CancellationToken ct = default);
+    /// <summary>Produtos selados da coleção (v1.94.0 — preço de referência do Estoque).</summary>
+    Task<IReadOnlyList<SeladoCatalogo>> SeladosAsync(int categoria, int grupo, CancellationToken ct = default);
     /// <summary>Preços da coleção, por produto (sem cache: o robô quer o do dia).</summary>
     Task<IReadOnlyDictionary<int, IReadOnlyList<PrecoCatalogo>>> PrecosAsync(int categoria, int grupo, CancellationToken ct = default);
 }
@@ -98,27 +104,49 @@ public class CatalogoCartasService : ICatalogoCartas
     public async Task<IReadOnlyList<CartaCatalogo>> CartasAsync(int categoria, int grupo, CancellationToken ct = default)
     {
         if (!CategoriaConhecida(categoria) || grupo <= 0) return [];
-        var cartas = await _cache.GetOrCreateAsync($"tcgcsv:cartas:{categoria}:{grupo}", async e =>
+        return (await ItensAsync(categoria, grupo, ct)).Cartas;
+    }
+
+    public async Task<IReadOnlyList<SeladoCatalogo>> SeladosAsync(int categoria, int grupo, CancellationToken ct = default)
+    {
+        if (!CategoriaConhecida(categoria) || grupo <= 0) return [];
+        return (await ItensAsync(categoria, grupo, ct)).Selados;
+    }
+
+    private sealed record ItensDaColecao(List<CartaCatalogo> Cartas, List<SeladoCatalogo> Selados);
+
+    /// <summary>Lê a coleção uma vez (cache de 6 h) e separa carta (tem número) de selado (não tem).</summary>
+    private async Task<ItensDaColecao> ItensAsync(int categoria, int grupo, CancellationToken ct)
+    {
+        var itens = await _cache.GetOrCreateAsync($"tcgcsv:itens:{categoria}:{grupo}", async e =>
         {
             e.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6);
             var precos = await PrecosAsync(categoria, grupo, ct);
             using var doc = await LerAsync($"tcgplayer/{categoria}/{grupo}/products", ct);
-            var lista = new List<CartaCatalogo>();
+            var cartas = new List<CartaCatalogo>();
+            var selados = new List<SeladoCatalogo>();
             foreach (var p in doc.RootElement.GetProperty("results").EnumerateArray())
             {
                 var extra = Extra(p);
-                // Sem número = produto selado (booster, caixa) — não é carta avulsa
-                if (!extra.TryGetValue("Number", out var numero) || string.IsNullOrWhiteSpace(numero)) continue;
                 var id = p.GetProperty("productId").GetInt32();
                 var img = Texto(p, "imageUrl");
-                lista.Add(new CartaCatalogo(id, categoria, grupo, NomeDaCarta(Texto(p, "name") ?? "", numero), numero,
-                    TraduzirRaridade(extra.GetValueOrDefault("Rarity")),
-                    img?.Replace("_200w.jpg", "_400w.jpg"), img?.Replace("_200w.jpg", "_in_1000x1000.jpg"),
-                    precos.GetValueOrDefault(id) ?? []));
+                var (imagem, grande) = (img?.Replace("_200w.jpg", "_400w.jpg"), img?.Replace("_200w.jpg", "_in_1000x1000.jpg"));
+                var preco = precos.GetValueOrDefault(id) ?? [];
+                // Sem número = produto selado (booster, caixa, deck) — vai pro Estoque, não pro Mercado de Cartas
+                if (!extra.TryGetValue("Number", out var numero) || string.IsNullOrWhiteSpace(numero))
+                {
+                    var nome = (Texto(p, "name") ?? "").Trim();
+                    // "Code Card - ..." é o código do jogo online que vem dentro da caixa, não produto de prateleira
+                    if (!nome.StartsWith("Code Card", StringComparison.OrdinalIgnoreCase))
+                        selados.Add(new SeladoCatalogo(id, categoria, grupo, nome, imagem, grande, preco));
+                }
+                else
+                    cartas.Add(new CartaCatalogo(id, categoria, grupo, NomeDaCarta(Texto(p, "name") ?? "", numero), numero,
+                        TraduzirRaridade(extra.GetValueOrDefault("Rarity")), imagem, grande, preco));
             }
-            return lista;
+            return new ItensDaColecao(cartas, selados);
         });
-        return cartas ?? [];
+        return itens ?? new ItensDaColecao([], []);
     }
 
     public async Task<IReadOnlyDictionary<int, IReadOnlyList<PrecoCatalogo>>> PrecosAsync(int categoria, int grupo, CancellationToken ct = default)

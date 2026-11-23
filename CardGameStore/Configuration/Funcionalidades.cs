@@ -50,6 +50,7 @@ public static class Funcionalidades
     public const string CartasComoProduto = "cartas-como-produto";
     public const string PrecoReferenciaCartas = "preco-referencia-cartas";
     public const string HomeEventosNoTopo = "home-eventos-no-topo";
+    public const string PrecoReferenciaEstoque = "preco-referencia-estoque";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
@@ -217,6 +218,18 @@ public static class Funcionalidades
             Padrao:     true,
             Desde:      "v1.93.0",
             RevisarEm:  new DateOnly(2027, 5, 20)),
+
+        new(PrecoReferenciaEstoque,
+            Nome:       "Preço de referência também nos produtos do Estoque (boosters, boxes, decks)",
+            OQueMuda:   "Na gaveta \"Detalhes do Produto\" do Estoque, \"Ligar ao catálogo\" (jogo → coleção → produto selado) liga o produto " +
+                        "ao preço de mercado do TCGplayer, como as cartas avulsas: a gaveta mostra a referência em reais, a variação de 7 e 30 dias " +
+                        "e a sugestão pela regra da loja. O robô \"Preço das cartas\" atualiza esses produtos todo dia; o preço de venda só muda " +
+                        "sozinho no produto marcado com \"Ajustar o preço sozinho\".",
+            SeDesligar: "Some o bloco de referência da gaveta do Estoque e o robô volta a ler só as cartas avulsas. Os produtos continuam " +
+                        "com o preço que tinham; a ligação fica guardada e volta se ligar de novo.",
+            Padrao:     true,
+            Desde:      "v1.94.0",
+            RevisarEm:  new DateOnly(2027, 5, 23)),
     ];
 
     public static Funcionalidade? Buscar(string codigo) =>

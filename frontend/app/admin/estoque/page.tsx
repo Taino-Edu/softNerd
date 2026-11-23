@@ -11,13 +11,16 @@ import { gerarRelatorioOperacional, gerarRelatorioGerencial } from '@/lib/relato
 import CameraScanner from '@/components/CameraScanner'
 import { startHub, stopHub, recarregarSeDesconectado } from '@/lib/signalr'
 import { brl } from '@/lib/format'
+import ReferenciaEstoque from '@/components/admin/ReferenciaEstoque'
 
 // ── Drawer de detalhe do produto ─────────────────────────────────────────────
-function ProductDrawer({ product, onClose, onEdit, onStock }: {
+function ProductDrawer({ product, onClose, onEdit, onStock, onAtualizado }: {
   product: Product
   onClose: () => void
   onEdit:  () => void
   onStock: (id: string, delta: number) => void
+  /** Ligou ao catálogo / mudou o preço pela referência (v1.94.0): atualiza a gaveta e a lista */
+  onAtualizado: (p: Product) => void
 }) {
   const [imgIdx, setImgIdx] = useState(0)
   const [wlEntries, setWlEntries] = useState<AdminReservation[]>([])
@@ -186,6 +189,9 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
               </div>
             )}
           </div>
+
+          {/* ── Preço de referência do catálogo (v1.94.0, chave preco-referencia-estoque) ── */}
+          <ReferenciaEstoque product={product} onAtualizado={onAtualizado} />
 
           {/* ── Fila (produto que ainda não chegou) ── */}
           {product.isPreVenda && (
@@ -903,6 +909,7 @@ export default function EstoquePage() {
           onClose={() => setDrawer(null)}
           onEdit={() => { setModal(drawer); setDrawer(null) }}
           onStock={async (id, delta) => { await handleStock(id, delta); setDrawer(prev => prev ? { ...prev, stockQuantity: prev.stockQuantity + delta } : null) }}
+          onAtualizado={p => { setDrawer(p); setProducts(prev => prev.map(x => x.id === p.id ? { ...x, ...p } : x)) }}
         />
       )}
 
