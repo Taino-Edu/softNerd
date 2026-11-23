@@ -96,6 +96,7 @@ O banco usa `EnsureCreated` (sem migrations). Tabela/coluna nova em banco que j�
 | Singleton | `ITcgApiClient → TcgApiClient` | `CardGameStore/Services/Implementations/TcgApiClient.cs` |
 | Singleton | `ITcgService → TcgService` | `CardGameStore/Services/Implementations/TcgService.cs` |
 | Singleton | `CurrencyService` | `CardGameStore/Services/Implementations/CurrencyService.cs` |
+| Scoped | `IFonteCotacao → CotacaoMercadoService` | `CardGameStore/Services/Implementations/CotacaoMercadoService.cs` |
 | Singleton | `ICatalogoCartas → CatalogoCartasService` | `CardGameStore/Services/Implementations/CatalogoCartasService.cs` |
 | Scoped | `PrecoCartasService` | `CardGameStore/Services/Implementations/PrecoCartasService.cs` |
 | Scoped | `IAuditService → AuditService` | `CardGameStore/Services/Implementations/AuditService.cs` |

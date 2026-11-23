@@ -31,7 +31,8 @@ public sealed record ResultadoRodadaPreco(bool Rodou, string Mensagem, int Carta
 public sealed record VariacaoPreco(Guid ProductId, int? ReferenciaCentavos, DateTime? ReferenciaEm, int? Ha7Dias, int? Ha30Dias);
 
 public sealed record ReferenciaAgora(decimal? MercadoUsd, string? Variante, decimal Cotacao, bool CotacaoDegradada,
-    string? AvisoCotacao, int? ReferenciaCentavos, int? SugestaoCentavos, IReadOnlyList<PrecoCatalogo> Precos);
+    string? AvisoCotacao, int? ReferenciaCentavos, int? SugestaoCentavos, IReadOnlyList<PrecoCatalogo> Precos,
+    DateTime? CotacaoEm = null, string? CotacaoFonte = null);
 
 public class PrecoCartasService
 {
@@ -98,8 +99,13 @@ public class PrecoCartasService
         var preco = PrecoDaVariante(precos, variante);
         int? referencia = preco?.Referencia is { } usd && !cot.Degradada ? ReferenciaCentavos(usd, cot.Valor) : null;
         int? sugestao = referencia is { } r ? Sugestao(r, await RegraAsync()) : null;
-        return new ReferenciaAgora(preco?.Referencia, preco?.Variante, cot.Valor, cot.Degradada, cot.Aviso, referencia, sugestao, precos);
+        return new ReferenciaAgora(preco?.Referencia, preco?.Variante, cot.Valor, cot.Degradada, cot.Aviso, referencia, sugestao, precos,
+            cot.ObtidaEm, cot.Fonte);
     }
+
+    /// <summary>Dólar usado na conversão agora (a tela converte o preço em dólar das listas com ele).</summary>
+    public Task<CotacaoUsdBrl> CotacaoAsync() => _cotacao.GetCotacaoAsync();
+
 
     // ── Produto do Estoque ligado ao catálogo (v1.94.0, chave "preco-referencia-estoque") ────────────
 

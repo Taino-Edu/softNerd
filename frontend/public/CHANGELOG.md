@@ -1,12 +1,22 @@
 # Changelog — Santuário Nerd
 
-## [v1.95.0] — 2026-11-23
+## [v1.96.0] — 2026-11-23
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.95.0] — 2026-11-23
+
+### Preço de referência em reais, com o dólar de agora
+- **Reais primeiro em todo lugar:** no "Buscar no catálogo" (cartas e lacrados), no cadastro da carta, na lista do Mercado de Cartas do painel e na gaveta do Estoque, o valor em reais vem em destaque e o dólar fica ao lado, menor
+- **Dólar de agora, não o do último dia útil:** a conversão usa o dólar comercial (lido no máximo a cada 10 minutos) em vez da PTAX do Banco Central, que só muda em dia útil. Ex.: segunda de manhã a PTAX ainda era a de sexta (R$ 5,8889) e o mercado estava em R$ 5,975
+- **Com a hora:** a tela diz qual dólar usou ("dólar R$ 5,975 · mercado às 09:30")
+- **Convertido ao vivo:** o preço em dólar do catálogo é lido uma vez por dia (é quando o TCGplayer publica); a referência em reais acompanha o dólar ao longo do dia. O ajuste automático do preço de venda continua uma vez por dia (17h30), pra o preço não mudar com o cliente com a carta na sacola
+- **Se o mercado não responder:** usa a PTAX oficial e avisa na tela; nunca um número inventado
+- **Com volta:** chave "Preço de referência em reais com o dólar de agora". Desligada, volta a converter pela PTAX
 
 ## [v1.94.0] — 2026-11-23
 

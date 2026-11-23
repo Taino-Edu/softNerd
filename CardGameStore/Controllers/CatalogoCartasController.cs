@@ -8,6 +8,7 @@
 // PUT  /api/product/catalogo-cartas/ligacao/{id}                         → liga/desliga produto do Estoque (v1.94.0)
 // PUT  /api/product/catalogo-cartas/preco/{id}                           → "Usar" a sugestão: troca só o preço de venda
 // GET  /api/product/catalogo-cartas/referencia?categoria=&grupo=&produtoId=&variante= → referência e sugestão agora
+// GET  /api/product/catalogo-cartas/cotacao                              → dólar usado agora (mercado; PTAX de reserva) — v1.95.0
 // GET  /api/product/catalogo-cartas/variacoes                            → referência atual, 7 e 30 dias, por carta
 // GET  /api/product/catalogo-cartas/regra   ·  PUT .../regra              → regra da loja
 // POST /api/product/catalogo-cartas/atualizar  (corpo opcional: ids)      → roda a atualização agora
@@ -93,6 +94,14 @@ public class CatalogoCartasController : ControllerBase
         if (!CatalogoCartasService.CategoriaConhecida(categoria)) return BadRequest(new { message = "Jogo fora do catálogo." });
         try { return Ok(await _precos.ReferenciaAgoraAsync(categoria, grupo, produtoId, variante, ct)); }
         catch (HttpRequestException ex) { return StatusCode(502, new { message = ex.Message }); }
+    }
+
+    /// <summary>Dólar da conversão agora, com hora e fonte — a tela converte as listas em dólar pra reais com ele.</summary>
+    [HttpGet("cotacao")]
+    public async Task<IActionResult> Cotacao()
+    {
+        var c = await _precos.CotacaoAsync();
+        return Ok(new { valor = c.Valor, obtidaEm = c.ObtidaEm, fonte = c.Fonte, degradada = c.Degradada, aviso = c.Aviso });
     }
 
     [HttpGet("variacoes")]
