@@ -76,7 +76,8 @@ function ProductDrawer({ product, onClose, onEdit, onStock }: {
           </div>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+        {/* pb-24: o fim da gaveta rola acima dos botões flutuantes (assistente e VLibras), que ficam por cima dela */}
+        <div className="overflow-y-auto flex-1 p-5 pb-24 space-y-4">
           {/* Imagem */}
           {images.length > 0 ? (
             <div className="space-y-2">
