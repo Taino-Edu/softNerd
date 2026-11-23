@@ -1,5 +1,11 @@
 # Changelog — Santuário Nerd
 
+## [v1.93.0] — 2026-11-23
+
+### Home: torneios e pontos lá em cima
+- **Próximos Torneios e Ganhe pontos sobem:** na página inicial, os torneios (com o calendário dos dias) e os pontos vêm logo depois da agenda "Campeonatos & eventos", antes das vitrines de produto. O cliente vê os dias e os pontos sem descer a página toda (no computador, os torneios saem de ~4.700px pra ~1.000px do topo)
+- **Com volta:** chave "Home: torneios e pontos lá em cima" em Mudanças com volta. Desligada, volta a ordem anterior (produtos primeiro, torneios e pontos no fim)
+
 ## [v1.92.0] — 2026-11-19
 
 ### Preço de referência das cartas: catálogo de todos os jogos e preço de mercado todo dia
