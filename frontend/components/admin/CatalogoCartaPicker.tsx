@@ -7,10 +7,42 @@
 // tipo="selados" (v1.94.0, Estoque): a mesma escolha, mas lista os produtos selados da coleção (booster, box, deck).
 import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
-import { Search, Loader2, ChevronLeft, BookOpen } from 'lucide-react'
+import { Search, Loader2, ChevronLeft, BookOpen, ImageOff } from 'lucide-react'
 import { catalogoCartasApi, ColecaoCatalogo, CartaCatalogo } from '@/lib/api'
 import { brlDeCentavos } from '@/lib/format'
 import { useCotacaoCartas, emCentavos, usd, rotuloCotacao } from '@/lib/cotacaoCartas'
+
+/** Quantas cartas mostrar de cada vez (coleção grande passa de 200). */
+const POR_VEZ = 60
+
+/**
+ * Foto do catálogo numa caixa de tamanho fixo. Se a do CDN do TCGplayer falhar (acontece em rajada), tenta a menor
+ * (_200w) e depois mostra um quadro vazio — antes a caixa encolhia e desmontava a grade (print do Taino, 23/11).
+ */
+function FotoCatalogo({ src, selado }: { src: string | null; selado: boolean }) {
+  const [atual, setAtual] = useState(src)
+  const [falhou, setFalhou] = useState(!src)
+  return (
+    <div className={clsx('relative w-full rounded bg-surface-700 overflow-hidden', selado ? 'aspect-square' : 'aspect-[63/88]')}>
+      {!falhou && atual ? (
+        <img src={atual} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-contain"
+          onError={() => {
+            if (atual.endsWith('_400w.jpg')) setAtual(atual.replace('_400w.jpg', '_200w.jpg'))
+            else setFalhou(true)
+          }} />
+      ) : (
+        <span className="absolute inset-0 flex items-center justify-center text-gray-500" title="Foto indisponível no catálogo agora">
+          <ImageOff className="w-5 h-5" />
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** Coleção que ainda vai sair (data de lançamento no futuro) — no catálogo ela costuma ter só os lacrados. */
+function aindaVaiSair(c: ColecaoCatalogo) {
+  return !!c.lancamento && new Date(c.lancamento).getTime() > Date.now()
+}
 
 export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas', rotulo, abertoDeInicio = false }: {
   jogo: string
@@ -31,6 +63,7 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
   const [colecao, setColecao]       = useState<ColecaoCatalogo | null>(null)
   const [cartas, setCartas]         = useState<CartaCatalogo[] | null>(null)
   const [buscaCarta, setBuscaCarta] = useState('')
+  const [limite, setLimite]         = useState(POR_VEZ)
 
   // Trocou o jogo: volta pra lista de coleções dele
   useEffect(() => { setColecoes(null); setColecao(null); setCartas(null); setBuscaColecao(''); setErro(null) }, [jogo])
@@ -61,11 +94,15 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
       || (c.sigla ?? '').toLowerCase().startsWith(t)) : lista).slice(0, 40)
   }, [colecoes, buscaColecao])
 
-  const cartasVisiveis = useMemo(() => {
+  // Volta pro começo ao trocar de coleção ou de busca
+  useEffect(() => { setLimite(POR_VEZ) }, [colecao, buscaCarta])
+
+  const cartasFiltradas = useMemo(() => {
     const t = buscaCarta.trim().toLowerCase()
     const lista = cartas ?? []
-    return (t ? lista.filter(c => c.nome.toLowerCase().includes(t) || (c.numero ?? '').toLowerCase().includes(t)) : lista).slice(0, 60)
+    return t ? lista.filter(c => c.nome.toLowerCase().includes(t) || (c.numero ?? '').toLowerCase().includes(t)) : lista
   }, [cartas, buscaCarta])
+  const cartasVisiveis = cartasFiltradas.slice(0, limite)
 
   if (jogo === 'Outro') return null
 
@@ -114,7 +151,11 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
                     </span>
                     <span className="shrink-0 text-right">
                       {c.sigla && <span className="block text-[11px] font-black text-brand-300">{c.sigla}</span>}
-                      {c.lancamento && <span className="block text-[11px] text-gray-400">{new Date(c.lancamento).getUTCFullYear()}</span>}
+                      {c.lancamento && (aindaVaiSair(c)
+                        ? <span className="block text-[10px] font-bold text-yellow-400" title="Ainda vai sair: o catálogo costuma ter só os lacrados">
+                            sai {new Date(c.lancamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                          </span>
+                        : <span className="block text-[11px] text-gray-400">{new Date(c.lancamento).getUTCFullYear()}</span>)}
                     </span>
                   </button>
                 </li>
@@ -133,15 +174,14 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
           {!cartas && !erro ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-brand-400" /></div>
           ) : (
+            <>
             <div className="max-h-72 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 gap-2 pr-1">
               {cartasVisiveis.map(c => {
                 const preco = c.precos.find(p => p.referencia != null)
                 return (
                   <button key={c.produtoId} type="button" onClick={() => onEscolher(c, colecao)}
                     className={clsx('text-left rounded-lg border border-surface-600 p-1.5 hover:border-brand-500 hover:bg-surface-700 transition-colors')}>
-                    {c.imagem
-                      ? <img src={c.imagem} alt="" loading="lazy" className="w-full aspect-[63/88] object-contain rounded" />
-                      : <div className="w-full aspect-[63/88] rounded bg-surface-700" />}
+                    <FotoCatalogo key={c.imagem ?? c.produtoId} src={c.imagem} selado={selados} />
                     <p className="text-[11px] font-semibold text-white leading-tight mt-1 line-clamp-2">{c.nome}</p>
                     <p className="text-[10px] text-gray-400">{c.numero}{c.raridade ? ` · ${c.raridade}` : ''}</p>
                     {(() => {
@@ -155,11 +195,26 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
                 )
               })}
               {cartas && cartasVisiveis.length === 0 && (
-                <p className="col-span-full text-xs text-gray-400 py-3">
-                  {selados && cartas.length === 0 ? 'Esta coleção não tem produto selado no catálogo.' : selados ? 'Nenhum produto com essa busca.' : 'Nenhuma carta com essa busca.'}
+                <p className="col-span-full text-xs text-gray-400 py-3 leading-snug">
+                  {cartas.length > 0
+                    ? (selados ? 'Nenhum produto com essa busca.' : 'Nenhuma carta com essa busca.')
+                    : selados
+                    ? 'Esta coleção não tem produto lacrado no catálogo.'
+                    : colecao && aindaVaiSair(colecao)
+                    ? `Esta coleção sai em ${new Date(colecao.lancamento!).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} — o catálogo ainda não tem as cartas, só os lacrados. Cadastre à mão ou volte depois do lançamento.`
+                    : 'O catálogo não tem cartas avulsas nesta coleção (costuma ser deck pronto, kit de evento ou coleção nova que ainda não foi cadastrada lá). Cadastre à mão ou escolha outra coleção.'}
                 </p>
               )}
             </div>
+            {cartasFiltradas.length > cartasVisiveis.length && (
+              <div className="flex items-center justify-between gap-2 text-[11px] text-gray-400">
+                <span>Mostrando {cartasVisiveis.length} de {cartasFiltradas.length} — busque pelo nome ou número</span>
+                <button type="button" onClick={() => setLimite(l => l + POR_VEZ)} className="font-semibold text-brand-300 hover:underline shrink-0">
+                  Mostrar mais
+                </button>
+              </div>
+            )}
+            </>
           )}
         </>
       )}
