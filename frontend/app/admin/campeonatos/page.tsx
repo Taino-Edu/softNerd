@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { championshipApi, userApi, deckApi, Championship, ChampionshipParticipant, ChampionshipPreInscricao, DeckListDto, uploadApi, PodioItem } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Badge, BadgeTone } from '@/components/ui/Badge'
@@ -539,9 +540,12 @@ function AddParticipantModal({ championshipId, game, entryFeeInCents, onClose, o
 
 // ── Card do Campeonato ────────────────────────────────────────────────────────
 function ChampionshipCard({
-  c, onStatusChange, onParticipantChange, onDelete, onEdit,
+  c, onStatusChange, onParticipantChange, onDelete, onEdit, abrirAgora, onAberto,
 }: {
   c: Championship
+  /** Veio de um aviso ("Inscrição nova"/"Inscrição paga"): abre os participantes e rola até o card */
+  abrirAgora?: boolean
+  onAberto?: () => void
   onStatusChange: (id: string, status: string) => void
   onParticipantChange: () => void
   onDelete?: (id: string) => void
@@ -589,6 +593,19 @@ function ChampionshipCard({
     if (!expanded) await loadAll()
     setExpanded(v => !v)
   }
+
+  const cardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!abrirAgora) return
+    loadAll().then(() => {
+      setActiveTab('participantes')
+      setExpanded(true)
+      onAberto?.()
+      // Depois de a lista abrir (altura final do card), senão a rolagem para no meio do caminho
+      setTimeout(() => cardRef.current?.scrollIntoView({ block: 'start' }), 150)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- abre uma vez só, quando chega pelo aviso
+  }, [abrirAgora])
 
   async function handleDeletePreInscricao(pi: ChampionshipPreInscricao) {
     try {
@@ -668,7 +685,7 @@ function ChampionshipCard({
         />
       )}
 
-      <div className="card space-y-4 overflow-hidden !p-0">
+      <div ref={cardRef} className="card space-y-4 overflow-hidden !p-0 scroll-mt-28 md:scroll-mt-4">
         {/* Banner de imagem */}
         {c.imageUrl && (
           <div className="relative w-full h-32 overflow-hidden">
@@ -1069,12 +1086,27 @@ function ChampionshipCard({
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
+// useSearchParams precisa de Suspense em volta (senão o build do Next recusa a página)
 export default function CampeonatosPage() {
+  return <Suspense fallback={null}><Campeonatos /></Suspense>
+}
+
+function Campeonatos() {
   const [championships, setChampionships] = useState<Championship[]>([])
   const [loading, setLoading]             = useState(true)
   const [showModal, setShowModal]         = useState(false)
   const [editTarget, setEditTarget]       = useState<Championship | null>(null)
   const [search, setSearch]               = useState('')
+  // ?abrir=<id>: link dos avisos de inscrição pra loja (AvisoDaInscricaoPraLoja.cs)
+  const [abrir, setAbrir] = useState<string | null>(null)
+  // Lido a cada mudança do endereço: clicar num aviso já estando nesta tela também abre o card (Codex no PR #196)
+  const abrirDoLink = useSearchParams().get('abrir')
+  useEffect(() => { if (abrirDoLink) setAbrir(abrirDoLink) }, [abrirDoLink])
+  /** Abriu o card do aviso: tira o ?abrir= (buscar ou recarregar não volta a rolar até ele) */
+  const aberto = useCallback(() => {
+    setAbrir(null)
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   const load = useCallback(async (q?: string) => {
     setLoading(true)
@@ -1085,8 +1117,11 @@ export default function CampeonatosPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Debounce na busca
+  // Debounce na busca. Na abertura não: o load acima já buscou, e a segunda busca trocava a lista
+  // pelo carregando e montava os cards de novo (o card aberto pelo aviso perdia a rolagem).
+  const primeiraBusca = useRef(true)
   useEffect(() => {
+    if (primeiraBusca.current) { primeiraBusca.current = false; return }
     const t = setTimeout(() => load(search || undefined), 350)
     return () => clearTimeout(t)
   }, [search, load])
@@ -1173,7 +1208,8 @@ export default function CampeonatosPage() {
         />
       </div>
 
-      {loading ? (
+      {/* Recarregando (busca, mudança de status): a lista fica na tela, sem desmontar os cards abertos */}
+      {loading && championships.length === 0 ? (
         <div className="flex justify-center py-16">
           <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -1200,6 +1236,8 @@ export default function CampeonatosPage() {
                     onStatusChange={handleStatusChange}
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
+                    abrirAgora={c.id === abrir}
+                    onAberto={aberto}
                   />
                 ))}
               </div>
@@ -1215,6 +1253,8 @@ export default function CampeonatosPage() {
                     onStatusChange={handleStatusChange}
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
+                    abrirAgora={c.id === abrir}
+                    onAberto={aberto}
                   />
                 ))}
               </div>
@@ -1230,6 +1270,8 @@ export default function CampeonatosPage() {
                     onStatusChange={handleStatusChange}
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
+                    abrirAgora={c.id === abrir}
+                    onAberto={aberto}
                     onDelete={handleDelete}
                   />
                 ))}

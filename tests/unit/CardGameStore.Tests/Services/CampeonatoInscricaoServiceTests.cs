@@ -31,6 +31,15 @@ public class CampeonatoInscricaoServiceTests
         public required Mock<InterSyncService> Inter { get; init; }
         public required CampeonatoInscricaoService Inscricoes { get; init; }
         public required Mock<IEmailService> Email { get; init; }
+        public required Mock<IPushService> Push { get; init; }
+
+        public User Admin(string nome = "Maikon", string papel = UserRole.Admin)
+        {
+            var u = new User { Id = Guid.NewGuid(), Name = nome, Email = $"{Guid.NewGuid()}@t.com", PasswordHash = "x", Role = papel, IsActive = true };
+            Db.Users.Add(u);
+            Db.SaveChanges();
+            return u;
+        }
 
         public User Jogador(string nome = "Ana")
         {
@@ -83,10 +92,11 @@ public class CampeonatoInscricaoServiceTests
             new EncryptionService(config, env.Object), config, NullLogger<InterSyncService>.Instance);
 
         var email = new Mock<IEmailService>();
+        var push  = new Mock<IPushService>();
         var servico = new CampeonatoInscricaoService(db, new ChampionshipService(db), inter.Object,
-            new Mock<IPixReconciliationService>().Object, new Mock<IPushService>().Object,
+            new Mock<IPixReconciliationService>().Object, push.Object,
             NullLogger<CampeonatoInscricaoService>.Instance, email.Object);
-        return new Amb { Db = db, Inter = inter, Inscricoes = servico, Email = email };
+        return new Amb { Db = db, Inter = inter, Inscricoes = servico, Email = email, Push = push };
     }
 
     private static async Task<RegraException> Recusa(Func<Task> acao) =>
@@ -299,6 +309,74 @@ public class CampeonatoInscricaoServiceTests
         a.Email.Verify(e => e.SendCobrancaInscricaoAsync(ana.Email!, It.Is<CobrancaInscricaoEmail>(c =>
             c.Link == $"/cliente?pagarInscricao={ch.Id}" && c.Valor == "R$ 25,00" && c.PrazoDaVaga != null)), Times.Once);
         a.Email.Verify(e => e.SendComprovanteInscricaoAsync(It.IsAny<string>(), It.IsAny<ComprovanteInscricaoEmail>()), Times.Never);
+    }
+
+    // ── Aviso pra loja (chave "aviso-inscricao-loja") ─────────────────────────
+
+    [Fact]
+    public async Task Gratuito_PeloSite_AvisaALoja_ComNumeroEVagas()
+    {
+        var a = Criar();
+        var dono = a.Admin();
+        var ch = a.Campeonato(vagas: 8);
+
+        await a.Inscricoes.InscreverAsync(ch.Id, a.Jogador("Ana").Id, null);
+
+        var aviso = await a.Db.Notifications.SingleAsync(n => n.UserId == dono.Id);
+        aviso.Title.Should().Be("Inscrição nova: Ana");
+        aviso.Body.Should().Be("Ana se inscreveu em \"Liguinha\" pelo site. Jogador #1 — 1 de 8 vagas.");
+        aviso.Link.Should().Be($"/admin/campeonatos?abrir={ch.Id}");
+        a.Push.Verify(p => p.SendToManyAsync(It.Is<IEnumerable<Guid>>(ids => ids.Contains(dono.Id)),
+            "Inscrição nova: Ana", It.IsAny<string>(), $"/admin/campeonatos?abrir={ch.Id}", It.IsAny<string?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Gratuito_ChaveDoAvisoDesligada_NaoAvisaALoja()
+    {
+        var a = Criar();
+        a.Db.FuncionalidadesEstado.Add(new FuncionalidadeEstado { Codigo = CardGameStore.Configuration.Funcionalidades.AvisoInscricaoLoja, Ligada = false });
+        a.Db.SaveChanges();
+        var dono = a.Admin();
+        var ch = a.Campeonato();
+
+        await a.Inscricoes.InscreverAsync(ch.Id, a.Jogador().Id, null);
+
+        (await a.Db.Notifications.CountAsync(n => n.UserId == dono.Id)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Pago_VagaAindaSegurada_NaoAvisaALoja()
+    {
+        // Muitas vagas seguradas vencem sem pagar: o aviso só sai quando o Pix cair
+        var a = Criar();
+        a.ComPix();
+        a.InterCobra();
+        var dono = a.Admin();
+        var ch = a.Campeonato(entradaEmCentavos: 1000);
+
+        await a.Inscricoes.InscreverAsync(ch.Id, a.Jogador().Id, null);
+
+        (await a.Db.Notifications.CountAsync(n => n.UserId == dono.Id)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task LojaInscreveNoGratuito_NaoAvisaALoja()
+    {
+        var a = Criar();
+        var dono = a.Admin();
+        var ch = a.Campeonato();
+
+        await a.Inscricoes.InscreverPeloAdminAsync(ch.Id, new AdminRegisterRequest { UserId = a.Jogador().Id }, dono.Id);
+
+        (await a.Db.Notifications.CountAsync(n => n.UserId == dono.Id)).Should().Be(0);
+    }
+
+    [Fact]
+    public void Vagas_ComESemLimite()
+    {
+        AvisoDaInscricaoPraLoja.Vagas(3, 16).Should().Be("3 de 16 vagas");
+        AvisoDaInscricaoPraLoja.Vagas(1, null).Should().Be("1 inscrito");
+        AvisoDaInscricaoPraLoja.Vagas(5, null).Should().Be("5 inscritos");
     }
 
     [Fact]
