@@ -29,7 +29,7 @@ public sealed record ComprovantePronto(string Email, ComprovanteCompraEmail Dado
 public static class ComprovanteDeCompra
 {
     /// <summary>Minha conta → aba Compras.</summary>
-    public const string Link = "/cliente/perfil?aba=historico";
+    public const string Link = "/cliente/perfil?tab=historico";
 
     /// <summary>Código curto: os 8 últimos hexadecimais do id (o começo do id do Mongo é a hora — repete entre vendas).</summary>
     public static string Codigo(string id)
