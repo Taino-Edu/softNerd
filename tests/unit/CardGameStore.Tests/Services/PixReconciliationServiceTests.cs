@@ -518,6 +518,39 @@ public class PixReconciliationServiceTests
         email.Verify(e => e.SendComprovanteInscricaoAsync(It.IsAny<string>(), It.Is<ComprovanteInscricaoEmail>(c => c.Valor == "R$ 25,00")), Times.Once);
     }
 
+    [Fact]
+    public async Task Reconciliar_InscricaoPaga_AvisaALojaUmaVez_ComValorEVagas()
+    {
+        // Chave "aviso-inscricao-loja": a equipe fica sabendo que a vaga foi paga
+        var db   = CreateDb(nameof(Reconciliar_InscricaoPaga_AvisaALojaUmaVez_ComValorEVagas));
+        var user = await SeedBaseAsync(db);
+        var dono = new User { Name = "Maikon", Email = "dono@test.com", PasswordHash = "x", Role = UserRole.Admin, IsActive = true };
+        db.Users.Add(dono);
+        var championship = new Championship { Name = "Torneio Teste", Game = "Magic", EntryFeeInCents = 5000, MaxParticipants = 16, StartDate = DateTime.UtcNow.AddDays(2) };
+        db.Championships.Add(championship);
+        var participant = new ChampionshipParticipant
+        {
+            ChampionshipId = championship.Id, UserId = user.Id, PlayerNumber = 3, InscricaoExpiraEm = DateTime.UtcNow.AddMinutes(20),
+        };
+        db.ChampionshipParticipants.Add(participant);
+        var pix = NovaCobranca(PixCobrancaOrigem.Campeonato, 5000);
+        pix.ChampionshipParticipantId = participant.Id;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+        var push    = new Mock<IPushService>();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object, push: push.Object);
+
+        await service.ReconciliarAsync(pix);
+        await service.ReconciliarAsync(pix); // robô e tela juntos
+
+        var aviso = db.Notifications.Single(n => n.UserId == dono.Id);
+        aviso.Title.Should().StartWith("Inscrição paga: ");
+        aviso.Body.Should().Contain("Torneio Teste").And.Contain("R$ 50,00").And.Contain("#3").And.Contain("1 de 16 vagas");
+        aviso.Link.Should().Be($"/admin/campeonatos/{championship.Id}");
+        push.Verify(p => p.SendToManyAsync(It.Is<IEnumerable<Guid>>(ids => ids.Contains(dono.Id)),
+            It.Is<string>(t => t.StartsWith("Inscrição paga")), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
+    }
+
     // ── Reserva (pré-venda) ───────────────────────────────────────────────────
 
     [Fact]

@@ -1,5 +1,13 @@
 # Changelog — Santuário Nerd
 
+## [v1.100.0] - 2026-11-24
+
+### Campeonato: a loja fica sabendo de inscrição nova
+- **Inscrição nova:** quando um jogador se inscreve sozinho pelo site num campeonato grátis, os admins e os operadores com a permissão Campeonatos recebem no sininho e no celular "Inscrição nova: nome", com o campeonato, o número do jogador e quantas vagas já foram (ex.: "5 de 16 vagas").
+- **Inscrição paga:** quando o Pix da inscrição cai, chega "Inscrição paga: nome" com o valor pago. Vale também pra cobrança feita pela loja.
+- **Sem barulho:** vaga só segurada esperando o Pix não avisa (muitas vencem sem pagar), e inscrição que a própria loja faz no grátis também não. Clicar no aviso abre a lista de participantes do campeonato. Cada tipo pode ser ignorado no sininho.
+- **Com volta:** chave "Campeonato: a loja é avisada de inscrição nova". Desligada, volta como era.
+
 ## [v1.99.0] - 2026-11-24
 
 ### Comprovante de compra pro cliente

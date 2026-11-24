@@ -166,7 +166,11 @@ public class PixReconciliationService : IPixReconciliationService
 
         // Chave "comprovante-inscricao": a vaga ficou garantida — comprovante por e-mail (melhor-esforço, depois do commit)
         if (comprovanteDaInscricao is Guid participanteId)
+        {
             await Campeonatos.EmailDaInscricao.EnviarComprovanteAsync(_db, _email, _logger, participanteId);
+            // Chave "aviso-inscricao-loja": a equipe fica sabendo que a vaga foi paga
+            await Campeonatos.AvisoDaInscricaoPraLoja.AvisarAsync(_db, _push, _logger, participanteId, pix.ValorEmCentavos);
+        }
 
         if (aviso is not null)
         {
