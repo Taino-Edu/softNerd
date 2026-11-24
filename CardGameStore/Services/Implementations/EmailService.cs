@@ -131,34 +131,91 @@ public class EmailService : IEmailService
         await SendAsync(toEmail, toName, "Crediário quitado — softNerd", body);
     }
 
-    public async Task SendCampeonatoInscricaoAsync(string toEmail, string toName, string campeonato, DateTime data, decimal entryFee)
+    // ── Campeonato: comprovante e cobrança (v1.98.0) ─────────────────────────
+    // Os dados chegam prontos (EmailDaInscricao): datas em Brasília e o nome da loja do SiteConfig. O modelo
+    // antigo assinava "softNerd" e formatava a hora pelo fuso do servidor (UTC no Docker).
+
+    private string UrlDoSite(string caminho)
     {
-        var dataFmt = data.ToLocalTime().ToString("dd/MM/yyyy 'às' HH:mm");
+        var appUrl = (_config["SmtpSettings:AppUrl"] ?? _config["EmailSettings:AppUrl"] ?? "https://santuarionerd.com.br").TrimEnd('/');
+        return caminho.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? caminho : $"{appUrl}{(caminho.StartsWith('/') ? "" : "/")}{caminho}";
+    }
+
+    private static string Linha(string rotulo, string valor, bool listrada) => $"""
+                <tr{(listrada ? " style=\"background:#f6f7fb\"" : "")}>
+                  <td style="padding:8px 10px;color:#555">{WebUtility.HtmlEncode(rotulo)}</td>
+                  <td style="padding:8px 10px;font-weight:bold;color:#111">{WebUtility.HtmlEncode(valor)}</td>
+                </tr>
+        """;
+
+    public async Task SendComprovanteInscricaoAsync(string toEmail, ComprovanteInscricaoEmail c)
+    {
+        var linhas = new List<(string, string)>
+        {
+            ("Campeonato", c.Campeonato), ("Jogo", c.Jogo), ("Data", c.DataDoCampeonato),
+            ("Jogador", c.Jogador), ("Nº do jogador", $"#{c.NumeroDoJogador}"),
+        };
+        if (c.Valor is not null)
+        {
+            linhas.Add(("Inscrição", c.Valor));
+            if (c.FormaDePagamento is not null) linhas.Add(("Pago via", c.FormaDePagamento));
+            if (c.PagoEm is not null) linhas.Add(("Pago em", c.PagoEm));
+        }
+        else linhas.Add(("Inscrição", "Gratuita"));
+        linhas.Add(("Código da inscrição", c.Codigo));
+
+        var tabela = string.Concat(linhas.Select((l, i) => Linha(l.Item1, l.Item2, i % 2 == 1)));
+        var loja = WebUtility.HtmlEncode(c.Loja);
         var body = $"""
-            <div style="font-family:sans-serif;max-width:500px">
-              <h2 style="color:#7839F3">softNerd — Inscrição Confirmada</h2>
-              <p>Olá, <strong>{toName}</strong>!</p>
-              <p>Sua inscrição no campeonato abaixo foi confirmada:</p>
-              <table style="width:100%;border-collapse:collapse;margin:16px 0">
-                <tr>
-                  <td style="padding:8px;color:#666">Campeonato</td>
-                  <td style="padding:8px;font-weight:bold">{campeonato}</td>
-                </tr>
-                <tr style="background:#f9f9f9">
-                  <td style="padding:8px;color:#666">Data</td>
-                  <td style="padding:8px;font-weight:bold">{dataFmt}</td>
-                </tr>
-                <tr>
-                  <td style="padding:8px;color:#666">Taxa de Inscrição</td>
-                  <td style="padding:8px;font-weight:bold">{Common.Dinheiro.Brl(entryFee)}</td>
-                </tr>
+            <div style="font-family:sans-serif;max-width:520px;color:#111">
+              <h2 style="color:#1d4ed8;margin-top:0">Inscrição confirmada ✅</h2>
+              <p>Olá, <strong>{WebUtility.HtmlEncode(c.Jogador)}</strong>! Sua vaga está garantida.</p>
+              <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+                {tabela}
               </table>
-              <p>Apareça na loja no dia do evento. Boa sorte!</p>
-              <p style="color:#888;font-size:12px">softNerd — Sistema de Gestão</p>
+              <p>Mostre este comprovante (ou o botão "Comprovante" na sua conta) no dia do campeonato.</p>
+              <p style="margin:20px 0">
+                <a href="{UrlDoSite(c.Link)}"
+                   style="display:inline-block;background:#1d4ed8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold">
+                  Ver na minha conta
+                </a>
+              </p>
+              <p style="color:#777;font-size:12px">Comprovante de inscrição, sem valor fiscal. {loja}.<br/>
+                Não quer receber estes e-mails? Desligue em Configurações, na sua conta.</p>
             </div>
             """;
 
-        await SendAsync(toEmail, toName, $"Inscrição confirmada: {campeonato}", body);
+        await SendAsync(toEmail, c.Jogador, $"{c.Loja} — inscrição confirmada: {c.Campeonato}", body);
+    }
+
+    public async Task SendCobrancaInscricaoAsync(string toEmail, CobrancaInscricaoEmail c)
+    {
+        var loja  = WebUtility.HtmlEncode(c.Loja);
+        var prazo = c.PrazoDaVaga is null ? "" : $"""
+              <p style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;color:#9a3412">
+                <strong>Sua vaga fica guardada até {WebUtility.HtmlEncode(c.PrazoDaVaga)}.</strong> Depois disso ela volta pro público.
+              </p>
+            """;
+        var body = $"""
+            <div style="font-family:sans-serif;max-width:520px;color:#111">
+              <h2 style="color:#1d4ed8;margin-top:0">Pague sua inscrição</h2>
+              <p>Olá, <strong>{WebUtility.HtmlEncode(c.Jogador)}</strong>! A loja inscreveu você em
+                 <strong>{WebUtility.HtmlEncode(c.Campeonato)}</strong>. Pague <strong>{WebUtility.HtmlEncode(c.Valor)}</strong>
+                 pelo site para garantir a vaga.</p>
+              {prazo}
+              <p style="margin:20px 0">
+                <a href="{UrlDoSite(c.Link)}"
+                   style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold">
+                  Pagar inscrição
+                </a>
+              </p>
+              <p style="color:#555;font-size:13px">O botão abre a sua conta no site da {loja}, onde aparecem o QR Code e o código Pix.
+                 Por segurança, a loja nunca manda o código Pix por e-mail.</p>
+              <p style="color:#777;font-size:12px">Não quer receber estes e-mails? Desligue em Configurações, na sua conta.</p>
+            </div>
+            """;
+
+        await SendAsync(toEmail, c.Jogador, $"{c.Loja} — pague a inscrição: {c.Campeonato}", body);
     }
 
     public async Task SendWaitListNotifiedAsync(string toEmail, string toName, string productName, string productUrl)

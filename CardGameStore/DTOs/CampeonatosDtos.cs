@@ -92,6 +92,9 @@ public class MyParticipationDto
     /// <summary>"Suico" tem tela do jogador (/liga/jogar ou /campeonato/jogar): a conta mostra o botão de voltar pra ela.</summary>
     public string    Formato               { get; init; } = string.Empty;
     public string    Modalidade            { get; init; } = string.Empty;
+    /// <summary>Quanto ele pagou de fato (o Pix quitado). A taxa do campeonato pode mudar depois da cobrança — o
+    /// comprovante mostra este valor. Null = não pagou por Pix (grátis, pendente ou antigo).</summary>
+    public decimal?  ValorPagoEmReais      { get; init; }
 }
 
 /// <summary>DTO de participante em um campeonato.</summary>
@@ -285,8 +288,9 @@ public static class CampeonatoMapeamento
         PresentesCount       = ch.Participants?.Count(p => p.CheckInEm != null) ?? 0,
     };
 
-    public static MyParticipationDto ParaMinhaParticipacao(this ChampionshipParticipant p) => new()
+    public static MyParticipationDto ParaMinhaParticipacao(this ChampionshipParticipant p, int? valorPagoEmCentavos = null) => new()
     {
+        ValorPagoEmReais      = valorPagoEmCentavos / 100m,
         ParticipationId       = p.Id,
         ChampionshipId        = p.ChampionshipId,
         ChampionshipName      = p.Championship?.Name ?? string.Empty,

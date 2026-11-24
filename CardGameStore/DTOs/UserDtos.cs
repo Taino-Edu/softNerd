@@ -44,6 +44,13 @@ public class NotificationPrefs
     /// </summary>
     [JsonPropertyName("silenciados")]
     public List<string> Silenciados { get; set; } = new();
+
+    /// <summary>
+    /// Cliente: receber por e-mail o comprovante de inscrição e a cobrança do campeonato (v1.98.0,
+    /// chave "comprovante-inscricao"). Ligado por padrão; desliga em Configurações.
+    /// </summary>
+    [JsonPropertyName("emailsInscricao")]
+    public bool EmailsInscricao { get; set; } = true;
 }
 
 public class PdvPrefs

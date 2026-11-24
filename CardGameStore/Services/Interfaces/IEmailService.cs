@@ -30,8 +30,11 @@ public interface IEmailService
 
     // ── Campeonatos ───────────────────────────────────────────────────────────
 
-    /// <summary>Confirmação de inscrição em campeonato.</summary>
-    Task SendCampeonatoInscricaoAsync(string toEmail, string toName, string campeonato, DateTime data, decimal entryFee);
+    /// <summary>Comprovante da inscrição com a vaga garantida (v1.98.0). Datas já em Brasília.</summary>
+    Task SendComprovanteInscricaoAsync(string toEmail, ComprovanteInscricaoEmail c);
+
+    /// <summary>Cobrança da inscrição feita pela loja: só o botão pro site, sem o código Pix (v1.98.0).</summary>
+    Task SendCobrancaInscricaoAsync(string toEmail, CobrancaInscricaoEmail c);
 
     // ── Pré-venda / Lista de espera ───────────────────────────────────────────
 
@@ -64,3 +67,15 @@ public interface IEmailService
     /// <summary>Envia um email de diagnóstico para testar as configurações de SMTP.</summary>
     Task<bool> SendDiagnosticEmailAsync(string toEmail);
 }
+
+/// <summary>
+/// Dados do comprovante de inscrição (v1.98.0). Tudo já formatado: datas em Brasília, valores em reais.
+/// Valor/Forma/PagoEm nulos = campeonato grátis.
+/// </summary>
+public sealed record ComprovanteInscricaoEmail(
+    string Loja, string Jogador, string Campeonato, string Jogo, string DataDoCampeonato, int NumeroDoJogador,
+    string? Valor, string? FormaDePagamento, string? PagoEm, string Codigo, string Link);
+
+/// <summary>Cobrança da inscrição feita pela loja (v1.98.0). PrazoDaVaga em Brasília; nulo = sem prazo.</summary>
+public sealed record CobrancaInscricaoEmail(
+    string Loja, string Jogador, string Campeonato, string Valor, string? PrazoDaVaga, string Link);

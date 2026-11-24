@@ -12,7 +12,7 @@ import {
   ShoppingCart, Plus, Trash2, Loader2, Search,
   PackageOpen, Star, User as UserIcon, Package, ChevronDown,
   Trophy, Swords, Medal, BookOpen, Bell, ShoppingBag,
-  QrCode, Copy, Share2,
+  QrCode, Copy, Share2, FileText,
 } from 'lucide-react'
 import Link from 'next/link'
 import { brl } from '@/lib/format'
@@ -24,6 +24,7 @@ import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import { rotasDoEvento } from '@/lib/caminhosTorneio'
 import { rotuloMesa, rotuloStatusComanda } from '@/lib/rotulos'
 import AvatarCliente from '@/components/cliente/AvatarCliente'
+import { printComprovanteInscricao } from '@/lib/printComprovanteInscricao'
 
 interface MyParticipation {
   participationId: string
@@ -44,6 +45,8 @@ interface MyParticipation {
   /** "Suico" tem tela do jogador (mesa, resultado, relógio) — o botão "Abrir o torneio" leva pra ela. */
   formato?: string
   modalidade?: string
+  /** O que ele pagou de fato no Pix (a taxa pode ter mudado depois). Null = não pagou por Pix. */
+  valorPagoEmReais?: number | null
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
@@ -149,12 +152,13 @@ function ProximosCampeonatos({ cor }: { cor: string }) {
   )
 }
 
-function MeusCampeonatos() {
+function MeusCampeonatos({ jogador, loja }: { jogador: string; loja: string }) {
   const [participations, setParticipations] = useState<MyParticipation[]>([])
   const [loading, setLoading] = useState(true)
   const [pixInscricao, setPixInscricao] = useState<{ championshipId: string; pix: PixCobrancaDto } | null>(null)
   const [gerandoPix, setGerandoPix] = useState<string | null>(null)
   const separado = useFuncionalidade('campeonato-separado') === true
+  const comprovante = useFuncionalidade('comprovante-inscricao') === true
 
   const load = useCallback(() => {
     fetch(`${BASE}/api/championship/my-participations`, { credentials: 'include' })
@@ -175,6 +179,22 @@ function MeusCampeonatos() {
       toast.error(err?.response?.data?.message ?? 'Não foi possível gerar o Pix agora.')
     } finally { setGerandoPix(null) }
   }
+
+  // "Pagar inscrição" do e-mail de cobrança (v1.98.0): /cliente?pagarInscricao=<campeonato> já abre o Pix.
+  // Lido de window.location (useSearchParams pediria Suspense na página inteira). O parâmetro só sai do
+  // endereço depois de achar a inscrição: deslogado, o login guarda o endereço inteiro e volta com ele
+  // (antes ele era apagado na hora e o Pix não abria depois do login — Codex no PR #193).
+  const [pagarDoEmail] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('pagarInscricao'))
+  const [pagamentoDoEmailFeito, setPagamentoDoEmailFeito] = useState(false)
+  useEffect(() => {
+    if (!pagarDoEmail || pagamentoDoEmailFeito || loading) return
+    const p = participations.find(x => x.championshipId === pagarDoEmail)
+    if (!p) return // ainda sem a inscrição (deslogado ou carregando de novo): o parâmetro fica
+    setPagamentoDoEmailFeito(true)
+    window.history.replaceState(null, '', window.location.pathname)
+    if (p.entryFeeInReais > 0 && !p.entryFeePaidAt) void pagarInscricao(p.championshipId)
+  }, [pagarDoEmail, pagamentoDoEmailFeito, loading, participations])
 
   // Polling: enquanto o Pix da inscrição está aberto, verifica a cada 6s
   useEffect(() => {
@@ -229,6 +249,21 @@ function MeusCampeonatos() {
                 style={{ backgroundColor: C.blue2, color: '#FFFFFF' }}>
                 <Swords className="w-3.5 h-3.5" /> Abrir o torneio
               </Link>
+            )}
+
+            {/* Comprovante (v1.98.0): só com a vaga garantida — grátis ou paga (sem prazo segurando a vaga) */}
+            {comprovante && !p.inscricaoExpiraEm && (p.entryFeeInReais <= 0 || p.entryFeePaidAt) && (
+              <button type="button"
+                onClick={() => printComprovanteInscricao({
+                  loja, jogador, participationId: p.participationId, campeonato: p.championshipName, jogo: p.game,
+                  inicio: p.startDate, numeroDoJogador: p.playerNumber,
+                  valorEmReais: p.entryFeePaidAt ? (p.valorPagoEmReais ?? p.entryFeeInReais) : p.entryFeeInReais,
+                  pagoEm: p.entryFeePaidAt, formaDePagamento: p.entryFeePaymentMethod,
+                })}
+                className="mt-2 mr-2 inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-black transition-all active:scale-95"
+                style={{ backgroundColor: '#EFF6FF', color: C.blue2, border: '1px solid #BFDBFE' }}>
+                <FileText className="w-3.5 h-3.5" /> Comprovante
+              </button>
             )}
 
             {/* Taxa de inscrição: paga (chip) ou botão de Pix */}
@@ -998,7 +1033,7 @@ export default function ClientePage() {
         </div>
 
         {/* Meus Campeonatos */}
-        <MeusCampeonatos />
+        <MeusCampeonatos jogador={profile?.name ?? ''} loja={site?.siteName || 'Santuário Nerd'} />
 
         {/* Próximos campeonatos */}
         <ProximosCampeonatos cor={corTopo} />

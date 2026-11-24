@@ -30,6 +30,7 @@ public class CampeonatoInscricaoServiceTests
         public required AppDbContext Db { get; init; }
         public required Mock<InterSyncService> Inter { get; init; }
         public required CampeonatoInscricaoService Inscricoes { get; init; }
+        public required Mock<IEmailService> Email { get; init; }
 
         public User Jogador(string nome = "Ana")
         {
@@ -81,10 +82,11 @@ public class CampeonatoInscricaoServiceTests
         var inter = new Mock<InterSyncService>(new Mock<IServiceScopeFactory>().Object,
             new EncryptionService(config, env.Object), config, NullLogger<InterSyncService>.Instance);
 
+        var email = new Mock<IEmailService>();
         var servico = new CampeonatoInscricaoService(db, new ChampionshipService(db), inter.Object,
             new Mock<IPixReconciliationService>().Object, new Mock<IPushService>().Object,
-            NullLogger<CampeonatoInscricaoService>.Instance);
-        return new Amb { Db = db, Inter = inter, Inscricoes = servico };
+            NullLogger<CampeonatoInscricaoService>.Instance, email.Object);
+        return new Amb { Db = db, Inter = inter, Inscricoes = servico, Email = email };
     }
 
     private static async Task<RegraException> Recusa(Func<Task> acao) =>
@@ -214,5 +216,94 @@ public class CampeonatoInscricaoServiceTests
         ana.ValorInscricaoEmCentavos.Should().Be(1500);
         ana.CobrancaEmAberto.Should().BeTrue();
         ana.UserName.Should().Be("Ana");
+    }
+
+    // ── v1.98.0 (chave comprovante-inscricao): comprovante e cobrança por e-mail ──
+
+    private static void Chave(Amb a, bool ligada)
+    {
+        a.Db.FuncionalidadesEstado.Add(new FuncionalidadeEstado { Codigo = CardGameStore.Configuration.Funcionalidades.ComprovanteInscricao, Ligada = ligada });
+        a.Db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Gratuito_MandaOComprovante_ComDataDeBrasiliaENomeDaLoja()
+    {
+        var a = Criar();
+        var ch = a.Campeonato();
+        ch.StartDate = new DateTime(2026, 11, 28, 22, 30, 0, DateTimeKind.Utc); // 19h30 em Brasília
+        a.Db.SaveChanges();
+        var ana = a.Jogador();
+
+        var (_, inscricao) = await a.Inscricoes.InscreverAsync(ch.Id, ana.Id, null);
+        var codigo = inscricao.Participant.Id.ToString("N").Substring(0, 8).ToUpperInvariant();
+
+        a.Email.Verify(e => e.SendComprovanteInscricaoAsync(ana.Email!, It.Is<ComprovanteInscricaoEmail>(c =>
+            c.Loja == "Santuário Nerd" && c.Jogador == "Ana" && c.Campeonato == "Liguinha" &&
+            c.DataDoCampeonato == "28/11/2026 às 19:30" && c.NumeroDoJogador == 1 && c.Valor == null &&
+            c.Codigo == codigo)), Times.Once);
+    }
+
+    [Fact]
+    public async Task Gratuito_ChaveDesligada_NaoMandaEmail()
+    {
+        var a = Criar();
+        Chave(a, ligada: false);
+        var ch = a.Campeonato();
+
+        await a.Inscricoes.InscreverAsync(ch.Id, a.Jogador().Id, null);
+
+        a.Email.Verify(e => e.SendComprovanteInscricaoAsync(It.IsAny<string>(), It.IsAny<ComprovanteInscricaoEmail>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Gratuito_ClienteDesligouOsEmails_NaoMandaEmail()
+    {
+        var a = Criar();
+        var ch = a.Campeonato();
+        var ana = a.Jogador();
+        ana.PreferencesJson = """{"notifications":{"emailsInscricao":false}}""";
+        a.Db.SaveChanges();
+
+        await a.Inscricoes.InscreverAsync(ch.Id, ana.Id, null);
+
+        a.Email.Verify(e => e.SendComprovanteInscricaoAsync(It.IsAny<string>(), It.IsAny<ComprovanteInscricaoEmail>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Pago_VagaAindaSegurada_NaoMandaComprovanteNemCobranca()
+    {
+        // Quem se inscreve pelo site já está com o Pix na tela: o comprovante só sai quando o Pix cair.
+        var a = Criar();
+        a.ComPix();
+        a.InterCobra();
+        var ch = a.Campeonato(entradaEmCentavos: 1000);
+
+        await a.Inscricoes.InscreverAsync(ch.Id, a.Jogador().Id, null);
+
+        a.Email.Verify(e => e.SendComprovanteInscricaoAsync(It.IsAny<string>(), It.IsAny<ComprovanteInscricaoEmail>()), Times.Never);
+        a.Email.Verify(e => e.SendCobrancaInscricaoAsync(It.IsAny<string>(), It.IsAny<CobrancaInscricaoEmail>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task LojaInscreveNoPago_MandaCobrancaSoComOBotaoProSite()
+    {
+        var a = Criar();
+        a.ComPix();
+        a.InterCobra();
+        var ch = a.Campeonato(entradaEmCentavos: 2500);
+        var ana = a.Jogador();
+
+        await a.Inscricoes.InscreverPeloAdminAsync(ch.Id, new AdminRegisterRequest { UserId = ana.Id }, Guid.NewGuid());
+
+        a.Email.Verify(e => e.SendCobrancaInscricaoAsync(ana.Email!, It.Is<CobrancaInscricaoEmail>(c =>
+            c.Link == $"/cliente?pagarInscricao={ch.Id}" && c.Valor == "R$ 25,00" && c.PrazoDaVaga != null)), Times.Once);
+        a.Email.Verify(e => e.SendComprovanteInscricaoAsync(It.IsAny<string>(), It.IsAny<ComprovanteInscricaoEmail>()), Times.Never);
+    }
+
+    [Fact]
+    public void DataHora_UsaOFusoDeBrasilia()
+    {
+        EmailDaInscricao.DataHora(new DateTime(2026, 11, 25, 2, 15, 0, DateTimeKind.Utc)).Should().Be("24/11/2026 às 23:15");
     }
 }

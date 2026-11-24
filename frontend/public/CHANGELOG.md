@@ -1,5 +1,14 @@
 # Changelog — Santuário Nerd
 
+## [v1.98.0] - 2026-11-24
+
+### Campeonato: comprovante de inscrição e cobrança por e-mail
+- **Comprovante por e-mail:** quando a vaga fica garantida (Pix pago ou campeonato grátis), o jogador recebe o comprovante com campeonato, data, número do jogador, valor, forma e data do pagamento e um código da inscrição. Datas no horário de Brasília e com o nome da loja.
+- **Botão "Comprovante"** em Meus Campeonatos: abre o comprovante pronto pra imprimir ou salvar em PDF, pra mostrar no dia.
+- **Cobrança por e-mail:** quando a loja inscreve ou cobra o jogador, ele recebe um e-mail com o botão "Pagar inscrição", que abre a conta dele já com o Pix na tela, e o horário até quando a vaga fica guardada. Por segurança, o código Pix não vai no e-mail.
+- **O jogador escolhe:** "E-mails de campeonato" em Configurações liga e desliga esses e-mails.
+- **Com volta:** chave "Campeonato: comprovante de inscrição e cobrança por e-mail". Desligada, nenhum e-mail de inscrição sai e o botão some.
+
 ## [v1.97.0] - 2026-11-24
 
 ### O cliente fica sabendo do pedido
