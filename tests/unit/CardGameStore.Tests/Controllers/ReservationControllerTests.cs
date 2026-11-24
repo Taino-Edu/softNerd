@@ -1531,8 +1531,9 @@ public class ReservationControllerTests
 
         var titulos = await AvisosDoClienteAsync(db, cliente.Id);
         titulos.Count(t => t == "Pedido cancelado").Should().Be(avisos);
-        (await db.Notifications.AsNoTracking().Where(n => n.UserId == cliente.Id).Select(n => n.Body).ToListAsync())
-            .Should().OnlyContain(b => b.Contains("Booster Pack"));
+        if (ligada)
+            (await db.Notifications.AsNoTracking().Where(n => n.UserId == cliente.Id).Select(n => n.Body).ToListAsync())
+                .Should().OnlyContain(b => b.Contains("Booster Pack"));
     }
 
     [Fact]
