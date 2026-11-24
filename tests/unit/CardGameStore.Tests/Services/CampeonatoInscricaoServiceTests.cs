@@ -236,11 +236,12 @@ public class CampeonatoInscricaoServiceTests
         var ana = a.Jogador();
 
         var (_, inscricao) = await a.Inscricoes.InscreverAsync(ch.Id, ana.Id, null);
+        var codigo = inscricao.Participant.Id.ToString("N").Substring(0, 8).ToUpperInvariant();
 
         a.Email.Verify(e => e.SendComprovanteInscricaoAsync(ana.Email!, It.Is<ComprovanteInscricaoEmail>(c =>
             c.Loja == "Santuário Nerd" && c.Jogador == "Ana" && c.Campeonato == "Liguinha" &&
             c.DataDoCampeonato == "28/11/2026 às 19:30" && c.NumeroDoJogador == 1 && c.Valor == null &&
-            c.Codigo == inscricao.Participant.Id.ToString("N")[..8].ToUpperInvariant())), Times.Once);
+            c.Codigo == codigo)), Times.Once);
     }
 
     [Fact]
