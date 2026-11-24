@@ -1,16 +1,18 @@
 'use client'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { SECOND_PAYMENT_METHODS, comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
+import { comandaApi, crediarioApi, userApi, productApi, analyticsApi, championshipApi, lgpdAdminApi, notificationsApi, reservationApi, ComandaDto, ComandaItemDto, UserSummary, Product, COMANDA_PAYMENT_METHODS, FinanceiroDto, LgpdRequestDto, DashChartScheme, EditarComandaRequest, EditarItemRequest, CrediariosDto } from '@/lib/api'
 import { usePreferences } from '@/hooks/usePreferences'
 import { HubConnectionState } from '@microsoft/signalr'
 import { startHub, stopHub, garanteHub, ouvirEstadoHub, ComandaUpdatedEvent } from '@/lib/signalr'
 import { playGoalSound } from '@/lib/sounds'
 import { tocarSom, notificarBrowser, pedirPermissaoNotificacao, incrementBadge, clearBadge } from '@/lib/notificacoes'
-import CameraScanner from '@/components/CameraScanner'
 import { CobrancaPixModal } from '@/components/admin/CobrancaPixModal'
+import ComandaLancamento from '@/components/admin/ComandaLancamento'
+import ComandaFechamento from '@/components/admin/ComandaFechamento'
+import PercentPicker from '@/components/admin/PercentPicker'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 import ConferenciaButton from '@/components/admin/ConferenciaButton'
 import EscolherContaCrediarioModal from '@/components/admin/EscolherContaCrediarioModal'
-import PercentPicker from '@/components/admin/PercentPicker'
 import {
   useTopClientes, TopClientesFilterBar, TopClientesList,
   DEFAULT_TOP_CLIENTES, TopClientesState,
@@ -19,14 +21,13 @@ import toast from 'react-hot-toast'
 import {
   Wifi, WifiOff, RefreshCw, Users, TrendingUp,
   Clock, CheckCircle, XCircle, Plus, ChevronDown, ChevronUp,
-  History, Search, Loader2, TableProperties, Trash2, CreditCard, ScanBarcode, Camera,
+  History, Search, Loader2, TableProperties, Trash2, CreditCard,
   AlertTriangle, DollarSign, BarChart2, Trophy, Star, FolderOpen, Package, Shield, MessageCircle,
-  Pencil, X, UserSearch, QrCode, RotateCcw,
+  Pencil, X, UserSearch, RotateCcw,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { rotuloCurtoPagamento } from '@/lib/pagamentos'
-import { useRascunho, limparRascunhos } from '@/lib/useRascunho'
-import { useDispensarModal } from '@/lib/useDispensarModal'
+import { limparRascunhos } from '@/lib/useRascunho'
 import { PagamentoIcone } from '@/components/PagamentoIcone'
 import { brl as fmt, brl, hojeBrasil } from '@/lib/format'
 import { agoraNoServidor } from '@/lib/relogioServidor'
@@ -130,230 +131,6 @@ function elapsedColor(openedAt: string) {
   if (mins < 20) return 'text-accent-green'
   if (mins < 45) return 'text-amber-400'
   return 'text-red-400'
-}
-
-// ── Modal: adicionar item a uma comanda ───────────────────────────────────────
-
-function AddItemModal({
-  comandaId, onClose, onAdded,
-}: {
-  comandaId: string
-  onClose: () => void
-  onAdded: (updated: ComandaDto) => void
-}) {
-  const [products, setProducts]         = useState<Product[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [adding, setAdding]             = useState<string | null>(null)
-  const [search, setSearch]             = useState('')
-  const [barcodeInput, setBarcodeInput] = useState('')
-  const [barcodeLoading, setBarcodeLoading] = useState(false)
-  const [mode, setMode]                 = useState<'search' | 'barcode'>('search')
-  const [cameraOpen, setCameraOpen]     = useState(false)
-  const barcodeRef                      = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    productApi.listAdmin()
-      .then(r => setProducts(r.data.filter(p => p.isActive && p.stockQuantity > 0)))
-      .catch(() => toast.error('Erro ao carregar produtos'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    if (mode === 'barcode') setTimeout(() => barcodeRef.current?.focus(), 100)
-  }, [mode])
-
-  async function handleAdd(product: Product) {
-    setAdding(product.id)
-    try {
-      const effectivePrice = product.isOnPromo && product.discountPriceInCents != null
-        ? product.discountPriceInCents : product.priceInCents
-      const { data } = await comandaApi.addItem(comandaId, {
-        productId:        product.id,
-        itemName:         product.name,
-        unitPriceInCents: effectivePrice,
-        quantity:         1,
-      })
-      onAdded(data)
-      toast.success(`${product.name} adicionado!`)
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(msg || 'Erro ao adicionar item.')
-    } finally {
-      setAdding(null)
-    }
-  }
-
-  async function handleBarcodeSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const code = barcodeInput.trim()
-    if (!code) return
-    setBarcodeLoading(true)
-    try {
-      const { data } = await productApi.getByBarcode(code)
-      await handleAdd(data)
-      setBarcodeInput('')
-    } catch {
-      toast.error('Produto não encontrado para este código de barras.')
-    } finally {
-      setBarcodeLoading(false)
-      barcodeRef.current?.focus()
-    }
-  }
-
-  async function handleCameraDetect(code: string) {
-    setCameraOpen(false)
-    setBarcodeLoading(true)
-    try {
-      const { data } = await productApi.getByBarcode(code)
-      await handleAdd(data)
-      setBarcodeInput('')
-    } catch {
-      toast.error('Produto não encontrado para este código de barras.')
-    } finally {
-      setBarcodeLoading(false)
-    }
-  }
-
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.category.toLowerCase().includes(search.toLowerCase())
-  )
-
-  return (
-    <>
-    {cameraOpen && (
-      <CameraScanner
-        onDetected={handleCameraDetect}
-        onClose={() => setCameraOpen(false)}
-      />
-    )}
-    {/* Clique fora nao fecha: a busca e a quantidade digitadas iriam junto. */}
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-md max-h-[75vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-surface-500">
-          <h3 className="font-semibold text-white">Adicionar produto à comanda</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
-            <XCircle className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Tabs busca / barcode */}
-        <div className="flex border-b border-surface-500">
-          <button
-            onClick={() => setMode('search')}
-            className={clsx('flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors',
-              mode === 'search' ? 'text-brand-400 border-b-2 border-brand-400 -mb-px' : 'text-gray-500 hover:text-gray-300')}
-          >
-            <Search className="w-3.5 h-3.5" /> Buscar
-          </button>
-          <button
-            onClick={() => setMode('barcode')}
-            className={clsx('flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors',
-              mode === 'barcode' ? 'text-brand-400 border-b-2 border-brand-400 -mb-px' : 'text-gray-500 hover:text-gray-300')}
-          >
-            <ScanBarcode className="w-3.5 h-3.5" /> Código de Barras
-          </button>
-        </div>
-
-        {mode === 'barcode' ? (
-          <form onSubmit={handleBarcodeSubmit} className="p-4 space-y-3">
-            <p className="text-xs text-gray-500">Clique no campo e escaneie com o leitor USB ou use a câmera.</p>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  ref={barcodeRef}
-                  className="input pl-9 font-mono"
-                  placeholder="Aguardando leitura..."
-                  value={barcodeInput}
-                  onChange={e => setBarcodeInput(e.target.value)}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setCameraOpen(true)}
-                className="shrink-0 px-3 rounded-lg bg-surface-600 hover:bg-brand-600/20 border border-surface-500 hover:border-brand-500/40 text-gray-400 hover:text-brand-400 transition-colors"
-                title="Usar câmera"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-            </div>
-            <button
-              type="submit"
-              disabled={!barcodeInput.trim() || barcodeLoading}
-              className="btn-primary w-full justify-center"
-            >
-              {barcodeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              {barcodeLoading ? 'Buscando...' : 'Adicionar'}
-            </button>
-          </form>
-        ) : (
-          <>
-            <div className="p-3 border-b border-surface-500">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  autoFocus
-                  className="input pl-9 text-sm"
-                  placeholder="Buscar produto..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : filtered.length === 0 ? (
-                <p className="text-center text-gray-500 text-sm py-8">Nenhum produto encontrado</p>
-              ) : (
-                filtered.map(p => {
-                  const onPromo = p.isOnPromo && p.discountPriceInReais != null
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => handleAdd(p)}
-                      disabled={adding === p.id}
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-500 transition-colors text-left disabled:opacity-50"
-                    >
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm text-white font-medium">{p.name}</p>
-                          {onPromo && (
-                            <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-red-500/20 text-red-400">
-                              Promoção
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">{p.category} · {p.stockQuantity} un.</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
-                        {onPromo ? (
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-gray-500 line-through">{fmt(p.priceInReais)}</span>
-                            <span className="text-red-400 text-sm font-bold">{fmt(p.discountPriceInReais!)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-accent-gold text-sm font-bold">{fmt(p.priceInReais)}</span>
-                        )}
-                        {adding === p.id
-                          ? <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
-                          : <Plus className="w-4 h-4 text-brand-400" />
-                        }
-                      </div>
-                    </button>
-                  )
-                })
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-    </>
-  )
 }
 
 // ── Modal: Admin abre comanda por um cliente ──────────────────────────────────
@@ -476,333 +253,6 @@ function AdminOpenModal({
 // ── Modal: escolher conta de crediário ───────────────────────────────────────
 
 
-// ── Modal: selecionar pagamento ao fechar comanda ────────────────────────────
-
-function CloseComandaModal({
-  comanda, onConfirm, onCancel, onGerarPix,
-}: {
-  comanda:   ComandaDto
-  onConfirm: (paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number) => void
-  onCancel:  () => void
-  onGerarPix: (discountInCents: number) => void
-}) {
-  // Pagamento, divisão e desconto ficam guardados por comanda (lib/useRascunho): dá pra
-  // fechar o modal por engano e voltar sem perder o que já estava marcado.
-  const rascunho = `fechar:${comanda.id}:`
-  const [method,        setMethod]        = useRascunho(rascunho + 'method', 'Dinheiro')
-  const [splitEnabled,  setSplitEnabled]  = useRascunho(rascunho + 'split', false)
-  const [secondMethod,  setSecondMethod]  = useRascunho(rascunho + 'method2', 'Cashback')
-  const [secondAmtStr,  setSecondAmtStr]  = useRascunho(rascunho + 'valor2', '')
-  // Comanda só guarda desconto em centavos no banco (sem campo de percentual) — o
-  // percentual é resolvido aqui no front antes de mandar, mesmo padrão do Venda Avulsa.
-  const [discountMode,  setDiscountMode]  = useRascunho<'percent' | 'cents'>(rascunho + 'descModo', 'percent')
-  const [discountPct,   setDiscountPct]   = useRascunho(rascunho + 'descPct', 0)
-  const [descontoStr,   setDescontoStr]   = useRascunho(rascunho + 'descValor', '')
-  const fundo = useDispensarModal(onCancel)
-
-  const totalAntesDesconto = comanda.totalInReais - comanda.pointsApplied / 100
-  const totalAntesDescontoCents = Math.round(totalAntesDesconto * 100)
-  const descontoCents  = Math.min(
-    discountMode === 'percent'
-      ? Math.round(totalAntesDescontoCents * discountPct / 100)
-      : Math.round(parseFloat(descontoStr.replace(',', '.') || '0') * 100),
-    totalAntesDescontoCents,
-  )
-  const totalRestante  = totalAntesDesconto - descontoCents / 100
-  const saldoCashback  = comanda.userBalanceInCents / 100
-  const saldoPontos    = comanda.userPointsBalance
-
-  const secondAmtCents = splitEnabled ? Math.round(parseFloat(secondAmtStr || '0') * 100) : 0
-  const primaryAmtCents = Math.round(totalRestante * 100) - secondAmtCents
-  const primaryAmtReais = primaryAmtCents / 100
-
-  // Validações
-  const semSaldoCashback = method === 'Cashback' && !splitEnabled && saldoCashback < totalRestante
-  const semSaldoPontos   = method === 'Pontos'   && !splitEnabled && saldoPontos < Math.round(totalRestante * 100)
-  const splitInvalido    = splitEnabled && (secondAmtCents <= 0 || secondAmtCents >= Math.round(totalRestante * 100))
-  const splitSemCashback = splitEnabled && secondMethod === 'Cashback' && secondAmtCents > comanda.userBalanceInCents
-  const splitSemPontos   = splitEnabled && secondMethod === 'Pontos'   && secondAmtCents > saldoPontos
-  const bloqueado = semSaldoCashback || semSaldoPontos || splitInvalido || splitSemCashback || splitSemPontos
-
-  function handleConfirm() {
-    if (splitEnabled && secondAmtCents > 0)
-      onConfirm(method, secondMethod, secondAmtCents, descontoCents)
-    else
-      onConfirm(method, undefined, undefined, descontoCents)
-  }
-
-  return (
-    // Esc e clique fora fecham: pagamento, desconto e divisão ficam no rascunho desta
-    // comanda (antes sumiam no meio do fechamento, por isso o clique fora não fechava).
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" {...fundo}>
-      <div className="bg-surface-700 border border-surface-500 rounded-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
-       <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
-        <div>
-          <h3 className="font-semibold text-white text-lg">Fechar comanda</h3>
-          <p className="text-gray-400 text-sm mt-1">
-            {comanda.userName} · <span className="text-accent-gold font-bold">{`${brl(totalRestante)}`}</span>
-          </p>
-          {(saldoPontos > 0 || saldoCashback > 0) && (
-            <div className="flex gap-3 mt-2">
-              {saldoPontos > 0 && (
-                <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2 py-1">
-                  {saldoPontos} pts
-                </span>
-              )}
-              {saldoCashback > 0 && (
-                <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1">
-                  {brl(saldoCashback)} cashback
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Desconto</p>
-            <div className="flex gap-1 bg-surface-900 rounded-lg p-0.5">
-              {(['percent', 'cents'] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setDiscountMode(mode)}
-                  className={clsx(
-                    'px-2.5 py-1 rounded-md text-[11px] font-bold transition-all',
-                    discountMode === mode
-                      ? 'bg-accent-green/20 text-accent-green'
-                      : 'text-gray-500 hover:text-gray-300'
-                  )}
-                >{mode === 'percent' ? '%' : 'R$'}</button>
-              ))}
-            </div>
-          </div>
-
-          {discountMode === 'percent' ? (
-            <PercentPicker value={discountPct} onChange={setDiscountPct} />
-          ) : (
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={descontoStr}
-              onChange={e => setDescontoStr(e.target.value)}
-              className="input text-sm w-full font-mono"
-            />
-          )}
-
-          {descontoCents > 0 && (
-            <p className="text-xs text-accent-green mt-1">
-              Total após desconto: {brl(totalRestante)}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">
-            {splitEnabled ? 'Pagamento principal (restante)' : 'Forma de pagamento'}
-          </p>
-          <div className="grid grid-cols-1 gap-2">
-            {COMANDA_PAYMENT_METHODS.map(pm => (
-              <button
-                key={pm.value}
-                onClick={() => setMethod(pm.value)}
-                className={clsx(
-                  'flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium transition-all text-left',
-                  method === pm.value
-                    ? pm.value === 'Crediario'
-                      ? 'bg-amber-500/10 border-amber-500/50 text-amber-300'
-                      : 'bg-brand-600/20 border-brand-500/50 text-brand-300'
-                    : 'border-surface-500 text-gray-400 hover:border-surface-400 hover:text-gray-200'
-                )}
-              >
-                <PagamentoIcone forma={pm.value} />
-                <span className="flex-1">{pm.label}</span>
-                {splitEnabled && method === pm.value && (
-                  <span className="text-xs font-mono text-white">
-                    {primaryAmtReais > 0 ? brl(primaryAmtReais) : 'R$ —'}
-                  </span>
-                )}
-                {!splitEnabled && pm.value === 'Crediario' && (
-                  <span className="text-xs text-amber-400/70 font-normal">acumula no saldo</span>
-                )}
-                {!splitEnabled && pm.value === 'Cashback' && saldoCashback > 0 && (
-                  <span className="text-xs text-emerald-400/70 font-normal">
-                    {brl(saldoCashback)} disp.
-                  </span>
-                )}
-                {!splitEnabled && pm.value === 'Pontos' && saldoPontos > 0 && (
-                  <span className="text-xs text-amber-400/70 font-normal">
-                    {saldoPontos} pts disp.
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Toggle split */}
-        <button
-          onClick={() => { setSplitEnabled(v => !v); setSecondAmtStr('') }}
-          className={clsx(
-            'w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm transition-all',
-            splitEnabled
-              ? 'bg-brand-600/10 border-brand-500/40 text-brand-300'
-              : 'border-surface-500 text-gray-500 hover:border-surface-400 hover:text-gray-300'
-          )}
-        >
-          <span className="flex items-center gap-2">
-            <CreditCard className="w-3.5 h-3.5" />
-            Dividir em dois métodos de pagamento
-          </span>
-          <span className={clsx('w-4 h-4 rounded border flex items-center justify-center text-xs shrink-0',
-            splitEnabled ? 'bg-brand-500 border-brand-500 text-white' : 'border-surface-400'
-          )}>
-            {splitEnabled && '✓'}
-          </span>
-        </button>
-
-        {/* Segundo pagamento */}
-        {splitEnabled && (
-          <div className="bg-surface-800 rounded-xl p-3 space-y-3">
-            <p className="text-xs text-gray-400 font-medium">Segundo pagamento</p>
-            <select
-              value={secondMethod}
-              onChange={e => setSecondMethod(e.target.value)}
-              className="input text-sm w-full"
-            >
-              {SECOND_PAYMENT_METHODS.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Valor (R$)</label>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                max={(totalRestante - 0.01).toFixed(2)}
-                placeholder="0,00"
-                value={secondAmtStr}
-                onChange={e => setSecondAmtStr(e.target.value)}
-                className="input text-sm w-full font-mono"
-              />
-              {secondMethod === 'Cashback' && saldoCashback > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSecondAmtStr(Math.min(saldoCashback, totalRestante - 0.01).toFixed(2))}
-                  className="mt-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                >
-                  Usar tudo ({brl(saldoCashback)})
-                </button>
-              )}
-              {secondMethod === 'Pontos' && saldoPontos > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSecondAmtStr((Math.min(saldoPontos, Math.round(totalRestante * 100) - 1) / 100).toFixed(2))}
-                  className="mt-1 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                >
-                  Usar tudo ({saldoPontos} pts = {brl((saldoPontos / 100))})
-                </button>
-              )}
-            </div>
-            {secondAmtCents > 0 && primaryAmtCents > 0 && !splitInvalido && (
-              <div className="text-xs text-gray-400 pt-1 border-t border-surface-500 space-y-1">
-                <div className="flex justify-between">
-                  <span>{SECOND_PAYMENT_METHODS.find(m => m.value === secondMethod)?.label}:</span>
-                  <span className="text-white font-mono">{brl((secondAmtCents / 100))}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{COMANDA_PAYMENT_METHODS.find(m => m.value === method)?.label ?? method}:</span>
-                  <span className="text-white font-mono">{brl((primaryAmtCents / 100))}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {method === 'Crediario' && !splitEnabled && (
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-300">
-            O valor será acumulado no saldo devedor do cliente. Novas comandas podem ser abertas normalmente.
-          </div>
-        )}
-        {method === 'Crediario' && splitEnabled && secondAmtCents > 0 && (
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-300">
-            {brl((primaryAmtCents / 100))} irá para o crediário. O restante já foi quitado.
-          </div>
-        )}
-        {semSaldoCashback && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            Saldo insuficiente. Cliente tem {brl(saldoCashback)} mas a comanda custa {brl(totalRestante)}.
-          </div>
-        )}
-        {semSaldoPontos && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            Pontos insuficientes. Cliente tem {saldoPontos} pts mas a comanda requer {Math.round(totalRestante * 100)} pts.
-          </div>
-        )}
-        {splitSemCashback && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            Cashback insuficiente. Cliente tem {brl(saldoCashback)} mas foi solicitado {brl((secondAmtCents / 100))}.
-          </div>
-        )}
-        {splitSemPontos && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            Pontos insuficientes para o segundo pagamento. Cliente tem {saldoPontos} pts, solicitado {secondAmtCents} pts.
-          </div>
-        )}
-        {splitEnabled && splitInvalido && secondAmtStr !== '' && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400">
-            O segundo valor deve ser maior que zero e menor que o total ({brl(totalRestante)}).
-          </div>
-        )}
-
-        {method === 'Pix' && !splitEnabled && (
-          <p className="text-xs text-gray-500 -mt-1">
-            Cliente já pagou por fora? Use "Confirmar" direto. Pra gerar um QR Code de cobrança, use "Gerar QR Pix".
-          </p>
-        )}
-
-       </div>
-
-       {/* Rodapé fixo: os botões de confirmar não ficam escondidos abaixo da dobra no celular */}
-       <div className="shrink-0 border-t border-surface-500 p-4">
-        {method === 'Pix' && !splitEnabled ? (
-          <div className="space-y-2">
-            <button
-              onClick={() => onGerarPix(descontoCents)}
-              className="btn-success w-full justify-center"
-            >
-              <QrCode className="w-4 h-4" /> Gerar QR Pix
-            </button>
-            <div className="flex gap-3">
-              <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Voltar</button>
-              <button
-                onClick={handleConfirm}
-                disabled={bloqueado}
-                className="btn-secondary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <CheckCircle className="w-4 h-4" /> Confirmar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <button onClick={onCancel} className="btn-secondary justify-center shrink-0">Voltar</button>
-            <button
-              onClick={handleConfirm}
-              disabled={bloqueado}
-              className="btn-success flex-1 justify-center whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <CheckCircle className="w-4 h-4" /> Confirmar · {rotuloCurtoPagamento(method)}
-            </button>
-          </div>
-        )}
-       </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Modal de confirmação genérico (cancelar) ──────────────────────────────────
 
 function ConfirmModal({
@@ -831,14 +281,19 @@ function ConfirmModal({
 
 // ── Card de Comanda ───────────────────────────────────────────────────────────
 
+type EtapaComanda = 'itens' | 'fechamento'
+type TelaComanda = { id: string; etapa: EtapaComanda }
+
 function ComandaCard({
-  comanda, onClose, onCancel, onUpdate, onClosedExternally, isNew, recentChange,
+  comanda, onClose, onCancel, onUpdate, onClosedExternally, isNew, recentChange, onTela, carregandoTela,
 }: {
   comanda: ComandaDto
   onClose:  (id: string, paymentMethod: string, secondMethod?: string, secondAmountInCents?: number, discountInCents?: number) => void
   onCancel: (id: string) => void
   onUpdate: (updated: ComandaDto, changeType?: 'add' | 'remove') => void
   onClosedExternally: () => void
+  onTela?: (etapa: EtapaComanda) => void
+  carregandoTela: boolean
   isNew:    boolean
   recentChange: 'add' | 'remove' | null
 }) {
@@ -925,14 +380,14 @@ function ComandaCard({
   return (
     <>
       {addOpen && (
-        <AddItemModal
-          comandaId={comanda.id}
+        <ComandaLancamento
+          comanda={comanda}
           onClose={() => setAddOpen(false)}
           onAdded={updated => { onUpdate(updated, 'add'); setAddOpen(false) }}
         />
       )}
       {closeOpen && (
-        <CloseComandaModal
+        <ComandaFechamento
           comanda={comanda}
           onConfirm={handleClose}
           onCancel={() => setCloseOpen(false)}
@@ -1104,14 +559,16 @@ function ComandaCard({
         {/* Ações */}
         <div className="flex gap-2 pt-1">
           <button
-            onClick={() => setAddOpen(true)}
-            className="btn-secondary py-1.5 px-3"
+            onClick={() => onTela ? onTela('itens') : setAddOpen(true)}
+            disabled={carregandoTela}
+            className="btn-secondary py-1.5 px-3 text-sm disabled:opacity-50"
+            aria-label={onTela ? "Adicionar itens" : "Adicionar item"}
             title="Adicionar item"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" /> {onTela && "Adicionar itens"}
           </button>
           <button
-            onClick={() => setCloseOpen(true)} disabled={loading}
+            onClick={() => onTela ? onTela('fechamento') : setCloseOpen(true)} disabled={loading || carregandoTela}
             className="btn-success flex-1 justify-center text-sm py-1.5"
           >
             <CheckCircle className="w-4 h-4" /> Fechar
@@ -1443,6 +900,9 @@ function EditarComandaModal({
 export default function DashboardPage() {
   const { prefs } = usePreferences()
   const dp = prefs.dashboard
+  const telasComanda = useFuncionalidade('comanda-telas')
+  const [telaComanda, setTelaComanda] = useState<TelaComanda | null>(null)
+  const [pixDaTela, setPixDaTela] = useState<number | null>(null)
   const notificationPrefsRef = useRef(prefs.notifications)
 
   useEffect(() => {
@@ -1450,6 +910,12 @@ export default function DashboardPage() {
   }, [prefs.notifications])
   const [tab, setTab]             = useState<'ativas' | 'historico' | 'analises'>('ativas')
   const [comandas, setComandas]   = useState<ComandaDto[]>([])
+  useEffect(() => {
+    if (telaComanda && !comandas.some(c => c.id === telaComanda.id)) {
+      setTelaComanda(null)
+      setPixDaTela(null)
+    }
+  }, [comandas, telaComanda])
   const [history, setHistory]     = useState<ComandaDto[]>([])
   const [histData, setHistData]   = useState(() => brToday())
   const [loading, setLoading]     = useState(true)
@@ -1692,6 +1158,7 @@ export default function DashboardPage() {
       const label = paymentMethod === 'Crediario' ? 'Comanda fechada no crediário!' : 'Comanda fechada!'
       toast.success(label)
       limparRascunhos(`fechar:${id}:`)
+      setTelaComanda(atual => atual?.id === id ? null : atual)
       fetchComandas()
       fetchHistory(histData)
     } catch (err: unknown) {
@@ -1814,6 +1281,66 @@ export default function DashboardPage() {
   const filtered = comandas.filter(c =>
     !search || c.userName.toLowerCase().includes(search.toLowerCase())
   )
+
+  const escolhaCrediario = pendingClose && (
+        <EscolherContaCrediarioModal
+          userName={pendingClose.userName}
+          contasAbertas={contasAbertas}
+          valorNovo={pendingClose.valorPrincipal}
+          onEscolher={async (credId) => {
+            setPendingClose(null)
+            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, credId, pendingClose.discount)
+          }}
+          onNova={async venc => {
+            setPendingClose(null)
+            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, undefined, pendingClose.discount, venc)
+          }}
+          onCancel={() => setPendingClose(null)}
+        />
+  )
+
+  const comandaEmEdicao = telaComanda && comandas.find(c => c.id === telaComanda.id)
+  if (telasComanda && telaComanda && comandaEmEdicao) {
+    const id = comandaEmEdicao.id
+    return (
+      <div className="min-w-0 py-3 pl-3 pr-8 sm:p-6">
+        {telaComanda.etapa === 'itens' ? (
+          <ComandaLancamento
+            key={id}
+            comanda={comandaEmEdicao}
+            onAdded={atualizada => handleUpdate(atualizada, 'add')}
+            onClose={() => setTelaComanda(null)}
+            onFechar={() => setTelaComanda({ id, etapa: 'fechamento' })}
+          />
+        ) : (
+          <ComandaFechamento
+            key={id}
+            comanda={comandaEmEdicao}
+            onConfirm={(metodo, segundo, valor, desconto) => handleClose(id, metodo, segundo, valor, desconto)}
+            onCancel={() => setTelaComanda(null)}
+            onItens={() => setTelaComanda({ id, etapa: 'itens' })}
+            onGerarPix={setPixDaTela}
+          />
+        )}
+        {pixDaTela !== null && (
+          <CobrancaPixModal
+            clienteNome={comandaEmEdicao.userName}
+            gerar={() => comandaApi.gerarPix(id, pixDaTela)}
+            verificar={txid => comandaApi.statusPix(id, txid)}
+            onClose={() => setPixDaTela(null)}
+            onSuccess={() => {
+              setPixDaTela(null)
+              setTelaComanda(null)
+              limparRascunhos(`fechar:${id}:`)
+              fetchComandas()
+              fetchHistory(histData)
+            }}
+          />
+        )}
+        {escolhaCrediario}
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
@@ -1957,6 +1484,8 @@ export default function DashboardPage() {
                 onCancel={handleCancel}
                 onUpdate={handleUpdate}
                 onClosedExternally={() => { fetchComandas(); fetchHistory(histData) }}
+                onTela={telasComanda ? etapa => setTelaComanda({ id: c.id, etapa }) : undefined}
+                carregandoTela={telasComanda === undefined}
                 isNew={newIds.has(c.id)}
                 recentChange={recentChanges.get(c.id)?.type ?? null}
               />
@@ -2590,22 +2119,7 @@ export default function DashboardPage() {
         />
       )}
 
-      {pendingClose && (
-        <EscolherContaCrediarioModal
-          userName={pendingClose.userName}
-          contasAbertas={contasAbertas}
-          valorNovo={pendingClose.valorPrincipal}
-          onEscolher={async (credId) => {
-            setPendingClose(null)
-            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, credId, pendingClose.discount)
-          }}
-          onNova={async venc => {
-            setPendingClose(null)
-            await executarClose(pendingClose.id, pendingClose.pm, pendingClose.pm2, pendingClose.amt2, undefined, pendingClose.discount, venc)
-          }}
-          onCancel={() => setPendingClose(null)}
-        />
-      )}
+      {escolhaCrediario}
     </div>
   )
 }

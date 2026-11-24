@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, KeyboardEvent, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTemRodapeFixo } from '@/lib/rodapeFixo'
 import { BrainCircuit, X, Send, Loader2, ChevronDown, Sparkles, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
 import { aiApi } from '@/lib/api'
 import { usePreferences } from '@/hooks/usePreferences'
@@ -78,8 +79,19 @@ function speak(text: string) {
   window.speechSynthesis.speak(utt)
 }
 
+// Nova venda e telas da comanda (lib/rodapeFixo): no celular o total e o botão de avançar ficam presos no pé
+// (~104px), a mão do VLibras sobe pra 120px (VLibrasController) e a aba do cronômetro fica em 176–212px
+// (TimerWidget, bottom-44). Nos cantos de baixo o botão sobe acima dos três.
+const FOLGA_COM_RODAPE_FIXO = 228
+
+function cantoDoBotao(corner: string, rodapeFixo: boolean) {
+  const estilo = CORNER_STYLES[corner] ?? CORNER_STYLES['bottom-right']
+  return rodapeFixo && estilo.bottom !== undefined ? { ...estilo, bottom: FOLGA_COM_RODAPE_FIXO } : estilo
+}
+
 export default function AiChatWidget() {
   const router      = useRouter()
+  const rodapeFixo  = useTemRodapeFixo()
   const { prefs }   = usePreferences()
   const [open,      setOpen]      = useState(false)
   const [messages,  setMessages]  = useState<Message[]>([])
@@ -111,9 +123,10 @@ export default function AiChatWidget() {
         posRef.current = p; setPos(p); return
       }
     } catch {}
-    const p = { x: window.innerWidth - BTN_SIZE - 16, y: window.innerHeight - BTN_SIZE - FOLGA_INFERIOR }
+    // Sem posição arrastada: o lugar padrão segue a tela (sobe acima da barra presa no pé)
+    const p = { x: window.innerWidth - BTN_SIZE - 16, y: window.innerHeight - BTN_SIZE - (rodapeFixo ? FOLGA_COM_RODAPE_FIXO : FOLGA_INFERIOR) }
     posRef.current = p; setPos(p)
-  }, [])
+  }, [rodapeFixo])
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
@@ -387,7 +400,7 @@ export default function AiChatWidget() {
           onClick={() => setOpen(o => !o)}
           className="fixed z-50 flex items-center justify-center rounded-full shadow-lg transition-colors hover:brightness-110 active:brightness-90"
           style={{
-            ...CORNER_STYLES[prefs.aiButton.corner] ?? CORNER_STYLES['bottom-right'],
+            ...cantoDoBotao(prefs.aiButton.corner, rodapeFixo),
             width: BTN_SIZE, height: BTN_SIZE,
             background: open ? '#10286B' : 'linear-gradient(135deg, #1E4FD6, #163CA8)',
             boxShadow: `0 4px 24px rgba(30, 79, 214, ${listening ? 0.9 : 0.6})`,
