@@ -614,4 +614,114 @@ public class ComandaServiceTests
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*comanda fechada*");
     }
+
+    // ── Produto com tamanho/cor: o estoque volta pra variante ─────────────────
+    // O AddItem tira do estoque do tamanho escolhido. Cancelar, remover e mudar a quantidade
+    // devolviam ao total do produto (achado em 24/11): a variante ficava com estoque a menos.
+
+    private static async Task<(User user, Product camiseta, ProductVariant tamanhoP, Comanda comanda)> SeedComTamanhoAsync(AppDbContext db)
+    {
+        var (user, _, comanda) = await SeedAsync(db);
+        var camiseta = new Product
+        {
+            Id            = Guid.NewGuid(),
+            Name          = "Camiseta",
+            Category      = "Camisetas",
+            PriceInCents  = 6000,
+            StockQuantity = 50,
+            MinimumStock  = 1,
+            IsActive      = true,
+            HasVariants   = true,
+        };
+        var tamanhoP = new ProductVariant { Id = Guid.NewGuid(), ProductId = camiseta.Id, Size = "P", StockQuantity = 5 };
+        db.Products.Add(camiseta);
+        db.ProductVariants.Add(tamanhoP);
+        await db.SaveChangesAsync();
+        return (user, camiseta, tamanhoP, comanda);
+    }
+
+    private static async Task<(int tamanho, int produto)> EstoquesAsync(AppDbContext db, Product camiseta, ProductVariant tamanho)
+    {
+        db.ChangeTracker.Clear(); // ExecuteUpdateAsync passa por fora do change tracker
+        return ((await db.ProductVariants.FindAsync(tamanho.Id))!.StockQuantity,
+                (await db.Products.FindAsync(camiseta.Id))!.StockQuantity);
+    }
+
+    [Fact]
+    public async Task CancelComanda_ComTamanho_DeveDevolverAoTamanho()
+    {
+        var db      = CreateDb(nameof(CancelComanda_ComTamanho_DeveDevolverAoTamanho));
+        var service = CreateService(db);
+        var (user, camiseta, tamanhoP, comanda) = await SeedComTamanhoAsync(db);
+
+        await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = camiseta.Id, VariantId = tamanhoP.Id, Quantity = 2 });
+        (await EstoquesAsync(db, camiseta, tamanhoP)).Should().Be((3, 50));
+
+        await service.CancelComandaAsync(comanda.Id, Guid.NewGuid());
+
+        (await EstoquesAsync(db, camiseta, tamanhoP)).Should().Be((5, 50));
+    }
+
+    [Fact]
+    public async Task RemoveItem_ComTamanho_DeveDevolverAoTamanho()
+    {
+        var db      = CreateDb(nameof(RemoveItem_ComTamanho_DeveDevolverAoTamanho));
+        var service = CreateService(db);
+        var (user, camiseta, tamanhoP, comanda) = await SeedComTamanhoAsync(db);
+
+        var comItem = await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = camiseta.Id, VariantId = tamanhoP.Id, Quantity = 2 });
+        await service.RemoveItemAsync(comanda.Id, comItem.Items.Single().Id, user.Id);
+
+        (await EstoquesAsync(db, camiseta, tamanhoP)).Should().Be((5, 50));
+    }
+
+    [Fact]
+    public async Task UpdateItem_ComTamanho_DeveMexerNoEstoqueDoTamanho()
+    {
+        var db      = CreateDb(nameof(UpdateItem_ComTamanho_DeveMexerNoEstoqueDoTamanho));
+        var service = CreateService(db);
+        var (user, camiseta, tamanhoP, comanda) = await SeedComTamanhoAsync(db);
+
+        var comItem = await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = camiseta.Id, VariantId = tamanhoP.Id, Quantity = 2 });
+        var itemId  = comItem.Items.Single().Id;
+
+        await service.UpdateItemAsync(comanda.Id, itemId, 1, Guid.NewGuid());   // devolve 1
+        (await EstoquesAsync(db, camiseta, tamanhoP)).Should().Be((4, 50));
+
+        await service.UpdateItemAsync(comanda.Id, itemId, 3, Guid.NewGuid());   // retira 2
+        (await EstoquesAsync(db, camiseta, tamanhoP)).Should().Be((2, 50));
+    }
+
+    [Fact]
+    public async Task UpdateItem_SemTamanho_DeveMexerNoEstoqueDoProduto()
+    {
+        var db      = CreateDb(nameof(UpdateItem_SemTamanho_DeveMexerNoEstoqueDoProduto));
+        var service = CreateService(db);
+        var (user, product, comanda) = await SeedAsync(db);
+
+        var comItem = await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = product.Id, Quantity = 3 });
+        await service.UpdateItemAsync(comanda.Id, comItem.Items.Single().Id, 1, Guid.NewGuid());
+
+        db.ChangeTracker.Clear();
+        (await db.Products.FindAsync(product.Id))!.StockQuantity.Should().Be(9); // 10 - 3 + 2
+    }
+
+    [Fact]
+    public async Task AddItem_ProdutoSimplesComTamanhoDeOutroProduto_NaoMexeNaquelaVariante()
+    {
+        // Cliente manda (por fora da tela) o VariantId da camiseta junto do refrigerante e depois cancela:
+        // o estoque da camiseta não pode subir.
+        var db      = CreateDb(nameof(AddItem_ProdutoSimplesComTamanhoDeOutroProduto_NaoMexeNaquelaVariante));
+        var service = CreateService(db);
+        var (user, camiseta, tamanhoP, comanda) = await SeedComTamanhoAsync(db);
+        var refrigerante = await db.Products.FirstAsync(p => p.Name == "Refrigerante");
+
+        var comItem = await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = refrigerante.Id, VariantId = tamanhoP.Id, Quantity = 1 });
+        (await db.ComandaItems.FindAsync(comItem.Items.Single().Id))!.VariantId.Should().BeNull();
+
+        await service.CancelComandaAsync(comanda.Id, Guid.NewGuid());
+
+        (await EstoquesAsync(db, camiseta, tamanhoP)).Should().Be((5, 50));
+        (await db.Products.FindAsync(refrigerante.Id))!.StockQuantity.Should().Be(10);
+    }
 }

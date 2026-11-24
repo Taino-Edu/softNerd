@@ -335,13 +335,7 @@ public class ComandaService : IComandaService
 
         comanda.TotalInCents = Math.Max(0, comanda.TotalInCents - item.SubtotalInCents);
 
-        if (item.ProductId.HasValue)
-        {
-            await _db.Products
-                .Where(p => p.Id == item.ProductId.Value)
-                .ExecuteUpdateAsync(s => s.SetProperty(
-                    p => p.StockQuantity, p => p.StockQuantity + item.Quantity));
-        }
+        await AjustarEstoqueDoItemAsync(item, item.Quantity);
 
         // Ajusta pontos aplicados se o total ficou menor que o desconto
         if (comanda.PointsApplied > comanda.TotalInCents)
@@ -401,15 +395,8 @@ public class ComandaService : IComandaService
         var oldSubtotal = item.SubtotalInCents;
         var diff        = item.UnitPriceInCents * newQuantity - oldSubtotal;
 
-        // Ajusta estoque físico
-        if (item.ProductId.HasValue)
-        {
-            var delta = item.Quantity - newQuantity; // positivo = devolve, negativo = retira
-            await _db.Products
-                .Where(p => p.Id == item.ProductId.Value)
-                .ExecuteUpdateAsync(s => s.SetProperty(
-                    p => p.StockQuantity, p => p.StockQuantity + delta));
-        }
+        // Ajusta estoque físico: positivo = devolve, negativo = retira
+        await AjustarEstoqueDoItemAsync(item, item.Quantity - newQuantity);
 
         item.Quantity       = newQuantity;
         item.SubtotalInCents = item.UnitPriceInCents * newQuantity;
@@ -696,13 +683,8 @@ public class ComandaService : IComandaService
                 "Esta comanda já foi fechada (cobrada) ou cancelada — cancelamento sem cobrança só se aplica a comandas ainda abertas. " +
                 "Para desfazer uma venda já fechada, use Estornar no histórico da comanda.");
 
-        foreach (var item in comanda.Items.Where(i => i.ProductId.HasValue))
-        {
-            await _db.Products
-                .Where(p => p.Id == item.ProductId!.Value)
-                .ExecuteUpdateAsync(s => s.SetProperty(
-                    p => p.StockQuantity, p => p.StockQuantity + item.Quantity));
-        }
+        foreach (var item in comanda.Items)
+            await AjustarEstoqueDoItemAsync(item, item.Quantity);
 
         // Devolve pontos que o cliente havia aplicado nesta comanda
         if (comanda.PointsApplied > 0 && comanda.User != null)
@@ -784,7 +766,7 @@ public class ComandaService : IComandaService
         {
             if (item.VariantId.HasValue)
                 await _db.ProductVariants
-                    .Where(v => v.Id == item.VariantId.Value)
+                    .Where(v => v.Id == item.VariantId.Value && v.ProductId == item.ProductId!.Value)
                     .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + item.Quantity));
             else
                 await _db.Products
@@ -973,6 +955,25 @@ public class ComandaService : IComandaService
     /// Resolve nome e preço do item. Se vier ProductId, busca do banco e ignora
     /// o que o cliente enviou — nunca confiar em preço vindo da requisição.
     /// </summary>
+    /// <summary>
+    /// Devolve (delta positivo) ou retira (negativo) o estoque de um item da comanda aberta. Produto com
+    /// tamanho/cor mexe no estoque da variante, que é de onde o AddItem tirou. Antes o cancelar, o remover e o
+    /// mudar quantidade mexiam sempre no total do produto: a variante ficava com estoque a menos e o produto
+    /// com estoque a mais (achado em 24/11; o estorno de comanda fechada já fazia certo).
+    /// </summary>
+    private async Task AjustarEstoqueDoItemAsync(ComandaItem item, int delta)
+    {
+        if (delta == 0 || !item.ProductId.HasValue) return;
+        if (item.VariantId.HasValue)
+            await _db.ProductVariants
+                .Where(v => v.Id == item.VariantId.Value && v.ProductId == item.ProductId.Value)
+                .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + delta));
+        else
+            await _db.Products
+                .Where(p => p.Id == item.ProductId.Value)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.StockQuantity, p => p.StockQuantity + delta));
+    }
+
     private async Task<(string name, int priceInCents, int costInCents)> ResolveItemAsync(AddItemToComandaRequest request)
     {
         if (!request.ProductId.HasValue)
@@ -1020,6 +1021,10 @@ public class ComandaService : IComandaService
         }
 
         // ── Produto simples ───────────────────────────────────────────────────
+        // Tamanho/cor só vale pra produto com grade: um VariantId mandado junto de produto simples (de outro
+        // produto, por exemplo) não fica gravado no item — senão o cancelar mexeria no estoque daquela variante.
+        request.VariantId = null;
+
         // SkipStockDecrement (homologação de pré-venda): estoque já foi baixado na
         // reserva — só resolve nome/preço sem mexer no saldo.
         if (request.SkipStockDecrement)
