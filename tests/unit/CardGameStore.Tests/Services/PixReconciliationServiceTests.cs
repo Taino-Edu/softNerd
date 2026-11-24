@@ -570,6 +570,8 @@ public class PixReconciliationServiceTests
             .Should().ContainSingle().Which.Should().Contain("reativado");
         (await db.ExternalTransactions.SingleAsync(x => x.ExternalId == pix.TxId)).Notes
             .Should().Contain("pago depois de cancelado");
+        (await db.Notifications.Where(n => n.UserId == reserva.UserId).Select(n => n.Title).ToListAsync())
+            .Should().Equal(new[] { "Pagamento confirmado ✅" }, "o pedido voltou como pago: o cliente precisa saber que é só retirar");
     }
 
     [Fact]

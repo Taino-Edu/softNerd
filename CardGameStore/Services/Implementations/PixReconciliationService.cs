@@ -483,8 +483,10 @@ public class PixReconciliationService : IPixReconciliationService
             });
         }
 
-        if (quitados == 0) return (null, null);
-        return (await AvisarEquipePedidoPagoAsync(pix, groupId), await AvisarClientePedidoPagoAsync(pix, pagos));
+        // A loja segue avisada só pelos itens quitados (o reativado já tem aviso próprio pros admins); o cliente é
+        // avisado sempre que algo dele ficou pago — inclusive o pedido que estava cancelado e voltou (Codex no PR #192).
+        var equipe = quitados > 0 ? await AvisarEquipePedidoPagoAsync(pix, groupId) : null;
+        return (equipe, await AvisarClientePedidoPagoAsync(pix, pagos));
     }
 
     /// <summary>
