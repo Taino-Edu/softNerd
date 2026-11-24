@@ -325,9 +325,9 @@ public class CampeonatoInscricaoServiceTests
         var aviso = await a.Db.Notifications.SingleAsync(n => n.UserId == dono.Id);
         aviso.Title.Should().Be("Inscrição nova: Ana");
         aviso.Body.Should().Be("Ana se inscreveu no Liguinha pelo site. Jogador #1 — 1 de 8 vagas.");
-        aviso.Link.Should().Be($"/admin/campeonatos/{ch.Id}");
+        aviso.Link.Should().Be($"/admin/campeonatos?abrir={ch.Id}");
         a.Push.Verify(p => p.SendToManyAsync(It.Is<IEnumerable<Guid>>(ids => ids.Contains(dono.Id)),
-            "Inscrição nova: Ana", It.IsAny<string>(), $"/admin/campeonatos/{ch.Id}", It.IsAny<string?>()), Times.Once);
+            "Inscrição nova: Ana", It.IsAny<string>(), $"/admin/campeonatos?abrir={ch.Id}", It.IsAny<string?>()), Times.Once);
     }
 
     [Fact]

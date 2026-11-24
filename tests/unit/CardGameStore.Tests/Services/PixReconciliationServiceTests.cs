@@ -546,7 +546,7 @@ public class PixReconciliationServiceTests
         var aviso = db.Notifications.Single(n => n.UserId == dono.Id);
         aviso.Title.Should().StartWith("Inscrição paga: ");
         aviso.Body.Should().Contain("Torneio Teste").And.Contain("R$ 50,00").And.Contain("#3").And.Contain("1 de 16 vagas");
-        aviso.Link.Should().Be($"/admin/campeonatos/{championship.Id}");
+        aviso.Link.Should().Be($"/admin/campeonatos?abrir={championship.Id}");
         push.Verify(p => p.SendToManyAsync(It.Is<IEnumerable<Guid>>(ids => ids.Contains(dono.Id)),
             It.Is<string>(t => t.StartsWith("Inscrição paga")), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
     }

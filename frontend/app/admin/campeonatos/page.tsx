@@ -539,9 +539,11 @@ function AddParticipantModal({ championshipId, game, entryFeeInCents, onClose, o
 
 // ── Card do Campeonato ────────────────────────────────────────────────────────
 function ChampionshipCard({
-  c, onStatusChange, onParticipantChange, onDelete, onEdit,
+  c, onStatusChange, onParticipantChange, onDelete, onEdit, abrirAgora,
 }: {
   c: Championship
+  /** Veio de um aviso ("Inscrição nova"/"Inscrição paga"): abre os participantes e rola até o card */
+  abrirAgora?: boolean
   onStatusChange: (id: string, status: string) => void
   onParticipantChange: () => void
   onDelete?: (id: string) => void
@@ -589,6 +591,16 @@ function ChampionshipCard({
     if (!expanded) await loadAll()
     setExpanded(v => !v)
   }
+
+  const cardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!abrirAgora) return
+    loadAll().then(() => {
+      setActiveTab('participantes')
+      setExpanded(true)
+      requestAnimationFrame(() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    })
+  }, [abrirAgora, loadAll])
 
   async function handleDeletePreInscricao(pi: ChampionshipPreInscricao) {
     try {
@@ -668,7 +680,7 @@ function ChampionshipCard({
         />
       )}
 
-      <div className="card space-y-4 overflow-hidden !p-0">
+      <div ref={cardRef} className="card space-y-4 overflow-hidden !p-0 scroll-mt-4">
         {/* Banner de imagem */}
         {c.imageUrl && (
           <div className="relative w-full h-32 overflow-hidden">
@@ -1075,6 +1087,9 @@ export default function CampeonatosPage() {
   const [showModal, setShowModal]         = useState(false)
   const [editTarget, setEditTarget]       = useState<Championship | null>(null)
   const [search, setSearch]               = useState('')
+  // ?abrir=<id>: link dos avisos de inscrição pra loja (AvisoDaInscricaoPraLoja.cs)
+  const [abrir, setAbrir] = useState<string | null>(null)
+  useEffect(() => { setAbrir(new URLSearchParams(window.location.search).get('abrir')) }, [])
 
   const load = useCallback(async (q?: string) => {
     setLoading(true)
@@ -1200,6 +1215,7 @@ export default function CampeonatosPage() {
                     onStatusChange={handleStatusChange}
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
+                    abrirAgora={c.id === abrir}
                   />
                 ))}
               </div>
@@ -1215,6 +1231,7 @@ export default function CampeonatosPage() {
                     onStatusChange={handleStatusChange}
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
+                    abrirAgora={c.id === abrir}
                   />
                 ))}
               </div>
@@ -1230,6 +1247,7 @@ export default function CampeonatosPage() {
                     onStatusChange={handleStatusChange}
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
+                    abrirAgora={c.id === abrir}
                     onDelete={handleDelete}
                   />
                 ))}

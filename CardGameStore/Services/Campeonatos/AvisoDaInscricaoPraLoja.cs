@@ -24,8 +24,8 @@ namespace CardGameStore.Services.Campeonatos;
 
 public static class AvisoDaInscricaoPraLoja
 {
-    /// <summary>Lista de participantes do campeonato no painel.</summary>
-    public static string Link(Guid championshipId) => $"/admin/campeonatos/{championshipId}";
+    /// <summary>Campeonatos no painel, com o card desse aberto nos participantes (a página lê ?abrir=).</summary>
+    public static string Link(Guid championshipId) => $"/admin/campeonatos?abrir={championshipId}";
 
     public static async Task<bool> LigadoAsync(AppDbContext db)
     {
