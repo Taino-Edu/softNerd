@@ -8,6 +8,13 @@
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
 
+## [v1.96.1] - 2026-11-24
+
+### Comanda: produto com tamanho/cor volta pro tamanho certo
+- **Cancelar a comanda, tirar um item ou diminuir a quantidade** devolvia a peça ao total do produto, e não ao tamanho/cor escolhido: a "Camiseta P" ficava com estoque a menos e o produto com estoque a mais. Agora volta pro tamanho. Aumentar a quantidade também tira do tamanho.
+- Produto sem tamanho/cor já voltava certo e continua igual. O estorno de comanda fechada já fazia certo.
+- Só acontecia com item lançado pelo cliente na comanda da mesa, que é onde dá pra escolher o tamanho.
+
 ## [v1.96.0] - 2026-11-24
 
 ### Comandas do Painel Geral: adicionar itens e fechar em duas telas
