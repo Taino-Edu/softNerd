@@ -54,9 +54,20 @@ public static class Funcionalidades
     public const string DolarTempoRealCartas = "dolar-tempo-real-cartas";
     public const string PdvResponsivo = "pdv-responsivo";
     public const string ComandaTelas = "comanda-telas";
+    public const string AvisosPedidoCliente = "avisos-pedido-cliente";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
+
+        new(AvisosPedidoCliente,
+            Nome:       "Avisos do pedido pro cliente: pagamento confirmado e pedido cancelado pela loja",
+            OQueMuda:   "O cliente recebe no sininho e no celular quando o Pix do pedido é confirmado, quando a loja registra o pagamento " +
+                        "feito por fora e quando a loja cancela o pedido (ou tira da fila). Antes ele só via o Pix confirmado se estivesse " +
+                        "com a tela aberta, e não sabia do cancelamento.",
+            SeDesligar: "Volta como era: o cliente só recebe aviso quando a loja registra o pedido pra ele.",
+            Padrao:     true,
+            Desde:      "v1.97.0",
+            RevisarEm:  new DateOnly(2027, 1, 24)),
 
         new(ComandaTelas,
             Nome:       "Comandas: telas de itens e fechamento",

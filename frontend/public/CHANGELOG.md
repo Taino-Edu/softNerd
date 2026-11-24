@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.96.2] — 2026-11-24
+## [v1.97.1] — 2026-11-24
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.97.0] - 2026-11-24
+
+### O cliente fica sabendo do pedido
+- **Pagamento confirmado:** quando o Pix do pedido (cartas do Mercado ou produtos) cai, o cliente recebe no sininho e no celular "Pagamento confirmado ✅ — é só retirar na loja", mesmo com a tela do Pix fechada.
+- **Pagamento registrado pela loja:** quando a loja lança um pagamento feito por fora, o cliente também é avisado.
+- **Pedido cancelado pela loja:** o cliente recebe "Pedido cancelado" com o que foi cancelado. Se já tinha pago, o aviso diz que a loja vai combinar a devolução do valor. Quem é tirado da fila de espera também fica sabendo. Quando é o próprio cliente que cancela, não chega aviso.
+- **Com volta:** chave "Avisos do pedido pro cliente". Desligada, volta como era (o cliente só era avisado quando a loja registrava o pedido pra ele).
 
 ## [v1.96.1] - 2026-11-24
 
