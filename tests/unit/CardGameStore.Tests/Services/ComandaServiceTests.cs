@@ -705,4 +705,23 @@ public class ComandaServiceTests
         db.ChangeTracker.Clear();
         (await db.Products.FindAsync(product.Id))!.StockQuantity.Should().Be(9); // 10 - 3 + 2
     }
+
+    [Fact]
+    public async Task AddItem_ProdutoSimplesComTamanhoDeOutroProduto_NaoMexeNaquelaVariante()
+    {
+        // Cliente manda (por fora da tela) o VariantId da camiseta junto do refrigerante e depois cancela:
+        // o estoque da camiseta não pode subir.
+        var db      = CreateDb(nameof(AddItem_ProdutoSimplesComTamanhoDeOutroProduto_NaoMexeNaquelaVariante));
+        var service = CreateService(db);
+        var (user, camiseta, tamanhoP, comanda) = await SeedComTamanhoAsync(db);
+        var refrigerante = await db.Products.FirstAsync(p => p.Name == "Refrigerante");
+
+        var comItem = await service.AddItemAsync(user.Id, new AddItemToComandaRequest { ProductId = refrigerante.Id, VariantId = tamanhoP.Id, Quantity = 1 });
+        (await db.ComandaItems.FindAsync(comItem.Items.Single().Id))!.VariantId.Should().BeNull();
+
+        await service.CancelComandaAsync(comanda.Id, Guid.NewGuid());
+
+        (await EstoquesAsync(db, camiseta, tamanhoP)).Should().Be((5, 50));
+        (await db.Products.FindAsync(refrigerante.Id))!.StockQuantity.Should().Be(10);
+    }
 }

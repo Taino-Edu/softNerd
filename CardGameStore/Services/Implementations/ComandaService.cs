@@ -766,7 +766,7 @@ public class ComandaService : IComandaService
         {
             if (item.VariantId.HasValue)
                 await _db.ProductVariants
-                    .Where(v => v.Id == item.VariantId.Value)
+                    .Where(v => v.Id == item.VariantId.Value && v.ProductId == item.ProductId!.Value)
                     .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + item.Quantity));
             else
                 await _db.Products
@@ -966,7 +966,7 @@ public class ComandaService : IComandaService
         if (delta == 0 || !item.ProductId.HasValue) return;
         if (item.VariantId.HasValue)
             await _db.ProductVariants
-                .Where(v => v.Id == item.VariantId.Value)
+                .Where(v => v.Id == item.VariantId.Value && v.ProductId == item.ProductId.Value)
                 .ExecuteUpdateAsync(s => s.SetProperty(v => v.StockQuantity, v => v.StockQuantity + delta));
         else
             await _db.Products
@@ -1021,6 +1021,10 @@ public class ComandaService : IComandaService
         }
 
         // ── Produto simples ───────────────────────────────────────────────────
+        // Tamanho/cor só vale pra produto com grade: um VariantId mandado junto de produto simples (de outro
+        // produto, por exemplo) não fica gravado no item — senão o cancelar mexeria no estoque daquela variante.
+        request.VariantId = null;
+
         // SkipStockDecrement (homologação de pré-venda): estoque já foi baixado na
         // reserva — só resolve nome/preço sem mexer no saldo.
         if (request.SkipStockDecrement)
