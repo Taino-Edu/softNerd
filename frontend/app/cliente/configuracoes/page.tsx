@@ -22,11 +22,15 @@ const CORNERS = [
   { value: 'top-left',     label: 'Superior esquerdo' },
 ] as const
 
+// shrink-0: com a descrição em duas linhas (celular) o flex espremia o trilho e a bolinha saía pra fora
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={value}
       onClick={() => onChange(!value)}
-      className="relative w-11 h-6 rounded-full transition-colors duration-200"
+      className="relative w-11 h-6 shrink-0 rounded-full transition-colors duration-200"
       style={{ backgroundColor: value ? C.blue : '#CBD5E1' }}
     >
       <span

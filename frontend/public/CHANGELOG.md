@@ -1,12 +1,25 @@
 # Changelog — Santuário Nerd
 
-## [v1.100.0] — 2026-11-24
+## [v1.101.0] — 2026-11-24
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.100.0] - 2026-11-24
+
+### Campeonato: a loja fica sabendo de inscrição nova
+- **Inscrição nova:** quando um jogador se inscreve sozinho pelo site num campeonato grátis, os admins e os operadores com a permissão Campeonatos recebem no sininho e no celular "Inscrição nova: nome", com o campeonato, o número do jogador e quantas vagas já foram (ex.: "5 de 16 vagas").
+- **Inscrição paga:** quando o Pix da inscrição cai, chega "Inscrição paga: nome" com o valor pago. Vale também pra cobrança feita pela loja.
+- **Sem barulho:** vaga só segurada esperando o Pix não avisa (muitas vencem sem pagar), e inscrição que a própria loja faz no grátis também não. Clicar no aviso abre a lista de participantes do campeonato. Cada tipo pode ser ignorado no sininho.
+- **Com volta:** chave "Campeonato: a loja é avisada de inscrição nova". Desligada, volta como era.
+
+### Passeio de visual e celular
+- **Campeonatos (painel):** a tela buscava a lista duas vezes ao abrir e, na segunda, trocava os cards pelo "carregando" (um card aberto fechava sozinho). Agora busca uma vez, e recarregar (busca, mudança de status) mantém os cards na tela.
+- **Configurações (cliente):** no celular, os interruptores com descrição em duas linhas ("E-mails de campeonato", "E-mails de compra") ficavam espremidos, com a bolinha pra fora do trilho.
+- **Conferido sem problema** em celular (375px) e notebook pequeno (1024px): as 30 telas do painel, a loja, a área do cliente (conta, compras, Mercado de Cartas, campeonatos, sacola, configurações) e as páginas de entrada e legais. Nenhuma tela rola pro lado.
 
 ## [v1.99.0] - 2026-11-24
 

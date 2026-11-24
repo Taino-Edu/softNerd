@@ -57,9 +57,20 @@ public static class Funcionalidades
     public const string AvisosPedidoCliente = "avisos-pedido-cliente";
     public const string ComprovanteInscricao = "comprovante-inscricao";
     public const string ComprovanteCompra = "comprovante-compra";
+    public const string AvisoInscricaoLoja = "aviso-inscricao-loja";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
+
+        new(AvisoInscricaoLoja,
+            Nome:       "Campeonato: a loja é avisada de inscrição nova",
+            OQueMuda:   "Quando um jogador garante a vaga sozinho (inscrição grátis pelo site ou Pix da inscrição pago), os admins e os " +
+                        "operadores com a permissão Campeonatos recebem no sininho e no celular quem entrou, em qual campeonato, o número do " +
+                        "jogador e quantas vagas já foram. Vaga só segurada esperando o Pix não avisa. Cada tipo dá pra ignorar no sininho.",
+            SeDesligar: "Volta como era: a loja só vê as inscrições abrindo a lista de participantes.",
+            Padrao:     true,
+            Desde:      "v1.100.0",
+            RevisarEm:  new DateOnly(2027, 1, 24)),
 
         new(ComprovanteCompra,
             Nome:       "Comprovante de compra pro cliente: por e-mail e na conta",

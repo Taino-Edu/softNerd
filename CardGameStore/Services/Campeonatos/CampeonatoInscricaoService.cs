@@ -152,7 +152,10 @@ public class CampeonatoInscricaoService(
         logger.LogInformation("Usuário {UserId} iniciou inscrição no campeonato {ChampionshipId}", userId, championshipId);
         // Grátis entra firme: o comprovante sai na hora. Pago sai quando o Pix cair (PixReconciliationService).
         if (criouAgora && ch.EntryFeeInCents <= 0)
+        {
             await EmailDaInscricao.EnviarComprovanteAsync(db, email, logger, participante.Id);
+            await AvisoDaInscricaoPraLoja.AvisarAsync(db, push, logger, participante.Id, valorPagoEmCentavos: null);
+        }
         return (criouAgora, new InscricaoDto(new ParticipantDto
         {
             Id                = participante.Id,
