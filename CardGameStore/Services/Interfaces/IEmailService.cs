@@ -36,6 +36,9 @@ public interface IEmailService
     /// <summary>Cobrança da inscrição feita pela loja: só o botão pro site, sem o código Pix (v1.98.0).</summary>
     Task SendCobrancaInscricaoAsync(string toEmail, CobrancaInscricaoEmail c);
 
+    /// <summary>Comprovante de compra (comanda, balcão ou pedido do site) — v1.99.0. Tudo já formatado.</summary>
+    Task SendComprovanteCompraAsync(string toEmail, ComprovanteCompraEmail c);
+
     // ── Pré-venda / Lista de espera ───────────────────────────────────────────
 
     /// <summary>Avisa o cliente que chegou sua vez na lista de espera.</summary>
@@ -79,3 +82,14 @@ public sealed record ComprovanteInscricaoEmail(
 /// <summary>Cobrança da inscrição feita pela loja (v1.98.0). PrazoDaVaga em Brasília; nulo = sem prazo.</summary>
 public sealed record CobrancaInscricaoEmail(
     string Loja, string Jogador, string Campeonato, string Valor, string? PrazoDaVaga, string Link);
+
+/// <summary>Uma linha do comprovante de compra: "2× Booster" — R$ 30,00.</summary>
+public sealed record ItemDoComprovante(string Nome, int Quantidade, string Subtotal);
+
+/// <summary>
+/// Comprovante de compra (v1.99.0). Origem: "Comanda", "Compra no balcão" ou "Pedido do site". Quando em Brasília.
+/// Desconto/Pontos nulos = não houve. Pagamento: uma linha por forma ("Pix — R$ 10,00").
+/// </summary>
+public sealed record ComprovanteCompraEmail(
+    string Loja, string Cliente, string Origem, string Quando, IReadOnlyList<ItemDoComprovante> Itens,
+    string? Desconto, string? Pontos, string Total, IReadOnlyList<string> Pagamento, string Codigo, string Link);
