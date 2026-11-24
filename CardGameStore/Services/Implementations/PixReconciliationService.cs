@@ -18,6 +18,7 @@ using CardGameStore.DTOs;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using CardGameStore.Services.Pedidos;
 
 namespace CardGameStore.Services.Implementations;
 
@@ -78,6 +79,7 @@ public class PixReconciliationService : IPixReconciliationService
         ComandaDto? comandaFechada = null;
         AvisoPendente? aviso = null;
         AvisoDaEquipe? avisoEquipe = null;
+        AvisoDoCliente? avisoCliente = null;
         var baixaEfetuada = false;
 
         // Transação manual precisa rodar dentro da execution strategy
@@ -120,7 +122,7 @@ public class PixReconciliationService : IPixReconciliationService
                     aviso = await BaixarCampeonatoAsync(pix);
                     break;
                 case PixCobrancaOrigem.Reserva:
-                    avisoEquipe = await BaixarReservaAsync(pix);
+                    (avisoEquipe, avisoCliente) = await BaixarReservaAsync(pix);
                     break;
                 // VendaAvulsa existe no enum mas nenhum fluxo gera cobrança com ela — nada a baixar.
                 case PixCobrancaOrigem.VendaAvulsa:
@@ -151,6 +153,13 @@ public class PixReconciliationService : IPixReconciliationService
         {
             try { await _push.SendToManyAsync(avisoEquipe.Ids, avisoEquipe.Titulo, avisoEquipe.Corpo, "/admin/reservas"); }
             catch (Exception ex) { _logger.LogWarning(ex, "Push do pedido pago não saiu pra loja (tx {TxId}).", pix.TxId); }
+        }
+
+        if (avisoCliente is not null)
+        {
+            // Chave "avisos-pedido-cliente": o sininho já está gravado; falha de push não desfaz o pagamento.
+            try { await _push.SendAsync(avisoCliente.UserId, avisoCliente.Titulo, avisoCliente.Corpo, AvisoDoCliente.Link, avisoCliente.Imagem); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Push do pedido pago não saiu pro cliente (tx {TxId}).", pix.TxId); }
         }
 
         if (aviso is not null)
@@ -375,9 +384,9 @@ public class PixReconciliationService : IPixReconciliationService
     //     no lançamento financeiro (o valor cobrado incluía esse item).
     // Cobranças antigas (sem snapshot, null) caem no comportamento legado: quitar
     // o grupo inteiro — é o que a tela/robô já faziam antes desta vinculação.
-    private async Task<AvisoDaEquipe?> BaixarReservaAsync(PixCobranca pix)
+    private async Task<(AvisoDaEquipe? Equipe, AvisoDoCliente? Cliente)> BaixarReservaAsync(PixCobranca pix)
     {
-        if (pix.ReservationGroupId is null) return null;
+        if (pix.ReservationGroupId is null) return (null, null);
         var groupId = pix.ReservationGroupId.Value;
 
         HashSet<Guid>? snapshot = null;
@@ -399,12 +408,14 @@ public class PixReconciliationService : IPixReconciliationService
             .Where(r => r.ReservationGroupId == groupId && r.Kind == "pre_venda" && r.Status == "active")
             .ToListAsync();
         var quitados = 0;
+        var pagos = new List<Guid>();
         foreach (var r in itens)
         {
             if (snapshot is not null && !snapshot.Contains(r.Id)) continue;
             r.ExpiresAt     = null;
             r.PaymentMethod = "pix";
             quitados++;
+            pagos.Add(r.Id);
         }
 
         // Itens do snapshot cancelados entre a geração e o pagamento: o cliente pagou
@@ -430,6 +441,7 @@ public class PixReconciliationService : IPixReconciliationService
                     r.ExpiresAt     = null;
                     r.PaymentMethod = "pix";
                     reativados++;
+                    pagos.Add(r.Id);
                 }
                 await AvisarAdminsPixDePedidoCanceladoAsync(pix, cancelados[0].User?.Name, reativados, cancelados.Count - reativados);
             }
@@ -471,7 +483,25 @@ public class PixReconciliationService : IPixReconciliationService
             });
         }
 
-        return quitados > 0 ? await AvisarEquipePedidoPagoAsync(pix, groupId) : null;
+        if (quitados == 0) return (null, null);
+        return (await AvisarEquipePedidoPagoAsync(pix, groupId), await AvisarClientePedidoPagoAsync(pix, pagos));
+    }
+
+    /// <summary>
+    /// Chave "avisos-pedido-cliente": o cliente fica sabendo que o Pix caiu mesmo de tela fechada
+    /// (antes só via com a tela do Pix aberta). Gravado na transação da baixa; o push sai depois do commit.
+    /// </summary>
+    private async Task<AvisoDoCliente?> AvisarClientePedidoPagoAsync(PixCobranca pix, List<Guid> pagos)
+    {
+        if (pagos.Count == 0 || !await AvisoAoCliente.LigadoAsync(_db)) return null;
+        var itens = await _db.ProductReservations.AsNoTracking()
+            .Include(r => r.Product).Include(r => r.Variant)
+            .Where(r => pagos.Contains(r.Id))
+            .ToListAsync();
+        if (itens.Count == 0) return null;
+
+        var (titulo, corpo) = AvisoAoCliente.PixConfirmado(AvisoAoCliente.OQue(itens), pix.ValorEmCentavos);
+        return AvisoAoCliente.Gravar(_db, itens[0].UserId, titulo, corpo, itens[0].Product?.ImageUrl);
     }
 
     /// <summary>

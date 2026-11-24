@@ -47,7 +47,8 @@ public interface IPedidoAndamentoService
 
 public class PedidoAndamentoService(
     AppDbContext db, IVendaAvulsaService vendas, IPedidoCobrancaService cobranca, IProductService produtos,
-    IAuditService audit, IHubContext<ComandaHub> hub, FuncionalidadesService? funcionalidades = null) : IPedidoAndamentoService
+    IAuditService audit, IHubContext<ComandaHub> hub, FuncionalidadesService? funcionalidades = null,
+    IPushService? push = null) : IPedidoAndamentoService
 {
     private const string EncerradaOuVirouVenda = "Esta reserva já foi encerrada ou acabou de virar venda — recarregue e tente de novo.";
 
@@ -79,6 +80,7 @@ public class PedidoAndamentoService(
                 details: $"{{\"produtoId\":\"{res.ProductId}\",\"status\":\"{statusOriginal}\",\"pelaLoja\":{(res.UserId != ator.Id).ToString().ToLowerInvariant()}}}");
 
         if (devolveuEstoque) await EstoqueVoltouAsync(res.ProductId);
+        if (res.UserId != ator.Id) await AvisarCancelamentoAsync(res, jaPaga);
         return new PedidoCanceladoDto(jaPaga);
     }
 
@@ -121,6 +123,7 @@ public class PedidoAndamentoService(
                 details: $"{{\"produtoId\":\"{res.ProductId}\",\"valorPago\":true,\"observacao\":\"estorno manual pendente\"}}");
 
         if (devolveuEstoque) await EstoqueVoltouAsync(res.ProductId);
+        if (status == "cancelled" && res.UserId != ator.Id) await AvisarCancelamentoAsync(res, jaPaga);
         return Pedido.ParaDto(res);
     }
 
@@ -328,6 +331,9 @@ public class PedidoAndamentoService(
                 .ExecuteUpdateAsync(s => s.SetProperty(r => r.VendaAvulsaId, venda.Id));
         });
 
+        var (tituloPago, corpoPago) = AvisoAoCliente.PagamentoRegistrado(AvisoAoCliente.OQue(aVender));
+        await AvisarClienteAsync(itens[0].UserId, tituloPago, corpoPago, itens[0].Product?.ImageUrl);
+
         return new PagamentoRegistradoDto("Pagamento registrado — o pedido fica aguardando a retirada.",
             aVender.Count, venda?.DiscountPercent ?? 0, venda?.DiscountInReais ?? 0);
     }
@@ -359,6 +365,7 @@ public class PedidoAndamentoService(
         // O estorno já devolveu o estoque: aqui só fecha os itens
         var doPedido = db.ProductReservations.Where(r => r.VendaAvulsaId == vendaId && r.Status == "active");
         var produtosDoPedido = await doPedido.Select(r => r.ProductId).Distinct().ToListAsync();
+        var cancelados = await doPedido.AsNoTracking().Include(r => r.Product).Include(r => r.Variant).ToListAsync();
         var agora = DateTime.UtcNow;
         var itens = await doPedido.ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, "cancelled").SetProperty(r => r.CancelledAt, agora));
 
@@ -368,6 +375,11 @@ public class PedidoAndamentoService(
         // Todo produto que voltou pro estoque puxa a fila dele, não só o da linha clicada
         foreach (var produtoId in produtosDoPedido) await ProcessarFilaAsync(produtoId);
         await Pedido.AvisarEstoqueMudouAsync(hub);
+        if (cancelados.Count > 0 && res.UserId != ator.Id)
+        {
+            var (titulo, corpo) = AvisoAoCliente.Cancelado(AvisoAoCliente.OQue(cancelados), fila: false, pago: true);
+            await AvisarClienteAsync(res.UserId, titulo, corpo, cancelados[0].Product?.ImageUrl);
+        }
         return new PedidoCanceladoDto(JaPaga: true, VendaEstornada: true, Itens: itens);
     }
 
@@ -476,6 +488,30 @@ public class PedidoAndamentoService(
     {
         await ProcessarFilaAsync(produtoId);
         await Pedido.AvisarEstoqueMudouAsync(hub);
+    }
+
+    /// <summary>Item cancelado pela loja (não pelo próprio cliente): avisa o cliente (chave "avisos-pedido-cliente").</summary>
+    private async Task AvisarCancelamentoAsync(ProductReservation res, bool pago)
+    {
+        try { await Pedido.CarregarProdutoAsync(db, res); } catch { /* sem nome, o aviso diz "produto" */ }
+        var (titulo, corpo) = AvisoAoCliente.Cancelado(AvisoAoCliente.OQue([res]), fila: res.Kind == "fila", pago);
+        await AvisarClienteAsync(res.UserId, titulo, corpo, res.Product?.ImageUrl);
+    }
+
+    /// <summary>
+    /// Sininho + push pro cliente, se a chave "avisos-pedido-cliente" estiver ligada. Melhor-esforço:
+    /// roda depois da mudança gravada — falha aqui não desfaz o cancelamento nem o pagamento.
+    /// </summary>
+    private async Task AvisarClienteAsync(Guid userId, string titulo, string corpo, string? imagem)
+    {
+        try
+        {
+            if (!await AvisoAoCliente.LigadoAsync(db)) return;
+            var aviso = AvisoAoCliente.Gravar(db, userId, titulo, corpo, imagem);
+            await db.SaveChangesAsync();
+            if (push is not null) await push.SendAsync(aviso.UserId, aviso.Titulo, aviso.Corpo, AvisoDoCliente.Link, aviso.Imagem);
+        }
+        catch { /* aviso é melhor-esforço */ }
     }
 
     private async Task ProcessarFilaAsync(Guid produtoId)

@@ -791,4 +791,29 @@ public class PixReconciliationServiceTests
         pix.PagoEm.Should().BeNull();
         pix.Status.Should().Be("ATIVA", "falha na consulta deixa a cobrança pra próxima tentativa");
     }
+
+    // ── v1.97.0 (chave avisos-pedido-cliente): o cliente sabe do Pix confirmado mesmo de tela fechada ──
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task Reconciliar_PedidoPago_AvisaOClienteSoComAChaveLigada(bool ligada, int avisos)
+    {
+        var db = CreateDb(nameof(Reconciliar_PedidoPago_AvisaOClienteSoComAChaveLigada) + ligada);
+        var (reserva, pix, _) = await SeedPedidoNaoPagoAsync(db);
+        db.FuncionalidadesEstado.Add(new FuncionalidadeEstado { Codigo = Funcionalidades.AvisosPedidoCliente, Ligada = ligada });
+        await db.SaveChangesAsync();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object);
+
+        await service.ReconciliarAsync(pix);
+
+        var avisosDoCliente = await db.Notifications.AsNoTracking()
+            .Where(n => n.UserId == reserva.UserId && n.Title == "Pagamento confirmado ✅").ToListAsync();
+        avisosDoCliente.Should().HaveCount(avisos);
+        if (ligada) avisosDoCliente[0].Body.Should().Contain("Blister").And.Contain("80,00");
+
+        // Robô e tela juntos: a segunda passada não repete o aviso
+        await service.ReconciliarAsync(pix);
+        (await db.Notifications.CountAsync(n => n.UserId == reserva.UserId && n.Title == "Pagamento confirmado ✅")).Should().Be(avisos);
+    }
 }

@@ -1508,4 +1508,79 @@ public class ReservationControllerTests
         reconciliacao.Verify(x => x.ReconciliarAsync(It.IsAny<PixCobranca>(), It.IsAny<Guid?>()), Times.Never(),
             "a listagem lê o que está gravado; quem confere no Inter é o robô ou a tela do pedido");
     }
+
+    // ── Avisos pro cliente (v1.97.0, chave avisos-pedido-cliente): o cliente não sabia do cancelamento ──
+
+    private static Task<List<string>> AvisosDoClienteAsync(AppDbContext db, Guid clienteId) =>
+        db.Notifications.AsNoTracking().Where(n => n.UserId == clienteId).Select(n => n.Title).ToListAsync();
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task Cancelar_PelaLoja_AvisaOClienteSoComAChaveLigada(bool ligada, int avisos)
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
+        var adminId = Guid.NewGuid();
+        await Chaves(db).DefinirAsync(Funcionalidades.AvisosPedidoCliente, ligada, adminId);
+        var andamento = CreateServicos(db).Andamento;
+
+        await andamento.CancelarAsync(itens[0].Id, new Ator(adminId, "Maikon", EhAdmin: true));
+
+        var titulos = await AvisosDoClienteAsync(db, cliente.Id);
+        titulos.Count(t => t == "Pedido cancelado").Should().Be(avisos);
+        (await db.Notifications.AsNoTracking().Where(n => n.UserId == cliente.Id).Select(n => n.Body).ToListAsync())
+            .Should().OnlyContain(b => b.Contains("Booster Pack"));
+    }
+
+    [Fact]
+    public async Task Cancelar_PeloProprioCliente_NaoAvisa()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
+        var andamento = CreateServicos(db).Andamento;
+
+        await andamento.CancelarAsync(itens[0].Id, new Ator(cliente.Id, cliente.Name, EhAdmin: false));
+
+        (await AvisosDoClienteAsync(db, cliente.Id)).Should().BeEmpty("foi ele mesmo quem cancelou");
+    }
+
+    [Fact]
+    public async Task MarcarCancelado_PeloPainel_AvisaOCliente()
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var itens = await SeedCarrinhoAsync(db, cliente.Id, Guid.NewGuid(), (produto.Id, 1));
+        var andamento = CreateServicos(db).Andamento;
+
+        await andamento.AtualizarStatusAsync(itens[0].Id, "cancelled", new Ator(Guid.NewGuid(), "Maikon", EhAdmin: true));
+
+        (await AvisosDoClienteAsync(db, cliente.Id)).Should().Equal("Pedido cancelado");
+    }
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task RegistrarPagamento_AvisaOClienteSoComAChaveLigada(bool ligada, int avisos)
+    {
+        var db = CreateDb(nameof(ReservationControllerTests));
+        var cliente = await SeedUserAsync(db);
+        var produto = await SeedProductAsync(db, stock: 5);
+        var groupId = Guid.NewGuid();
+        await SeedCarrinhoAsync(db, cliente.Id, groupId, (produto.Id, 1));
+        var adminId = Guid.NewGuid();
+        await Chaves(db).DefinirAsync(Funcionalidades.AvisosPedidoCliente, ligada, adminId);
+        var (venda, _) = CreateVendaSpyComId("venda-x");
+        var andamento = CreateServicos(db, vendaService: venda).Andamento;
+
+        await andamento.RegistrarPagamentoAsync(groupId, new HomologarRequest { PaymentMethod = "Dinheiro" },
+            new Ator(adminId, "Maikon", EhAdmin: true));
+
+        (await AvisosDoClienteAsync(db, cliente.Id)).Count(t => t == "Pagamento registrado ✅").Should().Be(avisos);
+    }
 }
