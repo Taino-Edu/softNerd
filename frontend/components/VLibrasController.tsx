@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { usePreferences } from '@/hooks/usePreferences'
+import { useTemRodapeFixo } from '@/lib/rodapeFixo'
 
 const SCRIPT_ID = 'vlibras-plugin-script'
 const WRAPPER_ID = 'vlibras-access-wrapper'
@@ -36,8 +37,11 @@ const cantoDaTela = (caminho: string, corner: string) =>
 
 // Páginas com a barra da comanda no rodapé: no celular a mão ficava em cima da seta que abre os
 // itens (teste do fluxo da mesa, 07/11). Nos cantos de baixo ela sobe e deixa a barra livre.
-const COM_BARRA_NO_RODAPE = ['/cliente']
-const folgaInferior = (caminho: string) => (COM_BARRA_NO_RODAPE.includes(caminho) ? 88 : 10)
+const COM_BARRA_NO_RODAPE: Record<string, number> = { '/cliente': 88 }
+// Nova venda e telas da comanda (lib/rodapeFixo): o total e o botão de avançar ficam presos no pé (~104px).
+const ACIMA_DO_RODAPE_FIXO = 120
+const folgaInferior = (caminho: string, rodapeFixo: boolean) =>
+  rodapeFixo ? ACIMA_DO_RODAPE_FIXO : COM_BARRA_NO_RODAPE[caminho] ?? 10
 
 /**
  * Abre o painel do VLibras. O botão mora dentro do Shadow DOM do plugin — o seletor antigo
@@ -85,7 +89,7 @@ export default function VLibrasController() {
   const caminho = usePathname() ?? ''
   const noMenu = temLibrasNoMenu(caminho)
   const canto = cantoDaTela(caminho, prefs.vlibras.corner)
-  const baixo = folgaInferior(caminho)
+  const baixo = folgaInferior(caminho, useTemRodapeFixo())
   const carregado = prefs.vlibras.enabled || noMenu
   const flutuante = prefs.vlibras.enabled && !noMenu
 
