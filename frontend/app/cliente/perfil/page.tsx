@@ -15,8 +15,10 @@ import {
   Wallet, CalendarClock, Receipt, ChevronDown, ChevronUp,
   ShoppingBag, XCircle, Trophy, Coins, ShieldCheck, Mail, Settings, BookOpen,
   Bell, Package, X, Hourglass, Pencil, Check, Loader2 as Loader2Icon,
-  QrCode, ShoppingCart, ChevronRight, Swords,
+  QrCode, ShoppingCart, ChevronRight, Swords, FileText,
 } from 'lucide-react'
+import { printComprovanteCompra } from '@/lib/printComprovanteCompra'
+import { useSiteConfig } from '@/lib/useSiteConfig'
 import PixReservaModal from '@/components/PixReservaModal'
 import MinhaLiga from '@/components/cliente/MinhaLiga'
 import clsx from 'clsx'
@@ -147,6 +149,14 @@ function DetalhePagamento({ pagamento, total, pointsAppliedInCents = 0, discount
   )
 }
 
+/** Formas do comprovante de compra: uma linha por forma; com duas, cada uma com o seu valor. */
+function linhasDePagamento(p: Pagamento, total: number): string[] {
+  if (!p.paymentMethod) return ['Forma não registrada']
+  if (!temSegundoPagamento(p)) return [pmLabel(p.paymentMethod)]
+  const segundo = p.secondPaymentAmountInCents / 100
+  return [`${pmLabel(p.paymentMethod)} — ${fmtBRL(total - segundo)}`, `${pmLabel(p.secondPaymentMethod!)} — ${fmtBRL(segundo)}`]
+}
+
 /** Histórico do cliente = comandas + vendas de balcão, na mesma linha do tempo. */
 type HistoricoItem =
   | { kind: 'comanda'; id: string; quando: number; comanda: ComandaDto }
@@ -256,6 +266,8 @@ function EditProfileModal({ profile, onClose, onSaved }: {
 
 export default function PerfilPage() {
   const router = useRouter()
+  const site = useSiteConfig()
+  const comprovanteCompra = useFuncionalidade('comprovante-compra') === true
   const [profile,        setProfile]        = useState<UserProfile | null>(null)
   const [crediarios,     setCrediarios]     = useState<CrediariosDto[]>([])
   const [history,        setHistory]        = useState<ComandaDto[]>([])
@@ -917,6 +929,28 @@ export default function PerfilPage() {
                                   total={v!.totalInReais}
                                   discountInReais={v!.discountInReais}
                                 />}
+
+                            {/* v1.99.0 (chave comprovante-compra): comprovante pra imprimir ou salvar em PDF */}
+                            {comprovanteCompra && !estornada && (!c || c.status === 'Fechada') && (
+                              <button type="button"
+                                onClick={() => printComprovanteCompra({
+                                  loja: site?.siteName || 'Santuário Nerd',
+                                  cliente: profile?.name ?? '',
+                                  id: h.id,
+                                  origem: c ? (c.tableIdentifier ? `Comanda · Mesa ${c.tableIdentifier}` : 'Comanda') : origemLabel(v!.origem),
+                                  quando: c ? (c.closedAt ?? c.openedAt) : v!.soldAt,
+                                  itens: c
+                                    ? c.items.map(i => ({ nome: i.itemNameSnapshot, quantidade: i.quantity, subtotalEmReais: i.subtotalInReais }))
+                                    : v!.items.map(i => ({ nome: i.productName, quantidade: i.quantity, subtotalEmReais: i.subtotalInReais })),
+                                  descontoEmReais: c ? c.discountInCents / 100 : v!.discountInReais,
+                                  pontosEmReais: c ? c.pointsApplied / 100 : 0,
+                                  totalEmReais: total,
+                                  pagamento: linhasDePagamento(c ?? v!, total),
+                                })}
+                                className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 text-[11px] font-black text-[#1E4FD6] transition-all active:scale-95">
+                                <FileText className="w-3.5 h-3.5" /> Comprovante
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>

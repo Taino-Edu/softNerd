@@ -56,9 +56,20 @@ public static class Funcionalidades
     public const string ComandaTelas = "comanda-telas";
     public const string AvisosPedidoCliente = "avisos-pedido-cliente";
     public const string ComprovanteInscricao = "comprovante-inscricao";
+    public const string ComprovanteCompra = "comprovante-compra";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
+
+        new(ComprovanteCompra,
+            Nome:       "Comprovante de compra pro cliente: por e-mail e na conta",
+            OQueMuda:   "Compra no nome de um cliente cadastrado (comanda fechada, venda no Frente de Caixa com cliente, pedido do site " +
+                        "pago) manda o comprovante por e-mail com os itens, o desconto, o total e a forma de pagamento. Em Minha conta → " +
+                        "Compras, cada compra ganha o botão \"Comprovante\" (dá pra salvar em PDF). O cliente desliga os e-mails em Configurações.",
+            SeDesligar: "Nenhum e-mail de compra sai e o botão some do histórico.",
+            Padrao:     true,
+            Desde:      "v1.99.0",
+            RevisarEm:  new DateOnly(2027, 1, 24)),
 
         new(ComprovanteInscricao,
             Nome:       "Campeonato: comprovante de inscrição e cobrança por e-mail",

@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.98.1] — 2026-11-24
+## [v1.99.1] — 2026-11-24
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.99.0] - 2026-11-24
+
+### Comprovante de compra pro cliente
+- **Por e-mail:** toda compra no nome de um cliente cadastrado manda o comprovante com os itens, o desconto, os pontos usados, o total, a forma de pagamento (as duas, se foi dividido) e um código da compra. Vale pra comanda fechada, venda no Frente de Caixa com cliente e pedido do site pago (Pix, pagamento registrado ou entregue no balcão). O e-mail sai em segundo plano: fechar a comanda e vender no caixa não ficam esperando.
+- **Na conta:** em Minha conta → Compras, cada compra aberta ganha o botão "Comprovante", pronto pra imprimir ou salvar em PDF. Compra estornada não tem comprovante.
+- **O cliente escolhe:** "E-mails de compra" em Configurações liga e desliga.
+- **Com volta:** chave "Comprovante de compra pro cliente". Desligada, nenhum e-mail de compra sai e o botão some.
 
 ## [v1.98.0] - 2026-11-24
 
