@@ -70,8 +70,8 @@ public static class AvisoDaInscricaoPraLoja
             var pago   = valorPagoEmCentavos is > 0;
             var titulo = pago ? $"Inscrição paga: {quem}" : $"Inscrição nova: {quem}";
             var corpo  = pago
-                ? $"{quem} pagou a inscrição no {p.Campeonato} ({Dinheiro.Brl(valorPagoEmCentavos!.Value / 100m)} no Pix). Jogador #{p.PlayerNumber} — {vagas}."
-                : $"{quem} se inscreveu no {p.Campeonato} pelo site. Jogador #{p.PlayerNumber} — {vagas}.";
+                ? $"{quem} pagou a inscrição em \"{p.Campeonato}\" ({Dinheiro.Brl(valorPagoEmCentavos!.Value / 100m)} no Pix). Jogador #{p.PlayerNumber} — {vagas}."
+                : $"{quem} se inscreveu em \"{p.Campeonato}\" pelo site. Jogador #{p.PlayerNumber} — {vagas}.";
             var link   = Link(p.ChampionshipId);
 
             EquipeDaLoja.Avisar(db, equipe, titulo, corpo, link);

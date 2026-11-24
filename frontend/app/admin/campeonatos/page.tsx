@@ -539,11 +539,12 @@ function AddParticipantModal({ championshipId, game, entryFeeInCents, onClose, o
 
 // ── Card do Campeonato ────────────────────────────────────────────────────────
 function ChampionshipCard({
-  c, onStatusChange, onParticipantChange, onDelete, onEdit, abrirAgora,
+  c, onStatusChange, onParticipantChange, onDelete, onEdit, abrirAgora, onAberto,
 }: {
   c: Championship
   /** Veio de um aviso ("Inscrição nova"/"Inscrição paga"): abre os participantes e rola até o card */
   abrirAgora?: boolean
+  onAberto?: () => void
   onStatusChange: (id: string, status: string) => void
   onParticipantChange: () => void
   onDelete?: (id: string) => void
@@ -598,9 +599,12 @@ function ChampionshipCard({
     loadAll().then(() => {
       setActiveTab('participantes')
       setExpanded(true)
-      requestAnimationFrame(() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      onAberto?.()
+      // Depois de a lista abrir (altura final do card), senão a rolagem para no meio do caminho
+      setTimeout(() => cardRef.current?.scrollIntoView({ block: 'start' }), 150)
     })
-  }, [abrirAgora, loadAll])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- abre uma vez só, quando chega pelo aviso
+  }, [abrirAgora])
 
   async function handleDeletePreInscricao(pi: ChampionshipPreInscricao) {
     try {
@@ -680,7 +684,7 @@ function ChampionshipCard({
         />
       )}
 
-      <div ref={cardRef} className="card space-y-4 overflow-hidden !p-0 scroll-mt-4">
+      <div ref={cardRef} className="card space-y-4 overflow-hidden !p-0 scroll-mt-28 md:scroll-mt-4">
         {/* Banner de imagem */}
         {c.imageUrl && (
           <div className="relative w-full h-32 overflow-hidden">
@@ -1090,6 +1094,11 @@ export default function CampeonatosPage() {
   // ?abrir=<id>: link dos avisos de inscrição pra loja (AvisoDaInscricaoPraLoja.cs)
   const [abrir, setAbrir] = useState<string | null>(null)
   useEffect(() => { setAbrir(new URLSearchParams(window.location.search).get('abrir')) }, [])
+  /** Abriu o card do aviso: tira o ?abrir= (buscar ou recarregar não volta a rolar até ele) */
+  const aberto = useCallback(() => {
+    setAbrir(null)
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   const load = useCallback(async (q?: string) => {
     setLoading(true)
@@ -1100,8 +1109,11 @@ export default function CampeonatosPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Debounce na busca
+  // Debounce na busca. Na abertura não: o load acima já buscou, e a segunda busca trocava a lista
+  // pelo carregando e montava os cards de novo (o card aberto pelo aviso perdia a rolagem).
+  const primeiraBusca = useRef(true)
   useEffect(() => {
+    if (primeiraBusca.current) { primeiraBusca.current = false; return }
     const t = setTimeout(() => load(search || undefined), 350)
     return () => clearTimeout(t)
   }, [search, load])
@@ -1188,7 +1200,8 @@ export default function CampeonatosPage() {
         />
       </div>
 
-      {loading ? (
+      {/* Recarregando (busca, mudança de status): a lista fica na tela, sem desmontar os cards abertos */}
+      {loading && championships.length === 0 ? (
         <div className="flex justify-center py-16">
           <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -1216,6 +1229,7 @@ export default function CampeonatosPage() {
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
                     abrirAgora={c.id === abrir}
+                    onAberto={aberto}
                   />
                 ))}
               </div>
@@ -1232,6 +1246,7 @@ export default function CampeonatosPage() {
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
                     abrirAgora={c.id === abrir}
+                    onAberto={aberto}
                   />
                 ))}
               </div>
@@ -1248,6 +1263,7 @@ export default function CampeonatosPage() {
                     onParticipantChange={() => load(search || undefined)}
                     onEdit={setEditTarget}
                     abrirAgora={c.id === abrir}
+                    onAberto={aberto}
                     onDelete={handleDelete}
                   />
                 ))}
