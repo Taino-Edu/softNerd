@@ -69,6 +69,20 @@ public static class EmailDaInscricao
     /// <summary>Data e hora no calendário de Brasília (o servidor roda em UTC).</summary>
     public static string DataHora(DateTime utc) => Brasilia.ParaBrasilia(utc).ToString("dd/MM/yyyy 'às' HH:mm");
 
+    /// <summary>
+    /// Valor do Pix quitado de cada inscrição (o mais recente). A taxa do campeonato pode mudar depois da
+    /// cobrança, e a cobrança no prazo é reaproveitada: o comprovante mostra o que foi pago (Codex no PR #193).
+    /// </summary>
+    public static async Task<Dictionary<Guid, int>> ValoresPagosAsync(AppDbContext db, IReadOnlyCollection<Guid> participantes)
+    {
+        if (participantes.Count == 0) return [];
+        var pagas = await db.PixCobrancas.AsNoTracking()
+            .Where(c => c.ChampionshipParticipantId != null && participantes.Contains(c.ChampionshipParticipantId.Value) && c.PagoEm != null)
+            .Select(c => new { Id = c.ChampionshipParticipantId!.Value, c.ValorEmCentavos, c.PagoEm })
+            .ToListAsync();
+        return pagas.GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.PagoEm).First().ValorEmCentavos);
+    }
+
     /// <summary>Comprovante da vaga garantida. Vaga ainda segurada esperando Pix não tem comprovante.</summary>
     public static async Task EnviarComprovanteAsync(AppDbContext db, IEmailService? email, ILogger logger, Guid participantId)
     {
@@ -84,6 +98,9 @@ public static class EmailDaInscricao
 
             var ch   = p.Championship;
             var pago = p.EntryFeePaidAt is not null;
+            // O que foi pago de fato; sem Pix quitado (grátis ou pendente), a taxa atual
+            var valor = pago && (await ValoresPagosAsync(db, [p.Id])).TryGetValue(p.Id, out var pagoEmCentavos)
+                ? pagoEmCentavos : ch.EntryFeeInCents;
             var comprovante = new ComprovanteInscricaoEmail(
                 Loja:             await LojaAsync(db),
                 Jogador:          destino.Nome,
@@ -91,8 +108,8 @@ public static class EmailDaInscricao
                 Jogo:             ch.Game,
                 DataDoCampeonato: DataHora(ch.StartDate),
                 NumeroDoJogador:  p.PlayerNumber,
-                Valor:            ch.EntryFeeInCents > 0 ? Dinheiro.Brl(ch.EntryFeeInCents / 100m) : null,
-                FormaDePagamento: ch.EntryFeeInCents <= 0 ? null : pago ? p.EntryFeePaymentMethod ?? "Pix" : "pagamento pendente",
+                Valor:            valor > 0 ? Dinheiro.Brl(valor / 100m) : null,
+                FormaDePagamento: valor <= 0 ? null : pago ? p.EntryFeePaymentMethod ?? "Pix" : "pagamento pendente",
                 PagoEm:           pago ? DataHora(p.EntryFeePaidAt!.Value) : null,
                 Codigo:           Codigo(p.Id),
                 Link:             LinkDaConta);
