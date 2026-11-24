@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { championshipApi, userApi, deckApi, Championship, ChampionshipParticipant, ChampionshipPreInscricao, DeckListDto, uploadApi, PodioItem } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Badge, BadgeTone } from '@/components/ui/Badge'
@@ -1085,7 +1086,12 @@ function ChampionshipCard({
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
+// useSearchParams precisa de Suspense em volta (senão o build do Next recusa a página)
 export default function CampeonatosPage() {
+  return <Suspense fallback={null}><Campeonatos /></Suspense>
+}
+
+function Campeonatos() {
   const [championships, setChampionships] = useState<Championship[]>([])
   const [loading, setLoading]             = useState(true)
   const [showModal, setShowModal]         = useState(false)
@@ -1093,7 +1099,9 @@ export default function CampeonatosPage() {
   const [search, setSearch]               = useState('')
   // ?abrir=<id>: link dos avisos de inscrição pra loja (AvisoDaInscricaoPraLoja.cs)
   const [abrir, setAbrir] = useState<string | null>(null)
-  useEffect(() => { setAbrir(new URLSearchParams(window.location.search).get('abrir')) }, [])
+  // Lido a cada mudança do endereço: clicar num aviso já estando nesta tela também abre o card (Codex no PR #196)
+  const abrirDoLink = useSearchParams().get('abrir')
+  useEffect(() => { if (abrirDoLink) setAbrir(abrirDoLink) }, [abrirDoLink])
   /** Abriu o card do aviso: tira o ?abrir= (buscar ou recarregar não volta a rolar até ele) */
   const aberto = useCallback(() => {
     setAbrir(null)
