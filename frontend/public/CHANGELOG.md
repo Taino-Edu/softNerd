@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.97.0] — 2026-11-24
+## [v1.98.0] — 2026-11-24
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.97.0] - 2026-11-24
+
+### O cliente fica sabendo do pedido
+- **Pagamento confirmado:** quando o Pix do pedido (cartas do Mercado ou produtos) cai, o cliente recebe no sininho e no celular "Pagamento confirmado ✅ — é só retirar na loja", mesmo com a tela do Pix fechada.
+- **Pagamento registrado pela loja:** quando a loja lança um pagamento feito por fora, o cliente também é avisado.
+- **Pedido cancelado pela loja:** o cliente recebe "Pedido cancelado" com o que foi cancelado. Se já tinha pago, o aviso diz que a loja vai combinar a devolução do valor. Quem é tirado da fila de espera também fica sabendo. Quando é o próprio cliente que cancela, não chega aviso.
+- **Com volta:** chave "Avisos do pedido pro cliente". Desligada, volta como era (o cliente só era avisado quando a loja registrava o pedido pra ele).
 
 ## [v1.96.1] - 2026-11-24
 
