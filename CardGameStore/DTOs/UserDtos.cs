@@ -51,6 +51,10 @@ public class NotificationPrefs
     /// </summary>
     [JsonPropertyName("emailsInscricao")]
     public bool EmailsInscricao { get; set; } = true;
+
+    /// <summary>Cliente: receber o comprovante de compra por e-mail (v1.99.0, chave "comprovante-compra").</summary>
+    [JsonPropertyName("emailsCompra")]
+    public bool EmailsCompra { get; set; } = true;
 }
 
 public class PdvPrefs
