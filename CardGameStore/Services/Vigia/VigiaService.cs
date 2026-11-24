@@ -90,12 +90,32 @@ public class VigiaService
         return novos;
     }
 
+    private static readonly string[] MensagensDeFora =
+    [
+        "Java object is gone",          // navegador interno do Instagram/Facebook (iabjs://) fechando a aba
+        "Handshake was canceled",       // tempo real cortado no meio da conexão (troca de tela, deploy); o SignalR religa
+        "Object Not Found Matching Id", // robô do Outlook/Bing que abre os links pra conferir
+    ];
+
+    /// <summary>
+    /// Erro que não é do site: o mesmo filtro do lib/reportarErro.ts do front, repetido aqui porque
+    /// celular com a página antiga em cache continua mandando. Também descarta quem não é navegador
+    /// (curl, scripts): o envio é anônimo e aberto. Passeio pelos alertas abertos em 24/11/2026.
+    /// </summary>
+    public static bool RuidoDeFora(string? mensagem, string? detalhe, string? navegador)
+    {
+        if (navegador is not null && !navegador.Contains("Mozilla/", StringComparison.Ordinal)) return true;
+        if (mensagem is not null && MensagensDeFora.Any(m => mensagem.Contains(m, StringComparison.OrdinalIgnoreCase))) return true;
+        return detalhe is not null && detalhe.Contains("iabjs://", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// Erro de JavaScript numa tela do site (app/error.tsx e o relator global). O mesmo erro
     /// na mesma tela soma ocorrências num alerta só; o 1º de cada um vai pro sininho.
     /// </summary>
     public async Task RegistrarErroTelaAsync(string mensagem, string rota, string? detalhe, Guid? userId, string? navegador)
     {
+        if (RuidoDeFora(mensagem, detalhe, navegador)) return;
         if (!await LigadoAsync()) return;
         // Envio anônimo: nada daqui vira link (seria isca pro admin) e o texto avisa que veio do navegador
         mensagem = Cortar(string.IsNullOrWhiteSpace(mensagem) ? "Erro sem mensagem" : mensagem.Trim(), 300);
