@@ -39,6 +39,9 @@ public interface ICampeonatoInscricaoService
 
     /// <summary>Rota legada do balcão: só desmarca pagamento que não veio do Pix.</summary>
     Task<PagamentoInscricaoDto> MarcarPagamentoAsync(Guid participantId, bool pago);
+
+    /// <summary>Meus Campeonatos do cliente, com o valor que ele pagou de fato (comprovante).</summary>
+    Task<List<MyParticipationDto>> MinhasParticipacoesAsync(Guid userId);
 }
 
 public class CampeonatoInscricaoService(
@@ -48,6 +51,13 @@ public class CampeonatoInscricaoService(
 {
     private const string NaoEncontrado = "Campeonato não encontrado.";
     private const string Lotado = "O campeonato atingiu o número máximo de participantes.";
+
+    public async Task<List<MyParticipationDto>> MinhasParticipacoesAsync(Guid userId)
+    {
+        var minhas = (await campeonatos.GetUserParticipationsAsync(userId)).ToList();
+        var pagos  = await EmailDaInscricao.ValoresPagosAsync(db, minhas.Select(p => p.Id).ToList());
+        return minhas.Select(p => p.ParaMinhaParticipacao(pagos.TryGetValue(p.Id, out var v) ? v : null)).ToList();
+    }
 
     public async Task<List<ParticipantDto>> ParticipantesAsync(Guid championshipId)
     {
