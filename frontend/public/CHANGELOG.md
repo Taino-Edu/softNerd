@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.99.0] — 2026-11-24
+## [v1.100.0] — 2026-11-24
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.99.0] - 2026-11-24
+
+### Comprovante de compra pro cliente
+- **Por e-mail:** toda compra no nome de um cliente cadastrado manda o comprovante com os itens, o desconto, os pontos usados, o total, a forma de pagamento (as duas, se foi dividido) e um código da compra. Vale pra comanda fechada, venda no Frente de Caixa com cliente e pedido do site pago (Pix, pagamento registrado ou entregue no balcão). O e-mail sai em segundo plano: fechar a comanda e vender no caixa não ficam esperando.
+- **Na conta:** em Minha conta → Compras, cada compra aberta ganha o botão "Comprovante", pronto pra imprimir ou salvar em PDF. Compra estornada não tem comprovante.
+- **O cliente escolhe:** "E-mails de compra" em Configurações liga e desliga.
+- **Com volta:** chave "Comprovante de compra pro cliente". Desligada, nenhum e-mail de compra sai e o botão some.
 
 ## [v1.98.0] - 2026-11-24
 

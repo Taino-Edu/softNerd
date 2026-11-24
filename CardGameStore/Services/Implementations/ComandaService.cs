@@ -651,6 +651,10 @@ public class ComandaService : IComandaService
 
         await _db.SaveChangesAsync();
 
+        // Chave "comprovante-compra": comprovante da comanda fechada por e-mail (em segundo plano)
+        await Comprovantes.ComprovanteDeCompra.PrepararEEnviarAsync(_email, _logger,
+            () => Comprovantes.ComprovanteDeCompra.DaComandaAsync(_db, comanda));
+
         var dto = MapToDto(comanda);
         // Notifica o cliente que a comanda foi fechada
         await _hub.Clients.Group(ComandaHub.GetComandaGroup(comandaId))

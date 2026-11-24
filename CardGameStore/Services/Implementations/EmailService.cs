@@ -188,6 +188,44 @@ public class EmailService : IEmailService
         await SendAsync(toEmail, c.Jogador, $"{c.Loja} — inscrição confirmada: {c.Campeonato}", body);
     }
 
+    public async Task SendComprovanteCompraAsync(string toEmail, ComprovanteCompraEmail c)
+    {
+        string Td(string v, bool direita = false, bool negrito = false) =>
+            $"<td style=\"padding:7px 10px;{(direita ? "text-align:right;" : "")}{(negrito ? "font-weight:bold;" : "")}\">{WebUtility.HtmlEncode(v)}</td>";
+        var itens = string.Concat(c.Itens.Select((i, n) =>
+            $"<tr{(n % 2 == 1 ? " style=\"background:#f6f7fb\"" : "")}>{Td($"{i.Quantidade}× {i.Nome}")}{Td(i.Subtotal, direita: true)}</tr>"));
+        var extras = "";
+        if (c.Desconto is not null) extras += $"<tr>{Td("Desconto")}{Td("−" + c.Desconto, direita: true)}</tr>";
+        if (c.Pontos is not null)   extras += $"<tr>{Td("Pontos usados")}{Td("−" + c.Pontos, direita: true)}</tr>";
+        var pagamento = string.Join("<br/>", c.Pagamento.Select(WebUtility.HtmlEncode));
+        var loja = WebUtility.HtmlEncode(c.Loja);
+        var body = $"""
+            <div style="font-family:sans-serif;max-width:520px;color:#111">
+              <h2 style="color:#1d4ed8;margin-top:0">Comprovante de compra</h2>
+              <p>Olá, <strong>{WebUtility.HtmlEncode(c.Cliente)}</strong>! Obrigado pela compra na {loja}.</p>
+              <p style="color:#555;margin:0">{WebUtility.HtmlEncode(c.Origem)} · {WebUtility.HtmlEncode(c.Quando)}</p>
+              <table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:14px">
+                {itens}
+                {extras}
+                <tr style="border-top:2px solid #111">{Td("Total", negrito: true)}{Td(c.Total, direita: true, negrito: true)}</tr>
+              </table>
+              <p style="margin:0 0 4px;color:#555">Pagamento</p>
+              <p style="margin:0 0 14px;font-weight:bold">{pagamento}</p>
+              <p style="color:#555;margin:0">Código da compra: <strong>{WebUtility.HtmlEncode(c.Codigo)}</strong></p>
+              <p style="margin:20px 0">
+                <a href="{UrlDoSite(c.Link)}"
+                   style="display:inline-block;background:#1d4ed8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold">
+                  Ver minhas compras
+                </a>
+              </p>
+              <p style="color:#777;font-size:12px">Comprovante de compra, sem valor fiscal. {loja}.<br/>
+                Não quer receber estes e-mails? Desligue em Configurações, na sua conta.</p>
+            </div>
+            """;
+
+        await SendAsync(toEmail, c.Cliente, $"{c.Loja} — comprovante de compra ({c.Total})", body);
+    }
+
     public async Task SendCobrancaInscricaoAsync(string toEmail, CobrancaInscricaoEmail c)
     {
         var loja  = WebUtility.HtmlEncode(c.Loja);

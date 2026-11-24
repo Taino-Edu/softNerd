@@ -185,6 +185,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `lib/pokemonPreferido.ts` | `spriteParado`, `spritesAnimados`, `carregarPokedex`, `buscarPokemon`, `QUERIDINHOS`, `sortear`, `nomeDoId`, `numeroDex` |
 | `lib/prazo.ts` | `fmtRestante` |
 | `lib/precoVitrine.ts` | `resolvePixPercent`, `calcPrecoVitrine` |
+| `lib/printComprovanteCompra.ts` | `codigoDaCompra`, `comprovanteCompraHTML`, `printComprovanteCompra` |
 | `lib/printComprovanteInscricao.ts` | `codigoDaInscricao`, `comprovanteHTML`, `printComprovanteInscricao` |
 | `lib/printConferencia.ts` | `CONFERENCIA_FORMATOS`, `printConferencia` |
 | `lib/printDeck.ts` | `printDecks` |

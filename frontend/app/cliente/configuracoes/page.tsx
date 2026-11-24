@@ -40,6 +40,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 export default function ClienteConfiguracoesPage() {
   const { prefs, loading, saving, update } = usePreferences()
   const emailsDeCampeonato = useFuncionalidade('comprovante-inscricao') === true
+  const emailsDeCompra = useFuncionalidade('comprovante-compra') === true
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>('default')
 
   useEffect(() => {
@@ -163,6 +164,20 @@ export default function ClienteConfiguracoesPage() {
                 </div>
                 <Toggle value={prefs.notifications.emailsInscricao !== false}
                   onChange={v => set('notifications', { emailsInscricao: v })} />
+              </div>
+            )}
+
+            {/* v1.99.0 (chave comprovante-compra): o comprovante de cada compra por e-mail */}
+            {emailsDeCompra && (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold" style={{ color: C.navy }}>E-mails de compra</p>
+                  <p className="text-xs mt-0.5" style={{ color: C.muted }}>
+                    Comprovante de cada compra (comanda, balcão e pedido do site)
+                  </p>
+                </div>
+                <Toggle value={prefs.notifications.emailsCompra !== false}
+                  onChange={v => set('notifications', { emailsCompra: v })} />
               </div>
             )}
           </div>

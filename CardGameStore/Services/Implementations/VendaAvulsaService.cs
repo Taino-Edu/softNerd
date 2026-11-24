@@ -25,13 +25,15 @@ public class VendaAvulsaService : IVendaAvulsaService
     private readonly ILogger<VendaAvulsaService>    _logger;
     private readonly IServiceScopeFactory           _scopeFactory;
     private readonly IHubContext<ComandaHub>        _hub;
+    private readonly IEmailService?                 _email;
 
     private const string CollectionName = "vendas_avulsas";
 
     public VendaAvulsaService(
         AppDbContext db, IMongoDatabase mongo, ILogger<VendaAvulsaService> logger,
-        IServiceScopeFactory scopeFactory, IHubContext<ComandaHub> hub)
+        IServiceScopeFactory scopeFactory, IHubContext<ComandaHub> hub, IEmailService? email = null)
     {
+        _email        = email;
         _db           = db;
         _collection   = mongo.GetCollection<VendaAvulsa>(CollectionName);
         _logger       = logger;
@@ -465,6 +467,10 @@ public class VendaAvulsaService : IVendaAvulsaService
                 Builders<VendaAvulsa>.Filter.Eq(v => v.Id, venda.Id),
                 Builders<VendaAvulsa>.Update.Set(v => v.CrediarioId, crediarioIdVinculado));
         }
+
+        // Chave "comprovante-compra": venda no nome de cliente cadastrado (PDV ou pedido do site) → comprovante por e-mail
+        await Comprovantes.ComprovanteDeCompra.PrepararEEnviarAsync(_email, _logger,
+            () => Comprovantes.ComprovanteDeCompra.DaVendaAsync(_db, venda));
 
         var dto = MapToDto(venda);
         return dto;
