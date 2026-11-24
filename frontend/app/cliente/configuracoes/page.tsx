@@ -7,6 +7,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import CabecalhoCliente from '@/components/cliente/CabecalhoCliente'
 import Link from 'next/link'
 import { UserPreferences } from '@/lib/api'
+import { useFuncionalidade } from '@/lib/useFuncionalidade'
 
 const C = {
   navy: '#0C3D5A', blue: '#1E4FD6', blue2: '#163CA8',
@@ -38,6 +39,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 
 export default function ClienteConfiguracoesPage() {
   const { prefs, loading, saving, update } = usePreferences()
+  const emailsDeCampeonato = useFuncionalidade('comprovante-inscricao') === true
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>('default')
 
   useEffect(() => {
@@ -149,6 +151,20 @@ export default function ClienteConfiguracoesPage() {
                 />
               </div>
             ))}
+
+            {/* v1.98.0 (chave comprovante-inscricao): o comprovante e a cobrança da inscrição vão por e-mail */}
+            {emailsDeCampeonato && (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold" style={{ color: C.navy }}>E-mails de campeonato</p>
+                  <p className="text-xs mt-0.5" style={{ color: C.muted }}>
+                    Comprovante da inscrição e o aviso pra pagar quando a loja te inscreve
+                  </p>
+                </div>
+                <Toggle value={prefs.notifications.emailsInscricao !== false}
+                  onChange={v => set('notifications', { emailsInscricao: v })} />
+              </div>
+            )}
           </div>
 
         </main>

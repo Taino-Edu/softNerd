@@ -465,6 +465,59 @@ public class PixReconciliationServiceTests
         db.Notifications.Count(n => n.UserId == user.Id).Should().Be(1);
     }
 
+    [Fact]
+    public async Task Reconciliar_InscricaoPaga_MandaOComprovantePorEmailUmaVez()
+    {
+        var db   = CreateDb(nameof(Reconciliar_InscricaoPaga_MandaOComprovantePorEmailUmaVez));
+        var user = await SeedBaseAsync(db);
+        var championship = new Championship { Name = "Torneio Teste", Game = "Magic", EntryFeeInCents = 5000, StartDate = DateTime.UtcNow.AddDays(2) };
+        db.Championships.Add(championship);
+        var participant = new ChampionshipParticipant
+        {
+            ChampionshipId = championship.Id, UserId = user.Id, PlayerNumber = 7,
+            InscricaoExpiraEm = DateTime.UtcNow.AddMinutes(20), // vaga segurada esperando o Pix
+        };
+        db.ChampionshipParticipants.Add(participant);
+        var pix = NovaCobranca(PixCobrancaOrigem.Campeonato, 5000);
+        pix.ChampionshipParticipantId = participant.Id;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+        var email   = new Mock<IEmailService>();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object, email: email.Object);
+
+        await service.ReconciliarAsync(pix);
+        await service.ReconciliarAsync(pix); // robô e tela juntos
+
+        email.Verify(e => e.SendComprovanteInscricaoAsync("cliente@test.com", It.Is<ComprovanteInscricaoEmail>(c =>
+            c.Campeonato == "Torneio Teste" && c.NumeroDoJogador == 7 && c.Valor == "R$ 50,00" && c.FormaDePagamento == "Pix" && c.PagoEm != null)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Reconciliar_InscricaoPaga_TaxaMudouDepois_ComprovanteMostraOValorPago()
+    {
+        // A loja subiu a taxa depois de gerar o Pix: o comprovante é do que foi pago (Codex no PR #193)
+        var db   = CreateDb(nameof(Reconciliar_InscricaoPaga_TaxaMudouDepois_ComprovanteMostraOValorPago));
+        var user = await SeedBaseAsync(db);
+        var championship = new Championship { Name = "Torneio Teste", Game = "Magic", EntryFeeInCents = 3000, StartDate = DateTime.UtcNow.AddDays(2) };
+        db.Championships.Add(championship);
+        var participant = new ChampionshipParticipant
+        {
+            ChampionshipId = championship.Id, UserId = user.Id, PlayerNumber = 2, InscricaoExpiraEm = DateTime.UtcNow.AddMinutes(20),
+        };
+        db.ChampionshipParticipants.Add(participant);
+        var pix = NovaCobranca(PixCobrancaOrigem.Campeonato, 2500);
+        pix.ChampionshipParticipantId = participant.Id;
+        db.PixCobrancas.Add(pix);
+        await db.SaveChangesAsync();
+        var email   = new Mock<IEmailService>();
+        var service = CreateService(db, CreateInterMock("CONCLUIDA").Object, new Mock<IComandaService>().Object, email: email.Object);
+
+        await service.ReconciliarAsync(pix);
+
+        email.Verify(e => e.SendComprovanteInscricaoAsync(It.IsAny<string>(), It.Is<ComprovanteInscricaoEmail>(c => c.Valor == "R$ 25,00")), Times.Once);
+    }
+
     // ── Reserva (pré-venda) ───────────────────────────────────────────────────
 
     [Fact]

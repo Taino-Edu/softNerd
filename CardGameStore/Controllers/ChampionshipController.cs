@@ -51,7 +51,7 @@ public class ChampionshipController(
     [Authorize]
     [ProducesResponseType(typeof(IEnumerable<MyParticipationDto>), 200)]
     public async Task<IActionResult> GetMyParticipations() =>
-        Ok((await campeonatos.GetUserParticipationsAsync(UsuarioId())).Select(p => p.ParaMinhaParticipacao()));
+        Ok(await inscricoes.MinhasParticipacoesAsync(UsuarioId()));
 
     /// <summary>Participantes de um campeonato, com o valor da cobrança de cada um. Só admin/operador:
     /// com [Authorize] qualquer cliente logado via quem pagou, como e quanto (teste de vazamentos, 04/11).
