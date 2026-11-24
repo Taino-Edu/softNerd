@@ -1,12 +1,19 @@
 # Changelog — Santuário Nerd
 
-## [v1.96.1] — 2026-11-24
+## [v1.96.2] — 2026-11-24
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.96.1] - 2026-11-24
+
+### Comanda: produto com tamanho/cor volta pro tamanho certo
+- **Cancelar a comanda, tirar um item ou diminuir a quantidade** devolvia a peça ao total do produto, e não ao tamanho/cor escolhido: a "Camiseta P" ficava com estoque a menos e o produto com estoque a mais. Agora volta pro tamanho. Aumentar a quantidade também tira do tamanho.
+- Produto sem tamanho/cor já voltava certo e continua igual. O estorno de comanda fechada já fazia certo.
+- Só acontecia com item lançado pelo cliente na comanda da mesa, que é onde dá pra escolher o tamanho.
 
 ## [v1.96.0] - 2026-11-24
 
