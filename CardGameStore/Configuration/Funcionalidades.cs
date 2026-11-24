@@ -55,9 +55,21 @@ public static class Funcionalidades
     public const string PdvResponsivo = "pdv-responsivo";
     public const string ComandaTelas = "comanda-telas";
     public const string AvisosPedidoCliente = "avisos-pedido-cliente";
+    public const string ComprovanteInscricao = "comprovante-inscricao";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
+
+        new(ComprovanteInscricao,
+            Nome:       "Campeonato: comprovante de inscrição e cobrança por e-mail",
+            OQueMuda:   "Quando a vaga fica garantida (Pix pago, campeonato grátis ou pago no balcão), o jogador recebe por e-mail o " +
+                        "comprovante da inscrição e ganha o botão \"Comprovante\" em Meus Campeonatos (dá pra salvar em PDF). Quando a loja " +
+                        "inscreve ou cobra o jogador, ele recebe um e-mail com o botão \"Pagar inscrição\" que abre o site (o código Pix não " +
+                        "vai no e-mail). O jogador pode desligar esses e-mails em Configurações.",
+            SeDesligar: "Nenhum e-mail de inscrição sai e o botão \"Comprovante\" some (o aviso no sininho continua).",
+            Padrao:     true,
+            Desde:      "v1.98.0",
+            RevisarEm:  new DateOnly(2027, 1, 24)),
 
         new(AvisosPedidoCliente,
             Nome:       "Avisos do pedido pro cliente: pagamento confirmado e pedido cancelado pela loja",

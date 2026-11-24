@@ -44,7 +44,7 @@ public interface ICampeonatoInscricaoService
 public class CampeonatoInscricaoService(
     AppDbContext db, IChampionshipService campeonatos, InterSyncService inter,
     IPixReconciliationService reconciliacao, IPushService push,
-    ILogger<CampeonatoInscricaoService> logger) : ICampeonatoInscricaoService
+    ILogger<CampeonatoInscricaoService> logger, IEmailService? email = null) : ICampeonatoInscricaoService
 {
     private const string NaoEncontrado = "Campeonato não encontrado.";
     private const string Lotado = "O campeonato atingiu o número máximo de participantes.";
@@ -140,6 +140,9 @@ public class CampeonatoInscricaoService(
         }
 
         logger.LogInformation("Usuário {UserId} iniciou inscrição no campeonato {ChampionshipId}", userId, championshipId);
+        // Grátis entra firme: o comprovante sai na hora. Pago sai quando o Pix cair (PixReconciliationService).
+        if (criouAgora && ch.EntryFeeInCents <= 0)
+            await EmailDaInscricao.EnviarComprovanteAsync(db, email, logger, participante.Id);
         return (criouAgora, new InscricaoDto(new ParticipantDto
         {
             Id                = participante.Id,
@@ -177,6 +180,7 @@ public class CampeonatoInscricaoService(
             }
             await AvisarCobrancaAsync(completo, ch.EntryFeeInCents);
         }
+        else await EmailDaInscricao.EnviarComprovanteAsync(db, email, logger, participante.Id);
 
         logger.LogInformation("Maikon inscreveu usuário {UserId} no campeonato {ChampionshipId}", req.UserId, championshipId);
 
@@ -325,6 +329,8 @@ public class CampeonatoInscricaoService(
         });
         await db.SaveChangesAsync();
         await push.SendAsync(participante.UserId, titulo, corpo, "/cliente");
+        // E-mail com o botão "Pagar inscrição" (sem o código Pix) — chave "comprovante-inscricao"
+        await EmailDaInscricao.EnviarCobrancaAsync(db, email, logger, participante, valorEmCentavos);
     }
 
     /// <summary>RegisterParticipantAsync recusa com InvalidOperationException (já inscrito, lotado...).</summary>

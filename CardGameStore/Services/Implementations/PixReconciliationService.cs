@@ -80,6 +80,7 @@ public class PixReconciliationService : IPixReconciliationService
         AvisoPendente? aviso = null;
         AvisoDaEquipe? avisoEquipe = null;
         AvisoDoCliente? avisoCliente = null;
+        Guid? comprovanteDaInscricao = null;
         var baixaEfetuada = false;
 
         // Transação manual precisa rodar dentro da execution strategy
@@ -120,6 +121,7 @@ public class PixReconciliationService : IPixReconciliationService
                     break;
                 case PixCobrancaOrigem.Campeonato:
                     aviso = await BaixarCampeonatoAsync(pix);
+                    if (aviso is not null) comprovanteDaInscricao = pix.ChampionshipParticipantId;
                     break;
                 case PixCobrancaOrigem.Reserva:
                     (avisoEquipe, avisoCliente) = await BaixarReservaAsync(pix);
@@ -161,6 +163,10 @@ public class PixReconciliationService : IPixReconciliationService
             try { await _push.SendAsync(avisoCliente.UserId, avisoCliente.Titulo, avisoCliente.Corpo, AvisoDoCliente.Link, avisoCliente.Imagem); }
             catch (Exception ex) { _logger.LogWarning(ex, "Push do pedido pago não saiu pro cliente (tx {TxId}).", pix.TxId); }
         }
+
+        // Chave "comprovante-inscricao": a vaga ficou garantida — comprovante por e-mail (melhor-esforço, depois do commit)
+        if (comprovanteDaInscricao is Guid participanteId)
+            await Campeonatos.EmailDaInscricao.EnviarComprovanteAsync(_db, _email, _logger, participanteId);
 
         if (aviso is not null)
         {
