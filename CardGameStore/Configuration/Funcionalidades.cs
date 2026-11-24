@@ -52,9 +52,27 @@ public static class Funcionalidades
     public const string HomeEventosNoTopo = "home-eventos-no-topo";
     public const string PrecoReferenciaEstoque = "preco-referencia-estoque";
     public const string DolarTempoRealCartas = "dolar-tempo-real-cartas";
+    public const string PdvResponsivo = "pdv-responsivo";
+    public const string ComandaTelas = "comanda-telas";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
+
+        new(ComandaTelas,
+            Nome:       "Comandas: telas de itens e fechamento",
+            OQueMuda:   "No Painel Geral, Adicionar itens mantém o catálogo aberto e atualiza o total da comanda. Fechar comanda abre a tela de pagamento.",
+            SeDesligar: "Os botões de adicionar e fechar voltam a abrir as janelas anteriores.",
+            Padrao:     true,
+            Desde:      "v1.96.0",
+            RevisarEm:  new DateOnly(2027, 1, 23)),
+
+        new(PdvResponsivo,
+            Nome:       "PDV: venda em tela responsiva",
+            OQueMuda:   "Nova venda abre no painel. No computador, catálogo e carrinho ficam lado a lado. No celular, o caixa alterna entre os dois. O pagamento tem sua própria etapa.",
+            SeDesligar: "Volta a janela de venda em três etapas. Os rascunhos continuam disponíveis.",
+            Padrao:     true,
+            Desde:      "v1.96.0",
+            RevisarEm:  new DateOnly(2027, 1, 23)),
 
         new(VigiaSistema,
             Nome:       "Vigia do sistema: alertas automáticos e erros de tela",

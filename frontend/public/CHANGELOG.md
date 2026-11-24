@@ -1,12 +1,32 @@
 # Changelog — Santuário Nerd
 
-## [v1.96.0] — 2026-11-23
+## [v1.97.0] — 2026-11-24
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.96.0] - 2026-11-24
+
+### Comandas do Painel Geral: adicionar itens e fechar em duas telas
+- **Adicionar itens** abre o catálogo com fotos, estoque e busca por nome ou código de barras. A tela continua aberta após cada adição, com os itens e o total atualizados.
+- **Fechar** abre uma tela com resumo, desconto e formas de pagamento. **Voltar aos itens** permite continuar a mesma comanda.
+- A chave **Comandas: telas de itens e fechamento** permite voltar às janelas anteriores.
+
+### Comanda e PDV com a mesma cara
+- **Mesma tela:** as telas da comanda ganharam o painel com as etapas (1 Itens, 2 Fechamento) e a barra de ações embaixo, iguais à Nova venda do PDV.
+- **Mesmo catálogo:** busca, câmera, categoria em lista (a subcategoria logo abaixo da categoria-pai) e os mesmos cards nas duas. O PDV ganhou a **câmera** pra ler código de barras.
+- **Cards mais baixos:** a foto tem altura fixa (inteira, sem corte) e o preço fica ao lado do "Adicionar". No computador cabem duas fileiras de produtos em vez de uma.
+- **Botão de pagar sempre à vista no celular:** o total e o botão de avançar ("Ir para pagamento", "Ir para fechamento", "Confirmar") ficam presos no pé da tela. A mão do Libras e o assistente sobem pra não cobrir.
+- **Pix já marcado** no fechamento da comanda, com as formas na mesma ordem do PDV. **Dividir pagamento** virou um botão de liga/desliga nas duas.
+
+### PDV: nova venda dentro do painel
+- Catálogo com fotos maiores e inteiras, estoque, busca por código de barras e seletor de categorias. No computador, carrinho e catálogo aparecem lado a lado em telas largas.
+- No celular, o caixa alterna entre produtos e carrinho, com o total junto do botão de pagamento. Na hora de pagar, o botão **Produtos** volta ao catálogo.
+- A venda começa no catálogo e permite identificar o cliente antes de confirmar. O rascunho continua disponível ao voltar ao PDV.
+- A chave **PDV: venda em tela responsiva** permite voltar à janela de venda anterior.
 
 ## [v1.95.1] — 2026-11-23
 

@@ -130,7 +130,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/category` | público | `GetAll` (34) | `categoryApi.list` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
+| GET | `/api/category` | público | `GetAll` (34) | `categoryApi.list` | `app/admin/categorias/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`components/admin/ComandaLancamento.tsx`<br>`components/admin/PdvVenda.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
 | POST | `/api/category` | AdminOnly | `Create` (39) | `categoryApi.create` | `app/admin/categorias/page.tsx` |
 | DELETE | `/api/category/{id:guid}` | AdminOnly | `Delete` (78) | `categoryApi.delete` | `app/admin/categorias/page.tsx` |
 | PUT | `/api/category/{id:guid}` | AdminOnly | `Update` (59) | `categoryApi.update` | `app/admin/categorias/page.tsx` |
@@ -185,7 +185,7 @@
 | PUT | `/api/comanda/{id:guid}/close` | AdminOnly | `Close` (202) | `comandaApi.close` | `app/admin/dashboard/page.tsx` |
 | PUT | `/api/comanda/{id:guid}/editar` | AdminOnly | `EditarComanda` (269) | `comandaApi.editar` | `app/admin/dashboard/page.tsx` |
 | POST | `/api/comanda/{id:guid}/estornar` | AdminOnly | `Estornar` (242) | `comandaApi.estornar` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/items` | logado | `AddItem` (153) | `comandaApi.addItem` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
+| POST | `/api/comanda/{id:guid}/items` | logado | `AddItem` (153) | `comandaApi.addItem` | `app/cliente/page.tsx`<br>`components/admin/ComandaLancamento.tsx` |
 | DELETE | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `RemoveItem` (172) | `comandaApi.removeItem` | `app/admin/dashboard/page.tsx` |
 | PATCH | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `UpdateItem` (184) | `comandaApi.updateItem` | `app/admin/dashboard/page.tsx` |
 | POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (328) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
@@ -221,7 +221,7 @@
 | PUT | `/api/crediarios/avisos/config` | AdminOnly | `SalvarAvisoConfig` (122) | `crediarioApi.salvarAvisoConfig` | `components/admin/CrediarioAvisos.tsx` |
 | GET | `/api/crediarios/historico` | logado | `GetMeuHistorico` (58) | `crediarioApi.meuHistorico` | `app/cliente/perfil/page.tsx` |
 | GET | `/api/crediarios/por-cliente` | AdminOnly | `GetPorCliente` (45) | `crediarioApi.porCliente` | `app/admin/crediario/page.tsx` |
-| GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (54) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`app/admin/venda-avulsa/page.tsx` |
+| GET | `/api/crediarios/usuario/{userId:guid}` | AdminOnly | `GetByUser` (54) | `crediarioApi.byUser` | `app/admin/dashboard/page.tsx`<br>`components/admin/PdvVenda.tsx` |
 | DELETE | `/api/crediarios/{id:guid}` | AdminOnly | `Deletar` (81) | `crediarioApi.deletar` | `app/admin/crediario/page.tsx` |
 | PATCH | `/api/crediarios/{id:guid}` | AdminOnly | `Editar` (66) | `crediarioApi.editar` | `app/admin/crediario/page.tsx` |
 | POST | `/api/crediarios/{id:guid}/aviso` | AdminOnly | `AvisarAgora` (144) | `crediarioApi.avisarAgora` | `components/admin/CrediarioAvisos.tsx` |
@@ -366,14 +366,14 @@
 |---|---|---|---|---|---|
 | GET | `/api/product` | público | `GetAll` (47) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`app/sitemap.ts` |
 | POST | `/api/product` | AdminOnly | `Create` (143) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts`<br>`components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (69) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (124) | `productApi.getByBarcode` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx` |
+| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (69) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ComandaLancamento.tsx` |
+| GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (124) | `productApi.getByBarcode` | `app/admin/estoque/page.tsx`<br>`components/admin/ComandaLancamento.tsx` |
 | GET | `/api/product/cartas` | público | `CartasAvulsas` (102) | `productApi.cartas` | `app/produtos/[id]/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
 | GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (133) | — | — |
 | GET | `/api/product/mais-vendidos` | público | `MaisVendidosDaLoja` (82) | `productApi.maisVendidos` | `app/page.tsx` |
 | GET | `/api/product/store` | logado | `GetAllStore` (59) | `productApi.listStore` | `app/cliente/page.tsx` |
 | DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (171) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/{id:guid}` | público | `GetById` (113) | `productApi.get` | `app/admin/venda-avulsa/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx` |
+| GET | `/api/product/{id:guid}` | público | `GetById` (113) | `productApi.get` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx`<br>`components/admin/PdvVenda.tsx` |
 | PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (160) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 | PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (183) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
@@ -537,7 +537,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/user` | AdminOnly | `GetAll` (52) | `userApi.list` | `app/admin/campeonatos/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/liga/admin/EscolherCliente.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
+| GET | `/api/user` | AdminOnly | `GetAll` (52) | `userApi.list` | `app/admin/campeonatos/page.tsx`<br>`app/admin/crediario/page.tsx`<br>`app/admin/dashboard/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/admin/PdvVenda.tsx`<br>`components/liga/admin/EscolherCliente.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | POST | `/api/user` | AdminOnly | `AdminCreate` (63) | `userApi.adminCreate` | `app/admin/reservas/page.tsx`<br>`app/admin/usuarios/page.tsx`<br>`components/liga/admin/JogadoresTorneio.tsx` |
 | DELETE | `/api/user/me` | CustomerOrAdmin | `DeleteMe` (135) | `userApi.deleteMe` | — |
 | GET | `/api/user/me` | logado | `GetMe` (90) | `userApi.me` | `app/cliente/decks/[id]/page.tsx`<br>`app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`components/CompleteProfileGuard.tsx` |
@@ -545,7 +545,7 @@
 | GET | `/api/user/me/preferences` | logado | `GetPreferences` (416) | `userApi.getPreferences` | `contexts/PreferencesContext.tsx` |
 | PUT | `/api/user/me/preferences` | logado | `UpdatePreferences` (432) | `userApi.updatePreferences` | `contexts/PreferencesContext.tsx` |
 | DELETE | `/api/user/{id:guid}` | AdminOnly | `DeleteUser` (500) | `userApi.adminDelete` | `app/admin/usuarios/page.tsx` |
-| GET | `/api/user/{id:guid}` | AdminOnly | `GetById` (159) | `userApi.getById` | `app/admin/venda-avulsa/page.tsx` |
+| GET | `/api/user/{id:guid}` | AdminOnly | `GetById` (159) | `userApi.getById` | `components/admin/PdvVenda.tsx` |
 | PUT | `/api/user/{id:guid}` | AdminOnly | `AdminUpdateUser` (226) | `userApi.adminUpdate` | `app/admin/usuarios/page.tsx` |
 | POST | `/api/user/{id:guid}/balance` | AdminOnly | `AdjustBalance` (203) | `userApi.adjustBalance` | `app/admin/usuarios/page.tsx` |
 | GET | `/api/user/{id:guid}/historico` | AdminOnly | `GetHistorico` (279) | `userApi.historico` | `app/admin/usuarios/page.tsx` |
@@ -559,7 +559,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/venda-avulsa` | AdminOnly | `Register` (45) | `vendaAvulsaApi.register` | `app/admin/venda-avulsa/page.tsx` |
+| POST | `/api/venda-avulsa` | AdminOnly | `Register` (45) | `vendaAvulsaApi.register` | `components/admin/PdvVenda.tsx` |
 | POST | `/api/venda-avulsa/backfill-costs` | AdminOnly | `BackfillCosts` (155) | `vendaAvulsaApi.backfillCosts` | `app/admin/financeiro/page.tsx` |
 | GET | `/api/venda-avulsa/by-date` | AdminOnly | `GetByDate` (84) | `vendaAvulsaApi.byDate` | `app/admin/venda-avulsa/page.tsx` |
 | GET | `/api/venda-avulsa/recent` | AdminOnly | `GetRecent` (72) | — | — |
