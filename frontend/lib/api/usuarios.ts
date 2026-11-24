@@ -49,7 +49,8 @@ export interface UserPreferences {
   /** Widget lateral de timer de torneio — mesma ideia do VLibras, visível em todo o sistema. */
   timer:         { enabled: boolean; corner: PrefCorner }
   /** silenciados: tipos de aviso ignorados no sininho do painel ("Fila de espera", …) */
-  notifications: { soundEnabled: boolean; browserEnabled: boolean; silenciados: string[] }
+  /** emailsInscricao: cliente recebe comprovante e cobrança de campeonato por e-mail (v1.98.0) */
+  notifications: { soundEnabled: boolean; browserEnabled: boolean; silenciados: string[]; emailsInscricao: boolean }
   /** defaultDiscount é % livre (0–100) — os atalhos 5/10/15/20 são só sugestão de tela. */
   pdv:           { defaultDiscount: number }
   dashboard:     { refreshInterval: DashRefreshInterval; chartScheme: DashChartScheme; panels: DashboardPanels }
@@ -64,7 +65,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   aiButton:      { mode: 'draggable', corner: 'bottom-right', enabled: true },
   vlibras:       { enabled: true, corner: 'bottom-right' },
   timer:         { enabled: true, corner: 'bottom-right' },
-  notifications: { soundEnabled: true, browserEnabled: true, silenciados: [] },
+  notifications: { soundEnabled: true, browserEnabled: true, silenciados: [], emailsInscricao: true },
   pdv:           { defaultDiscount: 0 },
   dashboard:     { refreshInterval: 30, chartScheme: 'default', panels: DEFAULT_DASHBOARD_PANELS },
 }
