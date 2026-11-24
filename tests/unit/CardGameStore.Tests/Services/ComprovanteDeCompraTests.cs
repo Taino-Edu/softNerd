@@ -33,9 +33,9 @@ public class ComprovanteDeCompraTests
         return db;
     }
 
-    private static User Cliente(AppDbContext db, string? preferencias = null, string? email = "ana@teste.local")
+    private static User Cliente(AppDbContext db, string? preferencias = null, string? email = "ana@teste.local", bool emailUnico = false)
     {
-        var u = new User { Id = Guid.NewGuid(), Name = "Ana", Email = email, PasswordHash = "x", Role = UserRole.Customer, PreferencesJson = preferencias };
+        var u = new User { Id = Guid.NewGuid(), Name = "Ana", Email = emailUnico && email is not null ? $"{Guid.NewGuid():N}@teste.local" : email, PasswordHash = "x", Role = UserRole.Customer, PreferencesJson = preferencias };
         db.Users.Add(u);
         db.SaveChanges();
         return u;
@@ -85,7 +85,7 @@ public class ComprovanteDeCompraTests
         var db = CriarDb();
         (await ComprovanteDeCompra.DaVendaAsync(db, Venda(null))).Should().BeNull("venda sem cliente cadastrado");
 
-        var desligou = Cliente(db, preferencias: """{"notifications":{"emailsCompra":false}}""");
+        var desligou = Cliente(db, preferencias: """{"notifications":{"emailsCompra":false}}""", emailUnico: true);
         (await ComprovanteDeCompra.DaVendaAsync(db, Venda(desligou.Id))).Should().BeNull("o cliente desligou em Configurações");
 
         var semEmail = Cliente(db, email: null);
@@ -93,7 +93,7 @@ public class ComprovanteDeCompraTests
 
         db.FuncionalidadesEstado.Add(new FuncionalidadeEstado { Codigo = Funcionalidades.ComprovanteCompra, Ligada = false });
         db.SaveChanges();
-        (await ComprovanteDeCompra.DaVendaAsync(db, Venda(Cliente(db).Id))).Should().BeNull("chave desligada");
+        (await ComprovanteDeCompra.DaVendaAsync(db, Venda(Cliente(db, emailUnico: true).Id))).Should().BeNull("chave desligada");
     }
 
     [Fact]
