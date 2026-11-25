@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/Switch'
 import clsx from 'clsx'
 import toast, { Toaster } from 'react-hot-toast'
 import { UserPreferences, DashboardPanels, DEFAULT_DASHBOARD_PANELS } from '@/lib/api'
+import { getRole } from '@/lib/auth'
+import { TravaLocalComanda, IconeComandaPelaConta } from '@/components/admin/TravaLocalComanda'
 
 const CORNERS = [
   { value: 'bottom-right', label: 'Inferior direito' },
@@ -47,6 +49,9 @@ function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: bool
 export default function ConfiguracoesPage() {
   const { prefs, loading, saving, update } = usePreferences()
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>('default')
+  // A trava da comanda pela conta vale pra loja toda: só o dono vê (a API também só deixa o dono)
+  const [ehDono, setEhDono] = useState(false)
+  useEffect(() => { setEhDono(getRole() === 'Admin') }, [])
 
   useEffect(() => {
     setBrowserPermission('Notification' in window ? Notification.permission : 'unsupported')
@@ -203,6 +208,13 @@ export default function ConfiguracoesPage() {
           />
         </Row>
       </Section>
+
+      {/* ── Comanda pela conta (loja toda, só o dono) ── */}
+      {ehDono && (
+        <Section title="Comanda pela conta" icon={IconeComandaPelaConta}>
+          <TravaLocalComanda />
+        </Section>
+      )}
 
       {/* ── PDV ── */}
       <Section title="Frente de Caixa" icon={<Tag className="w-5 h-5 text-accent-green" />}>

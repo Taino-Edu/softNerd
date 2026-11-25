@@ -8,6 +8,8 @@
 // PUT    /api/comanda/{id}/close          → fecha comanda (Admin)
 // PUT    /api/comanda/{id}/cancel         → cancela comanda (Admin)
 // POST   /api/comanda/{id}/apply-points   → aplica pontos do cliente
+// GET    /api/comanda/pela-conta          → o cliente pode abrir pela conta? precisa de localização?
+// POST   /api/comanda/abrir-pela-conta    → cliente abre a comanda sem o QR (v1.101.0)
 //
 // Venda avulsa de balcão → POST /api/venda-avulsa  (VendaAvulsaController)
 // =============================================================================
@@ -15,6 +17,7 @@
 using CardGameStore.Data;
 using CardGameStore.DTOs;
 using CardGameStore.Hubs;
+using CardGameStore.Services.Comandas;
 using CardGameStore.Models.PostgreSQL;
 using CardGameStore.Services.Implementations;
 using CardGameStore.Services.Interfaces;
@@ -93,6 +96,30 @@ public class ComandaController : ControllerBase
             return BadRequest(new { Message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// A conta do cliente pergunta se mostra o botão "Abrir comanda" e se precisa pedir a
+    /// localização (trava "Só abre na loja" ligada). Chave "comanda-pela-conta".
+    /// </summary>
+    [HttpGet("pela-conta")]
+    [Authorize(Roles = "Customer")]
+    [ProducesResponseType(typeof(ComandaPelaContaStatus), 200)]
+    public async Task<IActionResult> PelaContaStatus([FromServices] IComandaPelaContaService pelaConta) =>
+        Ok(await pelaConta.StatusAsync());
+
+    /// <summary>
+    /// Cliente abre a comanda pela própria conta, sem ler o QR da mesa. Com a trava ligada, manda a
+    /// posição do celular (não é gravada). Já tem comanda aberta? Devolve ela.
+    /// </summary>
+    [HttpPost("abrir-pela-conta")]
+    [Authorize(Roles = "Customer")]
+    [ProducesResponseType(typeof(ComandaDto), 200)]
+    public Task<IActionResult> AbrirPelaConta([FromServices] IComandaPelaContaService pelaConta,
+        [FromBody] AbrirPelaContaRequest? request) =>
+        this.Responder(() => pelaConta.AbrirAsync(GetUserId(),
+            request?.Latitude is double lat && request.Longitude is double lng
+                ? new LocalDoCliente(lat, lng, request.PrecisaoMetros)
+                : null));
 
     /// <summary>Dashboard do Admin: lista todas as comandas abertas/em andamento.</summary>
     [HttpGet("dashboard")]
@@ -496,4 +523,6 @@ public class ComandaController : ControllerBase
     }
 }
 
+/// <summary>Posição do celular (só quando a trava "Só abre na loja" está ligada).</summary>
+public record AbrirPelaContaRequest(double? Latitude, double? Longitude, double? PrecisaoMetros);
 public record AbrirNaMesaRequest([System.ComponentModel.DataAnnotations.MaxLength(50)] string? TableIdentifier);

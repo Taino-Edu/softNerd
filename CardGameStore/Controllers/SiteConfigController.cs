@@ -7,6 +7,7 @@
 
 using CardGameStore.Data;
 using CardGameStore.Models.PostgreSQL;
+using CardGameStore.Services.Comandas;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -110,6 +111,17 @@ public class SiteConfigController : ControllerBase
 
         return Ok(cfg);
     }
+
+    /// <summary>Trava "Só abre na loja" da comanda pela conta (lugar da loja + raio). Só o dono.</summary>
+    [HttpGet("trava-local")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> LerTravaLocal([FromServices] IComandaPelaContaService pelaConta) =>
+        Ok(await pelaConta.LerTravaAsync());
+
+    [HttpPut("trava-local")]
+    [Authorize(Policy = "AdminOnly")]
+    public Task<IActionResult> SalvarTravaLocal([FromServices] IComandaPelaContaService pelaConta, [FromBody] TravaLocalDto pedido) =>
+        this.Responder(() => pelaConta.SalvarTravaAsync(pedido));
 
     /// <summary>
     /// Busca a linha única de configuração pelo ID fixo, criando-a se necessário.
