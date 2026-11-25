@@ -226,6 +226,9 @@ Em `CardGameStore/Program.cs`, seção 6. Regras que já quebraram:
   (prod: `GOOGLE_CLIENT_ID` no `.env` da VPS). Só clientes; liga a conta pelo e-mail verificado (`users.google_sub`).
 - **QR Code da mesa** (`QuickLoginAsync`): nunca entra em conta com senha nem da equipe, exige WhatsApp (e CPF, se o
   cadastro tiver) iguais ao cadastro e não sobrescreve nada. Quem tem senha abre comanda por `POST /api/comanda/abrir-na-mesa`.
+- **Comanda pela conta** (sem QR, v1.101.0): `Services/Comandas/ComandaPelaContaService.cs`, chave `comanda-pela-conta`.
+  A trava "Só abre na loja" fica em `site_config` com `[JsonIgnore]`: o `GET /api/site-config` é público e não pode
+  mostrar a localização da loja. Quem lê e grava é `/api/site-config/trava-local`, só o dono. A posição do cliente não é gravada.
 - Teste: `python scripts/carga-liguinha.py --jogadores 32` (só localhost; cria e apaga o campeonato de teste).
 
 ### Notificações pro cliente/admin

@@ -58,9 +58,20 @@ public static class Funcionalidades
     public const string ComprovanteInscricao = "comprovante-inscricao";
     public const string ComprovanteCompra = "comprovante-compra";
     public const string AvisoInscricaoLoja = "aviso-inscricao-loja";
+    public const string ComandaPelaConta = "comanda-pela-conta";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
+
+        new(ComandaPelaConta,
+            Nome:       "Comanda: cliente abre pela própria conta",
+            OQueMuda:   "Na conta do cliente aparece o botão \"Abrir comanda\", sem precisar ler o QR Code da mesa. A comanda abre sem " +
+                        "mesa (a loja vê de quem é no Painel Geral) e o cliente pede os itens como faz hoje. Se a trava \"Só abre na loja\" estiver ligada " +
+                        "em Configurações, o celular precisa estar dentro do raio da loja (pede a localização uma vez).",
+            SeDesligar: "Volta como era: a comanda só abre pelo QR Code da mesa ou pela loja no painel.",
+            Padrao:     true,
+            Desde:      "v1.101.0",
+            RevisarEm:  new DateOnly(2027, 1, 25)),
 
         new(AvisoInscricaoLoja,
             Nome:       "Campeonato: a loja é avisada de inscrição nova",
