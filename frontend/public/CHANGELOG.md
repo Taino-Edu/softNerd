@@ -1,12 +1,20 @@
 # Changelog — Santuário Nerd
 
-## [v1.100.1] — 2026-11-24
+## [v1.100.2] — 2026-11-24
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.100.1] - 2026-11-24
+
+### Erros de tela: menos alarme falso, e a página se recupera sozinha
+Passeio pelos 15 erros de tela abertos em Alertas do sistema (10 a 23/11).
+- **Página aberta antes de um deploy:** quem estava com o site aberto durante uma atualização podia ver "Algo deu errado" ao trocar de tela ("Loading chunk … failed", "… is not a function" em `/`, `/produtos` e `/admin/estoque`). Agora a página recarrega sozinha uma vez e já abre na versão nova. Se o erro voltar logo depois, aí sim vira alerta.
+- **Tradutor do Chrome:** em celulares com o sistema em outra língua, o Chrome traduzia a página e o React se perdia ("insertBefore… not a child of this node" em `/cadastro` e `/produtos`). O site agora avisa o navegador que não é pra traduzir.
+- **Fora da conta do site:** não viram mais alerta o script do navegador interno do Instagram/Facebook ("Java object is gone"), o tempo real cortado no meio da conexão, que religa sozinho ("Handshake was canceled", 20 dos alertas), o robô do Outlook que abre os links e envios que não vêm de navegador (curl). O filtro vale no site e no servidor, pra celulares com a página antiga em cache.
 
 ## [v1.100.0] - 2026-11-24
 
