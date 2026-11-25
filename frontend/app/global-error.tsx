@@ -12,7 +12,7 @@ export default function ErroGeral({ error, reset }: { error: Error & { digest?: 
   }, [error])
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" translate="no">
       <body style={{ margin: 0, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: '#0F1B33', color: '#FFFFFF', fontFamily: 'system-ui, sans-serif', padding: 16 }}>
         <div style={{ maxWidth: 420, textAlign: 'center' }}>

@@ -151,6 +151,33 @@ public class VigiaServiceTests
 
     // ── Erro de tela ─────────────────────────────────────────────────────────
 
+    [Theory]
+    [InlineData("Uncaught Error: Error invoking postMessage: Java object is gone", null, "Mozilla/5.0 (Linux; Android 14; wv)")]
+    [InlineData("Server returned handshake error: Handshake was canceled.", null, "Mozilla/5.0 (Windows NT 10.0)")]
+    [InlineData("Object Not Found Matching Id:2, MethodName:update, ParamCount:4", null, "Mozilla/5.0 (Windows NT 10.0)")]
+    [InlineData("Uncaught Error", "at sendDataToNative (iabjs://navigation_performance_logger_android:1:11722)", "Mozilla/5.0")]
+    [InlineData("Erro sem mensagem", null, "curl/8.18.0")]
+    public async Task ErroDeTela_RuidoDeFora_NaoViraAlerta(string mensagem, string? detalhe, string navegador)
+    {
+        // Os alertas abertos em produção em 24/11: nenhum era erro do site
+        var a = Criar();
+
+        await a.Vigia().RegistrarErroTelaAsync(mensagem, "/", detalhe, null, navegador);
+
+        (await a.Db.AlertasSistema.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ErroDeTela_ErroDoSiteNoNavegador_ViraAlerta()
+    {
+        var a = Criar();
+
+        await a.Vigia().RegistrarErroTelaAsync("Cannot read properties of null (reading 'mesa')", "/cliente", null, null,
+            "Mozilla/5.0 (Linux; Android 10; K) Chrome/156.0.0.0 Mobile Safari/537.36");
+
+        (await a.Db.AlertasSistema.CountAsync(x => x.Codigo == VigiaService.CodigoErroTela)).Should().Be(1);
+    }
+
     [Fact]
     public async Task ErroDeTela_MesmoErroNaMesmaTela_UmAlertaSoComOcorrencias()
     {
