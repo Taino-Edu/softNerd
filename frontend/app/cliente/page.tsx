@@ -3,7 +3,7 @@
 // Barra no azul da loja com o logo de Personalizar Site, cartão de pontos com quanto valem em reais
 // e atalhos pra Loja, Sacola, Liga, Mercado, Decks e Conta.
 import { useEffect, useState, useCallback } from 'react'
-import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, championshipApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation, Championship } from '@/lib/api'
+import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, championshipApi, ComandaDto, ComandaPelaContaStatus, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation, Championship } from '@/lib/api'
 import { fmtRestante } from '@/lib/prazo'
 import NotificationBell from '@/components/cliente/NotificationBell'
 import { useComandaPelaConta, BotaoAbrirComanda } from '@/components/cliente/AbrirComandaPelaConta'
@@ -11,7 +11,7 @@ import { startHub, stopHub, ouvirEstadoHub, recarregarSeDesconectado, ComandaOpe
 import toast, { Toaster } from 'react-hot-toast'
 import {
   ShoppingCart, Plus, Trash2, Loader2, Search,
-  PackageOpen, Star, User as UserIcon, Package, ChevronDown,
+  Receipt, Star, User as UserIcon, Package, ChevronDown,
   Trophy, Swords, Medal, BookOpen, Bell, ShoppingBag,
   QrCode, Copy, Share2, FileText,
 } from 'lucide-react'
@@ -347,6 +347,81 @@ const C = {
   white:  '#FFFFFF',
   muted:  '#4D8FAC',
   border: 'rgba(62,194,242,0.18)',
+}
+
+/**
+ * Primeiro cartão da conta do cliente. Sem comanda: botão "Abrir minha comanda" (chave "comanda-pela-conta")
+ * ou o aviso do QR. Com comanda: resumo que rola até ela, porque a comanda completa (com o cardápio) é
+ * comprida e fica abaixo dos pontos e atalhos.
+ */
+function CartaoComandaTopo({ carregando, comanda, total, pelaConta, cor, onAberta }: {
+  carregando: boolean
+  comanda: ComandaDto | null
+  total: number
+  pelaConta: ComandaPelaContaStatus | null
+  cor: string
+  onAberta: () => void
+}) {
+  const caixa = { backgroundColor: C.white, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(12,61,90,0.06)' }
+  const icone = (
+    <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${cor}14` }}>
+      <Receipt className="w-5 h-5" style={{ color: cor }} />
+    </span>
+  )
+
+  if (carregando) {
+    return (
+      <div className="rounded-3xl p-4 flex items-center gap-3" style={caixa}>
+        {icone}
+        <p className="text-sm font-semibold flex items-center gap-2" style={{ color: C.muted }}>
+          <Loader2 className="w-4 h-4 animate-spin" /> Carregando sua comanda...
+        </p>
+      </div>
+    )
+  }
+
+  if (comanda) {
+    const n = comanda.items.length
+    return (
+      <a href="#comanda"
+        onClick={e => { e.preventDefault(); document.getElementById('comanda')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}
+        className="rounded-3xl p-4 flex items-center gap-3 transition-all active:scale-[0.98]"
+        style={{ ...caixa, border: `1px solid ${cor}66` }}>
+        {icone}
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: cor }}>Comanda aberta</p>
+          <p className="text-sm font-black leading-tight truncate" style={{ color: C.navy }}>
+            {rotuloMesa(comanda.tableIdentifier)} · {n} {n === 1 ? 'item' : 'itens'}
+          </p>
+          <p className="text-[11px]" style={{ color: C.muted }}>Toque pra ver e pedir mais</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-base font-black" style={{ color: C.navy }}>{brl(total)}</p>
+          <ChevronDown className="w-4 h-4 ml-auto" style={{ color: C.muted }} />
+        </div>
+      </a>
+    )
+  }
+
+  return (
+    <div className="rounded-3xl p-4 space-y-3" style={caixa}>
+      <div className="flex items-center gap-3">
+        {icone}
+        <div className="min-w-0">
+          <p className="font-black text-base leading-tight" style={{ color: C.navy }}>Nenhuma comanda aberta</p>
+          <p className="text-xs mt-0.5" style={{ color: C.muted }}>
+            {pelaConta?.disponivel
+              ? 'Está na loja? Abra aqui mesmo, sem ler o QR Code.'
+              : 'Leia o QR Code da mesa ou peça pro atendente abrir — ela aparece aqui sozinha.'}
+          </p>
+        </div>
+      </div>
+      {/* v1.101.0: abrir sem o QR (chave "comanda-pela-conta"; trava de local opcional) */}
+      {pelaConta?.disponivel && (
+        <BotaoAbrirComanda precisaLocalizacao={pelaConta.precisaLocalizacao} cor={cor} onAberta={onAberta} />
+      )}
+    </div>
+  )
 }
 
 function ProductCard({ p, adding, onAdd }: {
@@ -980,6 +1055,11 @@ export default function ClientePage() {
       {/* ── CONTENT ─────────────────────────────────────────────────── */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4 pb-24">
 
+        {/* Comanda primeiro (v1.101.1): é o que o cliente veio fazer na loja. Antes ficava no fim da tela,
+            abaixo dos campeonatos, e no celular ninguém achava o botão "Abrir minha comanda". */}
+        <CartaoComandaTopo carregando={loading} comanda={comanda} total={netTotal} pelaConta={pelaConta}
+          cor={corTopo} onAberta={fetchComanda} />
+
         {/* Pontos: quanto valem em reais — 1 ponto = 1 centavo de desconto na comanda */}
         {profile && (
           <div className="relative overflow-hidden rounded-3xl p-5"
@@ -1040,37 +1120,8 @@ export default function ClientePage() {
         {/* Próximos campeonatos */}
         <ProximosCampeonatos cor={corTopo} />
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.blue }} />
-            <p className="text-sm font-semibold" style={{ color: C.muted }}>Carregando sua comanda...</p>
-          </div>
-        ) : !comanda ? (
-          <div className="text-center py-16 space-y-4">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
-              style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}>
-              <PackageOpen className="w-10 h-10" style={{ color: C.muted }} />
-            </div>
-            <div>
-              <h2 className="font-black text-lg" style={{ color: C.navy }}>Nenhuma comanda aberta</h2>
-              <p className="text-sm mt-1" style={{ color: C.muted }}>
-                {pelaConta?.disponivel
-                  ? 'Está na loja? Abra por aqui mesmo, leia o QR Code da mesa ou peça pro atendente.'
-                  : 'Escaneie o QR Code da sua mesa ou peça pro atendente abrir — quando abrir, ela aparece aqui sozinha, sem precisar entrar de novo.'}
-              </p>
-            </div>
-            {/* v1.101.0: abrir sem o QR (chave "comanda-pela-conta"; trava de local opcional) */}
-            {pelaConta?.disponivel && (
-              <BotaoAbrirComanda precisaLocalizacao={pelaConta.precisaLocalizacao} cor={corTopo} onAberta={fetchComanda} />
-            )}
-            {/* Sem comanda a conta continua útil: pontos, histórico e notas ficam no perfil. */}
-            <Link href="/cliente/perfil"
-              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all active:scale-95"
-              style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, color: C.navy }}>
-              <UserIcon className="w-3.5 h-3.5" /> Ver minha conta e meus pontos
-            </Link>
-          </div>
-        ) : (
+        {/* A comanda aberta (itens + cardápio) fica aqui embaixo; o cartão do topo leva até ela. */}
+        {!loading && comanda && (
           <>
             {/* ── PAGAMENTO PIX (quando o admin gera a cobrança) ────── */}
             {pix && pix.status === 'ATIVA' && pix.pixCopiaCola && (
