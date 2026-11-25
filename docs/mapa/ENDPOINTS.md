@@ -175,7 +175,7 @@
 | POST | `/api/comanda/admin-open` | AdminOnly | `AdminOpenComanda` (67) | `comandaApi.adminOpen` | `app/admin/dashboard/page.tsx` |
 | GET | `/api/comanda/dashboard` | AdminOnly | `GetDashboard` (128) | `comandaApi.dashboard` | `app/admin/dashboard/page.tsx`<br>`app/admin/relatorios/page.tsx` |
 | GET | `/api/comanda/history` | AdminOnly | `GetHistory` (138) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/my` | logado | `GetMyComanda` (169) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
+| GET | `/api/comanda/my` | logado | `GetMyComanda` (169) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
 | GET | `/api/comanda/my-history` | logado | `GetMyHistory` (158) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
 | GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (449) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
 | POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (462) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
