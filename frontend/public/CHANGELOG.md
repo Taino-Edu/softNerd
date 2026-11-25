@@ -1,12 +1,22 @@
 # Changelog — Santuário Nerd
 
-## [v1.101.0] — 2026-11-24
+## [v1.102.0] — 2026-11-25
 
 ### Restrições CHECK e conferência de integridade no PostgreSQL (PIM IV, etapa 7)
 - **Novo (banco):** 11 restrições CHECK para valores não negativos, quantidade de item e status de comanda, crediário, campeonato e rodada; valem para gravações novas e não relêem linhas antigas (`NOT VALID`)
 - **Novo (banco):** procedure `pr_conferir_integridade` conta referências órfãs e linhas antigas fora das regras, sem alterar dados de negócio
 - **Novo (API):** `POST /api/relatorios/banco/conferencia-integridade`, só do dono
 - Volta: `scripts/reverter-procedures-triggers.sql`
+
+## [v1.101.0] - 2026-11-25
+
+### Comanda: o cliente abre pela própria conta
+Pedido do Maikon: abrir a comanda sem ler o QR Code da mesa.
+- **Abrir minha comanda:** na conta do cliente, quando não há comanda aberta, aparece o botão. A comanda abre sem mesa. O cliente pede os itens como já faz, e ela aparece no Painel Geral com o nome dele. Se já tiver uma aberta, o botão só mostra ela.
+- **Trava "Só abre na loja" (opcional, começa desligada):** em Configurações → Comanda pela conta, o dono marca onde a loja fica ("Usar minha localização", de dentro da loja) e escolhe o raio (100 m a 1 km). Ligada, o celular pede a localização e só abre dentro do raio. Como o GPS dentro de prédio erra, um pouco da imprecisão é perdoada. É um freio pra quem está em casa, não um cadeado: GPS falso passa.
+- **Localização:** a posição só é usada pra medir a distância na hora. Não é gravada e não aparece no site público.
+- **QR Code da mesa** continua igual.
+- **Com volta:** chave "Comanda: cliente abre pela própria conta". Desligada, a comanda volta a abrir só pelo QR Code ou pelo painel.
 
 ## [v1.100.1] - 2026-11-24
 

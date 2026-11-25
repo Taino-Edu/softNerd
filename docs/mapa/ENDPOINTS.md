@@ -2,7 +2,7 @@
 
 > Gerado por `python scripts/gerar-mapa.py` — não edite à mão, rode o script de novo.
 
-274 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
+278 endpoints em 37 controllers. "Quem" = política de acesso (`AdminOnly` = admin/operador, `OwnerOnly` = só o dono, `logado` = qualquer usuário logado).
 
 "Função no front" é a chamada em `frontend/lib/api/` (um arquivo por assunto); "Telas" são os arquivos que usam essa função (ou chamam a rota direto). Endpoint sem tela = só usado por robô, webhook, integração ou ninguém.
 
@@ -15,7 +15,7 @@
 - [CatalogoCartas](#catalogocartas) (11)
 - [Category](#category) (4)
 - [Championship](#championship) (22)
-- [Comanda](#comanda) (20)
+- [Comanda](#comanda) (22)
 - [ContasReceber](#contasreceber) (11)
 - [Crediarios](#crediarios) (14)
 - [Deck](#deck) (6)
@@ -36,7 +36,7 @@
 - [Relatorios](#relatorios) (2)
 - [RelatoriosBanco](#relatoriosbanco) (6)
 - [Reservation](#reservation) (19)
-- [SiteConfig](#siteconfig) (2)
+- [SiteConfig](#siteconfig) (4)
 - [Tcg](#tcg) (8)
 - [Timer](#timer) (4)
 - [Torneio](#torneio) (24)
@@ -170,26 +170,28 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/comanda/abrir-na-mesa` | papéis Customer | `AbrirNaMesa` (85) | `comandaApi.abrirNaMesa` | `app/mesa/[mesa]/page.tsx` |
-| POST | `/api/comanda/admin-open` | AdminOnly | `AdminOpenComanda` (64) | `comandaApi.adminOpen` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/dashboard` | AdminOnly | `GetDashboard` (101) | `comandaApi.dashboard` | `app/admin/dashboard/page.tsx`<br>`app/admin/relatorios/page.tsx` |
-| GET | `/api/comanda/history` | AdminOnly | `GetHistory` (111) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/my` | logado | `GetMyComanda` (142) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
-| GET | `/api/comanda/my-history` | logado | `GetMyHistory` (131) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
-| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (422) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
-| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (435) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
-| GET | `/api/comanda/{id:guid}` | AdminOnly | `GetById` (122) | — | — |
-| DELETE | `/api/comanda/{id:guid}/apply-points` | logado | `RemovePoints` (307) | `comandaApi.removePoints` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
-| POST | `/api/comanda/{id:guid}/apply-points` | logado | `ApplyPoints` (285) | `comandaApi.applyPoints` | `app/cliente/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/cancel` | AdminOnly | `Cancel` (227) | `comandaApi.cancel` | `app/admin/dashboard/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/close` | AdminOnly | `Close` (202) | `comandaApi.close` | `app/admin/dashboard/page.tsx` |
-| PUT | `/api/comanda/{id:guid}/editar` | AdminOnly | `EditarComanda` (269) | `comandaApi.editar` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/estornar` | AdminOnly | `Estornar` (242) | `comandaApi.estornar` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/items` | logado | `AddItem` (153) | `comandaApi.addItem` | `app/cliente/page.tsx`<br>`components/admin/ComandaLancamento.tsx` |
-| DELETE | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `RemoveItem` (172) | `comandaApi.removeItem` | `app/admin/dashboard/page.tsx` |
-| PATCH | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `UpdateItem` (184) | `comandaApi.updateItem` | `app/admin/dashboard/page.tsx` |
-| POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (328) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
-| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (411) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/abrir-na-mesa` | papéis Customer | `AbrirNaMesa` (88) | `comandaApi.abrirNaMesa` | `app/mesa/[mesa]/page.tsx` |
+| POST | `/api/comanda/abrir-pela-conta` | papéis Customer | `AbrirPelaConta` (117) | `comandaApi.abrirPelaConta` | `components/cliente/AbrirComandaPelaConta.tsx` |
+| POST | `/api/comanda/admin-open` | AdminOnly | `AdminOpenComanda` (67) | `comandaApi.adminOpen` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/dashboard` | AdminOnly | `GetDashboard` (128) | `comandaApi.dashboard` | `app/admin/dashboard/page.tsx`<br>`app/admin/relatorios/page.tsx` |
+| GET | `/api/comanda/history` | AdminOnly | `GetHistory` (138) | `comandaApi.history` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/my` | logado | `GetMyComanda` (169) | `comandaApi.myComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx`<br>`app/entrar/page.tsx`<br>`app/liga/jogar/page.tsx`<br>`app/mesa/[mesa]/page.tsx` |
+| GET | `/api/comanda/my-history` | logado | `GetMyHistory` (158) | `comandaApi.myHistory` | `app/cliente/perfil/page.tsx` |
+| GET | `/api/comanda/my/pix` | logado | `GetMinhaCobrancaPix` (449) | `comandaApi.meuPix` | `app/cliente/page.tsx` |
+| POST | `/api/comanda/my/pix/verificar` | logado | `VerificarMinhaCobrancaPix` (462) | `comandaApi.verificarMeuPix` | `app/cliente/page.tsx` |
+| GET | `/api/comanda/pela-conta` | papéis Customer | `PelaContaStatus` (107) | `comandaApi.pelaConta` | `components/cliente/AbrirComandaPelaConta.tsx` |
+| GET | `/api/comanda/{id:guid}` | AdminOnly | `GetById` (149) | — | — |
+| DELETE | `/api/comanda/{id:guid}/apply-points` | logado | `RemovePoints` (334) | `comandaApi.removePoints` | `app/admin/dashboard/page.tsx`<br>`app/cliente/page.tsx` |
+| POST | `/api/comanda/{id:guid}/apply-points` | logado | `ApplyPoints` (312) | `comandaApi.applyPoints` | `app/cliente/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/cancel` | AdminOnly | `Cancel` (254) | `comandaApi.cancel` | `app/admin/dashboard/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/close` | AdminOnly | `Close` (229) | `comandaApi.close` | `app/admin/dashboard/page.tsx` |
+| PUT | `/api/comanda/{id:guid}/editar` | AdminOnly | `EditarComanda` (296) | `comandaApi.editar` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/estornar` | AdminOnly | `Estornar` (269) | `comandaApi.estornar` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/items` | logado | `AddItem` (180) | `comandaApi.addItem` | `app/cliente/page.tsx`<br>`components/admin/ComandaLancamento.tsx` |
+| DELETE | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `RemoveItem` (199) | `comandaApi.removeItem` | `app/admin/dashboard/page.tsx` |
+| PATCH | `/api/comanda/{id:guid}/items/{itemId:guid}` | AdminOnly | `UpdateItem` (211) | `comandaApi.updateItem` | `app/admin/dashboard/page.tsx` |
+| POST | `/api/comanda/{id:guid}/pix` | AdminOnly | `GerarCobrancaPix` (355) | `comandaApi.gerarPix` | `app/admin/dashboard/page.tsx` |
+| GET | `/api/comanda/{id:guid}/pix/{txid}/status` | AdminOnly | `ConsultarCobrancaPix` (438) | `comandaApi.statusPix` | `app/admin/dashboard/page.tsx` |
 
 ## ContasReceber
 
@@ -461,8 +463,10 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| GET | `/api/site-config` | público | `Get` (27) | `siteConfigApi.get` | `app/admin/estoque/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/layout.tsx`<br>`app/liga/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`lib/useSiteConfig.ts` |
-| PUT | `/api/site-config` | AdminOnly | `Save` (35) | `siteConfigApi.save` | `app/admin/site/page.tsx`<br>`app/layout.tsx` |
+| GET | `/api/site-config` | público | `Get` (28) | `siteConfigApi.get` | `app/admin/estoque/page.tsx`<br>`app/admin/site/page.tsx`<br>`app/cliente/reserva/carrinho/page.tsx`<br>`app/layout.tsx`<br>`app/liga/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`lib/useSiteConfig.ts` |
+| PUT | `/api/site-config` | AdminOnly | `Save` (36) | `siteConfigApi.save` | `app/admin/site/page.tsx`<br>`app/layout.tsx` |
+| GET | `/api/site-config/trava-local` | AdminOnly | `LerTravaLocal` (118) | `siteConfigApi.travaLocal` | `components/admin/TravaLocalComanda.tsx` |
+| PUT | `/api/site-config/trava-local` | AdminOnly | `SalvarTravaLocal` (123) | `siteConfigApi.salvarTravaLocal` | `components/admin/TravaLocalComanda.tsx` |
 
 ## Tcg
 

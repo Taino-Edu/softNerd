@@ -473,6 +473,11 @@ ALTER TABLE site_config ADD COLUMN IF NOT EXISTS aviso_topo     VARCHAR(120) NOT
 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS pix_discount_percent     NUMERIC(5,2) NOT NULL DEFAULT 5;
 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS max_installments         INTEGER      NOT NULL DEFAULT 12;
 ALTER TABLE site_config ADD COLUMN IF NOT EXISTS min_installment_in_cents INTEGER      NOT NULL DEFAULT 500;
+-- Comanda pela conta (v1.101.0): trava "só abre na loja" — desligada até o dono marcar o lugar e o raio.
+ALTER TABLE site_config ADD COLUMN IF NOT EXISTS trava_local_ligada      BOOLEAN          NOT NULL DEFAULT FALSE;
+ALTER TABLE site_config ADD COLUMN IF NOT EXISTS loja_latitude           DOUBLE PRECISION NULL;
+ALTER TABLE site_config ADD COLUMN IF NOT EXISTS loja_longitude          DOUBLE PRECISION NULL;
+ALTER TABLE site_config ADD COLUMN IF NOT EXISTS trava_local_raio_metros INTEGER          NOT NULL DEFAULT 300;
 ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS pix_discount_percent NUMERIC(5,2) NULL;
 -- Parcelamento é por item (decidido no cadastro do produto): null = não anuncia.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS max_installments INTEGER NULL;

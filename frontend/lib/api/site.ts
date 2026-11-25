@@ -71,7 +71,12 @@ export interface SiteConfigDto {
   minInstallmentInCents: number
 }
 
+export interface TravaLocalDto { ligada: boolean; latitude: number | null; longitude: number | null; raioMetros: number }
+
 export const siteConfigApi = {
   get:  () => api.get<SiteConfigDto>('/api/site-config'),
   save: (body: Partial<SiteConfigDto>) => api.put<SiteConfigDto>('/api/site-config', body),
+  /** Trava "Só abre na loja" da comanda pela conta: lugar da loja e raio (só o dono). */
+  travaLocal:       () => api.get<TravaLocalDto>('/api/site-config/trava-local'),
+  salvarTravaLocal: (body: TravaLocalDto) => api.put<TravaLocalDto>('/api/site-config/trava-local', body),
 }
