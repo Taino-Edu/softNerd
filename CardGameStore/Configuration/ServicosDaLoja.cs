@@ -139,6 +139,7 @@ public static class ServicosDaLoja
         services.AddScoped<IPedidoConsultaService,  PedidoConsultaService>();
         // Inscrição em campeonato e Pix da entrada (Services/Campeonatos)
         services.AddScoped<ICampeonatoInscricaoService, CampeonatoInscricaoService>();
+        services.AddScoped<CardGameStore.Services.Comandas.IComandaPelaContaService, CardGameStore.Services.Comandas.ComandaPelaContaService>();
         // Contas do crediário (Services/Crediarios)
         services.AddScoped<ICrediarioContaService, CrediarioContaService>();
         services.AddScoped<IAiChatService,       GeminiChatService>();

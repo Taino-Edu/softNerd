@@ -72,6 +72,11 @@ public static class InicializacaoBanco
         "ALTER TABLE products ADD COLUMN carta_ref_centavos INTEGER NULL;",
         "ALTER TABLE products ADD COLUMN carta_ref_em TEXT NULL;",
         "ALTER TABLE products ADD COLUMN carta_preco_automatico INTEGER NOT NULL DEFAULT 0;",
+        // Comanda pela conta: trava "só abre na loja" (v1.101.0)
+        "ALTER TABLE site_config ADD COLUMN trava_local_ligada INTEGER NOT NULL DEFAULT 0;",
+        "ALTER TABLE site_config ADD COLUMN loja_latitude REAL NULL;",
+        "ALTER TABLE site_config ADD COLUMN loja_longitude REAL NULL;",
+        "ALTER TABLE site_config ADD COLUMN trava_local_raio_metros INTEGER NOT NULL DEFAULT 300;",
     ];
 
     public static async Task ExecutarAsync(IServiceProvider services, bool useSqlite)

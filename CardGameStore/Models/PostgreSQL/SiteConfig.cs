@@ -7,6 +7,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace CardGameStore.Models.PostgreSQL;
 
@@ -217,6 +218,28 @@ public class SiteConfig
     /// </summary>
     [Column("min_installment_in_cents")]
     public int MinInstallmentInCents { get; set; } = 500;
+
+    // ── Comanda pela conta: trava "só abre na loja" (v1.101.0) ──────────────────
+    // Fora do GET público do site (JsonIgnore): quem lê e muda é a tela do dono, por
+    // /api/site-config/trava-local (Services/Comandas/ComandaPelaContaService.cs).
+
+    /// <summary>Ligada = o cliente só abre a comanda pela conta estando dentro do raio da loja.</summary>
+    [JsonIgnore]
+    [Column("trava_local_ligada")]
+    public bool TravaLocalLigada { get; set; }
+
+    [JsonIgnore]
+    [Column("loja_latitude")]
+    public double? LojaLatitude { get; set; }
+
+    [JsonIgnore]
+    [Column("loja_longitude")]
+    public double? LojaLongitude { get; set; }
+
+    /// <summary>Raio em metros. Largo de propósito: GPS dentro de prédio erra de 20 a 100 m.</summary>
+    [JsonIgnore]
+    [Column("trava_local_raio_metros")]
+    public int TravaLocalRaioMetros { get; set; } = 300;
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { api, comandaApi, userApi, productApi, categoryApi, reservationApi, variantApi, championshipApi, ComandaDto, Product, ProductCategory, UserProfile, ProductVariant, PixCobrancaDto, MyReservation, Championship } from '@/lib/api'
 import { fmtRestante } from '@/lib/prazo'
 import NotificationBell from '@/components/cliente/NotificationBell'
+import { useComandaPelaConta, BotaoAbrirComanda } from '@/components/cliente/AbrirComandaPelaConta'
 import { startHub, stopHub, ouvirEstadoHub, recarregarSeDesconectado, ComandaOpenedEvent } from '@/lib/signalr'
 import toast, { Toaster } from 'react-hot-toast'
 import {
@@ -576,6 +577,7 @@ export default function ClientePage() {
   const site = useSiteConfig()
   const corTopo = site?.colorHero ?? '#1E4FD6'
   const { totalItems: itensSacola } = useReservationCart()
+  const pelaConta = useComandaPelaConta()
 
   const fetchComanda = useCallback(async () => {
     try {
@@ -1052,10 +1054,15 @@ export default function ClientePage() {
             <div>
               <h2 className="font-black text-lg" style={{ color: C.navy }}>Nenhuma comanda aberta</h2>
               <p className="text-sm mt-1" style={{ color: C.muted }}>
-                Escaneie o QR Code da sua mesa ou peça pro atendente abrir — quando abrir,
-                ela aparece aqui sozinha, sem precisar entrar de novo.
+                {pelaConta?.disponivel
+                  ? 'Está na loja? Abra por aqui mesmo, leia o QR Code da mesa ou peça pro atendente.'
+                  : 'Escaneie o QR Code da sua mesa ou peça pro atendente abrir — quando abrir, ela aparece aqui sozinha, sem precisar entrar de novo.'}
               </p>
             </div>
+            {/* v1.101.0: abrir sem o QR (chave "comanda-pela-conta"; trava de local opcional) */}
+            {pelaConta?.disponivel && (
+              <BotaoAbrirComanda precisaLocalizacao={pelaConta.precisaLocalizacao} cor={corTopo} onAberta={fetchComanda} />
+            )}
             {/* Sem comanda a conta continua útil: pontos, histórico e notas ficam no perfil. */}
             <Link href="/cliente/perfil"
               className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all active:scale-95"

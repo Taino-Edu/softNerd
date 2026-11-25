@@ -62,12 +62,19 @@ export const SECOND_PAYMENT_METHODS = opcoesPagamento(
   ['Cashback', 'Pontos', 'Dinheiro', 'Pix', 'CartaoCredito', 'CartaoDebito'],
 )
 
+export interface ComandaPelaContaStatus { disponivel: boolean; precisaLocalizacao: boolean }
+
 export const comandaApi = {
   dashboard:    () => api.get<ComandaDto[]>('/api/comanda/dashboard'),
   history:      (data?: string) => api.get<ComandaDto[]>('/api/comanda/history', { params: data ? { data } : undefined }),
   myComanda:    () => api.get<ComandaDto>('/api/comanda/my'),
   /** Cliente logado (e-mail e senha) abre a comanda na mesa do QR Code. */
   abrirNaMesa:  (tableIdentifier: string) => api.post<ComandaDto>('/api/comanda/abrir-na-mesa', { tableIdentifier }),
+  /** O cliente pode abrir a comanda pela conta (sem QR)? Precisa da localização? (chave "comanda-pela-conta") */
+  pelaConta:    () => api.get<ComandaPelaContaStatus>('/api/comanda/pela-conta'),
+  /** Abre pela conta; com a trava "Só abre na loja" ligada, manda a posição do celular (não é gravada). */
+  abrirPelaConta: (local?: { latitude: number; longitude: number; precisaoMetros: number }) =>
+    api.post<ComandaDto>('/api/comanda/abrir-pela-conta', local ?? {}),
   myHistory:    () => api.get<ComandaDto[]>('/api/comanda/my-history'),
   addItem:      (id: string, item: { productId?: string; cardCacheId?: string; variantId?: string; itemName: string; unitPriceInCents: number; quantity: number }) =>
     api.post<ComandaDto>(`/api/comanda/${id}/items`, item),
