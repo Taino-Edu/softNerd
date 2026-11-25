@@ -1,5 +1,15 @@
 # Changelog — Santuário Nerd
 
+## [v1.101.1] - 2026-11-25
+
+### Comanda no topo da conta do cliente
+Na v1.101.0 o botão "Abrir minha comanda" ficava no fim da tela inicial da conta, abaixo dos campeonatos. E quem entrava sem comanda aberta caía em "Minha Conta", que não tinha o botão: era preciso ir e voltar por outra tela para achar.
+- **Entrar leva sempre ao início da conta.** Antes, sem comanda aberta, levava para "Minha Conta".
+- **Comanda é o primeiro cartão do início.**
+  - Sem comanda: aparece o botão **Abrir minha comanda**.
+  - Com comanda: aparece o resumo (mesa, itens, total). Tocar nele leva direto à comanda e ao cardápio.
+- **"Minha Conta" também tem o botão** quando não há comanda aberta. Depois de abrir, a tela vai direto para a comanda.
+
 ## [v1.101.0] - 2026-11-25
 
 ### Comanda: o cliente abre pela própria conta

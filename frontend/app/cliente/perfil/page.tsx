@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ContaCrediarioCliente from '@/components/cliente/ContaCrediarioCliente'
+import { useComandaPelaConta, BotaoAbrirComanda } from '@/components/cliente/AbrirComandaPelaConta'
 import {
   userApi, UserProfile, crediarioApi, CrediariosDto, comandaApi, ComandaDto, championshipApi, MyParticipation,
   reservationApi, MyReservation, COMANDA_PAYMENT_METHODS,
@@ -317,6 +318,7 @@ export default function PerfilPage() {
   const [pixGroupId,     setPixGroupId]     = useState<string | null>(null)
   /** Comanda aberta agora — o atalho pra ela é o que evita reler o QR Code da mesa. */
   const [comandaAberta,  setComandaAberta]  = useState<ComandaDto | null>(null)
+  const pelaConta = useComandaPelaConta()
 
   async function refetchReservas() {
     try {
@@ -678,6 +680,23 @@ export default function PerfilPage() {
                   <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
                 </div>
               </Link>
+            )}
+
+            {/* ── ABRIR COMANDA (v1.101.1) ── sem comanda aberta, abre daqui mesmo, sem procurar outra tela */}
+            {!comandaAberta && pelaConta?.disponivel && (
+              <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm border border-[#1E4FD6]/40 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-[#1E4FD6]/15 flex items-center justify-center shrink-0">
+                    <ShoppingCart className="w-5 h-5 text-[#1E4FD6]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-gray-900 leading-tight">Nenhuma comanda aberta</p>
+                    <p className="text-[11px] text-gray-500">Está na loja? Abra aqui mesmo, sem ler o QR Code.</p>
+                  </div>
+                </div>
+                <BotaoAbrirComanda precisaLocalizacao={pelaConta.precisaLocalizacao} cor="#1E4FD6"
+                  onAberta={() => router.push('/cliente#comanda')} />
+              </div>
             )}
 
             {/* ── STATS RÁPIDOS ── */}
