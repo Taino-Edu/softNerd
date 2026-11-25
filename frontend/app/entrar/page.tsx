@@ -5,7 +5,7 @@
 // A lógica (entrar, Google, destino depois do login) é a mesma pras duas.
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { authApi, comandaApi } from '@/lib/api'
+import { authApi } from '@/lib/api'
 import { saveAuth } from '@/lib/auth'
 import toast from 'react-hot-toast'
 import { Mail, KeyRound } from 'lucide-react'
@@ -33,18 +33,12 @@ function EntrarForm() {
   const [loading, setLoading]   = useState(false)
 
   /**
-   * Com comanda aberta, entrar pela conta cai direto na comanda. Antes ia sempre
-   * pro perfil, e o cliente tinha que reler o QR Code da mesa só pra achar o que
-   * já era dele.
+   * Entrar cai sempre no início da conta (/cliente), que abre com a comanda no topo:
+   * a aberta, ou o botão "Abrir minha comanda". Até a v1.101.0, sem comanda aberta ia
+   * pro "Minha Conta" (/cliente/perfil), e o cliente não achava onde abrir a comanda.
    */
-  async function destinoDepoisDoLogin(): Promise<string> {
-    if (returnTo) return returnTo
-    try {
-      await comandaApi.myComanda()
-      return '/cliente'
-    } catch {
-      return '/cliente/perfil'
-    }
+  function destinoDepoisDoLogin(): string {
+    return returnTo ?? '/cliente'
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -54,7 +48,7 @@ function EntrarForm() {
       const { data } = await authApi.clientLogin(email, password)
       saveAuth(data)
       toast.success(`Bem-vindo, ${data.userName}!`)
-      router.push(await destinoDepoisDoLogin())
+      router.push(destinoDepoisDoLogin())
     } catch (err: unknown) {
       const resp = (err as { response?: { status?: number; data?: { message?: string } } })?.response
       if (resp?.status === 429) {
@@ -71,7 +65,7 @@ function EntrarForm() {
   const cadastroHref = returnTo ? `/cadastro?returnTo=${encodeURIComponent(returnTo)}` : '/cadastro'
   const aoEntrarComGoogle = async (data: { userName: string }) => {
     toast.success(`Bem-vindo, ${data.userName}!`)
-    router.push(await destinoDepoisDoLogin())
+    router.push(destinoDepoisDoLogin())
   }
 
   return (

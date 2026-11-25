@@ -49,7 +49,7 @@
 | `/cliente/decks` | `app/cliente/decks/page.tsx` | `cliente/CabecalhoCliente` |
 | `/cliente/mercado` | `app/cliente/mercado/page.tsx` | `cliente/CabecalhoCliente`, `loja/MercadoCartasLoja` |
 | `/cliente` | `app/cliente/page.tsx` | `cliente/AbrirComandaPelaConta`, `cliente/AvatarCliente`, `cliente/NotificationBell` |
-| `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga`, `pokemon/EscolherPokemon`, `pokemon/ParceiroDaConta` |
+| `/cliente/perfil` | `app/cliente/perfil/page.tsx` | `PixReservaModal`, `cliente/AbrirComandaPelaConta`, `cliente/ContaCrediarioCliente`, `cliente/MinhaLiga`, `pokemon/EscolherPokemon`, `pokemon/ParceiroDaConta` |
 | `/cliente/reserva/carrinho` | `app/cliente/reserva/carrinho/page.tsx` | `loja/MenuLoja` |
 | `/entrar` | `app/entrar/page.tsx` | `GoogleLoginButton`, `auth/Moldura` |
 | `/lgpd` | `app/lgpd/page.tsx` | `ThemeToggle` |
@@ -114,7 +114,7 @@ Mudou um componente? Confira as telas da última coluna.
 | `admin/TravaLocalComanda` | `TravaLocalComanda` | `app/admin/configuracoes/page.tsx` |
 | `admin/VariantPicker` | `VariantPicker` | `components/admin/PdvVenda.tsx` |
 | `auth/Moldura` | `useMarca`, `MolduraEntrada`, `TituloEntrada`, `AbasEntrada`, `CampoEntrada`, `BotaoEntrada`, `LinhaEntrada`, `LinkEntrada` | `app/cadastro/page.tsx`<br>`app/entrar/page.tsx`<br>`app/login/page.tsx`<br>`app/primeiro-acesso/page.tsx`<br>`app/reset-password/page.tsx` |
-| `cliente/AbrirComandaPelaConta` | `useComandaPelaConta`, `BotaoAbrirComanda` | `app/cliente/page.tsx` |
+| `cliente/AbrirComandaPelaConta` | `useComandaPelaConta`, `BotaoAbrirComanda` | `app/cliente/page.tsx`<br>`app/cliente/perfil/page.tsx` |
 | `cliente/AvatarCliente` | `AvatarCliente` | `app/cliente/page.tsx`<br>`app/produtos/[id]/page.tsx` |
 | `cliente/CabecalhoCliente` | `CabecalhoCliente` | `app/cliente/configuracoes/page.tsx`<br>`app/cliente/decks/page.tsx`<br>`app/cliente/mercado/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
 | `cliente/ContaCrediarioCliente` | `ContaCrediarioCliente` | `app/cliente/perfil/page.tsx` |
