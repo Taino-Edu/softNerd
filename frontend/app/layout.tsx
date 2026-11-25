@@ -90,8 +90,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     // suppressHydrationWarning: o script abaixo põe a classe "light" antes do React montar (evita
     // o flash do tema); a diferença no <html> é esperada e só vale pra este elemento.
-    <html lang="pt-BR" className={nunito.variable} suppressHydrationWarning>
+    // translate="no": o tradutor do Chrome troca o texto por <font> e o React se perde ("insertBefore ...
+    // not a child of this node" em /cadastro e /produtos, celulares com o sistema em outra língua)
+    <html lang="pt-BR" translate="no" className={nunito.variable} suppressHydrationWarning>
       <head>
+        <meta name="google" content="notranslate" />
         {/* iOS Safari PWA meta tags */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-touch-fullscreen" content="yes" />
