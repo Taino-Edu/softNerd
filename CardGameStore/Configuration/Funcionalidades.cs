@@ -59,9 +59,20 @@ public static class Funcionalidades
     public const string ComprovanteCompra = "comprovante-compra";
     public const string AvisoInscricaoLoja = "aviso-inscricao-loja";
     public const string ComandaPelaConta = "comanda-pela-conta";
+    public const string CadastroCartaTelas = "cadastro-carta-telas";
 
     public static readonly IReadOnlyList<Funcionalidade> Catalogo =
     [
+
+        new(CadastroCartaTelas,
+            Nome:       "Mercado de Cartas: cadastro da carta em telas próprias",
+            OQueMuda:   "No Mercado de Cartas do painel, \"Nova carta\" abre uma tela para escolher a carta no catálogo (jogo, coleção, carta) " +
+                        "e, em seguida, outra tela com o cadastro completo (foto, estado, idioma, quantidade, preço, \"Ver na Liga\"). " +
+                        "Editar uma carta abre direto a tela do cadastro. A janela antiga não cabia na tela.",
+            SeDesligar: "Nova carta e Editar voltam a abrir a janela única de antes, com o catálogo dentro dela.",
+            Padrao:     true,
+            Desde:      "v1.102.0",
+            RevisarEm:  new DateOnly(2027, 1, 25)),
 
         new(ComandaPelaConta,
             Nome:       "Comanda: cliente abre pela própria conta",
