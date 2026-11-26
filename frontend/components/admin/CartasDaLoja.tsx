@@ -6,8 +6,11 @@
 // Preço de referência (v1.92.0, chave "preco-referencia-cartas"): "Buscar no catálogo" liga a carta ao catálogo de
 // todos os jogos (tcgcsv/TCGplayer), mostra a referência do dia e a sugestão pela regra da loja; a lista mostra a
 // referência e a variação de 7 dias. "Ajustar o preço sozinho" é por carta — o padrão é só sugerir.
+// Cadastro em telas (v1.102.0, chave "cadastro-carta-telas"): Nova carta e Editar abrem as telas de
+// components/admin/CadastroCarta.tsx (/admin/marketplace/nova e /cadastro). Desligada, volta a janela CartaModal.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import {
@@ -62,6 +65,7 @@ function Variacao({ pct, rotulo }: { pct: number | null; rotulo: string }) {
 type LigacaoCatalogo = { produtoId: number; categoria: number; grupo: number }
 
 // ── Modal criar / editar carta ────────────────────────────────────────────────
+// FALLBACK da chave "cadastro-carta-telas" — apagar junto com a chave (o novo é components/admin/CadastroCarta.tsx)
 function CartaModal({ inicial, colecoes, comCatalogo, onClose, onSalvo }: {
   inicial?: Product
   /** Chave "preco-referencia-cartas" ligada: "Buscar no catálogo", referência e "Ajustar sozinho". */
@@ -457,6 +461,18 @@ export default function CartasDaLoja() {
   const [jogo, setJogo]           = useState('')
   const [nova, setNova]           = useState(false)
   const [editando, setEditando]   = useState<Product | null>(null)
+  // Chave "cadastro-carta-telas": ligada (ou carregando), Nova carta e Editar abrem telas próprias; desligada, a janela
+  const emTelas = useFuncionalidade('cadastro-carta-telas') !== false
+  const router = useRouter()
+
+  function novaCarta() {
+    if (!emTelas) { setNova(true); return }
+    router.push(comCatalogo ? '/admin/marketplace/nova' : '/admin/marketplace/cadastro')
+  }
+  function editar(c: Product) {
+    if (!emTelas) { setEditando(c); return }
+    router.push(`/admin/marketplace/cadastro?id=${encodeURIComponent(c.id)}`)
+  }
 
   async function carregar() {
     setCarregando(true)
@@ -543,7 +559,7 @@ export default function CartasDaLoja() {
                 </button>
               </>
             )}
-            <button onClick={() => setNova(true)} className="btn-primary flex items-center gap-2">
+            <button onClick={novaCarta} className="btn-primary flex items-center gap-2">
               <Plus className="w-4 h-4" /> Nova carta
             </button>
           </div>
@@ -581,7 +597,7 @@ export default function CartasDaLoja() {
           <Layers className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p className="mb-1 font-semibold text-white">Nenhuma carta cadastrada ainda</p>
           <p className="mb-5 text-sm">Cadastre as singles da pastinha — cada uma aparece no Mercado de Cartas pra reservar.</p>
-          <button onClick={() => setNova(true)} className="btn-primary flex items-center gap-2 mx-auto">
+          <button onClick={novaCarta} className="btn-primary flex items-center gap-2 mx-auto">
             <Plus className="w-4 h-4" /> Cadastrar a primeira carta
           </button>
         </div>
@@ -656,7 +672,7 @@ export default function CartasDaLoja() {
                 </td>
                 <td className="p-3 sm:p-4">
                   <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-                    <button onClick={() => setEditando(c)} title="Editar carta" aria-label="Editar carta"
+                    <button onClick={() => editar(c)} title="Editar carta" aria-label="Editar carta"
                       className="p-1.5 rounded-lg bg-surface-700 hover:bg-brand-500/20 text-gray-400 hover:text-brand-400 transition-colors">
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -676,6 +692,7 @@ export default function CartasDaLoja() {
         </Table>
       )}
 
+      {/* FALLBACK da chave "cadastro-carta-telas" — apagar junto com a chave */}
       {nova && <CartaModal colecoes={colecoes} comCatalogo={comCatalogo} onClose={() => setNova(false)} onSalvo={salvo} />}
       {editando && <CartaModal inicial={editando} colecoes={colecoes} comCatalogo={comCatalogo} onClose={() => setEditando(null)} onSalvo={salvo} />}
       {regraAberta && <RegraModal onClose={() => setRegraAberta(false)} />}
