@@ -314,6 +314,29 @@ public class AuthService : IAuthService
                     : "Essa conta tem senha. Entre com seu e-mail e senha pra abrir a comanda.",
                 "precisaSenha");
 
+        await ConferirWhatsAppDoCadastroAsync(user, cpf, whatsApp);
+
+        // Conta antiga sem CPF: completa (só se ninguém mais usa esse CPF — índice único protege)
+        var cpfDoCadastro = Identificadores.NormalizarCpf(user.Cpf);
+        if (cpfDoCadastro is null && cpf is not null)
+        {
+            user.Cpf = cpf;
+            user.UpdatedAt = DateTime.UtcNow;
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException) { _db.Entry(user).State = EntityState.Unchanged; user.Cpf = null; }
+        }
+    }
+
+    /// <summary>
+    /// O WhatsApp (e o CPF, se o cadastro tiver) batem com o cadastro? Quem entra sem senha
+    /// (QR Code da mesa, primeiro acesso pelo site) prova que é o dono por aqui. Dado que não
+    /// bate conta como senha errada (bloqueio por conta, ProtecaoLogin.cs).
+    /// <paramref name="zerarFalhas"/> = false pra conta com senha ou Google: lá o contador é o
+    /// das senhas erradas, e acertar CPF+WhatsApp não pode zerá-lo — senão dava pra intercalar
+    /// tentativas de senha com buscas pelo CPF e o bloqueio nunca chegava.
+    /// </summary>
+    private async Task ConferirWhatsAppDoCadastroAsync(User user, string? cpf, string? whatsApp, bool zerarFalhas = true)
+    {
         var agora = DateTime.UtcNow;
         var estado = await _db.Users.AsNoTracking().Where(u => u.Id == user.Id)
             .Select(u => new { u.FalhasLogin, u.LoginBloqueadoAte }).FirstAsync();
@@ -348,18 +371,9 @@ public class AuthService : IAuthService
                 cpfDoCadastro is not null && cpf is null ? "precisaCpf" : "naoBate");
         }
 
-        if (estado.FalhasLogin != 0)
+        if (zerarFalhas && estado.FalhasLogin != 0)
             await _db.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s
                 .SetProperty(u => u.FalhasLogin, 0).SetProperty(u => u.LoginBloqueadoAte, (DateTime?)null));
-
-        // Conta antiga sem CPF: completa (só se ninguém mais usa esse CPF — índice único protege)
-        if (cpfDoCadastro is null && cpf is not null)
-        {
-            user.Cpf = cpf;
-            user.UpdatedAt = DateTime.UtcNow;
-            try { await _db.SaveChangesAsync(); }
-            catch (DbUpdateException) { _db.Entry(user).State = EntityState.Unchanged; user.Cpf = null; }
-        }
     }
 
     // =========================================================================
@@ -621,20 +635,29 @@ public class AuthService : IAuthService
     // ACESSO DO CLIENTE PELO SITE
     // =========================================================================
 
-    public async Task<CpfLookupResponse> LookupByCpfAsync(string cpf)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Cpf == cpf && u.IsActive);
-        if (user == null)
-            throw new KeyNotFoundException("CPF não encontrado. Acesse a loja e escaneie o QR Code para criar sua conta.");
+    // Primeiro acesso de quem já comprou/jogou na loja: acha o cadastro pelo CPF e cria e-mail e
+    // senha. Antes bastava o CPF — a busca devolvia o nome de quem tinha aquele CPF e o
+    // setup-account trocava e-mail e senha de QUALQUER conta (até com senha, até da equipe).
+    // Agora vale a mesma regra do QR Code da mesa: o WhatsApp tem que bater com o cadastro
+    // (erro conta como senha errada) e só ativa conta de cliente que ainda não tem senha nem Google.
+    // CPF inexistente e dado que não bate dão a MESMA resposta: a busca não diz de quem é um CPF.
+    internal const string CadastroNaoAchado =
+        "Não achamos cadastro com esse CPF e WhatsApp. Confira os dados ou fale com o balcão.";
 
-        return new CpfLookupResponse(user.Name, user.PasswordHash != null);
+    public async Task<CpfLookupResponse> LookupByCpfAsync(string cpf, string whatsApp)
+    {
+        var user = await AcharCadastroDoPrimeiroAcessoAsync(cpf, whatsApp);
+        return new CpfLookupResponse(
+            PrimeiroNome(user.Name),
+            user.PasswordHash != null || user.GoogleSub != null);
     }
 
     public async Task<AuthResponse> SetupAccountAsync(SetupAccountRequest request)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Cpf == request.Cpf && u.IsActive);
-        if (user == null)
-            throw new KeyNotFoundException("CPF não encontrado.");
+        var user = await AcharCadastroDoPrimeiroAcessoAsync(request.Cpf, request.WhatsApp);
+
+        if (user.Role != UserRole.Customer || user.PasswordHash is not null || user.GoogleSub is not null)
+            throw new InvalidOperationException("Essa conta já foi ativada. Entre com seu e-mail e senha (ou com o Google).");
 
         var emailInUse = await _db.Users.AnyAsync(u => u.Email == request.Email.ToLowerInvariant() && u.Id != user.Id);
         if (emailInUse)
@@ -645,9 +668,31 @@ public class AuthService : IAuthService
         user.UpdatedAt    = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Conta ativada para cliente {Name}", user.Name);
+        _logger.LogInformation("Conta ativada para cliente {UserId}", user.Id);
         return await GenerateAuthResponseAsync(user);
     }
+
+    /// <summary>Cadastro ativo com esse CPF cujo WhatsApp bate. Senão, <see cref="KeyNotFoundException"/>
+    /// com a mesma mensagem pros dois casos (ou <see cref="ContaBloqueadaException"/> depois de 5 erros).</summary>
+    private async Task<User> AcharCadastroDoPrimeiroAcessoAsync(string cpfInformado, string whatsAppInformado)
+    {
+        var cpf      = Identificadores.NormalizarCpf(cpfInformado);
+        var whatsApp = Identificadores.NormalizarWhatsApp(whatsAppInformado);
+        if (cpf is null || whatsApp is null) throw new KeyNotFoundException(CadastroNaoAchado);
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.IsActive && u.Cpf != null
+            && u.Cpf.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf)
+            ?? throw new KeyNotFoundException(CadastroNaoAchado);
+
+        // Conta já ativada (senha, Google ou da equipe): confere sem zerar o contador de senhas erradas
+        var semCredencial = user.Role == UserRole.Customer && user.PasswordHash is null && user.GoogleSub is null;
+        try { await ConferirWhatsAppDoCadastroAsync(user, cpf, whatsApp, zerarFalhas: semCredencial); }
+        catch (QuickLoginRecusadoException) { throw new KeyNotFoundException(CadastroNaoAchado); }
+        return user;
+    }
+
+    private static string PrimeiroNome(string nome) =>
+        nome.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
 
     // Completa o perfil da conta LOGADA — quick-login cria conta semi-criada (sem
     // e-mail/senha) e o site exige esta etapa: sem e-mail a redefinição de senha
