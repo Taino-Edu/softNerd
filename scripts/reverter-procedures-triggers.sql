@@ -3,6 +3,17 @@
 -- eles são recriados no próximo startup. Para desligar de vez, remova o bloco do postgres.sql e publique.
 -- A tabela estoque_movimentos (histórico) NÃO é apagada aqui; para apagar: DROP TABLE estoque_movimentos;
 
+DO $do$
+DECLARE r record;
+BEGIN
+    FOR r IN SELECT conrelid::regclass::text AS tabela, conname::text AS nome FROM pg_constraint
+             WHERE contype = 'c' AND connamespace = 'public'::regnamespace AND conname LIKE 'chk\_%'
+    LOOP
+        EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', r.tabela, r.nome);
+    END LOOP;
+END
+$do$;
+DROP PROCEDURE IF EXISTS pr_conferir_integridade();
 DROP PROCEDURE IF EXISTS pr_manutencao_banco(integer, integer);
 DROP FUNCTION  IF EXISTS fn_saldo_crediario(uuid);
 DROP FUNCTION  IF EXISTS fn_fechamento_comandas(date);

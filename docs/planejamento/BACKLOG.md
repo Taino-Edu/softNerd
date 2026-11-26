@@ -125,6 +125,7 @@ Meses anteriores: [HISTORICO.md](HISTORICO.md).
 
 | Versão | Data | O quê |
 |---|---|---|
+| v1.103.0 | 26/11 | **CHECKs e conferência de integridade (PIM IV, etapa 7)**: 11 restrições CHECK `NOT VALID` no fim de `postgres.sql`, `pr_conferir_integridade` e `POST /api/relatorios/banco/conferencia-integridade` (dono). Teste SQL no CI; reverter com `scripts/reverter-procedures-triggers.sql` |
 | v1.87.0 | 16/11 | **Home que vende** (chave `home-que-vende`, PR #170): topo no modelo do Maikon com o mascote, cabeçalho em 3 tons, catálogo em 3 colunas com o cartão novo e "Adicionar", Produtos com filtros + busca numa linha, foto maior com "Ampliar", foto voando pra Sacola |
 | v1.86.1 | 13/11 | **Desconto só na finalização** (Maikon: pedido saiu R$ 41,22 mais barato "sem eu pedir"): chave `pix-pedido-com-desconto` nasce desligada — Pix do pedido cobra o preço cheio, desconto só no "Registrar pagamento"/comanda/caixa. Ficha do cliente mostra soma dos itens e o desconto. No banco: Pokémon e One Piece com 0% no Pix e produtos delas sem % própria (21 produtos de outras categorias ainda têm % só como texto da vitrine) |
 | v1.86.0 | 07/11 | **Procedures e triggers (PIM IV, etapa 7)**: bloco novo no fim de `postgres.sql` (idempotente): trigger `updated_at` em 12 tabelas, auditoria de estoque em `estoque_movimentos`, `fn_estoque_baixo`, `fn_fechamento_comandas`, `fn_saldo_crediario`, `pr_manutencao_banco`. `RelatoriosBancoController` (`/api/relatorios/banco`, 501 no SQLite). Teste SQL no CI; reverter com `scripts/reverter-procedures-triggers.sql` |
