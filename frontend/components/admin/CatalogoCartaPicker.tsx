@@ -5,6 +5,8 @@
 // A coleção vem do catálogo por coleção (não há busca por nome no jogo inteiro): a sigla ajuda a achar
 // (ex.: MEW = 151), é o código impresso no canto da carta.
 // tipo="selados" (v1.94.0, Estoque): a mesma escolha, mas lista os produtos selados da coleção (booster, box, deck).
+// emTela (v1.102.0, chave "cadastro-carta-telas"): ocupa a tela "Escolher a carta" — listas com a altura da página,
+// grade mais larga no computador e sem o botão Fechar (quem sai é o cabeçalho da tela).
 import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Search, Loader2, ChevronLeft, BookOpen, ImageOff } from 'lucide-react'
@@ -44,7 +46,7 @@ function aindaVaiSair(c: ColecaoCatalogo) {
   return !!c.lancamento && new Date(c.lancamento).getTime() > Date.now()
 }
 
-export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas', rotulo, abertoDeInicio = false }: {
+export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas', rotulo, abertoDeInicio = false, emTela = false }: {
   jogo: string
   onEscolher: (carta: CartaCatalogo, colecao: ColecaoCatalogo) => void
   /** cartas (Mercado de Cartas) ou selados (Estoque: booster, box, deck). */
@@ -52,11 +54,13 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
   /** Texto do botão fechado (padrão: "Buscar no catálogo de {jogo}"). */
   rotulo?: string
   abertoDeInicio?: boolean
+  /** Tela própria (cadastro de carta em telas): sem limite de altura apertado nem botão Fechar. */
+  emTela?: boolean
 }) {
   const selados = tipo === 'selados'
   // Reais primeiro (v1.95.0): o preço do catálogo vem em dólar e a tela converte pelo dólar de agora
   const cotacao = useCotacaoCartas()
-  const [aberto, setAberto]         = useState(abertoDeInicio)
+  const [aberto, setAberto]         = useState(abertoDeInicio || emTela)
   const [colecoes, setColecoes]     = useState<ColecaoCatalogo[] | null>(null)
   const [erro, setErro]             = useState<string | null>(null)
   const [buscaColecao, setBuscaColecao] = useState('')
@@ -116,7 +120,8 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
   }
 
   return (
-    <div className="rounded-xl border border-surface-500 bg-surface-700/40 p-3 space-y-2.5">
+    // Na tela própria, sem a caixa cinza: o catálogo fica direto no cartão branco da tela (pedido do Taino, 25/11)
+    <div className={clsx('space-y-2.5', !emTela && 'rounded-xl border border-surface-500 bg-surface-700/40 p-3')}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-bold text-white flex items-center gap-1.5 min-w-0">
           {colecao && (
@@ -125,7 +130,7 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
           )}
           <span className="truncate">{colecao ? colecao.nome : `Catálogo de ${jogo}`}</span>
         </p>
-        <button type="button" onClick={() => setAberto(false)} className="text-xs text-gray-400 hover:text-white shrink-0">Fechar</button>
+        {!emTela && <button type="button" onClick={() => setAberto(false)} className="text-xs text-gray-400 hover:text-white shrink-0">Fechar</button>}
       </div>
 
       {erro && <p className="text-xs text-red-400">{erro}</p>}
@@ -140,7 +145,8 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
           {!colecoes && !erro ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-brand-400" /></div>
           ) : (
-            <ul className="max-h-56 overflow-y-auto divide-y divide-surface-600 rounded-lg border border-surface-600">
+            <ul className={clsx('overflow-y-auto divide-y divide-surface-600 rounded-lg border border-surface-600',
+              emTela ? 'max-h-[max(16rem,calc(100dvh-22rem))]' : 'max-h-56')}>
               {colecoesVisiveis.map(c => (
                 <li key={`${c.categoria}-${c.grupo}`}>
                   <button type="button" onClick={() => setColecao(c)}
@@ -175,7 +181,9 @@ export default function CatalogoCartaPicker({ jogo, onEscolher, tipo = 'cartas',
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-brand-400" /></div>
           ) : (
             <>
-            <div className="max-h-72 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 gap-2 pr-1">
+            <div className={clsx('overflow-y-auto grid gap-2 pr-1',
+              emTela ? 'max-h-[max(18rem,calc(100dvh-22rem))] grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8'
+                : 'max-h-72 grid-cols-3 sm:grid-cols-4')}>
               {cartasVisiveis.map(c => {
                 const preco = c.precos.find(p => p.referencia != null)
                 return (

@@ -1,12 +1,22 @@
 # Changelog — Santuário Nerd
 
-## [v1.101.2] — 2026-11-25
+## [v1.102.1] — 2026-11-25
 
 ### Segurança: ativar conta pelo CPF
 - **Corrigido (segurança):** o primeiro acesso pelo site ("Comprou na loja? Ative sua conta") passa a pedir também o **WhatsApp do cadastro**, como o QR Code da mesa já fazia. Só o CPF não basta mais
 - A ativação só vale pra conta de cliente que ainda não tem senha nem Google; conta já ativada continua entrando só com e-mail e senha
 - Errar o WhatsApp conta como senha errada: depois de 5 tentativas a conta trava por um tempo
 - A busca mostra só o primeiro nome e dá a mesma resposta pra CPF que não existe e dado que não bate
+
+## [v1.102.0] - 2026-11-25
+
+### Mercado de Cartas: cadastro da carta em telas próprias
+A janela de "Nova carta" não cabia na tela: a lista de coleções, o cabeçalho e o formulário passavam da altura, e não dava para escolher a carta nem fechar a janela. Agora o cadastro segue o jeito das comandas do Painel Geral, em duas etapas.
+- **1. Escolher a carta:** "Nova carta" abre uma tela própria. Escolha o jogo, procure a coleção (nome ou sigla) e toque na carta. A lista usa a altura da tela e, no computador, mostra mais cartas por linha. Não achou? **Cadastrar à mão** leva direto ao cadastro.
+- **2. Cadastro:** a carta escolhida já vem com nome, coleção, número, raridade, foto e preço de referência. Falta conferir estado, idioma, quantidade e preço. Continuam iguais: "Ver na Liga", referência do TCGplayer com o dólar do dia, sugestão pela regra da loja, "Ajustar o preço sozinho", foto e "uma linha por carta, cópias iguais viram quantidade".
+- **Editar** abre direto a tela do cadastro, com "Buscar no catálogo" dentro dela para ligar ou trocar a carta.
+- **No celular**, os botões ficam presos no pé da tela, como na comanda.
+- **Com volta:** chave "Mercado de Cartas: cadastro da carta em telas próprias". Desligada, Nova carta e Editar voltam a abrir a janela de antes.
 
 ## [v1.101.1] - 2026-11-25
 

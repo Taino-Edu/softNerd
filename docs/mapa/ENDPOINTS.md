@@ -112,13 +112,13 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/product/catalogo-cartas/atualizar` | papéis Admin,Operator | `Atualizar` (122) | `catalogoCartasApi.atualizar` | `components/admin/CartasDaLoja.tsx` |
+| POST | `/api/product/catalogo-cartas/atualizar` | papéis Admin,Operator | `Atualizar` (122) | `catalogoCartasApi.atualizar` | `components/admin/CadastroCarta.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 | GET | `/api/product/catalogo-cartas/cartas` | papéis Admin,Operator | `Cartas` (51) | `catalogoCartasApi.cartas` | `components/admin/CatalogoCartaPicker.tsx` |
 | GET | `/api/product/catalogo-cartas/colecoes` | papéis Admin,Operator | `Colecoes` (44) | `catalogoCartasApi.colecoes` | `components/admin/CatalogoCartaPicker.tsx` |
 | GET | `/api/product/catalogo-cartas/cotacao` | papéis Admin,Operator | `Cotacao` (101) | `catalogoCartasApi.cotacao` | `lib/cotacaoCartas.ts` |
 | PUT | `/api/product/catalogo-cartas/ligacao/{id:guid}` | papéis Admin,Operator | `Ligar` (68) | `catalogoCartasApi.ligar` | `components/admin/ReferenciaEstoque.tsx` |
 | PUT | `/api/product/catalogo-cartas/preco/{id:guid}` | papéis Admin,Operator | `TrocarPreco` (80) | `catalogoCartasApi.trocarPreco` | `components/admin/ReferenciaEstoque.tsx` |
-| GET | `/api/product/catalogo-cartas/referencia` | papéis Admin,Operator | `Referencia` (91) | `catalogoCartasApi.referencia` | `components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
+| GET | `/api/product/catalogo-cartas/referencia` | papéis Admin,Operator | `Referencia` (91) | `catalogoCartasApi.referencia` | `components/admin/CadastroCarta.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ReferenciaEstoque.tsx` |
 | GET | `/api/product/catalogo-cartas/regra` | papéis Admin,Operator | `Regra` (111) | `catalogoCartasApi.regra` | `components/admin/CartasDaLoja.tsx` |
 | PUT | `/api/product/catalogo-cartas/regra` | AdminOnly | `SalvarRegra` (115) | `catalogoCartasApi.salvarRegra` | `components/admin/CartasDaLoja.tsx` |
 | GET | `/api/product/catalogo-cartas/selados` | papéis Admin,Operator | `Selados` (59) | `catalogoCartasApi.selados` | `components/admin/CatalogoCartaPicker.tsx` |
@@ -367,8 +367,8 @@
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
 | GET | `/api/product` | público | `GetAll` (47) | `productApi.list` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/page.tsx`<br>`app/produtos/[id]/page.tsx`<br>`app/produtos/page.tsx`<br>`app/sitemap.ts` |
-| POST | `/api/product` | AdminOnly | `Create` (143) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts`<br>`components/admin/CartasDaLoja.tsx` |
-| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (69) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ComandaLancamento.tsx` |
+| POST | `/api/product` | AdminOnly | `Create` (143) | `productApi.create` | `app/admin/cartas/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/sitemap.ts`<br>`components/admin/CadastroCarta.tsx`<br>`components/admin/CartasDaLoja.tsx` |
+| GET | `/api/product/admin` | papéis Admin,Operator | `GetAllAdmin` (69) | `productApi.listAdmin` | `app/admin/dashboard/page.tsx`<br>`app/admin/estoque/page.tsx`<br>`app/admin/relatorios/page.tsx`<br>`app/admin/reservas/page.tsx`<br>`app/admin/venda-avulsa/page.tsx`<br>`components/admin/CadastroCarta.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ComandaLancamento.tsx` |
 | GET | `/api/product/barcode/{code}` | logado | `GetByBarcode` (124) | `productApi.getByBarcode` | `app/admin/estoque/page.tsx`<br>`components/admin/ComandaLancamento.tsx` |
 | GET | `/api/product/cartas` | público | `CartasAvulsas` (102) | `productApi.cartas` | `app/produtos/[id]/page.tsx`<br>`components/loja/MercadoCartasLoja.tsx` |
 | GET | `/api/product/low-stock` | AdminOnly | `GetLowStock` (133) | — | — |
@@ -376,7 +376,7 @@
 | GET | `/api/product/store` | logado | `GetAllStore` (59) | `productApi.listStore` | `app/cliente/page.tsx` |
 | DELETE | `/api/product/{id:guid}` | AdminOnly | `Deactivate` (171) | `productApi.deactivate` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 | GET | `/api/product/{id:guid}` | público | `GetById` (113) | `productApi.get` | `app/cliente/reserva/carrinho/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`app/produtos/[id]/page.tsx`<br>`components/admin/PdvVenda.tsx` |
-| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (160) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CartasDaLoja.tsx` |
+| PUT | `/api/product/{id:guid}` | AdminOnly | `Update` (160) | `productApi.update` | `app/admin/estoque/page.tsx`<br>`app/produtos/[id]/layout.tsx`<br>`components/admin/CadastroCarta.tsx`<br>`components/admin/CartasDaLoja.tsx` |
 | PATCH | `/api/product/{id:guid}/stock` | AdminOnly | `AdjustStock` (183) | `productApi.adjustStock` | `app/admin/estoque/page.tsx` |
 
 ## ProductVariant
@@ -530,7 +530,7 @@
 
 | Método | Rota | Quem | Ação (linha) | Função no front | Telas |
 |---|---|---|---|---|---|
-| POST | `/api/upload/image` | AdminOnly | `UploadImage` (57) | `uploadApi.image` | `app/admin/campeonatos/page.tsx`<br>`app/admin/site/page.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ImageUpload.tsx` |
+| POST | `/api/upload/image` | AdminOnly | `UploadImage` (57) | `uploadApi.image` | `app/admin/campeonatos/page.tsx`<br>`app/admin/site/page.tsx`<br>`components/admin/CadastroCarta.tsx`<br>`components/admin/CartasDaLoja.tsx`<br>`components/admin/ImageUpload.tsx` |
 | POST | `/api/upload/marketplace-image` | logado | `UploadMarketplaceImage` (70) | `marketplaceApi.uploadImage` | `app/admin/marketplace/page.tsx` |
 | POST | `/api/upload/profile-image` | logado | `UploadProfileImage` (80) | `authApi.uploadProfileImage` | `app/cliente/perfil/page.tsx` |
 
